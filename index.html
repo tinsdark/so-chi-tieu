@@ -64,8 +64,15 @@ tr.balance-row td{font-weight:700;background:#eef2ff;color:var(--primary-d)}
 @media (max-width:700px){.charts-grid{grid-template-columns:1fr}}
 .chart-box{position:relative;height:230px}
 .empty{color:var(--muted);font-size:13px;padding:10px 0}
-.dt-input{width:90px;text-align:right}
-.dt-name-input{width:140px}
+.dt-input{width:150px;text-align:right}
+.th-month{text-align:center}
+.dutru-row td{color:var(--muted)}
+.dutru-row input{color:var(--muted)}
+.thucte-row td{font-weight:600}
+.thucte-row .dt-input{color:var(--text)}
+.cat-label{display:flex;align-items:center;gap:6px}
+.cat-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:#f0f1f5;color:var(--muted)}
+.cat-tag.locked{background:#eef2ff;color:var(--primary-d)}
 .group-title{font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--primary-d)}
 .group-title:first-child{margin-top:0}
 .icon-btn{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
@@ -132,13 +139,6 @@ var accessToken = null;
 var DEFAULT_DATA = {
   settings: { soDuDauKy: 957000, ngayBatDau: "2026-09-25" },
   journal: {},
-  planItems: [
-    { id: "luong", nhom: "thu", ten: "Lương", ghiChu: "", thuTu: 1, values: {} },
-    { id: "anuong", nhom: "sinhhoat", ten: "Ăn uống", ghiChu: "", thuTu: 1, values: {} },
-    { id: "xangxe", nhom: "sinhhoat", ten: "Xăng xe", ghiChu: "", thuTu: 2, values: {} },
-    { id: "tieuvat", nhom: "sinhhoat", ten: "Tiêu vặt/khác", ghiChu: "", thuTu: 3, values: {} },
-    { id: "trano", nhom: "no", ten: "Trả nợ", ghiChu: "", thuTu: 1, values: {} }
-  ],
   categories: { thu: [
     { id: "luong", ten: "Lương" }
   ], chi: [
@@ -146,7 +146,8 @@ var DEFAULT_DATA = {
     { id: "xang", ten: "Xăng" },
     { id: "tieu", ten: "Tiêu" },
     { id: "traNo", ten: "Trả nợ" }
-  ]}
+  ]},
+  duTru: { thu: {}, chi: {} }
 };
 
 var state = {
@@ -243,6 +244,9 @@ function normalizeData(d){
   d.categories = d.categories || { thu: [], chi: [] };
   d.categories.thu = d.categories.thu || [];
   d.categories.chi = d.categories.chi || [];
+  d.duTru = d.duTru || { thu: {}, chi: {} };
+  d.duTru.thu = d.duTru.thu || {};
+  d.duTru.chi = d.duTru.chi || {};
   // migrate dữ liệu cũ: thu là số đơn -> chuyển thành object theo danh mục (giữ nguyên tổng)
   Object.keys(d.journal).forEach(function(date){
     var e = d.journal[date];
@@ -412,6 +416,12 @@ function balanceBeforeMonth(mk){
     bal += thuTotal(e) - chiTotal(e);
   }
   return bal;
+}
+// số dư tính tới hết tháng mk (cộng dồn toàn bộ lịch sử, không phụ thuộc năm đang xem)
+function balanceAtEndOfMonth(mk){
+  var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + 1;
+  if (m > 12){ m = 1; y++; }
+  return balanceBeforeMonth(y + '-' + pad2(m));
 }
 
 /* ---------------- rendering ---------------- */
@@ -637,11 +647,23 @@ function drawCharts(mk, monthDates, cats){
 }
 
 /* ---- Dòng tiền ---- */
-var GROUPS = [
-  { nhom:'thu', title:'Thu nhập' },
-  { nhom:'sinhhoat', title:'Chi sinh hoạt' },
-  { nhom:'no', title:'Trả nợ' }
-];
+// TB thực tế N tháng gần nhất có phát sinh (toàn bộ lịch sử), dùng làm gợi ý dự trù
+function recentAvgActual(kind, catId, n){
+  var byMonth = {};
+  Object.keys(state.data.journal).forEach(function(d){
+    var obj = state.data.journal[d][kind] || {};
+    if (!obj[catId]) return;
+    var mk = monthKey(d);
+    byMonth[mk] = (byMonth[mk]||0) + num(obj[catId]);
+  });
+  var mks = Object.keys(byMonth).sort();
+  var lastN = mks.slice(-n);
+  if (!lastN.length) return null;
+  var sum = lastN.reduce(function(s,mk){ return s+byMonth[mk]; },0);
+  return sum/lastN.length;
+}
+
+var DONGTIEN_GROUPS = [ { kind:'thu', title:'Thu nhập' }, { kind:'chi', title:'Chi' } ];
 
 function renderDongTien(){
   var root = document.getElementById('tabContent');
@@ -649,13 +671,30 @@ function renderDongTien(){
   var year = state.dongTienYear;
   var months = [];
   for (var m=1;m<=12;m++) months.push(year+'-'+pad2(m));
+  var startMk = (state.data.settings.ngayBatDau||todayStr()).slice(0,7);
 
-  function itemsOf(nhom){
-    return state.data.planItems.filter(function(it){ return it.nhom===nhom; }).sort(function(a,b){ return (a.thuTu||0)-(b.thuTu||0); });
-  }
-  function groupTotal(nhom, mk){
-    var s=0; itemsOf(nhom).forEach(function(it){ s += num(it.values[mk]); }); return s;
-  }
+  // thực tế = tổng theo danh mục/tháng lấy thẳng từ Sổ tay (chỉ năm đang xem)
+  var actual = { thu:{}, chi:{} };
+  ['thu','chi'].forEach(function(kind){
+    state.data.categories[kind].forEach(function(c){ actual[kind][c.id] = {}; });
+  });
+  Object.keys(state.data.journal).forEach(function(d){
+    if (d.slice(0,4) !== String(year)) return;
+    var mk = monthKey(d);
+    var e = state.data.journal[d];
+    ['thu','chi'].forEach(function(kind){
+      var obj = e[kind] || {};
+      Object.keys(obj).forEach(function(cid){
+        if (!actual[kind][cid]) actual[kind][cid] = {};
+        actual[kind][cid][mk] = (actual[kind][cid][mk]||0) + num(obj[cid]);
+      });
+    });
+  });
+
+  function duTruVal(kind, cid, mk){ return num(((state.data.duTru[kind]||{})[cid]||{})[mk]); }
+  function actualVal(kind, cid, mk){ return num((actual[kind][cid]||{})[mk]); }
+  function groupDuTru(kind, mk){ var s=0; state.data.categories[kind].forEach(function(c){ s+=duTruVal(kind,c.id,mk); }); return s; }
+  function groupActual(kind, mk){ var s=0; state.data.categories[kind].forEach(function(c){ s+=actualVal(kind,c.id,mk); }); return s; }
 
   var html = '<div class="year-nav">'
     + '<button data-act="prevYear" class="icon-btn">‹</button>'
@@ -663,47 +702,88 @@ function renderDongTien(){
     + '<button data-act="nextYear" class="icon-btn">›</button>'
     + '</div>';
 
-  html += '<div class="card"><div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:150px">Khoản mục</th>';
-  months.forEach(function(mk){ html += '<th class="dt-input">'+MONTH_NAMES[parseInt(mk.slice(5,7),10)-1]+'</th>'; });
-  html += '<th class="actions-col"></th></tr></thead><tbody>';
+  html += '<div class="card"><div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
+  months.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+'</th>'; });
+  html += '</tr></thead><tbody>';
 
-  GROUPS.forEach(function(g){
-    html += '<tr><td colspan="'+(months.length+2)+'" class="group-title">'+g.title+'</td></tr>';
-    itemsOf(g.nhom).forEach(function(it){
-      html += '<tr>';
-      html += '<td class="sticky-col"><input type="text" class="dt-name-input" data-act="itemName" data-id="'+it.id+'" value="'+(it.ten||'').replace(/"/g,'&quot;')+'"></td>';
+  DONGTIEN_GROUPS.forEach(function(g){
+    var cats = state.data.categories[g.kind];
+    html += '<tr><td colspan="'+(months.length+1)+'" class="group-title">'+g.title+'</td></tr>';
+    if (!cats.length){
+      html += '<tr><td colspan="'+(months.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</td></tr>';
+    }
+    cats.forEach(function(c){
+      html += '<tr class="dutru-row"><td class="sticky-col"><span class="cat-label">'+c.ten+' <span class="cat-tag">dự trù</span></span></td>';
       months.forEach(function(mk){
-        var v = it.values[mk];
-        html += '<td><input type="number" class="dt-input" data-act="itemValue" data-id="'+it.id+'" data-mk="'+mk+'" value="'+(v||'')+'" placeholder="0"></td>';
+        var v = duTruVal(g.kind, c.id, mk);
+        html += '<td><input type="number" class="dt-input" data-act="duTruValue" data-kind="'+g.kind+'" data-cat="'+c.id+'" data-mk="'+mk+'" value="'+(v||'')+'" placeholder="0"></td>';
       });
-      html += '<td class="actions-col"><button class="icon-btn" data-act="delItem" data-id="'+it.id+'">🗑</button></td>';
+      html += '</tr>';
+      html += '<tr class="thucte-row"><td class="sticky-col"><span class="cat-label">'+c.ten+' <span class="cat-tag locked">thực tế</span></span></td>';
+      months.forEach(function(mk){
+        var av = actualVal(g.kind, c.id, mk);
+        html += '<td class="dt-input">'+(av?fmt(av):'')+'</td>';
+      });
       html += '</tr>';
     });
-    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+'</td>';
-    months.forEach(function(mk){ html += '<td>'+fmt(groupTotal(g.nhom,mk))+'</td>'; });
-    html += '<td></td></tr>';
-    html += '<tr><td colspan="'+(months.length+2)+'" style="padding:4px 8px;border:none"><button class="btn secondary sm" data-act="addItem" data-nhom="'+g.nhom+'">+ Thêm khoản mục</button></td></tr>';
+    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+' (dự trù)</td>';
+    months.forEach(function(mk){ html += '<td>'+fmt(groupDuTru(g.kind,mk))+'</td>'; });
+    html += '</tr>';
+    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+' (thực tế)</td>';
+    months.forEach(function(mk){ html += '<td>'+fmt(groupActual(g.kind,mk))+'</td>'; });
+    html += '</tr>';
   });
 
   // cân đối + lũy kế
-  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng</td>';
-  var canDoiArr = [];
-  months.forEach(function(mk){
-    var cd = groupTotal('thu',mk) - groupTotal('sinhhoat',mk) - groupTotal('no',mk);
-    canDoiArr.push(cd);
-    html += '<td>'+fmt(cd)+'</td>';
-  });
-  html += '<td></td></tr>';
+  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng (dự trù)</td>';
+  months.forEach(function(mk){ html += '<td>'+fmt(groupDuTru('thu',mk) - groupDuTru('chi',mk))+'</td>'; });
+  html += '</tr>';
+
+  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng (thực tế)</td>';
+  months.forEach(function(mk){ html += '<td>'+fmt(groupActual('thu',mk) - groupActual('chi',mk))+'</td>'; });
+  html += '</tr>';
 
   html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
-  var running = num(state.data.settings.soDuDauKy);
-  months.forEach(function(cd,idx){
-    running += canDoiArr[idx];
-    html += '<td>'+fmt(running)+'</td>';
+  months.forEach(function(mk){
+    html += (mk < startMk) ? '<td>—</td>' : '<td>'+fmt(balanceAtEndOfMonth(mk))+'</td>';
   });
-  html += '<td></td></tr>';
+  html += '</tr>';
 
   html += '</tbody></table></div></div>';
+
+  // ---- Phân tích dòng tiền ----
+  html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
+    + '<div class="empty" style="padding:0 0 10px">TB thực tế/dự trù tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý dự trù tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử).</div>'
+    + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>TB thực tế/tháng</th><th>TB dự trù/tháng</th><th>Chênh lệch TB</th><th>Gợi ý dự trù tháng tới</th></tr></thead><tbody>';
+  ['thu','chi'].forEach(function(kind){
+    state.data.categories[kind].forEach(function(c){
+      var sumA=0, cntA=0, sumD=0, cntD=0;
+      months.forEach(function(mk){
+        var av = actualVal(kind,c.id,mk);
+        if (av){ sumA+=av; cntA++; }
+        var dv = duTruVal(kind,c.id,mk);
+        if (dv){ sumD+=dv; cntD++; }
+      });
+      var tbA = cntA ? sumA/cntA : null;
+      var tbD = cntD ? sumD/cntD : null;
+      var diff = (tbA!=null && tbD!=null) ? (tbA-tbD) : null;
+      var diffStyle = '';
+      if (diff!=null && diff!==0){
+        var bad = kind==='chi' ? diff>0 : diff<0;
+        diffStyle = ' style="color:'+(bad?'var(--red)':'var(--green)')+'"';
+      }
+      var goiY = recentAvgActual(kind, c.id, 3);
+      html += '<tr>'
+        + '<td style="text-align:left">'+c.ten+' <span class="cat-tag">'+(kind==='thu'?'thu':'chi')+'</span></td>'
+        + '<td>'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
+        + '<td>'+(tbD!=null?fmt(Math.round(tbD)):'—')+'</td>'
+        + '<td'+diffStyle+'>'+(diff!=null?fmt(Math.round(diff)):'—')+'</td>'
+        + '<td>'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
+        + '</tr>';
+    });
+  });
+  html += '</tbody></table></div></div>';
+
   root.innerHTML = html;
 }
 
@@ -767,12 +847,15 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
-  if (el.matches('[data-act=itemValue]')){
-    var it = state.data.planItems.find(function(x){ return x.id===el.getAttribute('data-id'); });
-    if (it){ it.values[el.getAttribute('data-mk')] = num(el.value); scheduleSave(); refreshTotalsOnly(); }
-  } else if (el.matches('[data-act=itemName]')){
-    var it2 = state.data.planItems.find(function(x){ return x.id===el.getAttribute('data-id'); });
-    if (it2){ it2.ten = el.value; scheduleSave(); }
+  if (el.matches('[data-act=duTruValue]')){
+    var kindDT = el.getAttribute('data-kind');
+    var cidDT = el.getAttribute('data-cat');
+    var mkDT = el.getAttribute('data-mk');
+    state.data.duTru[kindDT] = state.data.duTru[kindDT] || {};
+    state.data.duTru[kindDT][cidDT] = state.data.duTru[kindDT][cidDT] || {};
+    state.data.duTru[kindDT][cidDT][mkDT] = num(el.value);
+    scheduleSave();
+    refreshTotalsOnly();
   } else if (el.matches('[data-act=catName]')){
     var kindC = el.getAttribute('data-kind') || 'chi';
     var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
@@ -840,23 +923,6 @@ function handleAction(act, el){
   } else if (act === 'prevYear' || act === 'nextYear'){
     state.dongTienYear += (act==='nextYear'?1:-1);
     renderDongTien();
-  } else if (act === 'addItem'){
-    var nhom = el.getAttribute('data-nhom');
-    var existing = state.data.planItems.filter(function(x){return x.nhom===nhom;});
-    var maxOrd = existing.reduce(function(mx,x){return Math.max(mx,x.thuTu||0);},0);
-    var name = prompt('Tên khoản mục mới:');
-    if (name && name.trim()){
-      state.data.planItems.push({ id: slugify(name)+'_'+Date.now().toString(36), nhom: nhom, ten: name.trim(), ghiChu:'', thuTu: maxOrd+1, values:{} });
-      scheduleSave();
-      renderDongTien();
-    }
-  } else if (act === 'delItem'){
-    var id = el.getAttribute('data-id');
-    if (confirm('Xóa khoản mục này?')){
-      state.data.planItems = state.data.planItems.filter(function(x){return x.id!==id;});
-      scheduleSave();
-      renderDongTien();
-    }
   } else if (act === 'addCat'){
     var kind = el.getAttribute('data-kind') || 'chi';
     var name2 = prompt('Tên danh mục mới:');
