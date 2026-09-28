@@ -1,1 +1,796 @@
-<h1>Coming soon</h1>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sổ Chi Tiêu</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f7fb; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
+  --primary:#4f46e5; --primary-d:#4338ca; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+  --thu-bg:#ecfdf5; --chi-bg:#fef2f2; --shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 6px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+#app{max-width:1100px;margin:0 auto;padding:12px 14px 60px}
+header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:wrap}
+.brand{font-size:18px;font-weight:700;color:var(--primary-d);margin-right:auto}
+.sync-status{font-size:12px;color:var(--muted);white-space:nowrap}
+.sync-status.err{color:var(--red)}
+.sync-status.ok{color:var(--green)}
+button{cursor:pointer;font-family:inherit}
+#btnRefresh,#btnSignOut{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
+#btnRefresh:hover,#btnSignOut:hover{background:#f0f1f5}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--primary-d);border-bottom-color:var(--primary)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 12px;font-size:15px;color:var(--text)}
+.grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat .lbl{font-size:12px;color:var(--muted);margin-bottom:4px}
+.stat .val{font-size:17px;font-weight:700}
+.stat.thu .val{color:var(--green)}
+.stat.chi .val{color:var(--red)}
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.month-nav button{background:var(--card);border:1px solid var(--border);border-radius:8px;width:30px;height:30px}
+.month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+input[type=number],input[type=date],input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:#fff;color:var(--text)}
+.form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
+.cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px}
+.btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:#fff;background:var(--primary)}
+.btn:hover{background:var(--primary-d)}
+.btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.btn.secondary:hover{background:#f0f1f5}
+.btn.danger{background:#fff;color:var(--red);border:1px solid #fecaca}
+.btn.danger:hover{background:var(--chi-bg)}
+.btn.sm{padding:4px 10px;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+tr.total-row td{font-weight:700;background:#f6f7fb}
+tr.balance-row td{font-weight:700;background:#eef2ff;color:var(--primary-d)}
+.table-wrap{overflow-x:auto}
+.actions-col{width:70px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.charts-grid .full{grid-column:1/-1}
+@media (max-width:700px){.charts-grid{grid-template-columns:1fr}}
+.chart-box{position:relative;height:230px}
+.empty{color:var(--muted);font-size:13px;padding:10px 0}
+.dt-input{width:90px;text-align:right}
+.dt-name-input{width:140px}
+.group-title{font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--primary-d)}
+.group-title:first-child{margin-top:0}
+.icon-btn{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
+.icon-btn:hover{background:#f0f1f5;color:var(--red)}
+.banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.year-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.year-nav .lbl{font-weight:700;font-size:15px;min-width:60px;text-align:center}
+.sticky-col{position:sticky;left:0;background:#fff;z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.05)}
+tr.total-row .sticky-col{background:#f6f7fb}
+tr.balance-row .sticky-col{background:#eef2ff}
+.auth-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 26px;box-shadow:var(--shadow);max-width:320px;width:100%;text-align:center}
+.auth-card .auth-logo{font-size:36px;margin-bottom:6px}
+.auth-card h2{margin:0 0 8px;font-size:18px}
+.auth-card p{color:var(--muted);font-size:13px;margin:0 0 18px}
+.auth-card .btn{width:100%}
+.auth-msg{margin-top:12px;font-size:12px;color:var(--red);min-height:16px}
+</style>
+</head>
+<body>
+
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo">💰</div>
+    <h2>Sổ Chi Tiêu</h2>
+    <p>Đăng nhập Google để đồng bộ dữ liệu qua Google Drive.</p>
+    <button id="btnSignIn" class="btn">Đăng nhập với Google</button>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div class="brand">💰 Sổ Chi Tiêu</div>
+    <div class="sync-status" id="syncStatus">Đang tải dữ liệu…</div>
+    <button id="btnRefresh">⟳ Làm mới</button>
+    <button id="btnSignOut">Đăng xuất</button>
+  </header>
+  <div id="bannerZone"></div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="sotay">Sổ tay</button>
+    <button class="tab" data-tab="dongtien">Dòng tiền</button>
+    <button class="tab" data-tab="danhmuc">Danh mục</button>
+  </nav>
+  <main id="tabContent"><div class="empty">Đang tải…</div></main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------------- Google OAuth + Drive data layer ---------------- */
+var CLIENT_ID = '661285810864-b7pkfvt13fsnvu87g56e5f4qmoc74v22.apps.googleusercontent.com';
+var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+var DRIVE_FILE_TITLE = 'chitieu-canhan-data.json';
+var API_BASE = 'https://www.googleapis.com/drive/v3';
+var UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
+
+var tokenClient = null;
+var accessToken = null;
+
+var DEFAULT_DATA = {
+  settings: { soDuDauKy: 957000, ngayBatDau: "2026-09-25" },
+  journal: {},
+  planItems: [
+    { id: "luong", nhom: "thu", ten: "Lương", ghiChu: "", thuTu: 1, values: {} },
+    { id: "anuong", nhom: "sinhhoat", ten: "Ăn uống", ghiChu: "", thuTu: 1, values: {} },
+    { id: "xangxe", nhom: "sinhhoat", ten: "Xăng xe", ghiChu: "", thuTu: 2, values: {} },
+    { id: "tieuvat", nhom: "sinhhoat", ten: "Tiêu vặt/khác", ghiChu: "", thuTu: 3, values: {} },
+    { id: "trano", nhom: "no", ten: "Trả nợ", ghiChu: "", thuTu: 1, values: {} }
+  ],
+  categories: { chi: [
+    { id: "an", ten: "Ăn" },
+    { id: "xang", ten: "Xăng" },
+    { id: "tieu", ten: "Tiêu" },
+    { id: "traNo", ten: "Trả nợ" }
+  ]}
+};
+
+var state = {
+  data: null,
+  driveFileId: null,
+  dirty: false,
+  saving: false,
+  loading: true,
+  errorMsg: null,
+  lastSync: null,
+  tab: 'sotay',
+  soTayMonth: null,   // "YYYY-MM"
+  dongTienYear: null,
+  editingDate: null,
+};
+
+function initTokenClient(){
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: function(){}
+  });
+}
+
+function requestToken(interactive){
+  return new Promise(function(resolve, reject){
+    tokenClient.callback = function(resp){
+      if (resp && resp.error){ reject(resp); return; }
+      accessToken = resp.access_token;
+      resolve(accessToken);
+    };
+    tokenClient.error_callback = function(err){ reject(err); };
+    tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+  });
+}
+
+async function driveFetch(url, options, retried){
+  options = options || {};
+  var headers = Object.assign({}, options.headers, { 'Authorization': 'Bearer ' + accessToken });
+  var res = await fetch(url, Object.assign({}, options, { headers: headers }));
+  if (res.status === 401 && !retried){
+    await requestToken(false);
+    return driveFetch(url, options, true);
+  }
+  return res;
+}
+
+async function findFileId(){
+  var q = encodeURIComponent("name='" + DRIVE_FILE_TITLE + "' and trashed=false");
+  var url = API_BASE + '/files?q=' + q + '&fields=files(id,name,modifiedTime)&spaces=drive';
+  var res = await driveFetch(url);
+  if (!res.ok) throw new Error('search-failed:' + res.status);
+  var json = await res.json();
+  var files = json.files || [];
+  if (!files.length) return null;
+  files.sort(function(a,b){ return new Date(b.modifiedTime) - new Date(a.modifiedTime); });
+  return files[0].id;
+}
+
+async function driveLoad(){
+  try{
+    var fileId = await findFileId();
+    if (!fileId){
+      state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+      state.driveFileId = null;
+      state.errorMsg = null;
+      state.lastSync = new Date();
+      state.loading = false;
+      return;
+    }
+    var res = await driveFetch(API_BASE + '/files/' + fileId + '?alt=media');
+    if (!res.ok) throw new Error('download-failed:' + res.status);
+    var text = await res.text();
+    var parsed = JSON.parse(text);
+    state.data = normalizeData(parsed);
+    state.driveFileId = fileId;
+    state.errorMsg = null;
+    state.lastSync = new Date();
+  }catch(e){
+    if (!state.data){
+      state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+      state.errorMsg = 'Không tải được dữ liệu từ Google Drive — đang dùng dữ liệu mặc định. Bấm "Làm mới" để thử lại.';
+    } else {
+      state.errorMsg = 'Làm mới thất bại, vẫn giữ dữ liệu hiện tại trên máy.';
+    }
+  }
+  state.loading = false;
+}
+
+function normalizeData(d){
+  d.settings = d.settings || { soDuDauKy: 0, ngayBatDau: "2026-01-01" };
+  d.journal = d.journal || {};
+  d.planItems = d.planItems || [];
+  d.categories = d.categories || { chi: [] };
+  d.categories.chi = d.categories.chi || [];
+  return d;
+}
+
+var saveTimer = null;
+function scheduleSave(){
+  state.dirty = true;
+  renderSyncStatus();
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(driveSave, 1500);
+}
+
+async function driveSave(){
+  if (state.saving) { saveTimer = setTimeout(driveSave, 1500); return; }
+  state.saving = true;
+  renderSyncStatus();
+  try{
+    var text = JSON.stringify(state.data);
+    if (!state.driveFileId){
+      var createRes = await driveFetch(API_BASE + '/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: DRIVE_FILE_TITLE, mimeType: 'application/json' })
+      });
+      if (!createRes.ok) throw new Error('create-failed:' + createRes.status);
+      var created = await createRes.json();
+      state.driveFileId = created.id;
+    }
+    var upRes = await driveFetch(UPLOAD_BASE + '/files/' + state.driveFileId + '?uploadType=media', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: text
+    });
+    if (!upRes.ok) throw new Error('save-failed:' + upRes.status);
+    state.errorMsg = null;
+    state.lastSync = new Date();
+  }catch(e){
+    state.errorMsg = 'Lưu lên Google Drive thất bại. Sẽ thử lại.';
+    saveTimer = setTimeout(driveSave, 4000);
+  }
+  state.dirty = false;
+  state.saving = false;
+  renderSyncStatus();
+}
+
+function isTypingNow(){
+  var el = document.activeElement;
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+
+async function pollRefresh(){
+  if (!accessToken || state.dirty || state.saving || isTypingNow()) return;
+  await driveLoad();
+  renderAll();
+}
+
+/* ---------------- auth flow ---------------- */
+function showApp(){
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('app').style.display = '';
+}
+function showGate(msg){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('authGate').style.display = 'flex';
+  document.getElementById('authMsg').textContent = msg || '';
+}
+
+var polling = false;
+function startPolling(){
+  if (polling) return;
+  polling = true;
+  window.addEventListener('focus', pollRefresh);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) pollRefresh(); });
+  setInterval(pollRefresh, 35000);
+}
+
+async function signIn(){
+  if (!window.google || !google.accounts || !google.accounts.oauth2){
+    document.getElementById('authMsg').textContent = 'Đang tải Google Sign-In… thử lại sau 1-2 giây.';
+    return;
+  }
+  if (!tokenClient) initTokenClient();
+  document.getElementById('authMsg').textContent = 'Đang đăng nhập…';
+  try{
+    await requestToken(true);
+    showApp();
+    await driveLoad();
+    renderAll();
+    startPolling();
+  }catch(e){
+    showGate('Đăng nhập thất bại hoặc bị hủy. Thử lại.');
+  }
+}
+
+function signOut(){
+  if (accessToken && window.google && google.accounts && google.accounts.oauth2){
+    google.accounts.oauth2.revoke(accessToken, function(){});
+  }
+  accessToken = null;
+  state.data = null;
+  showGate('');
+}
+
+/* ---------------- helpers ---------------- */
+function fmt(n){ return (Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
+function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function pad2(n){ return n<10 ? '0'+n : ''+n; }
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+function monthLabel(mk){ var p=mk.split('-'); return 'Tháng ' + parseInt(p[1],10) + '/' + p[0]; }
+function slugify(s){
+  var out = s.toString().toLowerCase()
+    .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e')
+    .replace(/[ìíịỉĩ]/g,'i').replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o')
+    .replace(/[ùúụủũưừứựửữ]/g,'u').replace(/[ỳýỵỷỹ]/g,'y').replace(/đ/g,'d')
+    .replace(/[^a-z0-9]+/g,'');
+  return out || ('m' + Date.now());
+}
+
+function sortedJournalDates(){
+  return Object.keys(state.data.journal).sort();
+}
+function chiTotal(entry){
+  var s = 0;
+  var chi = entry.chi || {};
+  Object.keys(chi).forEach(function(k){ s += num(chi[k]); });
+  return s;
+}
+// balance at end of given date (inclusive), across full history
+function balanceAt(dateStr){
+  var bal = num(state.data.settings.soDuDauKy);
+  var dates = sortedJournalDates();
+  for (var i=0;i<dates.length;i++){
+    if (dates[i] > dateStr) break;
+    var e = state.data.journal[dates[i]];
+    bal += num(e.thu) - chiTotal(e);
+  }
+  return bal;
+}
+function balanceBeforeMonth(mk){
+  var firstDay = mk + '-01';
+  var bal = num(state.data.settings.soDuDauKy);
+  var dates = sortedJournalDates();
+  for (var i=0;i<dates.length;i++){
+    if (dates[i] >= firstDay) break;
+    var e = state.data.journal[dates[i]];
+    bal += num(e.thu) - chiTotal(e);
+  }
+  return bal;
+}
+
+/* ---------------- rendering ---------------- */
+var chartDonut=null, chartDay=null, chartMonth=null;
+
+function renderSyncStatus(){
+  var el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.classList.remove('err','ok');
+  if (state.saving){ el.textContent = 'Đang lưu…'; }
+  else if (state.dirty){ el.textContent = 'Có thay đổi chưa lưu…'; }
+  else if (state.errorMsg){ el.textContent = state.errorMsg; el.classList.add('err'); }
+  else if (state.lastSync){
+    el.textContent = 'Đã đồng bộ lúc ' + pad2(state.lastSync.getHours())+':'+pad2(state.lastSync.getMinutes());
+    el.classList.add('ok');
+  } else {
+    el.textContent = '';
+  }
+  var banner = document.getElementById('bannerZone');
+  if (banner){
+    banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+  }
+}
+
+function renderAll(){
+  renderSyncStatus();
+  if (state.tab === 'sotay') renderSoTay();
+  else if (state.tab === 'dongtien') renderDongTien();
+  else renderDanhMuc();
+}
+
+/* ---- Sổ tay ---- */
+function renderSoTay(){
+  var root = document.getElementById('tabContent');
+  if (!state.soTayMonth) state.soTayMonth = monthKey(todayStr());
+  var mk = state.soTayMonth;
+  var dates = sortedJournalDates();
+  var monthDates = dates.filter(function(d){ return monthKey(d) === mk; }).sort();
+
+  var tongThu = 0, tongChi = 0;
+  monthDates.forEach(function(d){
+    var e = state.data.journal[d];
+    tongThu += num(e.thu);
+    tongChi += chiTotal(e);
+  });
+  var duDauThang = balanceBeforeMonth(mk);
+  var duCuoiThang = duDauThang + tongThu - tongChi;
+
+  var cats = state.data.categories.chi;
+  var editEntry = state.editingDate ? (state.data.journal[state.editingDate] || {thu:0,chi:{},ghiChu:''}) : {thu:0,chi:{},ghiChu:''};
+  var editDate = state.editingDate || todayStr();
+
+  var html = '';
+  html += '<div class="grid-summary">'
+    + '<div class="stat"><div class="lbl">Số dư đầu tháng</div><div class="val">'+fmt(duDauThang)+'</div></div>'
+    + '<div class="stat thu"><div class="lbl">Tổng thu tháng</div><div class="val">'+fmt(tongThu)+'</div></div>'
+    + '<div class="stat chi"><div class="lbl">Tổng chi tháng</div><div class="val">'+fmt(tongChi)+'</div></div>'
+    + '<div class="stat"><div class="lbl">Số dư cuối tháng</div><div class="val">'+fmt(duCuoiThang)+'</div></div>'
+    + '</div>';
+
+  html += '<div class="month-nav">'
+    + '<button data-act="prevMonth">‹</button>'
+    + '<div class="lbl">'+monthLabel(mk)+'</div>'
+    + '<button data-act="nextMonth">›</button>'
+    + '</div>';
+
+  // Entry form
+  html += '<div class="card"><h3>'+(state.editingDate? 'Sửa ngày '+editDate : 'Thêm / cập nhật giao dịch')+'</h3>';
+  html += '<div class="form-row">';
+  html += '<div><label>Ngày</label><input type="date" id="f_date" value="'+editDate+'"></div>';
+  html += '<div><label>Tiền vào</label><input type="number" id="f_thu" value="'+(num(editEntry.thu)||'')+'" placeholder="0"></div>';
+  html += '</div>';
+  html += '<label style="margin-top:4px">Các khoản chi theo danh mục</label>';
+  html += '<div class="form-row">';
+  if (!cats.length){
+    html += '<div class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</div>';
+  }
+  cats.forEach(function(c){
+    var v = (editEntry.chi && editEntry.chi[c.id]) || '';
+    html += '<div><label>'+c.ten+'</label><input type="number" class="f_chi" data-cat="'+c.id+'" value="'+(v||'')+'" placeholder="0"></div>';
+  });
+  html += '</div>';
+  html += '<label>Nội dung</label><input type="text" id="f_ghichu" value="'+(editEntry.ghiChu||'').replace(/"/g,'&quot;')+'" placeholder="Ghi chú...">';
+  html += '<div style="margin-top:12px;display:flex;gap:8px">';
+  html += '<button class="btn" data-act="saveEntry">'+(state.editingDate?'Cập nhật':'Lưu')+'</button>';
+  if (state.editingDate) html += '<button class="btn secondary" data-act="cancelEdit">Hủy</button>';
+  html += '</div></div>';
+
+  // Table
+  html += '<div class="card"><h3>Chi tiết theo ngày</h3><div class="table-wrap">';
+  if (!monthDates.length){
+    html += '<div class="empty">Chưa có giao dịch trong tháng này.</div>';
+  } else {
+    html += '<table><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Số dư</th><th>Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
+    monthDates.forEach(function(d){
+      var e = state.data.journal[d];
+      html += '<tr>'
+        + '<td>'+d.slice(8,10)+'/'+d.slice(5,7)+'</td>'
+        + '<td style="color:var(--green)">'+(num(e.thu)?fmt(e.thu):'')+'</td>'
+        + '<td style="color:var(--red)">'+(chiTotal(e)?fmt(chiTotal(e)):'')+'</td>'
+        + '<td>'+fmt(balanceAt(d))+'</td>'
+        + '<td style="text-align:left;white-space:normal">'+(e.ghiChu||'')+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="editDay" data-date="'+d+'">✎</button><button class="icon-btn" data-act="delDay" data-date="'+d+'">🗑</button></td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  // Charts
+  html += '<div class="card"><h3>Biểu đồ chi tiêu</h3><div class="charts-grid">'
+    + '<div class="chart-box"><canvas id="chartDonut"></canvas></div>'
+    + '<div class="chart-box"><canvas id="chartDay"></canvas></div>'
+    + '<div class="chart-box full"><canvas id="chartMonth"></canvas></div>'
+    + '</div></div>';
+
+  root.innerHTML = html;
+  drawCharts(mk, monthDates, cats);
+}
+
+function drawCharts(mk, monthDates, cats){
+  // 1. donut chi theo danh mục
+  var byCat = {};
+  cats.forEach(function(c){ byCat[c.id] = 0; });
+  monthDates.forEach(function(d){
+    var e = state.data.journal[d];
+    Object.keys(e.chi||{}).forEach(function(cid){ byCat[cid] = (byCat[cid]||0) + num(e.chi[cid]); });
+  });
+  var labels1 = [], vals1 = [];
+  cats.forEach(function(c){ if (byCat[c.id] > 0){ labels1.push(c.ten); vals1.push(byCat[c.id]); } });
+  var palette = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+  if (chartDonut) chartDonut.destroy();
+  var ctx1 = document.getElementById('chartDonut');
+  if (ctx1){
+    chartDonut = new Chart(ctx1, { type:'doughnut',
+      data:{ labels: labels1.length?labels1:['Chưa có dữ liệu'], datasets:[{ data: vals1.length?vals1:[1], backgroundColor: vals1.length?palette:['#e5e7eb'] }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Chi theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
+    });
+  }
+
+  // 2. bar thu/chi theo ngày trong tháng
+  var days = [], thuArr = [], chiArr = [];
+  monthDates.forEach(function(d){
+    var e = state.data.journal[d];
+    days.push(d.slice(8,10));
+    thuArr.push(num(e.thu));
+    chiArr.push(chiTotal(e));
+  });
+  if (chartDay) chartDay.destroy();
+  var ctx2 = document.getElementById('chartDay');
+  if (ctx2){
+    chartDay = new Chart(ctx2, { type:'bar',
+      data:{ labels: days, datasets:[
+        { label:'Thu', data: thuArr, backgroundColor:'#16a34a' },
+        { label:'Chi', data: chiArr, backgroundColor:'#dc2626' }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu / Chi theo ngày'}, legend:{position:'bottom'} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
+    });
+  }
+
+  // 3. bar thu/chi theo tháng (cả năm của tháng đang xem)
+  var year = mk.slice(0,4);
+  var mLabels=[], mThu=[], mChi=[];
+  for (var m=1;m<=12;m++){
+    var key = year+'-'+pad2(m);
+    var t=0,c=0;
+    Object.keys(state.data.journal).forEach(function(d){
+      if (monthKey(d) === key){ var e=state.data.journal[d]; t+=num(e.thu); c+=chiTotal(e); }
+    });
+    mLabels.push(MONTH_NAMES[m-1]); mThu.push(t); mChi.push(c);
+  }
+  if (chartMonth) chartMonth.destroy();
+  var ctx3 = document.getElementById('chartMonth');
+  if (ctx3){
+    chartMonth = new Chart(ctx3, { type:'bar',
+      data:{ labels:mLabels, datasets:[
+        { label:'Thu', data:mThu, backgroundColor:'#16a34a' },
+        { label:'Chi', data:mChi, backgroundColor:'#dc2626' }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu / Chi theo tháng — '+year}, legend:{position:'bottom'} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
+    });
+  }
+}
+
+/* ---- Dòng tiền ---- */
+var GROUPS = [
+  { nhom:'thu', title:'Thu nhập' },
+  { nhom:'sinhhoat', title:'Chi sinh hoạt' },
+  { nhom:'no', title:'Trả nợ' }
+];
+
+function renderDongTien(){
+  var root = document.getElementById('tabContent');
+  if (!state.dongTienYear) state.dongTienYear = parseInt((state.data.settings.ngayBatDau||todayStr()).slice(0,4),10);
+  var year = state.dongTienYear;
+  var months = [];
+  for (var m=1;m<=12;m++) months.push(year+'-'+pad2(m));
+
+  function itemsOf(nhom){
+    return state.data.planItems.filter(function(it){ return it.nhom===nhom; }).sort(function(a,b){ return (a.thuTu||0)-(b.thuTu||0); });
+  }
+  function groupTotal(nhom, mk){
+    var s=0; itemsOf(nhom).forEach(function(it){ s += num(it.values[mk]); }); return s;
+  }
+
+  var html = '<div class="year-nav">'
+    + '<button data-act="prevYear" class="icon-btn">‹</button>'
+    + '<div class="lbl">'+year+'</div>'
+    + '<button data-act="nextYear" class="icon-btn">›</button>'
+    + '</div>';
+
+  html += '<div class="card"><div class="table-wrap"><table><thead><tr><th class="sticky-col" style="min-width:150px">Khoản mục</th>';
+  months.forEach(function(mk){ html += '<th class="dt-input">'+MONTH_NAMES[parseInt(mk.slice(5,7),10)-1]+'</th>'; });
+  html += '<th class="actions-col"></th></tr></thead><tbody>';
+
+  GROUPS.forEach(function(g){
+    html += '<tr><td colspan="'+(months.length+2)+'" class="group-title">'+g.title+'</td></tr>';
+    itemsOf(g.nhom).forEach(function(it){
+      html += '<tr>';
+      html += '<td class="sticky-col"><input type="text" class="dt-name-input" data-act="itemName" data-id="'+it.id+'" value="'+(it.ten||'').replace(/"/g,'&quot;')+'"></td>';
+      months.forEach(function(mk){
+        var v = it.values[mk];
+        html += '<td><input type="number" class="dt-input" data-act="itemValue" data-id="'+it.id+'" data-mk="'+mk+'" value="'+(v||'')+'" placeholder="0"></td>';
+      });
+      html += '<td class="actions-col"><button class="icon-btn" data-act="delItem" data-id="'+it.id+'">🗑</button></td>';
+      html += '</tr>';
+    });
+    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+'</td>';
+    months.forEach(function(mk){ html += '<td>'+fmt(groupTotal(g.nhom,mk))+'</td>'; });
+    html += '<td></td></tr>';
+    html += '<tr><td colspan="'+(months.length+2)+'" style="padding:4px 8px;border:none"><button class="btn secondary sm" data-act="addItem" data-nhom="'+g.nhom+'">+ Thêm khoản mục</button></td></tr>';
+  });
+
+  // cân đối + lũy kế
+  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng</td>';
+  var canDoiArr = [];
+  months.forEach(function(mk){
+    var cd = groupTotal('thu',mk) - groupTotal('sinhhoat',mk) - groupTotal('no',mk);
+    canDoiArr.push(cd);
+    html += '<td>'+fmt(cd)+'</td>';
+  });
+  html += '<td></td></tr>';
+
+  html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
+  var running = num(state.data.settings.soDuDauKy);
+  months.forEach(function(cd,idx){
+    running += canDoiArr[idx];
+    html += '<td>'+fmt(running)+'</td>';
+  });
+  html += '<td></td></tr>';
+
+  html += '</tbody></table></div></div>';
+  root.innerHTML = html;
+}
+
+/* ---- Danh mục ---- */
+function renderDanhMuc(){
+  var root = document.getElementById('tabContent');
+  var cats = state.data.categories.chi;
+  var html = '<div class="card"><h3>Danh mục khoản chi</h3>';
+  if (!cats.length){
+    html += '<div class="empty">Chưa có danh mục nào.</div>';
+  } else {
+    html += '<div class="cat-list">';
+    cats.forEach(function(c){
+      html += '<div style="display:flex;gap:4px;align-items:center">'
+        + '<input type="text" data-act="catName" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'">'
+        + '<button class="icon-btn" data-act="delCat" data-id="'+c.id+'">🗑</button>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '<button class="btn sm" data-act="addCat">+ Thêm danh mục</button>';
+  html += '</div>';
+  html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
+    + '<div class="form-row">'
+    + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
+    + '<div><label>Số dư</label><input type="number" id="cfg_du" value="'+(state.data.settings.soDuDauKy||0)+'"></div>'
+    + '</div><button class="btn sm" data-act="saveSettings">Lưu</button></div>';
+  root.innerHTML = html;
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest('[data-act]');
+  if (t){
+    var act = t.getAttribute('data-act');
+    handleAction(act, t, ev);
+    return;
+  }
+  var tabBtn = ev.target.closest('.tab');
+  if (tabBtn){
+    state.tab = tabBtn.getAttribute('data-tab');
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b===tabBtn); });
+    renderAll();
+  }
+});
+
+document.getElementById('btnSignIn').addEventListener('click', signIn);
+document.getElementById('btnSignOut').addEventListener('click', signOut);
+
+document.getElementById('btnRefresh').addEventListener('click', async function(){
+  state.errorMsg = null;
+  await driveLoad();
+  renderAll();
+});
+
+document.addEventListener('change', function(ev){
+  var el = ev.target;
+  if (el.matches('[data-act=itemValue]')){
+    var it = state.data.planItems.find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (it){ it.values[el.getAttribute('data-mk')] = num(el.value); scheduleSave(); refreshTotalsOnly(); }
+  } else if (el.matches('[data-act=itemName]')){
+    var it2 = state.data.planItems.find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (it2){ it2.ten = el.value; scheduleSave(); }
+  } else if (el.matches('[data-act=catName]')){
+    var c = state.data.categories.chi.find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (c){ c.ten = el.value; scheduleSave(); }
+  }
+});
+
+function refreshTotalsOnly(){
+  if (state.tab === 'dongtien') renderDongTien();
+}
+
+function handleAction(act, el){
+  if (act === 'prevMonth' || act === 'nextMonth'){
+    var p = state.soTayMonth.split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10);
+    m += (act==='nextMonth'?1:-1);
+    if (m<1){m=12;y--;} if (m>12){m=1;y++;}
+    state.soTayMonth = y+'-'+pad2(m);
+    renderSoTay();
+  } else if (act === 'saveEntry'){
+    var date = document.getElementById('f_date').value || todayStr();
+    var thu = num(document.getElementById('f_thu').value);
+    var ghiChu = document.getElementById('f_ghichu').value;
+    var chi = {};
+    document.querySelectorAll('.f_chi').forEach(function(inp){
+      var v = num(inp.value);
+      if (v) chi[inp.getAttribute('data-cat')] = v;
+    });
+    state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+    state.editingDate = null;
+    scheduleSave();
+    renderSoTay();
+  } else if (act === 'cancelEdit'){
+    state.editingDate = null;
+    renderSoTay();
+  } else if (act === 'editDay'){
+    state.editingDate = el.getAttribute('data-date');
+    renderSoTay();
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else if (act === 'delDay'){
+    var d = el.getAttribute('data-date');
+    if (confirm('Xóa giao dịch ngày '+d+'?')){
+      delete state.data.journal[d];
+      scheduleSave();
+      renderSoTay();
+    }
+  } else if (act === 'prevYear' || act === 'nextYear'){
+    state.dongTienYear += (act==='nextYear'?1:-1);
+    renderDongTien();
+  } else if (act === 'addItem'){
+    var nhom = el.getAttribute('data-nhom');
+    var existing = state.data.planItems.filter(function(x){return x.nhom===nhom;});
+    var maxOrd = existing.reduce(function(mx,x){return Math.max(mx,x.thuTu||0);},0);
+    var name = prompt('Tên khoản mục mới:');
+    if (name && name.trim()){
+      state.data.planItems.push({ id: slugify(name)+'_'+Date.now().toString(36), nhom: nhom, ten: name.trim(), ghiChu:'', thuTu: maxOrd+1, values:{} });
+      scheduleSave();
+      renderDongTien();
+    }
+  } else if (act === 'delItem'){
+    var id = el.getAttribute('data-id');
+    if (confirm('Xóa khoản mục này?')){
+      state.data.planItems = state.data.planItems.filter(function(x){return x.id!==id;});
+      scheduleSave();
+      renderDongTien();
+    }
+  } else if (act === 'addCat'){
+    var name2 = prompt('Tên danh mục mới:');
+    if (name2 && name2.trim()){
+      state.data.categories.chi.push({ id: slugify(name2)+'_'+Date.now().toString(36), ten: name2.trim() });
+      scheduleSave();
+      renderDanhMuc();
+    }
+  } else if (act === 'delCat'){
+    var cid = el.getAttribute('data-id');
+    if (confirm('Xóa danh mục này? (giao dịch cũ vẫn giữ nguyên số liệu)')){
+      state.data.categories.chi = state.data.categories.chi.filter(function(x){return x.id!==cid;});
+      scheduleSave();
+      renderDanhMuc();
+    }
+  } else if (act === 'saveSettings'){
+    state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
+    state.data.settings.soDuDauKy = num(document.getElementById('cfg_du').value);
+    scheduleSave();
+    renderDanhMuc();
+    alert('Đã lưu.');
+  }
+}
+
+/* ---------------- init ---------------- */
+showGate('');
+
+})();
+</script>
+</body>
+</html>
