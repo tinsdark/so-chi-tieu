@@ -726,7 +726,19 @@ function handleAction(act, el){
       var v = num(inp.value);
       if (v) chi[inp.getAttribute('data-cat')] = v;
     });
-    state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+    if (state.editingDate){
+      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+    } else if (state.data.journal[date]){
+      var existing = state.data.journal[date];
+      existing.thu = num(existing.thu) + thu;
+      existing.chi = existing.chi || {};
+      Object.keys(chi).forEach(function(cid){
+        existing.chi[cid] = num(existing.chi[cid]) + chi[cid];
+      });
+      if (ghiChu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChu) : ghiChu;
+    } else {
+      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+    }
     state.editingDate = null;
     scheduleSave();
     renderSoTay();
