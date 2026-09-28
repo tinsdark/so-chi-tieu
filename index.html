@@ -8,7 +8,7 @@
 :root{
   color-scheme: light;
   --bg:#f6f7fb; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
-  --primary:#4f46e5; --primary-d:#4338ca; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+  --primary:#4f46e5; --primary-d:#4338ca; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gold:#b8860b;
   --thu-bg:#ecfdf5; --chi-bg:#fef2f2; --shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 6px rgba(0,0,0,.04);
 }
 *{box-sizing:border-box}
@@ -33,6 +33,7 @@ button{cursor:pointer;font-family:inherit}
 .stat .val{font-size:17px;font-weight:700}
 .stat.thu .val{color:var(--green)}
 .stat.chi .val{color:var(--red)}
+.stat.gold .val{color:var(--gold)}
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;position:sticky;top:calc(var(--header-h,52px) + var(--tabs-h,45px));background:var(--bg);z-index:18;padding-top:4px}
 .month-nav button{background:var(--card);border:1px solid var(--border);border-radius:8px;width:30px;height:30px}
 .month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
@@ -138,7 +139,9 @@ var DEFAULT_DATA = {
     { id: "tieuvat", nhom: "sinhhoat", ten: "Tiêu vặt/khác", ghiChu: "", thuTu: 3, values: {} },
     { id: "trano", nhom: "no", ten: "Trả nợ", ghiChu: "", thuTu: 1, values: {} }
   ],
-  categories: { chi: [
+  categories: { thu: [
+    { id: "luong", ten: "Lương" }
+  ], chi: [
     { id: "an", ten: "Ăn" },
     { id: "xang", ten: "Xăng" },
     { id: "tieu", ten: "Tiêu" },
@@ -237,9 +240,30 @@ function normalizeData(d){
   d.settings = d.settings || { soDuDauKy: 0, ngayBatDau: "2026-01-01" };
   d.journal = d.journal || {};
   d.planItems = d.planItems || [];
-  d.categories = d.categories || { chi: [] };
+  d.categories = d.categories || { thu: [], chi: [] };
+  d.categories.thu = d.categories.thu || [];
   d.categories.chi = d.categories.chi || [];
+  // migrate dữ liệu cũ: thu là số đơn -> chuyển thành object theo danh mục (giữ nguyên tổng)
+  Object.keys(d.journal).forEach(function(date){
+    var e = d.journal[date];
+    if (!e.thu || typeof e.thu !== 'object'){
+      var oldVal = num(e.thu);
+      e.thu = oldVal ? { _khac: oldVal } : {};
+    }
+    e.chi = e.chi || {};
+  });
   return d;
+}
+
+function thuTotal(entry){
+  var s = 0;
+  var thu = entry.thu;
+  if (thu && typeof thu === 'object'){
+    Object.keys(thu).forEach(function(k){ s += num(thu[k]); });
+  } else {
+    s = num(thu);
+  }
+  return s;
 }
 
 var saveTimer = null;
@@ -374,7 +398,7 @@ function balanceAt(dateStr){
   for (var i=0;i<dates.length;i++){
     if (dates[i] > dateStr) break;
     var e = state.data.journal[dates[i]];
-    bal += num(e.thu) - chiTotal(e);
+    bal += thuTotal(e) - chiTotal(e);
   }
   return bal;
 }
@@ -385,7 +409,7 @@ function balanceBeforeMonth(mk){
   for (var i=0;i<dates.length;i++){
     if (dates[i] >= firstDay) break;
     var e = state.data.journal[dates[i]];
-    bal += num(e.thu) - chiTotal(e);
+    bal += thuTotal(e) - chiTotal(e);
   }
   return bal;
 }
@@ -439,14 +463,15 @@ function renderSoTay(){
   var tongThu = 0, tongChi = 0;
   monthDates.forEach(function(d){
     var e = state.data.journal[d];
-    tongThu += num(e.thu);
+    tongThu += thuTotal(e);
     tongChi += chiTotal(e);
   });
   var duDauThang = balanceBeforeMonth(mk);
   var duCuoiThang = duDauThang + tongThu - tongChi;
 
+  var thuCats = state.data.categories.thu;
   var cats = state.data.categories.chi;
-  var editEntry = state.editingDate ? (state.data.journal[state.editingDate] || {thu:0,chi:{},ghiChu:''}) : {thu:0,chi:{},ghiChu:''};
+  var editEntry = state.editingDate ? (state.data.journal[state.editingDate] || {thu:{},chi:{},ghiChu:''}) : {thu:{},chi:{},ghiChu:''};
   var editDate = state.editingDate || todayStr();
 
   var html = '';
@@ -454,7 +479,7 @@ function renderSoTay(){
     + '<div class="stat"><div class="lbl">Số dư đầu tháng</div><div class="val">'+fmt(duDauThang)+'</div></div>'
     + '<div class="stat thu"><div class="lbl">Tổng thu tháng</div><div class="val">'+fmt(tongThu)+'</div></div>'
     + '<div class="stat chi"><div class="lbl">Tổng chi tháng</div><div class="val">'+fmt(tongChi)+'</div></div>'
-    + '<div class="stat"><div class="lbl">Số dư cuối tháng</div><div class="val">'+fmt(duCuoiThang)+'</div></div>'
+    + '<div class="stat gold"><div class="lbl">Số dư cuối tháng</div><div class="val">'+fmt(duCuoiThang)+'</div></div>'
     + '</div>';
 
   html += '<div class="month-nav">'
@@ -467,12 +492,21 @@ function renderSoTay(){
   html += '<div class="card"><h3>'+(state.editingDate? 'Sửa ngày '+editDate : 'Thêm / cập nhật giao dịch')+'</h3>';
   html += '<div class="form-row">';
   html += '<div><label>Ngày</label><input type="date" id="f_date" value="'+editDate+'"></div>';
-  html += '<div><label>Tiền vào</label><input type="number" id="f_thu" value="'+(num(editEntry.thu)||'')+'" placeholder="0"></div>';
+  html += '</div>';
+  html += '<label style="margin-top:4px">Các khoản thu theo danh mục</label>';
+  html += '<div class="form-row">';
+  if (!thuCats.length){
+    html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
+  }
+  thuCats.forEach(function(c){
+    var vt = (editEntry.thu && editEntry.thu[c.id]) || '';
+    html += '<div><label>'+c.ten+'</label><input type="number" class="f_thu" data-cat="'+c.id+'" value="'+(vt||'')+'" placeholder="0"></div>';
+  });
   html += '</div>';
   html += '<label style="margin-top:4px">Các khoản chi theo danh mục</label>';
   html += '<div class="form-row">';
   if (!cats.length){
-    html += '<div class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</div>';
+    html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
   }
   cats.forEach(function(c){
     var v = (editEntry.chi && editEntry.chi[c.id]) || '';
@@ -491,11 +525,12 @@ function renderSoTay(){
     html += '<div class="empty">Chưa có giao dịch trong tháng này.</div>';
   } else {
     html += '<table><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Số dư</th><th>Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
-    monthDates.forEach(function(d){
+    var tableDates = monthDates.slice().reverse();
+    tableDates.forEach(function(d){
       var e = state.data.journal[d];
       html += '<tr>'
         + '<td>'+d.slice(8,10)+'/'+d.slice(5,7)+'</td>'
-        + '<td style="color:var(--green)">'+(num(e.thu)?fmt(e.thu):'')+'</td>'
+        + '<td style="color:var(--green)">'+(thuTotal(e)?fmt(thuTotal(e)):'')+'</td>'
         + '<td style="color:var(--red)">'+(chiTotal(e)?fmt(chiTotal(e)):'')+'</td>'
         + '<td>'+fmt(balanceAt(d))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+(e.ghiChu||'')+'</td>'
@@ -542,7 +577,7 @@ function drawCharts(mk, monthDates, cats){
   monthDates.forEach(function(d){
     var e = state.data.journal[d];
     days.push(d.slice(8,10));
-    thuArr.push(num(e.thu));
+    thuArr.push(thuTotal(e));
     chiArr.push(chiTotal(e));
   });
   if (chartDay) chartDay.destroy();
@@ -564,7 +599,7 @@ function drawCharts(mk, monthDates, cats){
     var key = year+'-'+pad2(m);
     var t=0,c=0;
     Object.keys(state.data.journal).forEach(function(d){
-      if (monthKey(d) === key){ var e=state.data.journal[d]; t+=num(e.thu); c+=chiTotal(e); }
+      if (monthKey(d) === key){ var e=state.data.journal[d]; t+=thuTotal(e); c+=chiTotal(e); }
     });
     mLabels.push(MONTH_NAMES[m-1]); mThu.push(t); mChi.push(c);
   }
@@ -653,24 +688,30 @@ function renderDongTien(){
 }
 
 /* ---- Danh mục ---- */
-function renderDanhMuc(){
-  var root = document.getElementById('tabContent');
-  var cats = state.data.categories.chi;
-  var html = '<div class="card"><h3>Danh mục khoản chi</h3>';
+function categoryCardHtml(kind, title, cats){
+  var html = '<div class="card"><h3>'+title+'</h3>';
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục nào.</div>';
   } else {
     html += '<div class="cat-list">';
     cats.forEach(function(c){
       html += '<div style="display:flex;gap:4px;align-items:center">'
-        + '<input type="text" data-act="catName" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'">'
-        + '<button class="icon-btn" data-act="delCat" data-id="'+c.id+'">🗑</button>'
+        + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'">'
+        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
         + '</div>';
     });
     html += '</div>';
   }
-  html += '<button class="btn sm" data-act="addCat">+ Thêm danh mục</button>';
+  html += '<button class="btn sm" data-act="addCat" data-kind="'+kind+'">+ Thêm danh mục</button>';
   html += '</div>';
+  return html;
+}
+
+function renderDanhMuc(){
+  var root = document.getElementById('tabContent');
+  var html = '';
+  html += categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu);
+  html += categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi);
   html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
@@ -713,7 +754,8 @@ document.addEventListener('change', function(ev){
     var it2 = state.data.planItems.find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (it2){ it2.ten = el.value; scheduleSave(); }
   } else if (el.matches('[data-act=catName]')){
-    var c = state.data.categories.chi.find(function(x){ return x.id===el.getAttribute('data-id'); });
+    var kindC = el.getAttribute('data-kind') || 'chi';
+    var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (c){ c.ten = el.value; scheduleSave(); }
   }
 });
@@ -731,8 +773,12 @@ function handleAction(act, el){
     renderSoTay();
   } else if (act === 'saveEntry'){
     var date = document.getElementById('f_date').value || todayStr();
-    var thu = num(document.getElementById('f_thu').value);
     var ghiChu = document.getElementById('f_ghichu').value;
+    var thu = {};
+    document.querySelectorAll('.f_thu').forEach(function(inp){
+      var v = num(inp.value);
+      if (v) thu[inp.getAttribute('data-cat')] = v;
+    });
     var chi = {};
     document.querySelectorAll('.f_chi').forEach(function(inp){
       var v = num(inp.value);
@@ -742,7 +788,10 @@ function handleAction(act, el){
       state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
     } else if (state.data.journal[date]){
       var existing = state.data.journal[date];
-      existing.thu = num(existing.thu) + thu;
+      existing.thu = (existing.thu && typeof existing.thu === 'object') ? existing.thu : {};
+      Object.keys(thu).forEach(function(cid){
+        existing.thu[cid] = num(existing.thu[cid]) + thu[cid];
+      });
       existing.chi = existing.chi || {};
       Object.keys(chi).forEach(function(cid){
         existing.chi[cid] = num(existing.chi[cid]) + chi[cid];
@@ -789,16 +838,18 @@ function handleAction(act, el){
       renderDongTien();
     }
   } else if (act === 'addCat'){
+    var kind = el.getAttribute('data-kind') || 'chi';
     var name2 = prompt('Tên danh mục mới:');
     if (name2 && name2.trim()){
-      state.data.categories.chi.push({ id: slugify(name2)+'_'+Date.now().toString(36), ten: name2.trim() });
+      state.data.categories[kind].push({ id: slugify(name2)+'_'+Date.now().toString(36), ten: name2.trim() });
       scheduleSave();
       renderDanhMuc();
     }
   } else if (act === 'delCat'){
+    var kind2 = el.getAttribute('data-kind') || 'chi';
     var cid = el.getAttribute('data-id');
     if (confirm('Xóa danh mục này? (giao dịch cũ vẫn giữ nguyên số liệu)')){
-      state.data.categories.chi = state.data.categories.chi.filter(function(x){return x.id!==cid;});
+      state.data.categories[kind2] = state.data.categories[kind2].filter(function(x){return x.id!==cid;});
       scheduleSave();
       renderDanhMuc();
     }
