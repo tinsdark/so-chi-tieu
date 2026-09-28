@@ -415,7 +415,7 @@ function balanceBeforeMonth(mk){
 }
 
 /* ---------------- rendering ---------------- */
-var chartDonut=null, chartDay=null, chartMonth=null;
+var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null;
 
 function renderSyncStatus(){
   var el = document.getElementById('syncStatus');
@@ -544,6 +544,7 @@ function renderSoTay(){
   // Charts
   html += '<div class="card"><h3>Biểu đồ chi tiêu</h3><div class="charts-grid">'
     + '<div class="chart-box"><canvas id="chartDonut"></canvas></div>'
+    + '<div class="chart-box"><canvas id="chartDonutThu"></canvas></div>'
     + '<div class="chart-box"><canvas id="chartDay"></canvas></div>'
     + '<div class="chart-box full"><canvas id="chartMonth"></canvas></div>'
     + '</div></div>';
@@ -569,6 +570,25 @@ function drawCharts(mk, monthDates, cats){
     chartDonut = new Chart(ctx1, { type:'doughnut',
       data:{ labels: labels1.length?labels1:['Chưa có dữ liệu'], datasets:[{ data: vals1.length?vals1:[1], backgroundColor: vals1.length?palette:['#e5e7eb'] }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Chi theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
+    });
+  }
+
+  // 1b. donut thu theo danh mục
+  var catsThu = state.data.categories.thu;
+  var byCatThu = {};
+  catsThu.forEach(function(c){ byCatThu[c.id] = 0; });
+  monthDates.forEach(function(d){
+    var e = state.data.journal[d];
+    Object.keys(e.thu||{}).forEach(function(cid){ byCatThu[cid] = (byCatThu[cid]||0) + num(e.thu[cid]); });
+  });
+  var labels1b = [], vals1b = [];
+  catsThu.forEach(function(c){ if (byCatThu[c.id] > 0){ labels1b.push(c.ten); vals1b.push(byCatThu[c.id]); } });
+  if (chartDonutThu) chartDonutThu.destroy();
+  var ctx1b = document.getElementById('chartDonutThu');
+  if (ctx1b){
+    chartDonutThu = new Chart(ctx1b, { type:'doughnut',
+      data:{ labels: labels1b.length?labels1b:['Chưa có dữ liệu'], datasets:[{ data: vals1b.length?vals1b:[1], backgroundColor: vals1b.length?palette:['#e5e7eb'] }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
     });
   }
 
