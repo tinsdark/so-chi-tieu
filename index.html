@@ -37,6 +37,7 @@ button{cursor:pointer;font-family:inherit}
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;position:sticky;top:calc(var(--header-h,52px) + var(--tabs-h,45px));background:var(--bg);z-index:18;padding-top:4px}
 .month-nav button{background:var(--card);border:1px solid var(--border);border-radius:8px;width:30px;height:30px}
 .month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
+.month-nav select{font-weight:700;font-size:15px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:#fff;color:var(--text);text-align:center;text-align-last:center}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
 input[type=number],input[type=date],input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:#fff;color:var(--text)}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
@@ -376,6 +377,14 @@ function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMont
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
 function monthLabel(mk){ var p=mk.split('-'); return 'Tháng ' + parseInt(p[1],10) + '/' + p[0]; }
+// danh sách các tháng có giao dịch + tháng đang xem + tháng hiện tại, mới nhất trước
+function soTayMonthList(){
+  var set = {};
+  sortedJournalDates().forEach(function(d){ set[monthKey(d)] = true; });
+  set[state.soTayMonth] = true;
+  set[monthKey(todayStr())] = true;
+  return Object.keys(set).sort().reverse();
+}
 function slugify(s){
   var out = s.toString().toLowerCase()
     .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e')
@@ -515,9 +524,12 @@ function renderSoTay(){
     + '<div class="stat gold"><div class="lbl">Số dư cuối tháng</div><div class="val">'+fmt(duCuoiThang)+'</div></div>'
     + '</div>';
 
+  var monthOpts = soTayMonthList().map(function(m){
+    return '<option value="'+m+'"'+(m===mk?' selected':'')+'>'+monthLabel(m)+'</option>';
+  }).join('');
   html += '<div class="month-nav">'
     + '<button data-act="prevMonth">‹</button>'
-    + '<div class="lbl">'+monthLabel(mk)+'</div>'
+    + '<select data-act="jumpMonth">'+monthOpts+'</select>'
     + '<button data-act="nextMonth">›</button>'
     + '</div>';
 
@@ -886,7 +898,10 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
-  if (el.matches('[data-act=catName]')){
+  if (el.matches('[data-act=jumpMonth]')){
+    state.soTayMonth = el.value;
+    renderSoTay();
+  } else if (el.matches('[data-act=catName]')){
     var kindC = el.getAttribute('data-kind') || 'chi';
     var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (c){ c.ten = el.value; scheduleSave(); }
