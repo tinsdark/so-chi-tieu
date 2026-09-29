@@ -40,7 +40,7 @@ button{cursor:pointer;font-family:inherit}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
 input[type=number],input[type=date],input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:#fff;color:var(--text)}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
-.cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px}
+.cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:10px}
 .btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:#fff;background:var(--primary)}
 .btn:hover{background:var(--primary-d)}
 .btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
@@ -66,13 +66,9 @@ tr.balance-row td{font-weight:700;background:#eef2ff;color:var(--primary-d)}
 .empty{color:var(--muted);font-size:13px;padding:10px 0}
 .dt-input{width:150px;text-align:right}
 .th-month{text-align:center}
-.dutru-row td{color:var(--muted)}
-.dutru-row input{color:var(--muted)}
-.thucte-row td{font-weight:600}
-.thucte-row .dt-input{color:var(--text)}
+.dt-suggest{font-style:italic;color:var(--muted)}
 .cat-label{display:flex;align-items:center;gap:6px}
 .cat-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:#f0f1f5;color:var(--muted)}
-.cat-tag.locked{background:#eef2ff;color:var(--primary-d)}
 .group-title{font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--primary-d)}
 .group-title:first-child{margin-top:0}
 .icon-btn{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
@@ -140,12 +136,12 @@ var DEFAULT_DATA = {
   settings: { soDuDauKy: 957000, ngayBatDau: "2026-09-25" },
   journal: {},
   categories: { thu: [
-    { id: "luong", ten: "Lương" }
+    { id: "luong", ten: "Lương", chiTieu: 0 }
   ], chi: [
-    { id: "an", ten: "Ăn" },
-    { id: "xang", ten: "Xăng" },
-    { id: "tieu", ten: "Tiêu" },
-    { id: "traNo", ten: "Trả nợ" }
+    { id: "an", ten: "Ăn", chiTieu: 0 },
+    { id: "xang", ten: "Xăng", chiTieu: 0 },
+    { id: "tieu", ten: "Tiêu", chiTieu: 0 },
+    { id: "traNo", ten: "Trả nợ", chiTieu: 0 }
   ]},
   duTru: { thu: {}, chi: {} }
 };
@@ -244,6 +240,8 @@ function normalizeData(d){
   d.categories = d.categories || { thu: [], chi: [] };
   d.categories.thu = d.categories.thu || [];
   d.categories.chi = d.categories.chi || [];
+  d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; });
+  d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; });
   d.duTru = d.duTru || { thu: {}, chi: {} };
   d.duTru.thu = d.duTru.thu || {};
   d.duTru.chi = d.duTru.chi || {};
@@ -672,6 +670,7 @@ function renderDongTien(){
   var months = [];
   for (var m=1;m<=12;m++) months.push(year+'-'+pad2(m));
   var startMk = (state.data.settings.ngayBatDau||todayStr()).slice(0,7);
+  var currentMk = monthKey(todayStr());
 
   // thực tế = tổng theo danh mục/tháng lấy thẳng từ Sổ tay (chỉ năm đang xem)
   var actual = { thu:{}, chi:{} };
@@ -691,10 +690,27 @@ function renderDongTien(){
     });
   });
 
-  function duTruVal(kind, cid, mk){ return num(((state.data.duTru[kind]||{})[cid]||{})[mk]); }
   function actualVal(kind, cid, mk){ return num((actual[kind][cid]||{})[mk]); }
-  function groupDuTru(kind, mk){ var s=0; state.data.categories[kind].forEach(function(c){ s+=duTruVal(kind,c.id,mk); }); return s; }
-  function groupActual(kind, mk){ var s=0; state.data.categories[kind].forEach(function(c){ s+=actualVal(kind,c.id,mk); }); return s; }
+  function baseVal(kind, cid){
+    var cat = state.data.categories[kind].find(function(c){ return c.id===cid; });
+    return cat ? num(cat.chiTieu) : 0;
+  }
+  // gợi ý = TB thực tế 3 tháng gần nhất có phát sinh (toàn bộ lịch sử); nếu chưa có dữ liệu thì lấy chỉ tiêu
+  function suggestVal(kind, cid){
+    var avg = recentAvgActual(kind, cid, 3);
+    if (avg != null) return avg;
+    var b = baseVal(kind, cid);
+    return b > 0 ? b : null;
+  }
+  // giá trị hiển thị cho 1 ô: tháng đã qua/hiện tại -> thực tế, tháng tương lai -> gợi ý
+  function cellVal(kind, cid, mk){
+    return (mk > currentMk) ? suggestVal(kind, cid) : actualVal(kind, cid, mk);
+  }
+  function groupCell(kind, mk){
+    var s = 0;
+    state.data.categories[kind].forEach(function(c){ s += (cellVal(kind, c.id, mk) || 0); });
+    return s;
+  }
 
   var html = '<div class="year-nav">'
     + '<button data-act="prevYear" class="icon-btn">‹</button>'
@@ -703,7 +719,7 @@ function renderDongTien(){
     + '</div>';
 
   html += '<div class="card"><div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
-  months.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+'</th>'; });
+  months.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+(mk>currentMk?' *':'')+'</th>'; });
   html += '</tr></thead><tbody>';
 
   DONGTIEN_GROUPS.forEach(function(g){
@@ -713,34 +729,32 @@ function renderDongTien(){
       html += '<tr><td colspan="'+(months.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</td></tr>';
     }
     cats.forEach(function(c){
-      html += '<tr class="dutru-row"><td class="sticky-col"><span class="cat-label">'+c.ten+' <span class="cat-tag">dự trù</span></span></td>';
+      var base = baseVal(g.kind, c.id);
+      var tagHtml = base>0 ? ' <span class="cat-tag" title="Chỉ tiêu/tháng">'+fmt(base)+'</span>' : '';
+      html += '<tr><td class="sticky-col"><span class="cat-label">'+c.ten+tagHtml+'</span></td>';
       months.forEach(function(mk){
-        var v = duTruVal(g.kind, c.id, mk);
-        html += '<td><input type="number" class="dt-input" data-act="duTruValue" data-kind="'+g.kind+'" data-cat="'+c.id+'" data-mk="'+mk+'" value="'+(v||'')+'" placeholder="0"></td>';
-      });
-      html += '</tr>';
-      html += '<tr class="thucte-row"><td class="sticky-col"><span class="cat-label">'+c.ten+' <span class="cat-tag locked">thực tế</span></span></td>';
-      months.forEach(function(mk){
-        var av = actualVal(g.kind, c.id, mk);
-        html += '<td class="dt-input">'+(av?fmt(av):'')+'</td>';
+        var future = mk > currentMk;
+        var val = cellVal(g.kind, c.id, mk);
+        var showNum = future ? (val != null) : (!!val);
+        var text = showNum ? fmt(Math.round(val)) : (future ? '—' : '');
+        var cls = 'dt-input' + (future ? ' dt-suggest' : '');
+        var style = '';
+        if (showNum && base > 0){
+          var bad = g.kind === 'chi' ? (val > base) : (val < base);
+          style = ' style="color:'+(bad?'var(--red)':'var(--green)')+'"';
+        }
+        html += '<td class="'+cls+'"'+style+'>'+text+'</td>';
       });
       html += '</tr>';
     });
-    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+' (dự trù)</td>';
-    months.forEach(function(mk){ html += '<td>'+fmt(groupDuTru(g.kind,mk))+'</td>'; });
-    html += '</tr>';
-    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+' (thực tế)</td>';
-    months.forEach(function(mk){ html += '<td>'+fmt(groupActual(g.kind,mk))+'</td>'; });
+    html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+'</td>';
+    months.forEach(function(mk){ html += '<td>'+fmt(groupCell(g.kind,mk))+'</td>'; });
     html += '</tr>';
   });
 
   // cân đối + lũy kế
-  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng (dự trù)</td>';
-  months.forEach(function(mk){ html += '<td>'+fmt(groupDuTru('thu',mk) - groupDuTru('chi',mk))+'</td>'; });
-  html += '</tr>';
-
-  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng (thực tế)</td>';
-  months.forEach(function(mk){ html += '<td>'+fmt(groupActual('thu',mk) - groupActual('chi',mk))+'</td>'; });
+  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng</td>';
+  months.forEach(function(mk){ html += '<td>'+fmt(groupCell('thu',mk) - groupCell('chi',mk))+'</td>'; });
   html += '</tr>';
 
   html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
@@ -750,33 +764,32 @@ function renderDongTien(){
   html += '</tr>';
 
   html += '</tbody></table></div></div>';
+  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu).</div>';
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
-    + '<div class="empty" style="padding:0 0 10px">TB thực tế/dự trù tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý dự trù tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử).</div>'
-    + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>TB thực tế/tháng</th><th>TB dự trù/tháng</th><th>Chênh lệch TB</th><th>Gợi ý dự trù tháng tới</th></tr></thead><tbody>';
+    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục. TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử); nếu chưa có dữ liệu thì lấy theo chỉ tiêu.</div>'
+    + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   ['thu','chi'].forEach(function(kind){
     state.data.categories[kind].forEach(function(c){
-      var sumA=0, cntA=0, sumD=0, cntD=0;
+      var sumA=0, cntA=0;
       months.forEach(function(mk){
         var av = actualVal(kind,c.id,mk);
         if (av){ sumA+=av; cntA++; }
-        var dv = duTruVal(kind,c.id,mk);
-        if (dv){ sumD+=dv; cntD++; }
       });
       var tbA = cntA ? sumA/cntA : null;
-      var tbD = cntD ? sumD/cntD : null;
-      var diff = (tbA!=null && tbD!=null) ? (tbA-tbD) : null;
+      var base = baseVal(kind, c.id);
+      var diff = (tbA!=null && base>0) ? (tbA-base) : null;
       var diffStyle = '';
       if (diff!=null && diff!==0){
         var bad = kind==='chi' ? diff>0 : diff<0;
         diffStyle = ' style="color:'+(bad?'var(--red)':'var(--green)')+'"';
       }
-      var goiY = recentAvgActual(kind, c.id, 3);
+      var goiY = suggestVal(kind, c.id);
       html += '<tr>'
         + '<td style="text-align:left">'+c.ten+' <span class="cat-tag">'+(kind==='thu'?'thu':'chi')+'</span></td>'
+        + '<td>'+(base>0?fmt(base):'—')+'</td>'
         + '<td>'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
-        + '<td>'+(tbD!=null?fmt(Math.round(tbD)):'—')+'</td>'
         + '<td'+diffStyle+'>'+(diff!=null?fmt(Math.round(diff)):'—')+'</td>'
         + '<td>'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
         + '</tr>';
@@ -796,7 +809,8 @@ function categoryCardHtml(kind, title, cats){
     html += '<div class="cat-list">';
     cats.forEach(function(c){
       html += '<div style="display:flex;gap:4px;align-items:center">'
-        + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'">'
+        + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1">'
+        + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="width:120px" title="Chỉ tiêu/tháng">'
         + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
         + '</div>';
     });
@@ -847,25 +861,16 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
-  if (el.matches('[data-act=duTruValue]')){
-    var kindDT = el.getAttribute('data-kind');
-    var cidDT = el.getAttribute('data-cat');
-    var mkDT = el.getAttribute('data-mk');
-    state.data.duTru[kindDT] = state.data.duTru[kindDT] || {};
-    state.data.duTru[kindDT][cidDT] = state.data.duTru[kindDT][cidDT] || {};
-    state.data.duTru[kindDT][cidDT][mkDT] = num(el.value);
-    scheduleSave();
-    refreshTotalsOnly();
-  } else if (el.matches('[data-act=catName]')){
+  if (el.matches('[data-act=catName]')){
     var kindC = el.getAttribute('data-kind') || 'chi';
     var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (c){ c.ten = el.value; scheduleSave(); }
+  } else if (el.matches('[data-act=catBase]')){
+    var kindB = el.getAttribute('data-kind') || 'chi';
+    var cB = state.data.categories[kindB].find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (cB){ cB.chiTieu = num(el.value); scheduleSave(); }
   }
 });
-
-function refreshTotalsOnly(){
-  if (state.tab === 'dongtien') renderDongTien();
-}
 
 function handleAction(act, el){
   if (act === 'prevMonth' || act === 'nextMonth'){
