@@ -117,6 +117,7 @@ tr.balance-row .sticky-col{background:#eef2ff}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){
@@ -422,6 +423,30 @@ function balanceAtEndOfMonth(mk){
   return balanceBeforeMonth(y + '-' + pad2(m));
 }
 
+// xuất toàn bộ Sổ tay ra file Excel (dùng để backup thủ công)
+function exportExcel(){
+  var thuCats = state.data.categories.thu;
+  var chiCats = state.data.categories.chi;
+  var dates = sortedJournalDates();
+  var header = ['Ngày'];
+  thuCats.forEach(function(c){ header.push('Thu: '+c.ten); });
+  chiCats.forEach(function(c){ header.push('Chi: '+c.ten); });
+  header.push('Tổng thu','Tổng chi','Số dư cuối ngày','Ghi chú');
+  var rows = [header];
+  dates.forEach(function(d){
+    var e = state.data.journal[d];
+    var row = [d];
+    thuCats.forEach(function(c){ row.push(num((e.thu||{})[c.id]) || ''); });
+    chiCats.forEach(function(c){ row.push(num((e.chi||{})[c.id]) || ''); });
+    row.push(thuTotal(e), chiTotal(e), balanceAt(d), e.ghiChu||'');
+    rows.push(row);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'So tay');
+  XLSX.writeFile(wb, 'so-chi-tieu_' + todayStr() + '.xlsx');
+}
+
 /* ---------------- rendering ---------------- */
 var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null;
 
@@ -528,7 +553,7 @@ function renderSoTay(){
   html += '</div></div>';
 
   // Table
-  html += '<div class="card"><h3>Chi tiết theo ngày</h3><div class="table-wrap">';
+  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <button class="btn secondary sm" data-act="exportExcel">⬇ Xuất Excel</button></h3><div class="table-wrap">';
   if (!monthDates.length){
     html += '<div class="empty">Chưa có giao dịch trong tháng này.</div>';
   } else {
@@ -925,6 +950,8 @@ function handleAction(act, el){
       scheduleSave();
       renderSoTay();
     }
+  } else if (act === 'exportExcel'){
+    exportExcel();
   } else if (act === 'prevYear' || act === 'nextYear'){
     state.dongTienYear += (act==='nextYear'?1:-1);
     renderDongTien();
