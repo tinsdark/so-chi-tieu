@@ -245,8 +245,8 @@ function normalizeData(d){
   d.categories = d.categories || { thu: [], chi: [] };
   d.categories.thu = d.categories.thu || [];
   d.categories.chi = d.categories.chi || [];
-  d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; });
-  d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; });
+  d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; });
+  d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; });
   d.duTru = d.duTru || { thu: {}, chi: {} };
   d.duTru.thu = d.duTru.thu || {};
   d.duTru.chi = d.duTru.chi || {};
@@ -562,7 +562,17 @@ function renderSoTay(){
   }
   thuCats.forEach(function(c){
     var vt = (editEntry.thu && editEntry.thu[c.id]) || '';
-    html += '<div><label>'+c.ten+'</label><input type="number" class="f_thu" data-cat="'+c.id+'" value="'+(vt||'')+'" placeholder="0"></div>';
+    html += '<div><label>'+c.ten+'</label><input type="number" class="f_thu" data-cat="'+c.id+'" value="'+(vt||'')+'" placeholder="0">';
+    if (c.id === 'thuHoiChoVay' && !state.editingDate){
+      var pendingCV = (state.data.vayNo.choVay||[]).filter(function(l){ return l.trangThai !== 'da_thu_du' && conLaiPhaiThu(l) > 0.01; });
+      if (pendingCV.length){
+        html += '<select id="sotay_selChoVay" data-act="soTayChonChoVay" style="margin-top:4px;width:100%;font-size:12px">'
+          + '<option value="">— chọn khoản cho vay (tùy chọn) —</option>'
+          + pendingCV.map(function(l){ return '<option value="'+l.id+'">'+l.ten+' (còn '+fmt(conLaiPhaiThu(l))+')</option>'; }).join('')
+          + '</select>';
+      }
+    }
+    html += '</div>';
   });
   html += '</div>';
   html += '<label style="margin-top:4px">Các khoản chi theo danh mục</label>';
@@ -572,7 +582,20 @@ function renderSoTay(){
   }
   cats.forEach(function(c){
     var v = (editEntry.chi && editEntry.chi[c.id]) || '';
-    html += '<div><label>'+c.ten+'</label><input type="number" class="f_chi" data-cat="'+c.id+'" value="'+(v||'')+'" placeholder="0"></div>';
+    html += '<div><label>'+c.ten+'</label><input type="number" class="f_chi" data-cat="'+c.id+'" value="'+(v||'')+'" placeholder="0">';
+    if (c.id === 'traNo' && !state.editingDate){
+      var activeVN = (state.data.vayNo.vayNoPhaiTra||[]).filter(loanIsActive);
+      if (activeVN.length){
+        html += '<select id="sotay_selVayNo" data-act="soTayChonVayNo" style="margin-top:4px;width:100%;font-size:12px">'
+          + '<option value="">— chọn khoản vay (tùy chọn) —</option>'
+          + activeVN.map(function(l){
+              var td = tienDoTraNo(l);
+              return '<option value="'+l.id+'">'+l.ten+' ('+td.daTraKy+'/'+td.tongKy+' kỳ)</option>';
+            }).join('')
+          + '</select>';
+      }
+    }
+    html += '</div>';
   });
   html += '</div>';
   html += '<label>Nội dung</label><input type="text" id="f_ghichu" value="'+(editEntry.ghiChu||'').replace(/"/g,'&quot;')+'" placeholder="Ghi chú...">';
@@ -757,6 +780,18 @@ function thangDuKienHetNo(loan){
   var sch = tinhLichTraNo(loan);
   return sch.length ? sch[sch.length-1].mk : null;
 }
+// tiến độ trả nợ: tổng số kỳ, số kỳ đã trả (dựa theo daTraGoc thực tế), kỳ tiếp theo chưa trả (hoặc null nếu đã hết)
+function tienDoTraNo(loan){
+  var sch = tinhLichTraNo(loan);
+  var daTra = num(loan.daTraGoc);
+  var cum = 0, daTraKy = 0, kyTiepTheo = null;
+  for (var i=0;i<sch.length;i++){
+    cum += sch[i].goc;
+    if (cum <= daTra + 0.01) daTraKy++;
+    else if (!kyTiepTheo) kyTiepTheo = sch[i];
+  }
+  return { tongKy: sch.length, daTraKy: daTraKy, kyTiepTheo: kyTiepTheo };
+}
 function tongTraNoThang(mk){
   var s = 0;
   (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(loan){
@@ -841,8 +876,11 @@ function renderDongTien(){
     return cat ? num(cat.chiTieu) : 0;
   }
   // gợi ý: riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch trả của module Vay-Nợ (không dùng TB 3 tháng nữa);
+  // danh mục đánh dấu "Không dự trù" (khongDuTru) thì không đoán gì cả — luôn để trống ở tháng tương lai;
   // các danh mục khác vẫn TB thực tế 3 tháng gần nhất có phát sinh, nếu chưa có dữ liệu thì lấy chỉ tiêu
   function suggestVal(kind, cid, mk){
+    var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
+    if (cat0 && cat0.khongDuTru) return null;
     if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || null;
     if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || null;
     var avg = recentAvgActual(kind, cid, 3);
@@ -962,6 +1000,8 @@ function actualCatMonthAll(kind, mk){
   return s;
 }
 function duTruDanhMucThang(kind, cid, mk){
+  var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
+  if (cat0 && cat0.khongDuTru) return 0;
   if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
   if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
   var avg = recentAvgActual(kind, cid, 3);
@@ -997,7 +1037,7 @@ function choVayFormHtml(){
 
 function vayNoFormHtml(){
   var editing = state.vnFormId ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; }) : null;
-  var d = editing || { ten:'', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:'', ngayVay: todayStr(), soThangVay:'', ngayDaoHan:'', laiSuatNam:'' };
+  var d = editing || { ten:'', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:'', ngayVay: todayStr(), soThangVay:'', ngayDaoHan:'', laiSuatNam:'', daTraGoc:'' };
   var loaiOpts = Object.keys(LOAI_VAY_LABEL).map(function(k){ return '<option value="'+k+'"'+(d.loaiVay===k?' selected':'')+'>'+LOAI_VAY_LABEL[k]+'</option>'; }).join('');
   var hinhOpts = Object.keys(HINH_THUC_LABEL).map(function(k){ return '<option value="'+k+'"'+(d.hinhThuc===k?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('');
   return '<div class="form-row" style="margin-top:10px">'
@@ -1009,6 +1049,7 @@ function vayNoFormHtml(){
     + '<div><label>Kỳ hạn (số tháng)</label><input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="Bỏ trống nếu trả 1 lần"></div>'
     + '<div><label>Ngày đáo hạn (nếu trả 1 lần)</label><input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'"></div>'
     + '<div><label>Lãi suất %/năm</label><input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="Chỉ cần nếu có lãi suất"></div>'
+    + '<div><label>Đã trả gốc (nếu có, trước khi nhập vào đây)</label><input type="number" id="vn_vn_daTraGoc" value="'+(d.daTraGoc||'')+'" placeholder="0"></div>'
     + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
     + '<button class="btn sm" data-act="vnSaveVayNo">Lưu</button>'
     + '<button class="btn secondary sm" data-act="vnCancelForm">Hủy</button></div>';
@@ -1016,14 +1057,11 @@ function vayNoFormHtml(){
 
 function vayNoScheduleHtml(loan){
   var sch = tinhLichTraNo(loan);
-  var daTra = num(loan.daTraGoc);
-  var cum = 0, nextIdx = -1;
+  var tienDo = tienDoTraNo(loan);
   var rows = sch.map(function(row, idx){
-    cum += row.goc;
-    var paid = cum <= daTra + 0.01;
-    if (!paid && nextIdx === -1) nextIdx = idx;
-    return { row: row, paid: paid };
+    return { row: row, paid: idx < tienDo.daTraKy };
   });
+  var nextIdx = tienDo.daTraKy;
   var html = '<div class="table-wrap" style="margin:8px 0"><table><thead><tr><th>Tháng</th><th>Gốc</th><th>Lãi</th><th>Tổng trả</th><th>Dư nợ còn lại</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r, idx){
     html += '<tr'+(r.paid?' style="color:var(--muted)"':'')+'>'
@@ -1075,15 +1113,18 @@ function renderVayNo(){
   if (!vayNoPhaiTra.length){
     html += '<div class="empty">Chưa có khoản vay nào.</div>';
   } else {
-    html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Loại vay</th><th>Hình thức</th><th>Dư nợ còn lại</th><th>Dự kiến hết nợ</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
+    html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Loại vay</th><th>Hình thức</th><th>Đã trả</th><th>Dư nợ còn lại</th><th>Số tiền trả kỳ tới</th><th>Dự kiến hết nợ</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
     vayNoPhaiTra.forEach(function(v){
       var duNo = duNoConLaiThucTe(v);
       var hetNoMk = thangDuKienHetNo(v);
+      var tienDo = tienDoTraNo(v);
       html += '<tr>'
         + '<td style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+v.ten+'</a></td>'
         + '<td>'+LOAI_VAY_LABEL[v.loaiVay]+'</td>'
         + '<td>'+HINH_THUC_LABEL[v.hinhThuc]+'</td>'
+        + '<td>'+tienDo.daTraKy+'/'+tienDo.tongKy+' kỳ</td>'
         + '<td>'+fmt(duNo)+'</td>'
+        + '<td>'+(tienDo.kyTiepTheo ? fmt(Math.round(tienDo.kyTiepTheo.tongTra))+' ('+monthLabel(tienDo.kyTiepTheo.mk)+')' : '—')+'</td>'
         + '<td>'+(hetNoMk?monthLabel(hetNoMk):'—')+'</td>'
         + '<td>'+(v.trangThai==='da_tra_het'?'Đã trả hết':'Đang vay')+'</td>'
         + '<td class="actions-col">'
@@ -1091,7 +1132,7 @@ function renderVayNo(){
         + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'">🗑</button>'
         + '</td></tr>';
       if (state.vnDetailId === v.id){
-        html += '<tr><td colspan="7">'+vayNoScheduleHtml(v)+'</td></tr>';
+        html += '<tr><td colspan="9">'+vayNoScheduleHtml(v)+'</td></tr>';
       }
     });
     html += '</tbody></table></div>';
@@ -1149,6 +1190,8 @@ function categoryCardHtml(kind, title, cats){
       html += '<div style="display:flex;gap:4px;align-items:center">'
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1">'
         + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="width:120px" title="Chỉ tiêu/tháng">'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
+        + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
         + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
         + '</div>';
     });
@@ -1218,6 +1261,27 @@ document.addEventListener('change', function(ev){
     var kindB = el.getAttribute('data-kind') || 'chi';
     var cB = state.data.categories[kindB].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (cB){ cB.chiTieu = num(el.value); scheduleSave(); }
+  } else if (el.matches('[data-act=catNoForecast]')){
+    var kindN = el.getAttribute('data-kind') || 'chi';
+    var cN = state.data.categories[kindN].find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (cN){ cN.khongDuTru = el.checked; scheduleSave(); }
+  } else if (el.matches('[data-act=soTayChonChoVay]')){
+    var cvId = el.value;
+    var inpThu = document.querySelector('.f_thu[data-cat=thuHoiChoVay]');
+    if (cvId && inpThu){
+      var cvSel = state.data.vayNo.choVay.find(function(x){ return x.id===cvId; });
+      if (cvSel) inpThu.value = Math.round(conLaiPhaiThu(cvSel));
+    }
+  } else if (el.matches('[data-act=soTayChonVayNo]')){
+    var vnId = el.value;
+    var inpChi = document.querySelector('.f_chi[data-cat=traNo]');
+    if (vnId && inpChi){
+      var vnSel = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===vnId; });
+      if (vnSel){
+        var tdSel = tienDoTraNo(vnSel);
+        if (tdSel.kyTiepTheo) inpChi.value = Math.round(tdSel.kyTiepTheo.tongTra);
+      }
+    }
   }
 });
 
@@ -1231,6 +1295,11 @@ function handleAction(act, el){
   } else if (act === 'saveEntry'){
     var date = document.getElementById('f_date').value || todayStr();
     var ghiChu = document.getElementById('f_ghichu').value;
+    var wasEditing = !!state.editingDate;
+    var selCV = document.getElementById('sotay_selChoVay');
+    var selVN = document.getElementById('sotay_selVayNo');
+    var cvIdSel = (!wasEditing && selCV) ? selCV.value : '';
+    var vnIdSel = (!wasEditing && selVN) ? selVN.value : '';
     var thu = {};
     document.querySelectorAll('.f_thu').forEach(function(inp){
       var v = num(inp.value);
@@ -1256,6 +1325,23 @@ function handleAction(act, el){
       if (ghiChu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChu) : ghiChu;
     } else {
       state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+    }
+    if (cvIdSel && thu['thuHoiChoVay']){
+      var cvApply = state.data.vayNo.choVay.find(function(x){ return x.id===cvIdSel; });
+      if (cvApply){
+        cvApply.daThu = num(cvApply.daThu) + thu['thuHoiChoVay'];
+        if (cvApply.daThu >= cvApply.soTien - 0.01) cvApply.trangThai = 'da_thu_du';
+      }
+    }
+    if (vnIdSel){
+      var vnApply = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===vnIdSel; });
+      if (vnApply){
+        var tdApply = tienDoTraNo(vnApply);
+        if (tdApply.kyTiepTheo){
+          vnApply.daTraGoc = num(vnApply.daTraGoc) + tdApply.kyTiepTheo.goc;
+          if (vnApply.daTraGoc >= vnApply.soTienGoc - 0.01) vnApply.trangThai = 'da_tra_het';
+        }
+      }
     }
     state.editingDate = null;
     scheduleSave();
@@ -1356,7 +1442,8 @@ function handleAction(act, el){
       ngayVay: document.getElementById('vn_vn_ngay').value || todayStr(),
       soThangVay: num(document.getElementById('vn_vn_soThang').value),
       ngayDaoHan: document.getElementById('vn_vn_daoHan').value || '',
-      laiSuatNam: num(document.getElementById('vn_vn_laiSuat').value)
+      laiSuatNam: num(document.getElementById('vn_vn_laiSuat').value),
+      daTraGoc: num(document.getElementById('vn_vn_daTraGoc').value)
     };
     if (hinh === 'tra_1_lan' && !objVN.ngayDaoHan && !objVN.soThangVay){
       alert('Nhập ngày đáo hạn hoặc kỳ hạn (số tháng) cho khoản vay trả 1 lần.'); return;
@@ -1364,13 +1451,13 @@ function handleAction(act, el){
     if (hinh !== 'tra_1_lan' && !objVN.soThangVay){
       alert('Nhập kỳ hạn (số tháng) trả.'); return;
     }
+    if (objVN.daTraGoc >= objVN.soTienGoc && objVN.soTienGoc > 0) objVN.trangThai = 'da_tra_het';
     if (state.vnFormId){
       var oldVN = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; });
       Object.assign(oldVN, objVN);
     } else {
       objVN.id = 'vn_' + slugify(tenVN) + '_' + Date.now().toString(36);
-      objVN.daTraGoc = 0;
-      objVN.trangThai = 'dang_vay';
+      objVN.trangThai = objVN.trangThai || 'dang_vay';
       state.data.vayNo.vayNoPhaiTra.push(objVN);
     }
     state.vnFormKind = null; state.vnFormId = null;
