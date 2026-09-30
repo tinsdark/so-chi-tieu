@@ -397,16 +397,23 @@ function slugify(s){
 function sortedJournalDates(){
   return Object.keys(state.data.journal).sort();
 }
+// các ngày được tính vào số dư: từ ngayBatDau (mốc khóa sổ) trở đi. Data trước mốc này
+// vẫn còn nguyên trong journal (xem được ở Sổ tay, xuất Excel được) nhưng không cộng vào số dư nữa.
+function balanceDates(){
+  var start = state.data.settings.ngayBatDau || '';
+  var dates = sortedJournalDates();
+  return start ? dates.filter(function(d){ return d >= start; }) : dates;
+}
 function chiTotal(entry){
   var s = 0;
   var chi = entry.chi || {};
   Object.keys(chi).forEach(function(k){ s += num(chi[k]); });
   return s;
 }
-// balance at end of given date (inclusive), across full history
+// balance at end of given date (inclusive), chỉ tính các phát sinh từ ngayBatDau trở đi
 function balanceAt(dateStr){
   var bal = num(state.data.settings.soDuDauKy);
-  var dates = sortedJournalDates();
+  var dates = balanceDates();
   for (var i=0;i<dates.length;i++){
     if (dates[i] > dateStr) break;
     var e = state.data.journal[dates[i]];
@@ -417,7 +424,7 @@ function balanceAt(dateStr){
 function balanceBeforeMonth(mk){
   var firstDay = mk + '-01';
   var bal = num(state.data.settings.soDuDauKy);
-  var dates = sortedJournalDates();
+  var dates = balanceDates();
   for (var i=0;i<dates.length;i++){
     if (dates[i] >= firstDay) break;
     var e = state.data.journal[dates[i]];
