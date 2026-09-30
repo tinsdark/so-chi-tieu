@@ -711,10 +711,22 @@ function renderDongTien(){
   var root = document.getElementById('tabContent');
   if (!state.dongTienYear) state.dongTienYear = parseInt((state.data.settings.ngayBatDau||todayStr()).slice(0,4),10);
   var year = state.dongTienYear;
-  var months = [];
-  for (var m=1;m<=12;m++) months.push(year+'-'+pad2(m));
   var startMk = (state.data.settings.ngayBatDau||todayStr()).slice(0,7);
   var currentMk = monthKey(todayStr());
+  // chỉ hiển thị các tháng từ mốc khóa sổ (ngayBatDau) trở đi — tháng trước đó không theo dõi Dòng tiền nữa
+  var months = [];
+  for (var m=1;m<=12;m++){
+    var mk0 = year+'-'+pad2(m);
+    if (mk0 >= startMk) months.push(mk0);
+  }
+  if (!months.length){
+    root.innerHTML = '<div class="year-nav">'
+      + '<button data-act="prevYear" class="icon-btn">‹</button>'
+      + '<div class="lbl">'+year+'</div>'
+      + '<button data-act="nextYear" class="icon-btn">›</button>'
+      + '</div><div class="card"><div class="empty">Năm '+year+' không có tháng nào từ mốc khóa sổ ('+startMk+'). Bấm › để xem năm khác.</div></div>';
+    return;
+  }
 
   // thực tế = tổng theo danh mục/tháng lấy thẳng từ Sổ tay (chỉ năm đang xem)
   var actual = { thu:{}, chi:{} };
@@ -875,6 +887,11 @@ function renderDanhMuc(){
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
     + '<div><label>Số dư</label><input type="number" id="cfg_du" value="'+(state.data.settings.soDuDauKy||0)+'"></div>'
     + '</div><button class="btn sm" data-act="saveSettings">Lưu</button></div>';
+  html += '<div class="card"><h3>Khóa sổ</h3>'
+    + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
+    + '<div class="form-row">'
+    + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
+    + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ Tháng...</button></div>';
   root.innerHTML = html;
 }
 
@@ -999,6 +1016,19 @@ function handleAction(act, el){
     scheduleSave();
     renderDanhMuc();
     alert('Đã lưu.');
+  } else if (act === 'lockMonth'){
+    var mk3 = document.getElementById('cfg_khoa').value;
+    if (!mk3){ alert('Chọn tháng cần khóa sổ.'); return; }
+    var newBal = balanceAtEndOfMonth(mk3);
+    var p3 = mk3.split('-'); var ny = parseInt(p3[0],10), nm = parseInt(p3[1],10) + 1;
+    if (nm > 12){ nm = 1; ny++; }
+    var newStart = ny + '-' + pad2(nm) + '-01';
+    if (!confirm('Khóa sổ đến hết '+monthLabel(mk3)+'?\nSố dư đầu kỳ mới: '+fmt(newBal)+'\nNgày bắt đầu mới: '+newStart+'\n\nDữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư/Dòng tiền nữa.')) return;
+    state.data.settings.ngayBatDau = newStart;
+    state.data.settings.soDuDauKy = newBal;
+    scheduleSave();
+    renderDanhMuc();
+    alert('Đã khóa sổ đến hết '+monthLabel(mk3)+'.');
   }
 }
 
