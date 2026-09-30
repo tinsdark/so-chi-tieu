@@ -54,8 +54,11 @@ function renderSoTay(){
     tongThu += thuTotal(e);
     tongChi += chiTotal(e);
   });
-  var duDauThang = balanceBeforeMonth(mk);
-  var duCuoiThang = duDauThang + tongThu - tongChi;
+  // tháng hoàn toàn trước mốc khóa sổ (ngayBatDau) thì không còn tính vào số dư nữa -> hiện "—"
+  var startMk = (state.data.settings.ngayBatDau || '').slice(0,7);
+  var beforeLock = startMk && mk < startMk;
+  var duDauThang = beforeLock ? null : balanceBeforeMonth(mk);
+  var duCuoiThang = beforeLock ? null : (duDauThang + tongThu - tongChi);
 
   var thuCats = state.data.categories.thu;
   var cats = state.data.categories.chi;
@@ -64,11 +67,14 @@ function renderSoTay(){
 
   var html = '';
   html += '<div class="grid-summary">'
-    + '<div class="stat"><div class="lbl">Số dư đầu tháng</div><div class="val">'+fmt(duDauThang)+'</div></div>'
+    + '<div class="stat"><div class="lbl">Số dư đầu tháng</div><div class="val">'+(beforeLock?'—':fmt(duDauThang))+'</div></div>'
     + '<div class="stat thu"><div class="lbl">Tổng thu tháng</div><div class="val">'+fmt(tongThu)+'</div></div>'
     + '<div class="stat chi"><div class="lbl">Tổng chi tháng</div><div class="val">'+fmt(tongChi)+'</div></div>'
-    + '<div class="stat gold"><div class="lbl">Số dư cuối tháng</div><div class="val">'+fmt(duCuoiThang)+'</div></div>'
+    + '<div class="stat gold"><div class="lbl">Số dư cuối tháng</div><div class="val">'+(beforeLock?'—':fmt(duCuoiThang))+'</div></div>'
     + '</div>';
+  if (beforeLock){
+    html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc khóa sổ ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
+  }
 
   var monthOpts = soTayMonthList().map(function(m){
     return '<option value="'+m+'"'+(m===mk?' selected':'')+'>'+monthLabel(m)+'</option>';
