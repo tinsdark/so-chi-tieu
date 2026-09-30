@@ -140,7 +140,8 @@ var DEFAULT_DATA = {
   journal: {},
   categories: { thu: [
     { id: "luong", ten: "Lương", chiTieu: 0 },
-    { id: "thuHoiChoVay", ten: "Thu hồi cho vay", chiTieu: 0 }
+    { id: "thuHoiChoVay", ten: "Thu hồi cho vay", chiTieu: 0 },
+    { id: "nhanTienVay", ten: "Nhận tiền vay", chiTieu: 0, khongDuTru: true }
   ], chi: [
     { id: "an", ten: "Ăn", chiTieu: 0 },
     { id: "xang", ten: "Xăng", chiTieu: 0 },
@@ -255,6 +256,9 @@ function normalizeData(d){
   d.vayNo.vayNoPhaiTra = d.vayNo.vayNoPhaiTra || [];
   if (!d.categories.thu.some(function(c){ return c.id === 'thuHoiChoVay'; })){
     d.categories.thu.push({ id: 'thuHoiChoVay', ten: 'Thu hồi cho vay', chiTieu: 0 });
+  }
+  if (!d.categories.thu.some(function(c){ return c.id === 'nhanTienVay'; })){
+    d.categories.thu.push({ id: 'nhanTienVay', ten: 'Nhận tiền vay', chiTieu: 0, khongDuTru: true });
   }
   // migrate dữ liệu cũ: thu là số đơn -> chuyển thành object theo danh mục (giữ nguyên tổng)
   Object.keys(d.journal).forEach(function(date){
@@ -1483,6 +1487,14 @@ function handleAction(act, el){
       objVN.id = 'vn_' + slugify(tenVN) + '_' + Date.now().toString(36);
       objVN.trangThai = objVN.trangThai || 'dang_vay';
       state.data.vayNo.vayNoPhaiTra.push(objVN);
+      if (objVN.soTienGoc > 0){
+        var dateVN = objVN.ngayVay || todayStr();
+        var eVN = state.data.journal[dateVN] || { thu:{}, chi:{}, ghiChu:'' };
+        eVN.thu = eVN.thu || {};
+        eVN.thu['nhanTienVay'] = num(eVN.thu['nhanTienVay']) + objVN.soTienGoc;
+        eVN.ghiChu = eVN.ghiChu ? (eVN.ghiChu + '; Nhận tiền vay: '+objVN.ten) : ('Nhận tiền vay: '+objVN.ten);
+        state.data.journal[dateVN] = eVN;
+      }
     }
     state.vnFormKind = null; state.vnFormId = null;
     scheduleSave(); renderVayNo();
