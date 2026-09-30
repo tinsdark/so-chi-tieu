@@ -245,8 +245,8 @@ function normalizeData(d){
   d.categories = d.categories || { thu: [], chi: [] };
   d.categories.thu = d.categories.thu || [];
   d.categories.chi = d.categories.chi || [];
-  d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; });
-  d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; });
+  d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; if (c.coDinhChiTieu==null) c.coDinhChiTieu = false; });
+  d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; if (c.coDinhChiTieu==null) c.coDinhChiTieu = false; });
   d.duTru = d.duTru || { thu: {}, chi: {} };
   d.duTru.thu = d.duTru.thu || {};
   d.duTru.chi = d.duTru.chi || {};
@@ -887,6 +887,10 @@ function renderDongTien(){
     if (cat0 && cat0.khongDuTru) return null;
     if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || null;
     if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || null;
+    if (cat0 && cat0.coDinhChiTieu){
+      var bF = baseVal(kind, cid);
+      return bF > 0 ? bF : null;
+    }
     var avg = recentAvgActual(kind, cid, 3);
     if (avg != null) return avg;
     var b = baseVal(kind, cid);
@@ -1008,6 +1012,7 @@ function duTruDanhMucThang(kind, cid, mk){
   if (cat0 && cat0.khongDuTru) return 0;
   if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
   if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
+  if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : 0;
   var avg = recentAvgActual(kind, cid, 3);
   if (avg != null) return avg;
   var cat = state.data.categories[kind].find(function(c){ return c.id===cid; });
@@ -1201,6 +1206,8 @@ function categoryCardHtml(kind, title, cats){
         + '</div>'
         + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
         + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Luôn dùng đúng số Chỉ tiêu/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương/chỉ tiêu vừa thay đổi)">'
+        + '<input type="checkbox" data-act="catFixedTarget" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.coDinhChiTieu?' checked':'')+'> Cố định theo Chỉ tiêu</label>'
         + '</div>';
     });
     html += '</div>';
@@ -1273,6 +1280,10 @@ document.addEventListener('change', function(ev){
     var kindN = el.getAttribute('data-kind') || 'chi';
     var cN = state.data.categories[kindN].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (cN){ cN.khongDuTru = el.checked; scheduleSave(); }
+  } else if (el.matches('[data-act=catFixedTarget]')){
+    var kindF = el.getAttribute('data-kind') || 'chi';
+    var cF = state.data.categories[kindF].find(function(x){ return x.id===el.getAttribute('data-id'); });
+    if (cF){ cF.coDinhChiTieu = el.checked; scheduleSave(); }
   } else if (el.matches('[data-act=soTayChonChoVay]')){
     var cvId = el.value;
     var inpThu = document.querySelector('.f_thu[data-cat=thuHoiChoVay]');
