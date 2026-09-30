@@ -1187,12 +1187,14 @@ function categoryCardHtml(kind, title, cats){
   } else {
     html += '<div class="cat-list">';
     cats.forEach(function(c){
-      html += '<div style="display:flex;gap:4px;align-items:center">'
-        + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1">'
-        + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="width:120px" title="Chỉ tiêu/tháng">'
+      html += '<div style="display:flex;flex-direction:column;gap:4px">'
+        + '<div style="display:flex;gap:4px;align-items:center">'
+        + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
+        + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="width:100px" title="Chỉ tiêu/tháng">'
+        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
+        + '</div>'
         + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
         + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
-        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
         + '</div>';
     });
     html += '</div>';
