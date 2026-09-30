@@ -768,10 +768,6 @@ function tinhLichTraNo(loan){
   }
   return sch;
 }
-// dư nợ còn lại thực tế (dựa trên đã trả thực tế, không chỉ lý thuyết)
-function duNoConLaiThucTe(loan){
-  return Math.max(0, num(loan.soTienGoc) - num(loan.daTraGoc));
-}
 function conLaiPhaiThu(loan){
   return Math.max(0, num(loan.soTien) - num(loan.daThu));
 }
@@ -791,6 +787,14 @@ function tienDoTraNo(loan){
     else if (!kyTiepTheo) kyTiepTheo = sch[i];
   }
   return { tongKy: sch.length, daTraKy: daTraKy, kyTiepTheo: kyTiepTheo };
+}
+// tổng số tiền còn phải trả (gồm cả lãi) của các kỳ chưa trả
+function soTienConLaiPhaiTra(loan){
+  var sch = tinhLichTraNo(loan);
+  var daTraKy = tienDoTraNo(loan).daTraKy;
+  var s = 0;
+  for (var i = daTraKy; i < sch.length; i++) s += sch[i].tongTra;
+  return s;
 }
 function tongTraNoThang(mk){
   var s = 0;
@@ -1037,7 +1041,8 @@ function choVayFormHtml(){
 
 function vayNoFormHtml(){
   var editing = state.vnFormId ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; }) : null;
-  var d = editing || { ten:'', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:'', ngayVay: todayStr(), soThangVay:'', ngayDaoHan:'', laiSuatNam:'', daTraGoc:'' };
+  var d = editing || { ten:'', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:'', ngayVay: todayStr(), soThangVay:'', ngayDaoHan:'', laiSuatNam:'' };
+  var daTraKyVal = editing ? tienDoTraNo(editing).daTraKy : '';
   var loaiOpts = Object.keys(LOAI_VAY_LABEL).map(function(k){ return '<option value="'+k+'"'+(d.loaiVay===k?' selected':'')+'>'+LOAI_VAY_LABEL[k]+'</option>'; }).join('');
   var hinhOpts = Object.keys(HINH_THUC_LABEL).map(function(k){ return '<option value="'+k+'"'+(d.hinhThuc===k?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('');
   return '<div class="form-row" style="margin-top:10px">'
@@ -1049,7 +1054,7 @@ function vayNoFormHtml(){
     + '<div><label>Kỳ hạn (số tháng)</label><input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="Bỏ trống nếu trả 1 lần"></div>'
     + '<div><label>Ngày đáo hạn (nếu trả 1 lần)</label><input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'"></div>'
     + '<div><label>Lãi suất %/năm</label><input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="Chỉ cần nếu có lãi suất"></div>'
-    + '<div><label>Đã trả gốc (nếu có, trước khi nhập vào đây)</label><input type="number" id="vn_vn_daTraGoc" value="'+(d.daTraGoc||'')+'" placeholder="0"></div>'
+    + '<div><label>Số kỳ đã trả (nếu có, trước khi nhập vào đây)</label><input type="number" id="vn_vn_daTraKy" value="'+(daTraKyVal||'')+'" placeholder="0" min="0"></div>'
     + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
     + '<button class="btn sm" data-act="vnSaveVayNo">Lưu</button>'
     + '<button class="btn secondary sm" data-act="vnCancelForm">Hủy</button></div>';
@@ -1115,7 +1120,7 @@ function renderVayNo(){
   } else {
     html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Loại vay</th><th>Hình thức</th><th>Đã trả</th><th>Dư nợ còn lại</th><th>Số tiền trả kỳ tới</th><th>Dự kiến hết nợ</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
     vayNoPhaiTra.forEach(function(v){
-      var duNo = duNoConLaiThucTe(v);
+      var duNo = soTienConLaiPhaiTra(v);
       var hetNoMk = thangDuKienHetNo(v);
       var tienDo = tienDoTraNo(v);
       html += '<tr>'
@@ -1128,6 +1133,7 @@ function renderVayNo(){
         + '<td>'+(hetNoMk?monthLabel(hetNoMk):'—')+'</td>'
         + '<td>'+(v.trangThai==='da_tra_het'?'Đã trả hết':'Đang vay')+'</td>'
         + '<td class="actions-col">'
+        + (loanIsActive(v) ? '<button class="btn sm secondary" data-act="vnTatToan" data-id="'+v.id+'" title="Tất toán sớm toàn bộ khoản vay">Tất toán</button>' : '')
         + '<button class="icon-btn" data-act="vnEditVayNo" data-id="'+v.id+'">✎</button>'
         + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'">🗑</button>'
         + '</td></tr>';
@@ -1444,8 +1450,7 @@ function handleAction(act, el){
       ngayVay: document.getElementById('vn_vn_ngay').value || todayStr(),
       soThangVay: num(document.getElementById('vn_vn_soThang').value),
       ngayDaoHan: document.getElementById('vn_vn_daoHan').value || '',
-      laiSuatNam: num(document.getElementById('vn_vn_laiSuat').value),
-      daTraGoc: num(document.getElementById('vn_vn_daTraGoc').value)
+      laiSuatNam: num(document.getElementById('vn_vn_laiSuat').value)
     };
     if (hinh === 'tra_1_lan' && !objVN.ngayDaoHan && !objVN.soThangVay){
       alert('Nhập ngày đáo hạn hoặc kỳ hạn (số tháng) cho khoản vay trả 1 lần.'); return;
@@ -1453,6 +1458,12 @@ function handleAction(act, el){
     if (hinh !== 'tra_1_lan' && !objVN.soThangVay){
       alert('Nhập kỳ hạn (số tháng) trả.'); return;
     }
+    var daTraKyInput = Math.max(0, Math.floor(num(document.getElementById('vn_vn_daTraKy').value)));
+    var schVN = tinhLichTraNo(objVN);
+    daTraKyInput = Math.min(daTraKyInput, schVN.length);
+    var daTraGocCalc = 0;
+    for (var iDK=0; iDK<daTraKyInput; iDK++) daTraGocCalc += schVN[iDK].goc;
+    objVN.daTraGoc = daTraGocCalc;
     if (objVN.daTraGoc >= objVN.soTienGoc && objVN.soTienGoc > 0) objVN.trangThai = 'da_tra_het';
     if (state.vnFormId){
       var oldVN = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; });
@@ -1516,6 +1527,23 @@ function handleAction(act, el){
     eGTr.chi['traNo'] = num(eGTr.chi['traNo']) + amt2;
     eGTr.ghiChu = eGTr.ghiChu ? (eGTr.ghiChu + '; Trả nợ: '+vnItem.ten) : ('Trả nợ: '+vnItem.ten);
     state.data.journal[dateGTr] = eGTr;
+    scheduleSave(); renderVayNo();
+  } else if (act === 'vnTatToan'){
+    var idTT = el.getAttribute('data-id');
+    var vnTT = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===idTT; });
+    if (!vnTT) return;
+    var amtStrTT = prompt('Số tiền tất toán khoản "'+vnTT.ten+'" (nhập đúng số ngân hàng/bên cho vay báo, có thể khác số dư nợ lý thuyết):', '');
+    if (amtStrTT === null) return;
+    var amtTT = num(amtStrTT);
+    if (amtTT <= 0){ alert('Nhập số tiền tất toán hợp lệ.'); return; }
+    vnTT.daTraGoc = vnTT.soTienGoc;
+    vnTT.trangThai = 'da_tra_het';
+    var dateTT = todayStr();
+    var eTT = state.data.journal[dateTT] || { thu:{}, chi:{}, ghiChu:'' };
+    eTT.chi = eTT.chi || {};
+    eTT.chi['traNo'] = num(eTT.chi['traNo']) + amtTT;
+    eTT.ghiChu = eTT.ghiChu ? (eTT.ghiChu + '; Tất toán: '+vnTT.ten) : ('Tất toán: '+vnTT.ten);
+    state.data.journal[dateTT] = eTT;
     scheduleSave(); renderVayNo();
   }
 }
