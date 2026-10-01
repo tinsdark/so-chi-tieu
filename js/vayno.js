@@ -114,6 +114,16 @@ function actualCatMonthAll(kind, mk){
   });
   return s;
 }
+// tổng thực tế của 1 danh mục trong 1 tháng (dùng để kiểm tra đã ghi Sổ tay chưa)
+function actualCatInMonth(kind, cid, mk){
+  var s = 0;
+  Object.keys(state.data.journal).forEach(function(d){
+    if (monthKey(d) !== mk) return;
+    var obj = state.data.journal[d][kind] || {};
+    s += num(obj[cid]);
+  });
+  return s;
+}
 function duTruDanhMucThang(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
   if (cat0 && cat0.khongDuTru) return 0;
@@ -131,11 +141,21 @@ function duTruThuThang(mk){
 function duTruChiThang(mk){
   var s=0; state.data.categories.chi.forEach(function(c){ s += duTruDanhMucThang('chi', c.id, mk); }); return s;
 }
+// tháng hiện tại: nếu "Thu hồi cho vay"/"Trả nợ" chưa ghi Sổ tay thì cộng thêm số biết trước
+// theo lịch vay (không phải ước lượng) — các danh mục khác vẫn giữ nguyên thực tế (có thể 0)
 function tongThuThangCard(mk){
-  return (mk <= monthKey(todayStr())) ? actualCatMonthAll('thu', mk) : duTruThuThang(mk);
+  var currentMk = monthKey(todayStr());
+  if (mk > currentMk) return duTruThuThang(mk);
+  var s = actualCatMonthAll('thu', mk);
+  if (mk === currentMk && !actualCatInMonth('thu','thuHoiChoVay',mk)) s += (tongThuHoiThang(mk) || 0);
+  return s;
 }
 function tongChiThangCard(mk){
-  return (mk <= monthKey(todayStr())) ? actualCatMonthAll('chi', mk) : duTruChiThang(mk);
+  var currentMk = monthKey(todayStr());
+  if (mk > currentMk) return duTruChiThang(mk);
+  var s = actualCatMonthAll('chi', mk);
+  if (mk === currentMk && !actualCatInMonth('chi','traNo',mk)) s += (tongTraNoThang(mk) || 0);
+  return s;
 }
 
 /* ---- render ---- */
