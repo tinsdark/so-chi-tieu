@@ -141,20 +141,39 @@ function duTruThuThang(mk){
 function duTruChiThang(mk){
   var s=0; state.data.categories.chi.forEach(function(c){ s += duTruDanhMucThang('chi', c.id, mk); }); return s;
 }
-// tháng hiện tại: nếu "Thu hồi cho vay"/"Trả nợ" chưa ghi Sổ tay thì cộng thêm số biết trước
-// theo lịch vay (không phải ước lượng) — các danh mục khác vẫn giữ nguyên thực tế (có thể 0)
+// tháng hiện tại: các khoản BIẾT TRƯỚC (Trả nợ/Thu hồi cho vay theo lịch vay, hoặc danh mục có cờ
+// "Cố định theo Chỉ tiêu") mà chưa ghi Sổ tay thì cộng thêm số biết trước đó; các danh mục còn lại
+// (ước lượng, không cố định) vẫn giữ nguyên thực tế (có thể 0)
 function tongThuThangCard(mk){
   var currentMk = monthKey(todayStr());
   if (mk > currentMk) return duTruThuThang(mk);
   var s = actualCatMonthAll('thu', mk);
-  if (mk === currentMk && !actualCatInMonth('thu','thuHoiChoVay',mk)) s += (tongThuHoiThang(mk) || 0);
+  if (mk === currentMk){
+    if (!actualCatInMonth('thu','thuHoiChoVay',mk)) s += (tongThuHoiThang(mk) || 0);
+    state.data.categories.thu.forEach(function(c){
+      if (c.id === 'thuHoiChoVay') return;
+      if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk)){
+        var b = num(c.chiTieu);
+        if (b > 0) s += b;
+      }
+    });
+  }
   return s;
 }
 function tongChiThangCard(mk){
   var currentMk = monthKey(todayStr());
   if (mk > currentMk) return duTruChiThang(mk);
   var s = actualCatMonthAll('chi', mk);
-  if (mk === currentMk && !actualCatInMonth('chi','traNo',mk)) s += (tongTraNoThang(mk) || 0);
+  if (mk === currentMk){
+    if (!actualCatInMonth('chi','traNo',mk)) s += (tongTraNoThang(mk) || 0);
+    state.data.categories.chi.forEach(function(c){
+      if (c.id === 'traNo') return;
+      if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk)){
+        var b = num(c.chiTieu);
+        if (b > 0) s += b;
+      }
+    });
+  }
   return s;
 }
 
@@ -293,7 +312,7 @@ function renderVayNo(){
     + '<select id="vn_horizon" data-act="vnHorizonChange" style="width:auto;font-size:12px;padding:4px 8px">'
     + [6,12,24].map(function(h){ return '<option value="'+h+'"'+(h===horizon?' selected':'')+'>'+h+' tháng tới</option>'; }).join('')
     + '</select></h3>';
-  html += '<div class="empty" style="padding:0 0 10px">Tháng hiện tại/qua khứ dùng số thực tế từ Sổ tay; tháng tương lai dùng gợi ý (TB 3 tháng hoặc chỉ tiêu), riêng Trả nợ / Thu hồi cho vay lấy thẳng từ lịch vay ở trên.</div>';
+  html += '<div class="empty" style="padding:0 0 10px">Tháng hiện tại/qua khứ dùng số thực tế từ Sổ tay; tháng tương lai dùng gợi ý (TB 3 tháng hoặc chỉ tiêu). Riêng Trả nợ/Thu hồi cho vay (lấy thẳng từ lịch vay) và các danh mục có cờ "Cố định theo Chỉ tiêu": nếu tháng hiện tại chưa ghi Sổ tay thì vẫn hiện số biết trước.</div>';
   html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tháng</th><th>Thu</th><th>Chi</th><th>Số dư lũy kế</th></tr></thead><tbody>';
   rowsData.forEach(function(r){
     html += '<tr><td style="text-align:left">'+monthLabel(r.mk)+'</td><td style="color:var(--green)">'+fmt(Math.round(r.thu))+'</td><td style="color:var(--red)">'+fmt(Math.round(r.chi))+'</td><td>'+fmt(Math.round(r.bal))+'</td></tr>';

@@ -95,6 +95,11 @@ function renderDongTien(){
     if (mk === currentMk && !av){
       if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || 0;
       if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || 0;
+      var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
+      if (cat0 && cat0.coDinhChiTieu){
+        var bF = baseVal(kind, cid);
+        if (bF > 0) return bF;
+      }
     }
     return av;
   }
@@ -156,7 +161,7 @@ function renderDongTien(){
   html += '</tr>';
 
   html += '</tbody></table></div></div>';
-  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu). Riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch trả ở tab Vay - Nợ — kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
+  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu). Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
