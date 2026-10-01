@@ -15,6 +15,7 @@ function recentAvgActual(kind, catId, n){
     byMonth[mk] = (byMonth[mk]||0) + num(obj[catId]);
   });
   var mks = Object.keys(byMonth).sort();
+  if (mks.length < n) return null; // chưa đủ n tháng dữ liệu thực tế -> chưa dùng trung bình, để fallback về chỉ tiêu
   var lastN = mks.slice(-n);
   if (!lastN.length) return null;
   var sum = lastN.reduce(function(s,mk){ return s+byMonth[mk]; },0);
