@@ -85,8 +85,17 @@ function renderDongTien(){
     return b > 0 ? b : null;
   }
   // giá trị hiển thị cho 1 ô: tháng đã qua/hiện tại -> thực tế, tháng tương lai -> gợi ý
+  // riêng "Trả nợ"/"Thu hồi cho vay" ở THÁNG HIỆN TẠI: nếu chưa ghi Sổ tay (actual=0) thì tạm hiện
+  // số phải trả/thu theo lịch vay (đã biết trước, không phải ước lượng) thay vì hiện 0 — khi nào
+  // ghi Sổ tay thật thì actual sẽ khác 0 và tự động được ưu tiên hiện số thật.
   function cellVal(kind, cid, mk){
-    return (mk > currentMk) ? suggestVal(kind, cid, mk) : actualVal(kind, cid, mk);
+    if (mk > currentMk) return suggestVal(kind, cid, mk);
+    var av = actualVal(kind, cid, mk);
+    if (mk === currentMk && !av){
+      if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || 0;
+      if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || 0;
+    }
+    return av;
   }
   function groupCell(kind, mk){
     var s = 0;
@@ -146,11 +155,11 @@ function renderDongTien(){
   html += '</tr>';
 
   html += '</tbody></table></div></div>';
-  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu). Riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch trả ở tab Vay - Nợ.</div>';
+  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu). Riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch trả ở tab Vay - Nợ — kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục. TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử); nếu chưa có dữ liệu thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
+    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử); nếu chưa có dữ liệu thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
     + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   ['thu','chi'].forEach(function(kind){
     state.data.categories[kind].forEach(function(c){
@@ -160,7 +169,11 @@ function renderDongTien(){
         if (av){ sumA+=av; cntA++; }
       });
       var tbA = cntA ? sumA/cntA : null;
-      var base = baseVal(kind, c.id);
+      // "Trả nợ"/"Thu hồi cho vay": lấy đúng số phải trả/thu THÁNG HIỆN TẠI theo lịch vay làm mốc
+      // so sánh, thay vì chỉ tiêu tĩnh đặt tay ở Danh mục (số này biết trước và đổi theo từng tháng)
+      var base = (kind==='chi' && c.id==='traNo') ? (tongTraNoThang(currentMk) || 0)
+        : (kind==='thu' && c.id==='thuHoiChoVay') ? (tongThuHoiThang(currentMk) || 0)
+        : baseVal(kind, c.id);
       var diff = (tbA!=null && base>0) ? (tbA-base) : null;
       var diffStyle = '';
       if (diff!=null && diff!==0){
