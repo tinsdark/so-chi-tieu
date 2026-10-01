@@ -183,7 +183,13 @@ function renderDongTien(){
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
     + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
-  ['thu','chi'].forEach(function(kind){
+  DONGTIEN_GROUPS.forEach(function(g){
+    var kind = g.kind;
+    // tiêu đề nhóm + dòng tổng để tách hẳn khối thu với khối chi (trước đây 2 nhóm
+    // dính liền nhau, chỉ phân biệt bằng cái tag nhỏ ở cuối tên danh mục)
+    html += '<tr><td colspan="5" class="group-title" style="background:var(--bg);text-align:left">'
+      + (kind==='thu' ? '▲ ' : '▼ ') + g.title + '</td></tr>';
+    var tBase=0, tTb=0, tGoi=0;
     state.data.categories[kind].forEach(function(c){
       var sumA=0, cntA=0;
       months.forEach(function(mk){
@@ -203,14 +209,24 @@ function renderDongTien(){
         diffStyle = ' style="color:'+(bad?'var(--red)':'var(--green)')+'"';
       }
       var goiY = suggestVal(kind, c.id, monthKeyAdd(currentMk, 1));
+      tBase += (base>0?base:0); tTb += (tbA||0); tGoi += (goiY||0);
       html += '<tr>'
-        + '<td style="text-align:left">'+c.ten+' <span class="cat-tag">'+(kind==='thu'?'thu':'chi')+'</span></td>'
+        + '<td style="text-align:left;padding-left:18px">'+c.ten+'</td>'
         + '<td>'+(base>0?fmt(base):'—')+'</td>'
         + '<td>'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
         + '<td'+diffStyle+'>'+(diff!=null?fmt(Math.round(diff)):'—')+'</td>'
         + '<td>'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
         + '</tr>';
     });
+    var tDiff = tTb - tBase;
+    var tBad = kind==='chi' ? tDiff>0 : tDiff<0;
+    html += '<tr class="total-row">'
+      + '<td style="text-align:left">Tổng '+g.title.toLowerCase()+'</td>'
+      + '<td>'+fmt(Math.round(tBase))+'</td>'
+      + '<td>'+fmt(Math.round(tTb))+'</td>'
+      + '<td style="color:'+(tDiff===0?'inherit':(tBad?'var(--red)':'var(--green)'))+'">'+fmt(Math.round(tDiff))+'</td>'
+      + '<td>'+fmt(Math.round(tGoi))+'</td>'
+      + '</tr>';
   });
   html += '</tbody></table></div></div>';
 
