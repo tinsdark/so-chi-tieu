@@ -208,8 +208,20 @@ function normalizeData(d){
         }
       }
     }
+    // dongKy: trước đây cứ ghi nhận là coi như xong kỳ, không có khái niệm trả một
+    // phần -> bản ghi cũ đều là kỳ ĐÃ ĐÓNG. rid để xóa đúng LẦN trả nào khi xóa
+    // ngày ở Sổ tay (1 kỳ giờ có thể có nhiều lần trả).
+    loan.traNo.forEach(function(r, i){
+      if (r.dongKy == null) r.dongKy = true;
+      if (!r.rid) r.rid = 'r' + num(r.ky) + '_' + i + '_' + (r.ngay || '');
+    });
     delete loan.daTraGoc;
     if (loan.tatToan) loan.trangThai = 'da_tra_het';
+  });
+  // khoản cho vay đã tất toán (bỏ phần không đòi được) -> không còn chờ thu
+  d.vayNo.choVay.forEach(function(c){
+    if (c.daThu == null) c.daThu = 0;
+    if (c.tatToan) c.trangThai = 'da_thu_du';
   });
   invalidateBalanceCache();
   return d;

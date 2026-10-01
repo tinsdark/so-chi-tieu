@@ -7,6 +7,13 @@
 
 var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null;
 
+/* Hai danh mục này CHỈ được sinh ra từ tab Vay - Nợ (tạo khoản vay / khoản cho vay)
+   rồi tự hạch toán sang Sổ tay. Nhập tay ở đây sẽ tạo tiền mồ côi không gắn với
+   khoản nào, sửa/xóa khoản vay không hoàn lại được -> khóa ô.
+   Ngoại lệ: ngày đang sửa đã có số nhập tay (dữ liệu cũ) thì vẫn mở để xóa đi được. */
+var VN_ONLY_THU = { nhanTienVay: 1 };
+var VN_ONLY_CHI = { choVay: 1 };
+
 // danh sách các tháng có giao dịch + tháng đang xem + tháng hiện tại, mới nhất trước
 function soTayMonthList(){
   var set = {};
@@ -102,9 +109,18 @@ function renderSoTay(){
     var lockThu = hasRefs ? entryRefSum(editEntry, 'thu', c.id) : 0;
     var vt = num((editEntry.thu||{})[c.id]) - lockThu;
     if (vt <= 0) vt = '';
+    var roThu = !!VN_ONLY_THU[c.id] && !vt;
     html += '<div><label>'+c.ten
       + (lockThu > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockThu))+' khóa từ Vay-Nợ)</span>' : '')
-      + '</label><input type="number" class="f_thu" data-cat="'+c.id+'" data-lock="'+lockThu+'" value="'+(vt||'')+'" placeholder="0" min="0">';
+      + '</label><input type="number" class="f_thu" data-cat="'+c.id+'" data-lock="'+lockThu+'" value="'+(vt||'')+'" placeholder="0" min="0"'
+      + (roThu ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
+      + '>';
+    if (VN_ONLY_THU[c.id]){
+      html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
+        + (roThu ? 'Ghi ở tab Vay - Nợ (thêm khoản vay) — tự hạch toán sang đây.'
+                 : '⚠ Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+        + '</div>';
+    }
     if (c.id === 'thuHoiChoVay' && !state.editingDate){
       var pendingCV = (state.data.vayNo.choVay||[]).filter(function(l){ return l.trangThai !== 'da_thu_du' && conLaiPhaiThu(l) > 0.01; });
       if (pendingCV.length){
@@ -126,11 +142,20 @@ function renderSoTay(){
     var lockChi = hasRefs ? entryRefSum(editEntry, 'chi', c.id) : 0;
     var v = num((editEntry.chi||{})[c.id]) - lockChi;
     if (v <= 0) v = '';
+    var roChi = !!VN_ONLY_CHI[c.id] && !v;
     html += '<div><label>'+c.ten
       + (lockChi > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockChi))+' khóa từ Vay-Nợ)</span>' : '')
-      + '</label><input type="number" class="f_chi" data-cat="'+c.id+'" data-lock="'+lockChi+'" value="'+(v||'')+'" placeholder="0" min="0">';
+      + '</label><input type="number" class="f_chi" data-cat="'+c.id+'" data-lock="'+lockChi+'" value="'+(v||'')+'" placeholder="0" min="0"'
+      + (roChi ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
+      + '>';
+    if (VN_ONLY_CHI[c.id]){
+      html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
+        + (roChi ? 'Ghi ở tab Vay - Nợ (thêm khoản cho vay) — tự hạch toán sang đây.'
+                 : '⚠ Số này nhập tay, không gắn khoản cho vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+        + '</div>';
+    }
     if (c.id === 'traNo' && !state.editingDate){
-      // chỉ hiện khoản vay còn kỳ CHƯA ghi nhận — khoản đã ghi nhận hết kỳ mà vẫn cho chọn
+      // chỉ hiện khoản vay còn kỳ CHƯA ĐÓNG — khoản đã đóng hết kỳ mà vẫn cho chọn
       // thì sinh ra bản ghi trả nợ khống (P0-3)
       var activeVN = (state.data.vayNo.vayNoPhaiTra||[]).filter(function(l){
         return loanIsActive(l) && !l.tatToan && tienDoTraNo(l).kyTiepIdx >= 0;
@@ -140,7 +165,8 @@ function renderSoTay(){
           + '<option value="">— chọn khoản vay (tùy chọn) —</option>'
           + activeVN.map(function(l){
               var td = tienDoTraNo(l);
-              return '<option value="'+l.id+'">'+l.ten+' ('+td.daTraKy+'/'+td.tongKy+' kỳ)</option>';
+              var thieu = conThieuKy(l, td.kyTiepIdx, td.sch);
+              return '<option value="'+l.id+'">'+l.ten+' ('+td.daTraKy+'/'+td.tongKy+' kỳ, kỳ '+(td.kyTiepIdx+1)+' còn '+fmt(Math.round(thieu))+')</option>';
             }).join('')
           + '</select>';
       }
@@ -352,9 +378,20 @@ function handleSoTayAction(act, el){
       if (vnApply){
         var tdApply = tienDoTraNo(vnApply);
         if (tdApply.kyTiepIdx >= 0){
+          var kyAp = tdApply.kyTiepIdx;
+          var thieuAp = conThieuKy(vnApply, kyAp, tdApply.sch);
+          // trả ít hơn lịch -> hỏi ngay: xong kỳ (bỏ qua phần thiếu) hay còn nợ tiếp
+          var dongKyAp = true;
+          if (chi['traNo'] < thieuAp - 1){
+            dongKyAp = confirm('Trả '+fmt(Math.round(chi['traNo']))+' cho kỳ '+(kyAp+1)+' của "'+vnApply.ten+'", vẫn thiếu '
+              + fmt(Math.round(thieuAp - chi['traNo']))+' so với lịch.\n\n'
+              + 'OK = coi kỳ này ĐÃ THANH TOÁN XONG (phần thiếu tính vào chênh lệch)\n'
+              + 'Hủy = kỳ này CÒN NỢ TIẾP (phần thiếu vẫn nằm trong dư nợ)');
+          }
+          var ridAp = 'r' + kyAp + '_' + Date.now().toString(36);
           vnApply.traNo = vnApply.traNo || [];
-          vnApply.traNo.push({ ky: tdApply.kyTiepIdx, mk: tdApply.kyTiepTheo.mk, soTien: chi['traNo'], ngay: date });
-          journalTagRef(date, vnApply.id, 'traNo', chi['traNo'], { ky: tdApply.kyTiepIdx });
+          vnApply.traNo.push({ rid: ridAp, ky: kyAp, mk: tdApply.sch[kyAp].mk, soTien: chi['traNo'], ngay: date, dongKy: dongKyAp });
+          journalTagRef(date, vnApply.id, 'traNo', chi['traNo'], { ky: kyAp, rid: ridAp });
           if (soTienConLaiPhaiTra(vnApply) <= 0.01) vnApply.trangThai = 'da_tra_het';
         }
       }

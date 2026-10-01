@@ -226,6 +226,122 @@ test('ghi nhận hết 12 kỳ: còn lại = 0', function(){
 });
 
 /* ==================================================================== */
+group('2b. Trả một phần: tách "đã ghi nhận tiền" khỏi "kỳ đã ĐÓNG"');
+
+test('trả 400k/1tr mà chưa đóng kỳ: trạng thái "motphan", kỳ tiếp theo VẪN là kỳ 1', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { rid:'a', ky:0, mk:'2026-11', soTien:400000, ngay:'2026-11-05', dongKy:false }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  var st = ctx.kyStatus(l, 0);
+  eq(st.trangThai, 'motphan', 'trạng thái kỳ 0');
+  eq(st.dong, false, 'kỳ chưa đóng');
+  near(st.da, 400000, 0.01, 'đã trả trong kỳ');
+  near(ctx.conThieuKy(l, 0), 600000, 0.01, 'còn thiếu trong kỳ');
+  var td = ctx.tienDoTraNo(l);
+  eq(td.daTraKy, 0, 'chưa đóng kỳ nào');
+  eq(td.kyTiepIdx, 0, 'vẫn đang ở kỳ 1');
+});
+
+test('trả tiếp lần 2 cho đủ kỳ: cộng dồn -> "du", kỳ tiếp theo mới nhảy sang kỳ 2', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { rid:'a', ky:0, mk:'2026-11', soTien:400000, ngay:'2026-11-05', dongKy:false },
+    { rid:'b', ky:0, mk:'2026-11', soTien:600000, ngay:'2026-11-20', dongKy:true }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  var st = ctx.kyStatus(l, 0);
+  eq(st.trangThai, 'du', 'trạng thái kỳ 0');
+  near(st.da, 1000000, 0.01, 'tổng 2 lần trả');
+  eq(ctx.tienDoTraNo(l).kyTiepIdx, 1, 'sang kỳ 2');
+  near(ctx.soTienConLaiPhaiTra(l), 11000000, 0.01, 'còn 11 kỳ');
+  eq(ctx.tongLechTraNo(l), 0, 'không chênh lệch');
+});
+
+test('kỳ đang trả dở: phần THIẾU vẫn nằm trong dư nợ và trong dự trù tháng đó', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { rid:'a', ky:0, mk:'2026-11', soTien:400000, ngay:'2026-11-05', dongKy:false }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  near(ctx.soTienConLaiPhaiTra(l), 11600000, 0.01, '11 kỳ đủ + 600k còn thiếu kỳ 1');
+  near(ctx.tongTraNoThang('2026-11'), 600000, 0.01, 'dự trù T11 chỉ còn phần thiếu, không tính lại cả kỳ');
+  eq(ctx.tongLechTraNo(l), 0, 'kỳ chưa đóng thì KHÔNG tính vào chênh lệch');
+});
+
+test('đóng kỳ dù trả thiếu: phần thiếu rời dư nợ, chuyển sang chênh lệch', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { rid:'a', ky:0, mk:'2026-11', soTien:400000, ngay:'2026-11-05', dongKy:true }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  var st = ctx.kyStatus(l, 0);
+  eq(st.trangThai, 'thieu', 'trạng thái kỳ 0');
+  eq(st.dong, true, 'kỳ đã đóng');
+  near(ctx.soTienConLaiPhaiTra(l), 11000000, 0.01, 'chỉ còn 11 kỳ, bỏ 600k thiếu');
+  near(ctx.tongLechTraNo(l), -600000, 0.01, '600k thiếu hiện ở chênh lệch');
+  eq(ctx.tongTraNoThang('2026-11'), 0, 'T11 đã đóng -> không dự trù nữa');
+});
+
+test('migration: bản ghi cũ không có dongKy -> coi là kỳ ĐÃ ĐÓNG và được gắn rid', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { ky:0, mk:'2026-11', soTien:995000, ngay:'2026-11-05' }
+  ]})];
+  loadData(d);
+  var r = ctx.state.data.vayNo.vayNoPhaiTra[0].traNo[0];
+  eq(r.dongKy, true, 'dongKy backfill');
+  ok(!!r.rid, 'rid được sinh ra');
+  eq(ctx.kyDaDong(ctx.state.data.vayNo.vayNoPhaiTra[0], 0), true, 'kỳ 0 đã đóng');
+});
+
+test('loanRevertRef xóa đúng MỘT lần trả theo rid, không xóa cả kỳ', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { rid:'r0_a', ky:0, mk:'2026-11', soTien:400000, ngay:'2026-11-05', dongKy:false },
+    { rid:'r0_b', ky:0, mk:'2026-11', soTien:600000, ngay:'2026-11-20', dongKy:true }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  ctx.loanRevertRef({ loanId:'vn1', loai:'traNo', ky:0, rid:'r0_b', soTien:600000 });
+  eq(l.traNo.length, 1, 'còn lại 1 lần trả');
+  eq(l.traNo[0].rid, 'r0_a', 'giữ đúng lần trả còn lại');
+  eq(ctx.kyStatus(l, 0).trangThai, 'motphan', 'kỳ 0 quay về trả một phần');
+});
+
+test('loanRevertRef của ref CŨ (không có rid) vẫn xóa cả kỳ', function(){
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: [
+    { ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-11-05' }
+  ]})];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  ctx.loanRevertRef({ loanId:'vn1', loai:'traNo', ky:0, soTien:1000000 });
+  eq(l.traNo.length, 0, 'xóa hết lần trả của kỳ 0');
+});
+
+test('cho vay TẤT TOÁN: hết phải thu, hết quá hạn, không còn dự trù — KHÔNG sinh giao dịch', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:900000, trangThai:'dang_cho',
+                      ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-11-01',
+                      tatToan: { soTien:100000, ngay:'2026-12-10' } }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  eq(c.trangThai, 'da_thu_du', 'normalizeData set trạng thái khi có tatToan');
+  eq(ctx.conLaiPhaiThu(c), 0, 'không còn phải thu');
+  eq(ctx.soNgayQuaHan(c), 0, 'không còn quá hạn');
+  eq(ctx.tongThuHoiThang('2026-12'), 0, 'không còn dự trù thu hồi');
+  eq(Object.keys(ctx.state.data.journal).length, 0, 'tất toán cho vay KHÔNG ghi giao dịch nào');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 group('3. Migration dữ liệu cũ daTraGoc -> traNo[]');
 
 test('daTraGoc = 3tr của khoản 12tr/12 tháng -> đúng 3 kỳ đã trả, gắn cờ truocKhiDungApp', function(){

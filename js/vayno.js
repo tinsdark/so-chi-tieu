@@ -56,7 +56,10 @@ function tinhLichTraNo(loan){
   }
   return sch;
 }
+// còn phải thu của 1 khoản cho vay. Đã tất toán = phần còn lại coi như không đòi
+// được (cho luôn / mất) -> không còn nằm trong "sẽ thu được" nữa.
 function conLaiPhaiThu(loan){
+  if (loan.tatToan) return 0;
   return Math.max(0, num(loan.soTien) - num(loan.daThu));
 }
 // số ngày quá hạn của 1 khoản cho vay (0 nếu chưa tới hạn / đã thu đủ)
@@ -74,71 +77,95 @@ function thangDuKienHetNo(loan){
 
 /* ====================================================================
    TRẢ NỢ THEO TỪNG KỲ
-   loan.traNo = [{ ky, mk, soTien, ngay, truocKhiDungApp? }]
-   Mỗi kỳ có 2 trạng thái: ĐÃ ghi nhận trả (kỳ coi như xong) / CHƯA trả.
-   Trong kỳ đã ghi nhận còn phân biệt trả ĐỦ hay THIẾU so với lịch — số
-   thiếu vài nghìn do làm tròn/phí vẫn tính là kỳ đã xong, chỉ hiện ra
-   để biết, KHÔNG dồn ngược vào dư nợ (tiền thực tế đã nằm ở Sổ tay).
+   loan.traNo = [{ rid, ky, mk, soTien, ngay, dongKy, truocKhiDungApp? }]
+
+   TÁCH HẲN 2 khái niệm, vì số tiền KHÔNG BAO GIỜ phân biệt được 2 ca này:
+     - đã ghi nhận tiền : có tiền vào kỳ đó. 1 kỳ trả nhiều lần thì cộng dồn.
+     - kỳ ĐÃ ĐÓNG      : dongKy = true, coi như thanh toán xong kỳ đó.
+   Thiếu 50k ở kỳ 500k là trả dở, thiếu 50k ở kỳ 10tr là xong kỳ — nên app
+   không đoán, mà hỏi người dùng đúng lúc trả thiếu (xem vnGhiNhanTra).
+
+   Kỳ đã đóng: phần thiếu chuyển sang mục "chênh lệch", KHÔNG nằm trong dư nợ
+   (tiền thực tế đã ghi ở Sổ tay rồi).
+   Kỳ trả dở : phần còn thiếu VẪN nằm trong dư nợ và trong dự trù tháng đó.
    ==================================================================== */
 function kyRecords(loan, kyIdx){
   return (loan.traNo || []).filter(function(r){ return num(r.ky) === num(kyIdx); });
 }
 function kyDaGhiNhan(loan, kyIdx){ return kyRecords(loan, kyIdx).length > 0; }
+// kỳ đã đóng: chỉ cần 1 lần trả trong kỳ được đánh dấu đóng kỳ
+function kyDaDong(loan, kyIdx){
+  return kyRecords(loan, kyIdx).some(function(r){ return !!r.dongKy; });
+}
 // tổng tiền thực tế đã trả cho kỳ kyIdx
 function soTienTraKy(loan, kyIdx){
   var s = 0;
   kyRecords(loan, kyIdx).forEach(function(r){ s += num(r.soTien); });
   return s;
 }
-// trạng thái 1 kỳ: 'chua' | 'du' | 'thieu'; thieu = số còn thiếu so với lịch
+// số còn thiếu của 1 kỳ so với lịch (>= 0)
+function conThieuKy(loan, kyIdx, sch){
+  sch = sch || tinhLichTraNo(loan);
+  var can = sch[kyIdx] ? num(sch[kyIdx].tongTra) : 0;
+  return Math.max(0, can - soTienTraKy(loan, kyIdx));
+}
+// trạng thái 1 kỳ: 'chua' | 'motphan' | 'du' | 'thieu'
+//   motphan = có tiền vào nhưng CHƯA đóng kỳ  -> vẫn là kỳ đang chờ
+//   thieu   = đã đóng kỳ nhưng tiền ít hơn lịch -> chênh lệch ghi riêng
 function kyStatus(loan, kyIdx, sch){
   sch = sch || tinhLichTraNo(loan);
   var can = sch[kyIdx] ? num(sch[kyIdx].tongTra) : 0;
-  if (!kyDaGhiNhan(loan, kyIdx)) return { trangThai: 'chua', da: 0, can: can, lech: -can };
+  if (!kyDaGhiNhan(loan, kyIdx)) return { trangThai: 'chua', da: 0, can: can, lech: -can, dong: false };
   var da = soTienTraKy(loan, kyIdx);
   var lech = da - can;
-  return { trangThai: (lech >= -1 ? 'du' : 'thieu'), da: da, can: can, lech: lech };
+  if (!kyDaDong(loan, kyIdx)) return { trangThai: 'motphan', da: da, can: can, lech: lech, dong: false };
+  return { trangThai: (lech >= -1 ? 'du' : 'thieu'), da: da, can: can, lech: lech, dong: true };
 }
-// tiến độ trả nợ: tổng số kỳ, số kỳ ĐÃ ghi nhận, kỳ tiếp theo chưa ghi nhận
+// tiến độ trả nợ: đếm kỳ ĐÃ ĐÓNG. Kỳ tiếp theo = kỳ chưa đóng đầu tiên, có thể
+// là kỳ đang trả dở (trả tiếp sẽ cộng dồn vào đúng kỳ đó).
 function tienDoTraNo(loan){
   var sch = tinhLichTraNo(loan);
   var daTraKy = 0, kyTiepTheo = null, kyTiepIdx = -1;
   for (var i=0;i<sch.length;i++){
-    if (kyDaGhiNhan(loan, i)) daTraKy++;
+    if (kyDaDong(loan, i)) daTraKy++;
     else if (!kyTiepTheo){ kyTiepTheo = sch[i]; kyTiepIdx = i; }
   }
   return { tongKy: sch.length, daTraKy: daTraKy, kyTiepTheo: kyTiepTheo, kyTiepIdx: kyTiepIdx, sch: sch };
 }
-// tổng số tiền còn phải trả (gồm lãi) = các kỳ CHƯA ghi nhận. Tất toán -> 0.
+// tổng còn phải trả (gồm lãi) = các kỳ CHƯA ĐÓNG, đã trừ phần đã trả vào kỳ dở.
+// Tất toán -> 0.
 function soTienConLaiPhaiTra(loan){
   if (loan.tatToan) return 0;
   var sch = tinhLichTraNo(loan);
   var s = 0;
   for (var i = 0; i < sch.length; i++){
-    if (!kyDaGhiNhan(loan, i)) s += num(sch[i].tongTra);
+    if (kyDaDong(loan, i)) continue;
+    s += conThieuKy(loan, i, sch);
   }
   return s;
 }
-// tổng chênh lệch (âm = trả thiếu so với lịch) của các kỳ đã ghi nhận
+// tổng chênh lệch (âm = trả thiếu so với lịch) của các kỳ ĐÃ ĐÓNG. Kỳ đang trả
+// dở không tính vào đây — phần thiếu của nó vẫn đang nằm ở dư nợ.
 function tongLechTraNo(loan){
   var sch = tinhLichTraNo(loan), s = 0;
   for (var i=0;i<sch.length;i++){
-    if (!kyDaGhiNhan(loan, i)) continue;
+    if (!kyDaDong(loan, i)) continue;
     if (kyRecords(loan, i).every(function(r){ return r.truocKhiDungApp; })) continue;
     s += soTienTraKy(loan, i) - num(sch[i].tongTra);
   }
   return s;
 }
-// dự trù trả nợ tháng mk: chỉ các kỳ CHƯA ghi nhận (kỳ đã ghi nhận thì số thực
-// tế đã nằm trong Sổ tay rồi, cộng thêm lịch nữa là tính 2 lần)
+// dự trù trả nợ tháng mk: kỳ đã đóng thì bỏ qua, kỳ trả dở chỉ dự trù PHẦN CÒN
+// THIẾU (phần đã trả nằm trong Sổ tay rồi, dự trù cả kỳ nữa là tính 2 lần)
 function tongTraNoThang(mk){
   var s = 0;
   (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(loan){
     if (!loanIsActive(loan)) return;
-    tinhLichTraNo(loan).forEach(function(row, idx){
+    var sch = tinhLichTraNo(loan);
+    sch.forEach(function(row, idx){
       if (row.mk !== mk) return;
-      if (kyDaGhiNhan(loan, idx)) return;
-      s += num(row.tongTra);
+      if (kyDaDong(loan, idx)) return;
+      s += conThieuKy(loan, idx, sch);
     });
   });
   return s;
@@ -274,29 +301,36 @@ function vayNoFormHtml(){
 function vayNoScheduleHtml(loan){
   var tienDo = tienDoTraNo(loan);
   var sch = tienDo.sch;
-  // kỳ đã ghi nhận MỚI NHẤT mới được hủy, để lịch sử không bị rỗ giữa
-  var lastPaidIdx = -1;
-  for (var i=0;i<sch.length;i++){ if (kyDaGhiNhan(loan, i)) lastPaidIdx = i; }
+  // kỳ ĐÃ ĐÓNG mới nhất mới được mở lại, để lịch sử không bị rỗ giữa
+  var lastClosedIdx = -1;
+  for (var i=0;i<sch.length;i++){ if (kyDaDong(loan, i)) lastClosedIdx = i; }
   var html = '<div class="table-wrap" style="margin:8px 0"><table><thead><tr><th>Tháng</th><th>Gốc</th><th>Lãi</th><th>Theo lịch</th><th>Thực trả</th><th>Dư nợ còn lại</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
   sch.forEach(function(row, idx){
     var st = kyStatus(loan, idx, sch);
-    var paid = st.trangThai !== 'chua';
+    var coTien = st.trangThai !== 'chua';
     var badge;
-    if (st.trangThai === 'du')        badge = '<span style="color:var(--green)">✓ đã trả đủ kỳ</span>';
-    else if (st.trangThai === 'thieu')badge = '<span style="color:var(--red)">⚠ chưa trả đủ kỳ (thiếu '+fmt(Math.round(-st.lech))+')</span>';
-    else                              badge = '<span style="color:var(--muted)">chưa trả</span>';
+    if (st.trangThai === 'du')         badge = '<span style="color:var(--green)">✓ đã trả đủ kỳ</span>';
+    else if (st.trangThai === 'thieu') badge = '<span style="color:var(--green)">✓ xong kỳ</span> <span style="color:var(--red)">(thiếu '+fmt(Math.round(-st.lech))+')</span>';
+    else if (st.trangThai === 'motphan')badge = '<span style="color:var(--red)">⚠ chưa trả đủ kỳ (còn '+fmt(Math.round(st.can - st.da))+')</span>';
+    else                               badge = '<span style="color:var(--muted)">chưa trả</span>';
     var btn = '';
-    if (!paid && idx === tienDo.kyTiepIdx){
-      btn = '<button class="btn sm" data-act="vnGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" data-tong="'+row.tongTra+'" data-mk="'+row.mk+'">Ghi nhận đã trả</button>';
-    } else if (paid && idx === lastPaidIdx){
-      btn = '<button class="btn sm secondary" data-act="vnHuyGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" title="Hủy ghi nhận kỳ này, hoàn lại giao dịch ở Sổ tay">Hủy ghi nhận</button>';
+    if (idx === tienDo.kyTiepIdx){
+      btn = '<button class="btn sm" data-act="vnGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" data-mk="'+row.mk+'">'
+          + (st.trangThai === 'motphan' ? 'Trả tiếp' : 'Ghi nhận đã trả') + '</button>';
+      if (st.trangThai === 'motphan'){
+        btn += ' <button class="btn sm secondary" data-act="vnDongKy" data-id="'+loan.id+'" data-ky="'+idx+'" title="Coi kỳ này là đã thanh toán xong dù còn thiếu">Đóng kỳ</button>'
+             + ' <button class="btn sm secondary" data-act="vnHuyGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" title="Xóa hết các lần trả của kỳ này, hoàn lại giao dịch ở Sổ tay">Hủy ghi nhận</button>';
+      }
+    } else if (idx === lastClosedIdx){
+      btn = '<button class="btn sm secondary" data-act="vnMoLaiKy" data-id="'+loan.id+'" data-ky="'+idx+'" title="Bỏ đánh dấu xong kỳ, giữ nguyên tiền đã trả">Mở lại kỳ</button>'
+          + ' <button class="btn sm secondary" data-act="vnHuyGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" title="Xóa hết các lần trả của kỳ này, hoàn lại giao dịch ở Sổ tay">Hủy ghi nhận</button>';
     }
-    html += '<tr'+(paid?' style="color:var(--muted)"':'')+'>'
+    html += '<tr'+(st.dong?' style="color:var(--muted)"':'')+'>'
       + '<td>'+monthLabel(row.mk)+'</td>'
       + '<td>'+fmt(Math.round(row.goc))+'</td>'
       + '<td>'+fmt(Math.round(row.lai))+'</td>'
       + '<td>'+fmt(Math.round(row.tongTra))+'</td>'
-      + '<td>'+(paid ? fmt(Math.round(st.da)) : '—')+'</td>'
+      + '<td>'+(coTien ? fmt(Math.round(st.da)) : '—')+'</td>'
       + '<td>'+fmt(Math.round(row.duNoConLai))+'</td>'
       + '<td>'+badge+'</td>'
       + '<td>'+btn+'</td>'
@@ -305,9 +339,9 @@ function vayNoScheduleHtml(loan){
   html += '</tbody></table></div>';
   var lech = tongLechTraNo(loan);
   if (Math.abs(lech) >= 1){
-    html += '<div class="empty" style="padding:0 0 8px">Chênh lệch giữa thực trả và lịch: '
+    html += '<div class="empty" style="padding:0 0 8px">Chênh lệch giữa thực trả và lịch ở các kỳ ĐÃ ĐÓNG: '
       + (lech < 0 ? 'trả thiếu ' : 'trả thừa ') + fmt(Math.round(Math.abs(lech)))
-      + '. Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay.</div>';
+      + '. Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay. Kỳ còn đang trả dở thì phần thiếu vẫn nằm trong dư nợ.</div>';
   }
   if (loan.tatToan){
     html += '<div class="empty" style="padding:0 0 8px">Đã tất toán ngày '+(loan.tatToan.ngay||'')+' với số tiền '+fmt(loan.tatToan.soTien)+'.</div>';
@@ -323,6 +357,7 @@ function renderVayNo(){
 
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   if (state.vnFormKind === 'choVay') html += choVayFormHtml();
+  html += '<div class="empty" style="padding:0 0 10px">Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.</div>';
   if (!choVay.length){
     html += '<div class="empty">Chưa có khoản cho vay nào.</div>';
   } else {
@@ -330,11 +365,13 @@ function renderVayNo(){
     choVay.forEach(function(c){
       var conLai = conLaiPhaiThu(c);
       var qh = soNgayQuaHan(c);
-      var tt = (c.trangThai==='da_thu_du')
-        ? 'Đã thu đủ'
-        : (qh > 0
-            ? '<span style="color:var(--red);font-weight:600">Quá hạn '+qh+' ngày</span>'
-            : 'Đang chờ');
+      var tt = c.tatToan
+        ? 'Đã tất toán' + (num(c.tatToan.soTien) > 0 ? ' (bỏ '+fmt(Math.round(c.tatToan.soTien))+')' : '')
+        : ((c.trangThai==='da_thu_du' || conLai <= 0)
+            ? 'Đã thu đủ'
+            : (qh > 0
+                ? '<span style="color:var(--red);font-weight:600">Quá hạn '+qh+' ngày</span>'
+                : 'Đang chờ'));
       html += '<tr>'
         + '<td style="text-align:left">'+c.ten+'</td>'
         + '<td>'+fmt(c.soTien)+'</td>'
@@ -343,7 +380,9 @@ function renderVayNo(){
         + '<td>'+(c.ngayDuKienThu||'')+'</td>'
         + '<td>'+tt+'</td>'
         + '<td class="actions-col">'
-        + (conLai>0 ? '<button class="icon-btn" data-act="vnGhiNhanThu" data-id="'+c.id+'" title="Ghi nhận đã thu">✓</button>' : '')
+        + (c.tatToan
+            ? '<button class="icon-btn" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy tất toán, mở lại khoản">↺</button>'
+            : (conLai>0 ? '<button class="icon-btn" data-act="vnTatToanChoVay" data-id="'+c.id+'" title="Tất toán: bỏ phần không đòi được. KHÔNG ghi giao dịch nào ở Sổ tay">✓</button>' : ''))
         + '<button class="icon-btn" data-act="vnEditChoVay" data-id="'+c.id+'">✎</button>'
         + '<button class="icon-btn" data-act="vnDelChoVay" data-id="'+c.id+'">🗑</button>'
         + '</td></tr>';
@@ -431,7 +470,10 @@ function loanRevertRef(r){
   if (r.loai === 'traNo'){
     var l = (state.data.vayNo.vayNoPhaiTra||[]).find(function(x){ return x.id === r.loanId; });
     if (!l) return;
-    l.traNo = (l.traNo||[]).filter(function(x){ return num(x.ky) !== num(r.ky); });
+    // 1 kỳ giờ có thể có nhiều LẦN trả -> xóa đúng lần trả theo rid, chỉ fallback
+    // về xóa cả kỳ với dữ liệu cũ (ref chưa có rid)
+    if (r.rid) l.traNo = (l.traNo||[]).filter(function(x){ return x.rid !== r.rid; });
+    else       l.traNo = (l.traNo||[]).filter(function(x){ return num(x.ky) !== num(r.ky); });
     if (!l.tatToan && soTienConLaiPhaiTra(l) > 0.01) l.trangThai = 'dang_vay';
   } else if (r.loai === 'tatToan'){
     var l2 = (state.data.vayNo.vayNoPhaiTra||[]).find(function(x){ return x.id === r.loanId; });
@@ -618,18 +660,26 @@ function handleVayNoAction(act, el){
     var idTD = el.getAttribute('data-id');
     state.vnDetailId = (state.vnDetailId === idTD) ? null : idTD;
     renderVayNo();
-  } else if (act === 'vnGhiNhanThu'){
-    var idGT = el.getAttribute('data-id');
-    var cvItem = state.data.vayNo.choVay.find(function(x){ return x.id===idGT; });
-    if (!cvItem) return true;
-    var conLaiGT = conLaiPhaiThu(cvItem);
-    var amtStr = prompt('Số tiền đã thu được (còn phải thu: '+fmt(conLaiGT)+'):', conLaiGT);
-    if (amtStr === null) return true;
-    var amt = numNonNeg(amtStr);
-    if (amt <= 0) return true;
-    cvItem.daThu = num(cvItem.daThu) + amt;
-    if (cvItem.daThu >= cvItem.soTien - 0.01) cvItem.trangThai = 'da_thu_du';
-    journalAddRef(todayStr(), cvItem.id, 'thuHoiChoVay', amt, 'Thu hồi: ' + cvItem.ten);
+  } else if (act === 'vnTatToanChoVay'){
+    // TẤT TOÁN cho vay = phần còn lại không đòi được (cho luôn/mất). KHÔNG sinh
+    // giao dịch nào ở Sổ tay: tiền chi đã ghi đủ lúc cho vay, tiền thu chỉ ghi
+    // phần thực nhận -> số dư vốn đã đúng, ghi thêm là đếm 2 lần.
+    var idTTCV = el.getAttribute('data-id');
+    var cvTT = state.data.vayNo.choVay.find(function(x){ return x.id===idTTCV; });
+    if (!cvTT) return true;
+    var boTT = conLaiPhaiThu(cvTT);
+    if (boTT <= 0) return true;
+    if (!confirm('Tất toán khoản cho vay "'+cvTT.ten+'"?\n\nCòn phải thu '+fmt(Math.round(boTT))
+        + ' sẽ coi như KHÔNG ĐÒI ĐƯỢC và bỏ qua.\nKhông có giao dịch nào được ghi ở Sổ tay (số dư đã đúng từ trước).')) return true;
+    cvTT.tatToan = { soTien: boTT, ngay: todayStr() };
+    cvTT.trangThai = 'da_thu_du';
+    scheduleSave(); renderVayNo();
+  } else if (act === 'vnHuyTatToanChoVay'){
+    var idHTT = el.getAttribute('data-id');
+    var cvHTT = state.data.vayNo.choVay.find(function(x){ return x.id===idHTT; });
+    if (!cvHTT || !cvHTT.tatToan) return true;
+    cvHTT.tatToan = null;
+    cvHTT.trangThai = (num(cvHTT.daThu) >= num(cvHTT.soTien) - 0.01) ? 'da_thu_du' : 'dang_cho';
     scheduleSave(); renderVayNo();
   } else if (act === 'vnGhiNhanTra'){
     var idGTr = el.getAttribute('data-id');
@@ -637,17 +687,50 @@ function handleVayNoAction(act, el){
     if (!vnItem) return true;
     var kyGTr = parseInt(el.getAttribute('data-ky'), 10);
     var mkGTr = el.getAttribute('data-mk');
-    var tongKy = num(el.getAttribute('data-tong'));
-    if (isNaN(kyGTr) || kyDaGhiNhan(vnItem, kyGTr)) return true;
-    var amtStr2 = prompt('Số tiền trả kỳ '+(kyGTr+1)+' ('+monthLabel(mkGTr)+')\nTheo lịch: '+fmt(Math.round(tongKy))
-      + '\n\nNhập đúng số thực trả. Trả thiếu vài nghìn vẫn tính là ĐÃ TRẢ ĐỦ KỲ, chênh lệch được hiện riêng:', Math.round(tongKy));
+    if (isNaN(kyGTr) || kyDaDong(vnItem, kyGTr)) return true;
+    var schGTr = tinhLichTraNo(vnItem);
+    if (!schGTr[kyGTr]) return true;
+    var canKy = num(schGTr[kyGTr].tongTra);
+    var daKy = soTienTraKy(vnItem, kyGTr);
+    var conThieu = Math.max(0, canKy - daKy);
+    var amtStr2 = prompt('Số tiền trả kỳ '+(kyGTr+1)+' ('+monthLabel(mkGTr)+')\nTheo lịch: '+fmt(Math.round(canKy))
+      + (daKy > 0 ? '\nĐã trả trong kỳ: '+fmt(Math.round(daKy))+' -> còn thiếu '+fmt(Math.round(conThieu)) : '')
+      + '\n\nNhập đúng số thực trả lần này:', Math.round(conThieu));
     if (amtStr2 === null) return true;
     var amt2 = numNonNeg(amtStr2);
     if (amt2 <= 0){ alert('Nhập số tiền thực trả lớn hơn 0.'); return true; }
+    // trả thiếu so với lịch -> hỏi ngay: coi là xong kỳ (chênh lệch bỏ qua)
+    // hay vẫn còn nợ tiếp trong kỳ này (lần sau "Trả tiếp")
+    var dongKyG = true;
+    if (amt2 < conThieu - 1){
+      dongKyG = confirm('Lần này trả '+fmt(Math.round(amt2))+', vẫn thiếu '+fmt(Math.round(conThieu - amt2))+' so với lịch kỳ '+(kyGTr+1)+'.\n\n'
+        + 'OK = coi kỳ này ĐÃ THANH TOÁN XONG (phần thiếu tính vào chênh lệch)\n'
+        + 'Hủy = kỳ này CÒN NỢ TIẾP (phần thiếu vẫn nằm trong dư nợ)');
+    }
+    var ridG = 'r' + kyGTr + '_' + Date.now().toString(36);
     vnItem.traNo = vnItem.traNo || [];
-    vnItem.traNo.push({ ky: kyGTr, mk: mkGTr, soTien: amt2, ngay: todayStr() });
-    journalAddRef(todayStr(), vnItem.id, 'traNo', amt2, 'Trả nợ: '+vnItem.ten+' (kỳ '+(kyGTr+1)+')', { ky: kyGTr });
+    vnItem.traNo.push({ rid: ridG, ky: kyGTr, mk: mkGTr, soTien: amt2, ngay: todayStr(), dongKy: dongKyG });
+    journalAddRef(todayStr(), vnItem.id, 'traNo', amt2, 'Trả nợ: '+vnItem.ten+' (kỳ '+(kyGTr+1)+')', { ky: kyGTr, rid: ridG });
     if (soTienConLaiPhaiTra(vnItem) <= 0.01) vnItem.trangThai = 'da_tra_het';
+    scheduleSave(); renderVayNo();
+  } else if (act === 'vnDongKy' || act === 'vnMoLaiKy'){
+    // chỉ bật/tắt cờ "xong kỳ", KHÔNG đụng vào tiền đã trả lẫn giao dịch Sổ tay
+    var idDK = el.getAttribute('data-id');
+    var vnDK = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===idDK; });
+    if (!vnDK) return true;
+    var kyDK = parseInt(el.getAttribute('data-ky'), 10);
+    var recsDK = isNaN(kyDK) ? [] : kyRecords(vnDK, kyDK);
+    if (!recsDK.length) return true;
+    if (act === 'vnDongKy'){
+      var thieuDK = conThieuKy(vnDK, kyDK);
+      if (!confirm('Đóng kỳ '+(kyDK+1)+' dù còn thiếu '+fmt(Math.round(thieuDK))+'?\n\n'
+          + 'Phần thiếu sẽ chuyển sang mục chênh lệch, không còn tính vào dư nợ.')) return true;
+      recsDK[recsDK.length-1].dongKy = true;
+      if (soTienConLaiPhaiTra(vnDK) <= 0.01) vnDK.trangThai = 'da_tra_het';
+    } else {
+      recsDK.forEach(function(r){ r.dongKy = false; });
+      if (!vnDK.tatToan && soTienConLaiPhaiTra(vnDK) > 0.01) vnDK.trangThai = 'dang_vay';
+    }
     scheduleSave(); renderVayNo();
   } else if (act === 'vnHuyGhiNhanTra'){
     var idHuy = el.getAttribute('data-id');
@@ -655,11 +738,12 @@ function handleVayNoAction(act, el){
     if (!vnHuy) return true;
     var kyHuy = parseInt(el.getAttribute('data-ky'), 10);
     if (isNaN(kyHuy) || !kyDaGhiNhan(vnHuy, kyHuy)) return true;
+    var recsHuy = kyRecords(vnHuy, kyHuy);
     var daHuy = soTienTraKy(vnHuy, kyHuy);
-    var truoc = kyRecords(vnHuy, kyHuy).every(function(r){ return r.truocKhiDungApp; });
-    if (!confirm('Hủy ghi nhận trả kỳ '+(kyHuy+1)+' ('+fmt(Math.round(daHuy))+')?\n'
+    var truoc = recsHuy.every(function(r){ return r.truocKhiDungApp; });
+    if (!confirm('Hủy ghi nhận trả kỳ '+(kyHuy+1)+' ('+recsHuy.length+' lần trả, tổng '+fmt(Math.round(daHuy))+')?\n'
         + (truoc ? 'Kỳ này được khai là đã trả trước khi dùng app nên không có giao dịch Sổ tay để hoàn.'
-                 : 'Giao dịch "Trả nợ" tương ứng ở Sổ tay sẽ bị xóa, số dư hoàn lại.'))) return true;
+                 : 'Các giao dịch "Trả nợ" tương ứng ở Sổ tay sẽ bị xóa, số dư hoàn lại.'))) return true;
     journalRemoveRefs(vnHuy.id, 'traNo', kyHuy);
     vnHuy.traNo = (vnHuy.traNo||[]).filter(function(r){ return num(r.ky) !== kyHuy; });
     if (!vnHuy.tatToan && soTienConLaiPhaiTra(vnHuy) > 0.01) vnHuy.trangThai = 'dang_vay';
