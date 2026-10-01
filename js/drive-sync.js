@@ -97,29 +97,53 @@ function clearLocalDraft(){
 }
 // gọi 1 lần sau khi đăng nhập + tải xong dữ liệu Drive: nếu phát hiện có nháp cục bộ
 // còn sót lại từ lần trước (do mất mạng/đóng tab trước khi lưu Drive xong), hỏi khôi phục.
+// mô tả ngắn gọn 1 bộ dữ liệu để người dùng biết nháp chứa gì trước khi quyết định khôi phục
+function describeData(d){
+  if (!d) return '(trống)';
+  var soNgay = Object.keys(d.journal || {}).length;
+  var vn = (d.vayNo && d.vayNo.vayNoPhaiTra) ? d.vayNo.vayNoPhaiTra.length : 0;
+  var cv = (d.vayNo && d.vayNo.choVay) ? d.vayNo.choVay.length : 0;
+  var lastDay = Object.keys(d.journal || {}).sort().pop() || '—';
+  return soNgay + ' ngày có giao dịch (mới nhất: ' + lastDay + '), '
+    + vn + ' khoản vay phải trả, ' + cv + ' khoản cho vay';
+}
+
 function checkLocalDraft(){
   var raw = null;
   try{ raw = localStorage.getItem(LOCAL_DRAFT_KEY); }catch(e){ return; }
   if (!raw) return;
+  var draft = null;
   try{
-    var draft = JSON.parse(raw);
-    if (draft && draft.data){
-      var t = new Date(draft.savedAt);
-      var msg = 'Phát hiện có thay đổi chưa kịp đồng bộ lên Google Drive từ lần trước (lưu nháp lúc '
-        + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN')+').\n'
-        + 'Khôi phục thay đổi đó không? (Chọn Hủy nếu bỏ qua, giữ dữ liệu hiện tại từ Drive)';
-      if (confirm(msg)){
-        state.data = normalizeData(draft.data);
-        scheduleSave();
-      }
-    }
-  }catch(e){}
-  clearLocalDraft();
+    draft = JSON.parse(raw);
+  }catch(e){
+    // KHÔNG xóa nháp khi parse lỗi — dữ liệu còn đó, chỉ là hỏng cấu trúc; báo để còn cứu bằng tay
+    console.error('[chitieu] Bản nháp cục bộ bị lỗi, KHÔNG xóa. Nội dung thô nằm ở localStorage key "'
+      + LOCAL_DRAFT_KEY + '".', e);
+    state.errorMsg = 'Có bản nháp cục bộ bị lỗi định dạng, chưa xóa. Mở Console (F12) để xem chi tiết.';
+    return;
+  }
+  if (!draft || !draft.data) return;
+  var t = new Date(draft.savedAt);
+  var msg = 'Phát hiện thay đổi chưa kịp đồng bộ lên Google Drive từ lần trước.\n\n'
+    + 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
+    + '  ' + describeData(draft.data) + '\n\n'
+    + 'Dữ liệu hiện tại trên Drive:\n'
+    + '  ' + describeData(state.data) + '\n\n'
+    + 'OK = khôi phục nháp (ghi đè dữ liệu Drive).\n'
+    + 'Hủy = dùng dữ liệu Drive, nháp VẪN ĐƯỢC GIỮ LẠI để còn khôi phục sau.';
+  if (confirm(msg)){
+    state.data = normalizeData(draft.data);
+    scheduleSave();           // scheduleSave sẽ ghi lại nháp, clearLocalDraft chỉ chạy khi Drive lưu xong
+  }
+  // Chọn Hủy: cố tình KHÔNG clearLocalDraft() — nháp là bản sao cuối cùng, xóa là mất luôn.
 }
 
 var saveTimer = null;
+var changeSeq = 0;      // tăng mỗi lần dữ liệu đổi, để biết có thay đổi mới chen vào giữa lúc đang upload
 function scheduleSave(){
   state.dirty = true;
+  changeSeq++;
+  invalidateBalanceCache();   // dữ liệu vừa đổi -> cache số dư không còn đúng
   renderSyncStatus();
   saveLocalDraft();
   if (saveTimer) clearTimeout(saveTimer);
@@ -129,6 +153,7 @@ function scheduleSave(){
 async function driveSave(){
   if (state.saving) { saveTimer = setTimeout(driveSave, 1500); return; }
   state.saving = true;
+  var seqAtStart = changeSeq;
   renderSyncStatus();
   try{
     var text = JSON.stringify(state.data);
@@ -150,21 +175,35 @@ async function driveSave(){
     if (!upRes.ok) throw new Error('save-failed:' + upRes.status);
     state.errorMsg = null;
     state.lastSync = new Date();
-    clearLocalDraft();
+    // CHỈ hạ cờ dirty + xóa nháp khi Drive đã nhận xong VÀ không có thay đổi mới chen vào giữa lúc upload
+    if (changeSeq === seqAtStart){
+      state.dirty = false;
+      clearLocalDraft();
+    }
   }catch(e){
-    state.errorMsg = 'Lưu lên Google Drive thất bại. Sẽ thử lại.';
+    // Giữ state.dirty = true: pollRefresh sẽ không nạp đè dữ liệu Drive lên thay đổi chưa lưu,
+    // và nháp cục bộ được giữ nguyên làm bản sao cuối cùng.
+    console.error('[chitieu] Lưu Drive thất bại:', e);
+    state.errorMsg = 'Lưu lên Google Drive thất bại (' + (e && e.message ? e.message : 'lỗi mạng') + '). Sẽ thử lại.';
     saveTimer = setTimeout(driveSave, 4000);
   }
-  state.dirty = false;
   state.saving = false;
   renderSyncStatus();
 }
 
 async function pollRefresh(){
-  if (!accessToken || state.dirty || state.saving || isTypingNow()) return;
+  if (!accessToken || state.dirty || state.saving || isTypingNow() || isFormOpen()) return;
   await driveLoad();
   renderAll();
 }
+
+// Cảnh báo khi đóng tab/refresh mà còn thay đổi chưa đồng bộ lên Drive
+window.addEventListener('beforeunload', function(e){
+  if (!state.dirty && !state.saving) return;
+  e.preventDefault();
+  e.returnValue = '';   // Chrome yêu cầu set returnValue để hiện hộp xác nhận
+  return '';
+});
 
 /* ---------------- auth flow ---------------- */
 function showApp(){

@@ -5,21 +5,33 @@
    Cần state.js, vayno.js (tongTraNoThang, tongThuHoiThang) load trước.
    ==================================================================== */
 
-// TB thực tế N tháng gần nhất có phát sinh (toàn bộ lịch sử), dùng làm gợi ý dự trù
+/* ====================================================================
+   DỰ TRÙ = TB CÁC THÁNG ĐÃ HOÀN CHỈNH
+   Chỉ lấy tháng ĐÃ KẾT THÚC và từ settings.thangBatDauDuTru trở đi:
+   - tháng đang chạy chưa đủ số liệu -> lấy vào là kéo TB xuống sai
+   - tháng lẻ đầu tiên (bắt đầu dùng app từ giữa tháng) cũng không phản ánh cả tháng
+   Cửa sổ trượt tối đa 3 tháng hoàn chỉnh gần nhất. Chưa có tháng nào -> null
+   để nơi gọi fallback về Chỉ tiêu/tháng ở tab Danh mục.
+   Ví dụ (bắt đầu dự trù T10/2026): dự trù T11 = thực tế T10; T12 = TB(T10,T11);
+   T1/2027 = TB(T10,T11,T12); T2/2027 = TB(T11,T12,T1).
+   Tháng không phát sinh TÍNH LÀ 0 vào TB — mua 1 lần rồi thôi thì gợi ý phải
+   giảm dần, không được giữ mãi mức của tháng duy nhất có mua.
+   ==================================================================== */
+function forecastEligibleMonths(){
+  var startMk = state.data.settings.thangBatDauDuTru
+    || monthKey(state.data.settings.ngayBatDau || todayStr());
+  var curMk = monthKey(todayStr());
+  var out = [], mk = startMk, guard = 0;
+  while (mk < curMk && guard++ < 600){ out.push(mk); mk = monthKeyAdd(mk, 1); }
+  return out;
+}
 function recentAvgActual(kind, catId, n){
-  var byMonth = {};
-  Object.keys(state.data.journal).forEach(function(d){
-    var obj = state.data.journal[d][kind] || {};
-    if (!obj[catId]) return;
-    var mk = monthKey(d);
-    byMonth[mk] = (byMonth[mk]||0) + num(obj[catId]);
-  });
-  var mks = Object.keys(byMonth).sort();
-  if (mks.length < n) return null; // chưa đủ n tháng dữ liệu thực tế -> chưa dùng trung bình, để fallback về chỉ tiêu
-  var lastN = mks.slice(-n);
-  if (!lastN.length) return null;
-  var sum = lastN.reduce(function(s,mk){ return s+byMonth[mk]; },0);
-  return sum/lastN.length;
+  var months = forecastEligibleMonths();
+  if (!months.length) return null;
+  var win = months.slice(-n);
+  var sum = 0;
+  win.forEach(function(mk){ sum += actualCatInMonth(kind, catId, mk); });
+  return sum / win.length;
 }
 
 var DONGTIEN_GROUPS = [ { kind:'thu', title:'Thu nhập' }, { kind:'chi', title:'Chi' } ];
@@ -161,11 +173,15 @@ function renderDongTien(){
   html += '</tr>';
 
   html += '</tbody></table></div></div>';
-  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý (TB thực tế 3 tháng gần nhất, hoặc chỉ tiêu nếu chưa có dữ liệu). Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
+  var fcM = forecastEligibleMonths();
+  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
+    + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
+    + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng Chỉ tiêu/tháng ở tab Danh mục')
+    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB thực tế 3 tháng gần nhất có dữ liệu (toàn bộ lịch sử); nếu chưa có dữ liệu thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
+    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
     + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   ['thu','chi'].forEach(function(kind){
     state.data.categories[kind].forEach(function(c){

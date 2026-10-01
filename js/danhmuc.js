@@ -40,7 +40,10 @@ function renderDanhMuc(){
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
     + '<div><label>Số dư</label><input type="number" id="cfg_du" value="'+(state.data.settings.soDuDauKy||0)+'"></div>'
-    + '</div><button class="btn sm" data-act="saveSettings">Lưu</button></div>';
+    + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
+    + '</div>'
+    + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
+    + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += '<div class="card"><h3>Khóa sổ</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
     + '<div class="form-row">'
@@ -81,6 +84,8 @@ function handleDanhMucAction(act, el){
   } else if (act === 'saveSettings'){
     state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
     state.data.settings.soDuDauKy = num(document.getElementById('cfg_du').value);
+    var duTruVal = document.getElementById('cfg_duTru').value;
+    if (duTruVal) state.data.settings.thangBatDauDuTru = duTruVal;
     scheduleSave();
     renderDanhMuc();
     alert('Đã lưu.');

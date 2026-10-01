@@ -62,8 +62,11 @@ function renderSoTay(){
 
   var thuCats = state.data.categories.thu;
   var cats = state.data.categories.chi;
-  var editEntry = state.editingDate ? (state.data.journal[state.editingDate] || {thu:{},chi:{},ghiChu:''}) : {thu:{},chi:{},ghiChu:''};
+  var editEntry = state.editingDate ? (state.data.journal[state.editingDate] || blankEntry()) : blankEntry();
   var editDate = state.editingDate || todayStr();
+  // phần tiền trong ngày đang sửa mà do khoản vay/cho vay sinh ra: KHÓA, không cho sửa tay
+  // (sửa ở đây thì số ở Sổ tay và tiến độ khoản vay lệch nhau ngay)
+  var hasRefs = state.editingDate && (editEntry.refs||[]).length > 0;
 
   var html = '';
   html += '<div class="grid-summary">'
@@ -96,8 +99,12 @@ function renderSoTay(){
     html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
   }
   thuCats.forEach(function(c){
-    var vt = (editEntry.thu && editEntry.thu[c.id]) || '';
-    html += '<div><label>'+c.ten+'</label><input type="number" class="f_thu" data-cat="'+c.id+'" value="'+(vt||'')+'" placeholder="0" min="0">';
+    var lockThu = hasRefs ? entryRefSum(editEntry, 'thu', c.id) : 0;
+    var vt = num((editEntry.thu||{})[c.id]) - lockThu;
+    if (vt <= 0) vt = '';
+    html += '<div><label>'+c.ten
+      + (lockThu > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockThu))+' khóa từ Vay-Nợ)</span>' : '')
+      + '</label><input type="number" class="f_thu" data-cat="'+c.id+'" data-lock="'+lockThu+'" value="'+(vt||'')+'" placeholder="0" min="0">';
     if (c.id === 'thuHoiChoVay' && !state.editingDate){
       var pendingCV = (state.data.vayNo.choVay||[]).filter(function(l){ return l.trangThai !== 'da_thu_du' && conLaiPhaiThu(l) > 0.01; });
       if (pendingCV.length){
@@ -116,10 +123,18 @@ function renderSoTay(){
     html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
   }
   cats.forEach(function(c){
-    var v = (editEntry.chi && editEntry.chi[c.id]) || '';
-    html += '<div><label>'+c.ten+'</label><input type="number" class="f_chi" data-cat="'+c.id+'" value="'+(v||'')+'" placeholder="0" min="0">';
+    var lockChi = hasRefs ? entryRefSum(editEntry, 'chi', c.id) : 0;
+    var v = num((editEntry.chi||{})[c.id]) - lockChi;
+    if (v <= 0) v = '';
+    html += '<div><label>'+c.ten
+      + (lockChi > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockChi))+' khóa từ Vay-Nợ)</span>' : '')
+      + '</label><input type="number" class="f_chi" data-cat="'+c.id+'" data-lock="'+lockChi+'" value="'+(v||'')+'" placeholder="0" min="0">';
     if (c.id === 'traNo' && !state.editingDate){
-      var activeVN = (state.data.vayNo.vayNoPhaiTra||[]).filter(loanIsActive);
+      // chỉ hiện khoản vay còn kỳ CHƯA ghi nhận — khoản đã ghi nhận hết kỳ mà vẫn cho chọn
+      // thì sinh ra bản ghi trả nợ khống (P0-3)
+      var activeVN = (state.data.vayNo.vayNoPhaiTra||[]).filter(function(l){
+        return loanIsActive(l) && !l.tatToan && tienDoTraNo(l).kyTiepIdx >= 0;
+      });
       if (activeVN.length){
         html += '<select id="sotay_selVayNo" data-act="soTayChonVayNo" style="margin-top:4px;width:100%;font-size:12px">'
           + '<option value="">— chọn khoản vay (tùy chọn) —</option>'
@@ -133,6 +148,9 @@ function renderSoTay(){
     html += '</div>';
   });
   html += '</div>';
+  if (hasRefs){
+    html += '<div class="empty" style="padding:0 0 4px">Ngày này có giao dịch do khoản vay/cho vay sinh ra (phần "khóa"). Ô nhập chỉ chứa phần nhập tay; phần khóa muốn sửa thì vào tab Vay - Nợ.</div>';
+  }
   html += '<label>Nội dung</label><input type="text" id="f_ghichu" value="'+(editEntry.ghiChu||'').replace(/"/g,'&quot;')+'" placeholder="Ghi chú...">';
   html += '<div style="margin-top:12px;display:flex;gap:8px">';
   html += '<button class="btn" data-act="saveEntry">'+(state.editingDate?'Cập nhật':'Lưu')+'</button>';
@@ -288,18 +306,21 @@ function handleSoTayAction(act, el){
     var selVN = document.getElementById('sotay_selVayNo');
     var cvIdSel = (!wasEditing && selCV) ? selCV.value : '';
     var vnIdSel = (!wasEditing && selVN) ? selVN.value : '';
+    // data-lock = phần tiền do khoản vay sinh ra, ô nhập chỉ chứa phần nhập tay -> cộng lại
     var thu = {};
     document.querySelectorAll('.f_thu').forEach(function(inp){
-      var v = numNonNeg(inp.value);
+      var v = numNonNeg(inp.value) + num(inp.getAttribute('data-lock'));
       if (v) thu[inp.getAttribute('data-cat')] = v;
     });
     var chi = {};
     document.querySelectorAll('.f_chi').forEach(function(inp){
-      var v = numNonNeg(inp.value);
+      var v = numNonNeg(inp.value) + num(inp.getAttribute('data-lock'));
       if (v) chi[inp.getAttribute('data-cat')] = v;
     });
     if (state.editingDate){
-      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+      var oldE = state.data.journal[date] || blankEntry();
+      // GIỮ refs: ghi đè cả entry là làm mồ côi liên kết với khoản vay -> số dư/tiến độ lệch
+      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu, refs: oldE.refs || [] };
     } else if (state.data.journal[date]){
       var existing = state.data.journal[date];
       existing.thu = (existing.thu && typeof existing.thu === 'object') ? existing.thu : {};
@@ -310,26 +331,35 @@ function handleSoTayAction(act, el){
       Object.keys(chi).forEach(function(cid){
         existing.chi[cid] = num(existing.chi[cid]) + chi[cid];
       });
+      existing.refs = existing.refs || [];
       if (ghiChu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChu) : ghiChu;
     } else {
-      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu };
+      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu, refs: [] };
     }
     if (cvIdSel && thu['thuHoiChoVay']){
       var cvApply = state.data.vayNo.choVay.find(function(x){ return x.id===cvIdSel; });
       if (cvApply){
         cvApply.daThu = num(cvApply.daThu) + thu['thuHoiChoVay'];
         if (cvApply.daThu >= cvApply.soTien - 0.01) cvApply.trangThai = 'da_thu_du';
+        journalTagRef(date, cvApply.id, 'thuHoiChoVay', thu['thuHoiChoVay']);
       }
     }
-    if (vnIdSel){
+    // CHỈ ghi nhận trả nợ khi thực sự có nhập tiền vào danh mục "Trả nợ", và ghi đúng
+    // SỐ ĐÃ NHẬP vào kỳ tiếp theo (trước đây chọn khoản vay mà không nhập tiền vẫn
+    // cộng tiến độ 1 kỳ -> trả nợ khống)
+    if (vnIdSel && chi['traNo']){
       var vnApply = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===vnIdSel; });
       if (vnApply){
         var tdApply = tienDoTraNo(vnApply);
-        if (tdApply.kyTiepTheo){
-          vnApply.daTraGoc = num(vnApply.daTraGoc) + tdApply.kyTiepTheo.goc;
-          if (vnApply.daTraGoc >= vnApply.soTienGoc - 0.01) vnApply.trangThai = 'da_tra_het';
+        if (tdApply.kyTiepIdx >= 0){
+          vnApply.traNo = vnApply.traNo || [];
+          vnApply.traNo.push({ ky: tdApply.kyTiepIdx, mk: tdApply.kyTiepTheo.mk, soTien: chi['traNo'], ngay: date });
+          journalTagRef(date, vnApply.id, 'traNo', chi['traNo'], { ky: tdApply.kyTiepIdx });
+          if (soTienConLaiPhaiTra(vnApply) <= 0.01) vnApply.trangThai = 'da_tra_het';
         }
       }
+    } else if (vnIdSel && !chi['traNo']){
+      alert('Đã chọn khoản vay nhưng chưa nhập số tiền ở danh mục "Trả nợ" — không ghi nhận kỳ trả nào.');
     }
     state.editingDate = null;
     scheduleSave();
@@ -343,7 +373,28 @@ function handleSoTayAction(act, el){
     window.scrollTo({top:0, behavior:'smooth'});
   } else if (act === 'delDay'){
     var d = el.getAttribute('data-date');
-    if (confirm('Xóa giao dịch ngày '+d+'?')){
+    var eDel = state.data.journal[d];
+    if (!eDel) return true;
+    var refsDel = eDel.refs || [];
+    // giao dịch GỐC của khoản vay (nhận tiền vay / cho vay) không được xóa từ đây:
+    // xóa thì khoản vay vẫn còn mà tiền thì bốc hơi -> số dư sai
+    var goc = refsDel.filter(function(r){ return r.loai === 'nhanTienVay' || r.loai === 'choVay'; });
+    if (goc.length){
+      alert('Ngày này chứa giao dịch gốc của khoản vay/cho vay ('
+        + goc.map(function(r){ return REF_LABEL[r.loai]; }).join(', ')
+        + '). Muốn bỏ thì xóa/sửa chính khoản đó ở tab "Vay - Nợ", không xóa từ Sổ tay.');
+      return true;
+    }
+    var msgDel = 'Xóa giao dịch ngày '+d+'?';
+    if (refsDel.length){
+      msgDel += '\n\nNgày này có '+refsDel.length+' giao dịch gắn với khoản vay, xóa sẽ hoàn tác luôn ở tab Vay - Nợ:\n'
+        + refsDel.map(function(r){
+            return '  ' + (REF_LABEL[r.loai]||r.loai) + ' · ' + fmt(r.soTien)
+                 + (r.ky != null ? ' (kỳ '+(num(r.ky)+1)+' → về chưa trả)' : '');
+          }).join('\n');
+    }
+    if (confirm(msgDel)){
+      refsDel.forEach(function(r){ loanRevertRef(r); });
       delete state.data.journal[d];
       scheduleSave();
       renderSoTay();
