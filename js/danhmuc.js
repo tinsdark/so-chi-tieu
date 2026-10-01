@@ -10,12 +10,15 @@ function categoryCardHtml(kind, title, cats){
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục nào.</div>';
   } else {
-    html += '<div class="cat-list">';
-    cats.forEach(function(c){
-      html += '<div style="display:flex;flex-direction:column;gap:4px">'
+    html += '<div class="cat-list" data-kind="'+kind+'">';
+    cats.forEach(function(c, idx){
+      html += '<div class="cat-item" data-kind="'+kind+'" data-id="'+c.id+'" style="display:flex;flex-direction:column;gap:4px">'
         + '<div style="display:flex;gap:4px;align-items:center">'
+        + '<span class="cat-drag" draggable="true" title="Kéo để đổi thứ tự" style="cursor:grab;color:var(--muted);user-select:none;padding:0 2px">⠿</span>'
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="width:100px" title="Chỉ tiêu/tháng" min="0">'
+        + '<button class="icon-btn" data-act="catUp" data-kind="'+kind+'" data-id="'+c.id+'" title="Lên trên"'+(idx===0?' disabled style="opacity:.3"':'')+'>▲</button>'
+        + '<button class="icon-btn" data-act="catDown" data-kind="'+kind+'" data-id="'+c.id+'" title="Xuống dưới"'+(idx===cats.length-1?' disabled style="opacity:.3"':'')+'>▼</button>'
         + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
         + '</div>'
         + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
@@ -50,6 +53,52 @@ function renderDanhMuc(){
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
     + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
   root.innerHTML = html;
+  attachCatDragDrop();
+}
+
+/* ---- Kéo thả đổi thứ tự danh mục ----
+   Thứ tự mảng categories[kind] CHÍNH LÀ thứ tự hiện ở form Sổ tay / Dòng tiền,
+   nên chỉ cần hoán vị mảng rồi lưu. Dùng handle ⠿ thay vì kéo cả dòng để còn
+   bôi đen sửa tên trong ô input được. Chỉ cho kéo trong cùng nhóm thu/chi. */
+var dragCat = null;
+function clearCatDropHint(){
+  document.querySelectorAll('.cat-item').forEach(function(x){ x.style.boxShadow = ''; });
+}
+function attachCatDragDrop(){
+  document.querySelectorAll('.cat-item').forEach(function(item){
+    var handle = item.querySelector('.cat-drag');
+    if (handle){
+      handle.addEventListener('dragstart', function(e){
+        dragCat = { kind: item.getAttribute('data-kind'), id: item.getAttribute('data-id') };
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragCat.id);
+        item.style.opacity = '.4';
+      });
+      handle.addEventListener('dragend', function(){
+        item.style.opacity = ''; dragCat = null; clearCatDropHint();
+      });
+    }
+    item.addEventListener('dragover', function(e){
+      if (!dragCat || dragCat.kind !== item.getAttribute('data-kind')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearCatDropHint();
+      if (item.getAttribute('data-id') !== dragCat.id) item.style.boxShadow = 'inset 0 0 0 2px #4f46e5';
+    });
+    item.addEventListener('drop', function(e){
+      if (!dragCat || dragCat.kind !== item.getAttribute('data-kind')) return;
+      e.preventDefault();
+      clearCatDropHint();
+      var arr = state.data.categories[dragCat.kind] || [];
+      var from = arr.findIndex(function(x){ return x.id === dragCat.id; });
+      var to   = arr.findIndex(function(x){ return x.id === item.getAttribute('data-id'); });
+      dragCat = null;
+      if (from < 0 || to < 0 || from === to) return;
+      arr.splice(to, 0, arr.splice(from, 1)[0]);
+      scheduleSave();
+      renderDanhMuc();
+    });
+  });
 }
 
 /* ---- Danh mục: helper validate trùng tên ---- */
@@ -73,6 +122,16 @@ function handleDanhMucAction(act, el){
       scheduleSave();
       renderDanhMuc();
     }
+  } else if (act === 'catUp' || act === 'catDown'){
+    // đổi chỗ với dòng liền kề — dùng được trên điện thoại, nơi kéo thả không chạy
+    var kindM = el.getAttribute('data-kind') || 'chi';
+    var arrM = state.data.categories[kindM] || [];
+    var iM = arrM.findIndex(function(x){ return x.id === el.getAttribute('data-id'); });
+    var jM = iM + (act === 'catUp' ? -1 : 1);
+    if (iM < 0 || jM < 0 || jM >= arrM.length) return true;
+    var tmpM = arrM[iM]; arrM[iM] = arrM[jM]; arrM[jM] = tmpM;
+    scheduleSave();
+    renderDanhMuc();
   } else if (act === 'delCat'){
     var kind2 = el.getAttribute('data-kind') || 'chi';
     var cid = el.getAttribute('data-id');
