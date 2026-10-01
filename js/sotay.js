@@ -343,6 +343,16 @@ function handleSoTayAction(act, el){
       var v = numNonNeg(inp.value) + num(inp.getAttribute('data-lock'));
       if (v) chi[inp.getAttribute('data-cat')] = v;
     });
+    // mỗi lần Lưu = 1 khoản -> tự gắn số tiền vào cuối nội dung ("Ăn trưa" -> "Ăn trưa 40.000 ₫")
+    // CHỈ khi thêm mới. Sửa ngày cũ thì giữ nguyên nội dung đã có, không bóc/ghép lại số
+    // (bóc đuôi số dễ cắt nhầm nội dung vốn kết thúc bằng con số).
+    var ghiChuLuu = ghiChu;
+    if (!state.editingDate && ghiChu){
+      var tongLan = 0;
+      Object.keys(thu).forEach(function(cid){ tongLan += thu[cid]; });
+      Object.keys(chi).forEach(function(cid){ tongLan += chi[cid]; });
+      if (tongLan > 0) ghiChuLuu = ghiChu + ' ' + fmt(Math.round(tongLan));
+    }
     if (state.editingDate){
       var oldE = state.data.journal[date] || blankEntry();
       // GIỮ refs: ghi đè cả entry là làm mồ côi liên kết với khoản vay -> số dư/tiến độ lệch
@@ -358,9 +368,9 @@ function handleSoTayAction(act, el){
         existing.chi[cid] = num(existing.chi[cid]) + chi[cid];
       });
       existing.refs = existing.refs || [];
-      if (ghiChu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChu) : ghiChu;
+      if (ghiChuLuu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChuLuu) : ghiChuLuu;
     } else {
-      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChu, refs: [] };
+      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChuLuu, refs: [] };
     }
     if (cvIdSel && thu['thuHoiChoVay']){
       var cvApply = state.data.vayNo.choVay.find(function(x){ return x.id===cvIdSel; });
