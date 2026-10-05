@@ -69,6 +69,8 @@ document.addEventListener('click', function(ev){
   var t = ev.target.closest('[data-act]');
   if (t){
     var act = t.getAttribute('data-act');
+    // <a href="#"> mà không chặn mặc định thì trình duyệt nhảy về "#" = kéo lên đầu trang
+    if (t.tagName === 'A') ev.preventDefault();
     handleAction(act, t, ev);
     return;
   }
