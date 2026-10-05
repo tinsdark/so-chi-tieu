@@ -111,7 +111,9 @@ function describeData(d){
     + vn + ' khoản vay phải trả, ' + cv + ' khoản cho vay';
 }
 
-function checkLocalDraft(){
+// async: hộp thoại trả Promise. signIn() PHẢI await trước khi renderAll(),
+// nếu không màn hình vẽ xong bằng dữ liệu Drive rồi mới hỏi -> hỏi xong không vẽ lại.
+async function checkLocalDraft(){
   var raw = null;
   try{ raw = localStorage.getItem(LOCAL_DRAFT_KEY); }catch(e){ return; }
   if (!raw) return;
@@ -127,18 +129,21 @@ function checkLocalDraft(){
   }
   if (!draft || !draft.data) return;
   var t = new Date(draft.savedAt);
-  var msg = 'Phát hiện thay đổi chưa kịp đồng bộ lên Google Drive từ lần trước.\n\n'
-    + 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
+  var msg = 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
     + '  ' + describeData(draft.data) + '\n\n'
     + 'Dữ liệu hiện tại trên Drive:\n'
     + '  ' + describeData(state.data) + '\n\n'
-    + 'OK = khôi phục nháp (ghi đè dữ liệu Drive).\n'
-    + 'Hủy = dùng dữ liệu Drive, nháp VẪN ĐƯỢC GIỮ LẠI để còn khôi phục sau.';
-  if (confirm(msg)){
+    + 'Chọn "Dùng dữ liệu Drive" thì nháp VẪN ĐƯỢC GIỮ LẠI để còn khôi phục sau.';
+  var ok = await xacNhan('Có thay đổi chưa kịp đồng bộ lên Google Drive', msg, {
+    chuOk: 'Khôi phục nháp',
+    chuHuy: 'Dùng dữ liệu Drive'
+  });
+  if (ok){
     state.data = normalizeData(draft.data);
     scheduleSave();           // scheduleSave sẽ ghi lại nháp, clearLocalDraft chỉ chạy khi Drive lưu xong
+    toast('Đã khôi phục bản nháp cục bộ, đang lưu lên Drive.');
   }
-  // Chọn Hủy: cố tình KHÔNG clearLocalDraft() — nháp là bản sao cuối cùng, xóa là mất luôn.
+  // Chọn "Dùng dữ liệu Drive": cố tình KHÔNG clearLocalDraft() — nháp là bản sao cuối cùng, xóa là mất luôn.
 }
 
 var saveTimer = null;
@@ -242,7 +247,8 @@ async function signIn(){
     await requestToken(true);
     showApp();
     await driveLoad();
-    checkLocalDraft();
+    renderAll();            // vẽ ngay bằng dữ liệu Drive để không phải ngồi nhìn màn hình trắng
+    await checkLocalDraft();
     renderAll();
     startPolling();
   }catch(e){

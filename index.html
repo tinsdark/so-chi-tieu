@@ -22,18 +22,22 @@
   <header>
     <div class="brand">💰 Sổ Chi Tiêu</div>
     <div class="sync-status" id="syncStatus">Đang tải dữ liệu…</div>
+    <button id="btnTheme" aria-label="Đổi giao diện sáng/tối">◐</button>
     <button id="btnRefresh">⟳ Làm mới</button>
     <button id="btnSignOut">Đăng xuất</button>
   </header>
   <div id="bannerZone"></div>
+  <!-- Cùng 1 markup cho cả desktop và mobile: ở <=700px CSS đẩy .tabs xuống đáy
+       (vùng ngón tay), .tab-ico hiện lên trên chữ. Handler ở app.js không đổi. -->
   <nav class="tabs">
-    <button class="tab active" data-tab="sotay">Sổ tay</button>
-    <button class="tab" data-tab="dongtien">Dòng tiền</button>
-    <button class="tab" data-tab="vayno">Vay - Nợ<span class="tab-badge" id="vnBadge" style="display:none"></span></button>
-    <button class="tab" data-tab="mophong">Mô phỏng</button>
-    <button class="tab" data-tab="danhmuc">Danh mục</button>
+    <button class="tab active" data-tab="sotay"><span class="tab-ico" aria-hidden="true">📓</span>Sổ tay</button>
+    <button class="tab" data-tab="dongtien"><span class="tab-ico" aria-hidden="true">📈</span>Dòng tiền</button>
+    <button class="tab" data-tab="vayno"><span class="tab-ico" aria-hidden="true">🏦</span>Vay - Nợ<span class="tab-badge" id="vnBadge" style="display:none"></span></button>
+    <button class="tab" data-tab="mophong"><span class="tab-ico" aria-hidden="true">🧪</span>Mô phỏng</button>
+    <button class="tab" data-tab="danhmuc"><span class="tab-ico" aria-hidden="true">⚙</span>Danh mục</button>
   </nav>
   <main id="tabContent"><div class="empty">Đang tải…</div></main>
+  <button id="fabAdd" class="fab" data-act="fabAdd" title="Ghi nhanh một khoản" aria-label="Ghi nhanh một khoản">+</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
@@ -41,6 +45,7 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script src="js/state.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/drive-sync.js"></script>
 <script src="js/vayno.js"></script>
 <script src="js/sotay.js"></script>

@@ -148,7 +148,7 @@ function mpFormHtml(){
        + '</select></div>';
     h += '<div><label>Mô tả</label><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Mua laptop"></div>';
     h += '<div><label>Số tiền <span style="color:var(--muted);font-weight:400">(âm = giảm bớt)</span></label>'
-       + '<input type="number" id="mp_soTien" value="'+(dc?Math.round(num(dc.soTien)):'')+'"></div>';
+       + '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTien" value="'+(dc?veSo(dc.soTien):'')+'" placeholder="0"></div>';
     h += '<div><label>'+(loai==='dinhKy'?'Bắt đầu từ tháng':'Vào tháng')+'</label><select id="mp_mk">'
        + mkOpts(dc ? (dc.mk || dc.mkTu) : curMk) + '</select></div>';
     if (loai === 'dinhKy'){
@@ -156,7 +156,7 @@ function mpFormHtml(){
     }
   } else if (loai === 'vayMoi'){
     h += '<div><label>Tên khoản vay</label><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Vay ngân hàng mua xe"></div>';
-    h += '<div><label>Số tiền gốc</label><input type="number" id="mp_soTien" min="0" value="'+(dc?Math.round(num(dc.soTien)):'')+'"></div>';
+    h += '<div><label>Số tiền gốc</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTien" value="'+(dc?veSo(dc.soTien):'')+'" placeholder="0"></div>';
     h += '<div><label>Hình thức</label><select id="mp_hinhThuc">'
        + Object.keys(HINH_THUC_LABEL).map(function(k){
            return '<option value="'+k+'"'+((dc&&dc.hinhThuc===k)?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('')
@@ -253,8 +253,8 @@ function renderMoPhong(){
         + '<td style="text-align:left">'+MP_LOAI_LABEL[dc.loai]+'</td>'
         + '<td style="text-align:left;white-space:normal">'+mpDcMoTa(dc)+'</td>'
         + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'">✎</button>'
-          + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'">🗑</button>'
+          + '<button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh">✎</button>'
+          + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh">🗑</button>'
         + '</td></tr>';
     });
     html += '</tbody></table></div>';
@@ -333,13 +333,25 @@ function mpDrawChart(rowsGoc, rowsMoi){
 /* ---- actions ---- */
 function handleMoPhongAction(act, el){
   if (act === 'mpNapGoc'){
-    if (mpDaNap() && !confirm('Nạp lại từ dữ liệu gốc? Bản nháp hiện tại sẽ bị ghi đè (các điều chỉnh vẫn giữ).')) return true;
-    mpNapGoc();
-    renderMoPhong();
+    if (!mpDaNap()){ mpNapGoc(); renderMoPhong(); toast('Đã nạp dữ liệu gốc sang vùng nháp.'); return true; }
+    // hộp thoại trả Promise -> bọc IIFE async, handler vẫn trả true đồng bộ cho dispatcher
+    (async function(){
+      if (!await xacNhan('Nạp lại từ dữ liệu gốc?',
+            'Bản nháp hiện tại sẽ bị ghi đè. Các điều chỉnh thử vẫn được giữ.',
+            { chuOk:'Nạp lại' })) return;
+      mpNapGoc();
+      renderMoPhong();
+      toast('Đã nạp lại dữ liệu gốc.');
+    })();
   } else if (act === 'mpXoaNhap'){
-    if (!confirm('Xóa bản nháp và toàn bộ điều chỉnh? Dữ liệu thật không bị ảnh hưởng.')) return true;
-    mpXoaNhap();
-    renderMoPhong();
+    (async function(){
+      if (!await xacNhan('Xóa bản nháp và toàn bộ điều chỉnh?',
+            'Dữ liệu thật không bị ảnh hưởng — vùng nháp chỉ nằm trong bộ nhớ.',
+            { nguyHiem:true, chuOk:'Xóa nháp' })) return;
+      mpXoaNhap();
+      renderMoPhong();
+      toast('Đã xóa bản nháp.');
+    })();
   } else if (act === 'mpAddDc'){
     state.mp.formOpen = true;
     state.mp.editIdx = -1;
@@ -365,23 +377,23 @@ function handleMoPhongAction(act, el){
     if (loai === 'motLan' || loai === 'dinhKy'){
       dc.kind = g('mp_kind') || 'chi';
       dc.ten = g('mp_ten');
-      dc.soTien = num(g('mp_soTien'));
-      if (!dc.soTien){ alert('Số tiền phải khác 0.'); return true; }
+      dc.soTien = docSo(g('mp_soTien'));
+      if (!dc.soTien){ toast('Số tiền phải khác 0.', { loai:'warn' }); return true; }
       if (loai === 'motLan') dc.mk = g('mp_mk');
       else { dc.mkTu = g('mp_mk'); dc.soThang = Math.max(1, num(g('mp_soThang')) || 1); }
     } else if (loai === 'vayMoi'){
       dc.ten = g('mp_ten');
-      dc.soTien = numNonNeg(g('mp_soTien'));
+      dc.soTien = numNonNeg(docSo(g('mp_soTien')));
       dc.hinhThuc = g('mp_hinhThuc') || 'khong_lai';
       dc.laiSuatNam = numNonNeg(g('mp_laiSuatNam'));
       dc.soThang = Math.max(1, num(g('mp_soThang')) || 1);
       dc.mkTu = g('mp_mk');
       dc.loaiVay = 'ngan_hang';
-      if (dc.soTien <= 0){ alert('Số tiền gốc phải lớn hơn 0.'); return true; }
+      if (dc.soTien <= 0){ toast('Số tiền gốc phải lớn hơn 0.', { loai:'warn' }); return true; }
     } else if (loai === 'traSom'){
       dc.loanId = g('mp_loanId');
       dc.mk = g('mp_mk');
-      if (!dc.loanId){ alert('Chưa chọn khoản vay.'); return true; }
+      if (!dc.loanId){ toast('Chưa chọn khoản vay.', { loai:'warn' }); return true; }
     }
     if (state.mp.editIdx >= 0){
       dc.bat = state.mp.dieuChinh[state.mp.editIdx].bat;

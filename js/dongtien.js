@@ -50,9 +50,9 @@ function renderDongTien(){
   }
   if (!months.length){
     root.innerHTML = '<div class="year-nav">'
-      + '<button data-act="prevYear" class="icon-btn">‹</button>'
+      + '<button data-act="prevYear" class="icon-btn" title="Năm trước" aria-label="Năm trước">‹</button>'
       + '<div class="lbl">'+year+'</div>'
-      + '<button data-act="nextYear" class="icon-btn">›</button>'
+      + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
       + '</div><div class="card"><div class="empty">Năm '+year+' không có tháng nào từ mốc khóa sổ ('+startMk+'). Bấm › để xem năm khác.</div></div>';
     return;
   }
@@ -122,9 +122,9 @@ function renderDongTien(){
   }
 
   var html = '<div class="year-nav">'
-    + '<button data-act="prevYear" class="icon-btn">‹</button>'
+    + '<button data-act="prevYear" class="icon-btn" title="Năm trước" aria-label="Năm trước">‹</button>'
     + '<div class="lbl">'+year+'</div>'
-    + '<button data-act="nextYear" class="icon-btn">›</button>'
+    + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
     + '</div>';
 
   html += '<div class="card"><div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';

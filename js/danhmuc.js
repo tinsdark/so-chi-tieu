@@ -20,10 +20,10 @@ function categoryCardHtml(kind, title, cats){
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '</div>'
         + '<div style="display:flex;gap:4px;align-items:center">'
-        + '<input type="number" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.chiTieu||'')+'" placeholder="Chỉ tiêu/tháng" style="flex:1;min-width:0" title="Chỉ tiêu/tháng" min="0">'
+        + '<input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+veSo(c.chiTieu)+'" placeholder="Chỉ tiêu/tháng" style="flex:1;min-width:0" title="Chỉ tiêu/tháng">'
         + '<button class="icon-btn" data-act="catUp" data-kind="'+kind+'" data-id="'+c.id+'" title="Lên trên"'+(idx===0?' disabled style="opacity:.3"':'')+'>▲</button>'
         + '<button class="icon-btn" data-act="catDown" data-kind="'+kind+'" data-id="'+c.id+'" title="Xuống dưới"'+(idx===cats.length-1?' disabled style="opacity:.3"':'')+'>▼</button>'
-        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'">🗑</button>'
+        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'" title="Xóa danh mục" aria-label="Xóa danh mục '+esc(c.ten)+'">🗑</button>'
         + '</div>'
         + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
         + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
@@ -46,7 +46,7 @@ function renderDanhMuc(){
   html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
-    + '<div><label>Số dư</label><input type="number" id="cfg_du" value="'+(state.data.settings.soDuDauKy||0)+'"></div>'
+    + '<div><label>Số dư</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="cfg_du" value="'+veSo(state.data.settings.soDuDauKy)+'" placeholder="0"></div>'
     + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
     + '</div>'
     + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
@@ -115,17 +115,21 @@ function catNameExists(kind, name, excludeId){
 function handleDanhMucAction(act, el){
   if (act === 'addCat'){
     var kind = el.getAttribute('data-kind') || 'chi';
-    var name2 = prompt('Tên danh mục mới:');
-    if (name2 && name2.trim()){
-      var trimmed = name2.trim();
+    // hoiChu trả về Promise -> bọc IIFE async. KHÔNG được làm handler thành async:
+    // dispatcher trong app.js đọc giá trị trả về đồng bộ, async luôn trả Promise (truthy)
+    // nên mọi handler sau nó sẽ bị chặn.
+    (async function(){
+      var trimmed = await hoiChu('Thêm danh mục ' + (kind === 'thu' ? 'thu' : 'chi'), '', 'Tên danh mục');
+      if (!trimmed) return;
       if (catNameExists(kind, trimmed, null)){
-        alert('Đã có danh mục trùng tên "'+trimmed+'".');
-        return true;
+        toast('Đã có danh mục trùng tên "'+trimmed+'".', { loai:'err' });
+        return;
       }
       state.data.categories[kind].push({ id: slugify(trimmed)+'_'+Date.now().toString(36), ten: trimmed });
       scheduleSave();
       renderDanhMuc();
-    }
+      toast('Đã thêm danh mục "'+trimmed+'".');
+    })();
   } else if (act === 'catUp' || act === 'catDown'){
     // đổi chỗ với dòng liền kề — dùng được trên điện thoại, nơi kéo thả không chạy
     var kindM = el.getAttribute('data-kind') || 'chi';
@@ -139,32 +143,50 @@ function handleDanhMucAction(act, el){
   } else if (act === 'delCat'){
     var kind2 = el.getAttribute('data-kind') || 'chi';
     var cid = el.getAttribute('data-id');
-    if (confirm('Xóa danh mục này? (giao dịch cũ vẫn giữ nguyên số liệu)')){
-      state.data.categories[kind2] = state.data.categories[kind2].filter(function(x){return x.id!==cid;});
+    /* Xóa ngay + Hoàn tác thay vì hỏi xác nhận: danh mục không mang số tiền
+       nào (giao dịch cũ giữ nguyên số liệu), và chỉ cần nhớ object + vị trí cũ
+       là khôi phục y nguyên — kể cả đúng thứ tự trong danh sách. */
+    var arrC = state.data.categories[kind2] || [];
+    var viTri = arrC.findIndex(function(x){ return x.id === cid; });
+    if (viTri < 0) return true;
+    var banSaoCat = arrC[viTri];
+    var ten2 = catTen(kind2, cid);
+    arrC.splice(viTri, 1);
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã xóa danh mục "'+ten2+'".', { giay:6, hoanTac:function(){
+      state.data.categories[kind2].splice(viTri, 0, banSaoCat);
       scheduleSave();
       renderDanhMuc();
-    }
+      toast('Đã hoàn tác danh mục "'+ten2+'".');
+    } });
   } else if (act === 'saveSettings'){
     state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
-    state.data.settings.soDuDauKy = num(document.getElementById('cfg_du').value);
+    state.data.settings.soDuDauKy = docSo(document.getElementById('cfg_du').value);
     var duTruVal = document.getElementById('cfg_duTru').value;
     if (duTruVal) state.data.settings.thangBatDauDuTru = duTruVal;
     scheduleSave();
     renderDanhMuc();
-    alert('Đã lưu.');
+    toast('Đã lưu thiết lập.');
   } else if (act === 'lockMonth'){
     var mk3 = document.getElementById('cfg_khoa').value;
-    if (!mk3){ alert('Chọn tháng cần khóa sổ.'); return true; }
+    if (!mk3){ toast('Chọn tháng cần khóa sổ.', { loai:'warn' }); return true; }
     var newBal = balanceAtEndOfMonth(mk3);
     var p3 = mk3.split('-'); var ny = parseInt(p3[0],10), nm = parseInt(p3[1],10) + 1;
     if (nm > 12){ nm = 1; ny++; }
     var newStart = ny + '-' + pad2(nm) + '-01';
-    if (!confirm('Khóa sổ đến hết '+monthLabel(mk3)+'?\nSố dư đầu kỳ mới: '+fmt(newBal)+'\nNgày bắt đầu mới: '+newStart+'\n\nDữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư/Dòng tiền nữa.')) return true;
-    state.data.settings.ngayBatDau = newStart;
-    state.data.settings.soDuDauKy = newBal;
-    scheduleSave();
-    renderDanhMuc();
-    alert('Đã khóa sổ đến hết '+monthLabel(mk3)+'.');
+    (async function(){
+      if (!await xacNhan('Khóa sổ đến hết '+monthLabel(mk3)+'?',
+            'Số dư đầu kỳ mới: '+fmt(newBal)+'\n'
+            + 'Ngày bắt đầu mới: '+newStart+'\n\n'
+            + 'Dữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư / Dòng tiền nữa.',
+            { nguyHiem:true, chuOk:'Khóa sổ' })) return;
+      state.data.settings.ngayBatDau = newStart;
+      state.data.settings.soDuDauKy = newBal;
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã khóa sổ đến hết '+monthLabel(mk3)+'.');
+    })();
   } else {
     return false;
   }
@@ -178,12 +200,12 @@ function handleDanhMucChange(el){
     if (!c) return true;
     var newName = el.value.trim();
     if (!newName){
-      alert('Tên danh mục không được để trống.');
+      toast('Tên danh mục không được để trống.', { loai:'err' });
       el.value = c.ten;
       return true;
     }
     if (catNameExists(kindC, newName, c.id)){
-      alert('Đã có danh mục trùng tên "'+newName+'".');
+      toast('Đã có danh mục trùng tên "'+newName+'".', { loai:'err' });
       el.value = c.ten;
       return true;
     }
@@ -193,7 +215,7 @@ function handleDanhMucChange(el){
   } else if (el.matches('[data-act=catBase]')){
     var kindB = el.getAttribute('data-kind') || 'chi';
     var cB = state.data.categories[kindB].find(function(x){ return x.id===el.getAttribute('data-id'); });
-    if (cB){ cB.chiTieu = numNonNeg(el.value); scheduleSave(); }
+    if (cB){ cB.chiTieu = numNonNeg(docSo(el.value)); scheduleSave(); }
     return true;
   } else if (el.matches('[data-act=catNoForecast]')){
     var kindN = el.getAttribute('data-kind') || 'chi';

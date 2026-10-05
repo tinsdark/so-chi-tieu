@@ -1,8 +1,36 @@
+/* ====================================================================
+   BIẾN MÀU — mọi màu phải lấy từ đây, KHÔNG viết mã màu trực tiếp trong
+   rule bên dưới. Lý do: chế độ tối chỉ ghi đè khối [data-theme="dark"];
+   màu nào viết cứng sẽ sáng trắng giữa nền tối.
+   ==================================================================== */
 :root{
-  color-scheme: light;
+  color-scheme: light dark;
   --bg:#f6f7fb; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
   --primary:#4f46e5; --primary-d:#4338ca; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gold:#b8860b;
   --thu-bg:#ecfdf5; --chi-bg:#fef2f2; --shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 6px rgba(0,0,0,.04);
+  /* màu phụ, trước đây viết cứng trong rule */
+  --input-bg:#ffffff;      /* nền ô nhập + nền th sticky */
+  --hover:#f0f1f5;         /* nền khi hover nút phụ, nền thẻ tag */
+  --row-total:#f6f7fb;     /* dòng tổng */
+  --row-bal:#eef2ff;       /* dòng số dư / dòng đang mở chi tiết */
+  --row-sub:#fafafa;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
+  --danger-br:#fecaca;     /* viền nút nguy hiểm */
+  --warn-bg:#fffbeb; --warn-br:#fde68a; --warn-tx:#92400e;  /* banner cảnh báo */
+  --mask:rgba(17,24,39,.45);   /* nền mờ sau hộp thoại */
+}
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#12151c; --card:#1a1f29; --border:#2b3240; --text:#e6e9ef; --muted:#9aa4b2;
+  --primary:#6d63f0; --primary-d:#a5a0ff; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --gold:#d4af37;
+  --thu-bg:#10241a; --chi-bg:#2a1618; --shadow:0 1px 2px rgba(0,0,0,.4), 0 1px 6px rgba(0,0,0,.3);
+  --input-bg:#12161d;
+  --hover:#242b37;
+  --row-total:#1f242f;
+  --row-bal:#232540;
+  --row-sub:#161a22;
+  --danger-br:#5c2b2b;
+  --warn-bg:#2b2410; --warn-br:#5c4a16; --warn-tx:#fcd34d;
+  --mask:rgba(0,0,0,.6);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
@@ -13,8 +41,9 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
 button{cursor:pointer;font-family:inherit}
-#btnRefresh,#btnSignOut{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
-#btnRefresh:hover,#btnSignOut:hover{background:#f0f1f5}
+#btnRefresh,#btnSignOut,#btnTheme{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
+#btnRefresh:hover,#btnSignOut:hover,#btnTheme:hover{background:var(--hover)}
+#btnTheme{padding:6px 10px;font-size:15px;line-height:1}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);position:sticky;top:var(--header-h,52px);background:var(--bg);z-index:19}
 .tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tab.active{color:var(--primary-d);border-bottom-color:var(--primary)}
@@ -31,27 +60,29 @@ button{cursor:pointer;font-family:inherit}
 .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;position:sticky;top:calc(var(--header-h,52px) + var(--tabs-h,45px));background:var(--bg);z-index:18;padding-top:4px}
 .month-nav button{background:var(--card);border:1px solid var(--border);border-radius:8px;width:30px;height:30px}
 .month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
-.month-nav select{font-weight:700;font-size:15px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:#fff;color:var(--text);text-align:center;text-align-last:center}
+.month-nav select{font-weight:700;font-size:15px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:var(--input-bg);color:var(--text);text-align:center;text-align-last:center}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
-input[type=number],input[type=date],input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:#fff;color:var(--text)}
+input[type=number],input[type=date],input[type=text],select{padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--input-bg);color:var(--text)}
+input[type=number],input[type=date],input[type=text]{width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
 .cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:10px}
 .btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:#fff;background:var(--primary)}
 .btn:hover{background:var(--primary-d)}
 .btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
-.btn.secondary:hover{background:#f0f1f5}
-.btn.danger{background:#fff;color:var(--red);border:1px solid #fecaca}
+.btn.secondary:hover{background:var(--hover)}
+.btn.danger{background:var(--card);color:var(--red);border:1px solid var(--danger-br)}
 .btn.danger:hover{background:var(--chi-bg)}
 .btn.sm{padding:4px 10px;font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{color:var(--muted);font-weight:600;font-size:12px}
-tr.total-row td{font-weight:700;background:#f6f7fb}
-tr.balance-row td{font-weight:700;background:#eef2ff;color:var(--primary-d)}
+tr.total-row td{font-weight:700;background:var(--row-total)}
+tr.balance-row td{font-weight:700;background:var(--row-bal);color:var(--primary-d)}
 .table-wrap{overflow-x:auto}
 .table-wrap-year{overflow:auto;max-height:65vh}
-.table-wrap-year thead th{position:sticky;top:0;background:#fff;z-index:3}
+.table-wrap-year thead th{position:sticky;top:0;background:var(--card);z-index:3}
 .table-wrap-year thead th.sticky-col{z-index:4}
 .actions-col{width:70px}
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -63,17 +94,17 @@ tr.balance-row td{font-weight:700;background:#eef2ff;color:var(--primary-d)}
 .th-month{text-align:center}
 .dt-suggest{font-style:italic;color:var(--muted)}
 .cat-label{display:flex;align-items:center;gap:6px}
-.cat-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:#f0f1f5;color:var(--muted)}
+.cat-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--hover);color:var(--muted)}
 .group-title{font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--primary-d)}
 .group-title:first-child{margin-top:0}
 .icon-btn{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
-.icon-btn:hover{background:#f0f1f5;color:var(--red)}
-.banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.icon-btn:hover{background:var(--hover);color:var(--red)}
+.banner{background:var(--warn-bg);border:1px solid var(--warn-br);color:var(--warn-tx);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px}
 .year-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px;position:sticky;top:calc(var(--header-h,52px) + var(--tabs-h,45px));background:var(--bg);z-index:18;padding-top:4px}
 .year-nav .lbl{font-weight:700;font-size:15px;min-width:60px;text-align:center}
-.sticky-col{position:sticky;left:0;background:#fff;z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.05)}
-tr.total-row .sticky-col{background:#f6f7fb}
-tr.balance-row .sticky-col{background:#eef2ff}
+.sticky-col{position:sticky;left:0;background:var(--card);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.05)}
+tr.total-row .sticky-col{background:var(--row-total)}
+tr.balance-row .sticky-col{background:var(--row-bal)}
 .auth-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
 .auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 26px;box-shadow:var(--shadow);max-width:320px;width:100%;text-align:center}
 .auth-card .auth-logo{font-size:36px;margin-bottom:6px}
@@ -89,8 +120,8 @@ tr.balance-row .sticky-col{background:#eef2ff}
 a.st-day{color:var(--text);text-decoration:none;font-weight:600}
 a.st-day:hover{color:var(--primary)}
 .st-caret{color:var(--muted);font-size:10px}
-.st-count{font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px;background:#f0f1f5;color:var(--muted)}
-tr.st-open>td{background:#eef2ff}
+.st-count{font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px;background:var(--hover);color:var(--muted)}
+tr.st-open>td{background:var(--row-bal)}
 tr.st-detail>td{padding:0;background:var(--bg);border-bottom:2px solid var(--border)}
 .st-detail-box{padding:8px 10px 10px}
 .st-detail-head{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
@@ -98,7 +129,7 @@ tr.st-detail>td{padding:0;background:var(--bg);border-bottom:2px solid var(--bor
 .st-detail-tbl td{border-bottom:1px solid var(--border);padding:5px 8px}
 .st-detail-tbl tr:last-child td{border-bottom:none}
 .st-detail-tbl input,.st-detail-tbl select{font-size:12px;padding:4px 6px}
-tr.st-ref td{background:#fafafa;color:var(--muted)}
+tr.st-ref td{background:var(--row-sub);color:var(--muted)}
 .st-lock{font-size:10px;color:var(--amber)}
 .st-kind{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px}
 .st-kind.thu{background:var(--thu-bg);color:var(--green)}
@@ -109,3 +140,117 @@ tr.st-ref td{background:#fafafa;color:var(--muted)}
 .mp-chk input{width:auto;margin:0}
 tr.mp-off td{opacity:.45}
 tr.mp-am td{background:var(--chi-bg)}
+
+/* ====================================================================
+   toast — thông báo góc dưới, không chặn thao tác (thay alert)
+   z-index phải CAO HƠN .auth-gate (50) và .modal-back (60), vì toast có
+   thể bật ra ngay sau khi hộp thoại đóng.
+   ==================================================================== */
+.toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:80;
+  display:flex;flex-direction:column;gap:8px;align-items:stretch;width:min(460px,calc(100vw - 24px));pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:flex-start;gap:9px;
+  background:var(--card);color:var(--text);border:1px solid var(--border);border-left:3px solid var(--green);
+  border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);animation:toast-in .18s ease-out}
+.toast.err{border-left-color:var(--red)}
+.toast.warn{border-left-color:var(--amber)}
+.toast.out{opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s}
+.toast-ico{flex:0 0 auto;font-weight:700;color:var(--green)}
+.toast.err .toast-ico{color:var(--red)}
+.toast.warn .toast-ico{color:var(--amber)}
+.toast-msg{flex:1 1 auto;white-space:pre-wrap;word-break:break-word}
+.toast-undo{flex:0 0 auto;background:none;border:none;color:var(--primary-d);font-weight:700;font-size:12px;padding:0 4px;text-decoration:underline}
+.toast-x{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:12px;padding:0 2px;line-height:1.2}
+.toast-x:hover{color:var(--text)}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ====================================================================
+   hộp thoại — thay confirm/prompt. Chữ nằm trên nút nên không phải
+   giải thích "OK = ... / Hủy = ..." trong nội dung.
+   ==================================================================== */
+.modal-back{position:fixed;inset:0;background:var(--mask);z-index:60;
+  display:flex;align-items:center;justify-content:center;padding:18px;animation:modal-fade .15s ease-out}
+.modal-box{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;
+  padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.25);
+  max-width:430px;width:100%;max-height:calc(100vh - 36px);overflow:auto;animation:modal-pop .16s ease-out}
+.modal-box.nguy-hiem{border-top:3px solid var(--red)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px;word-break:break-word}
+.modal-box label{margin-top:2px}
+.modal-err{color:var(--red);font-size:12px;min-height:16px;margin-top:4px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+@keyframes modal-fade{from{opacity:0}to{opacity:1}}
+@keyframes modal-pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media (max-width:480px){
+  .modal-box{max-width:none}
+  .modal-btns .modal-btn{flex:1 1 120px}
+}
+
+/* ====================================================================
+   LỚP 2 — ô nhập tiền, nav dưới, FAB, bảng dạng thẻ
+   ==================================================================== */
+
+/* ô tiền là type="text" (để chèn được dấu "."), căn phải cho dễ soát số */
+.money{text-align:right;font-variant-numeric:tabular-nums}
+
+/* trạng thái rỗng có icon + nút hành động, thay vì chỉ 1 dòng chữ xám */
+.empty-box{text-align:center;padding:22px 10px;color:var(--muted);font-size:13px}
+.empty-box .ico{font-size:28px;display:block;margin-bottom:6px;opacity:.75}
+.empty-box .btn{margin-top:10px}
+
+/* đoạn giải thích dài gấp lại sau nút ⓘ — nhìn thấy bảng trước, đọc luật sau */
+.giai-thich{margin:0 0 10px;font-size:12px;color:var(--muted)}
+.giai-thich>summary{cursor:pointer;list-style:none;display:inline-block;
+  padding:3px 8px;border:1px solid var(--border);border-radius:999px;
+  color:var(--muted);font-size:12px;user-select:none}
+.giai-thich>summary::-webkit-details-marker{display:none}
+.giai-thich>summary:hover{color:var(--text);border-color:var(--primary)}
+.giai-thich>div{margin-top:7px;line-height:1.55}
+
+/* nút tròn nổi: việc làm nhiều nhất (ghi 1 khoản chi) không phải cuộn lên đầu trang.
+   Chỉ hiện ở tab Sổ tay — app.js bật/tắt .fab-hien trong renderAll(). */
+.fab{position:fixed;right:16px;bottom:18px;z-index:55;display:none;
+  width:52px;height:52px;border:none;border-radius:50%;
+  background:var(--primary);color:#fff;font-size:28px;line-height:1;
+  box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.fab:hover{background:var(--primary-d)}
+.fab.fab-hien{display:block}
+
+@media (max-width:700px){
+  /* điều hướng xuống đáy (vùng ngón tay). Markup + handler không đổi 1 dòng,
+     nhưng updateStickyOffsets() PHẢI set --tabs-h:0px vì nav không còn
+     chiếm chỗ ở đỉnh — nếu không .month-nav/.year-nav sẽ hở 1 khoảng trống. */
+  .tabs{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;
+    justify-content:space-around;gap:0;background:var(--card);
+    border-top:1px solid var(--border);border-bottom:none;
+    padding-bottom:env(safe-area-inset-bottom);z-index:50}
+  .tabs .tab{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:10px;padding:7px 0 6px;margin-bottom:0;border-bottom:none;border-top:2px solid transparent}
+  .tabs .tab.active{border-top-color:var(--primary)}
+  .tab-ico{font-size:17px;line-height:1}
+  .tab-badge{position:absolute;transform:translate(14px,-4px)}
+  #app{padding-bottom:78px}
+  .fab{bottom:calc(72px + env(safe-area-inset-bottom))}
+  .toast-wrap{bottom:calc(76px + env(safe-area-inset-bottom))}
+
+  /* bảng Sổ tay -> thẻ. CHỈ bảng này (class t-card): bảng Dòng tiền 13 cột
+     thì scroll ngang + sticky cột đầu mới đọc được, đổi sang thẻ là vô dụng. */
+  table.t-card thead{display:none}
+  table.t-card tbody,table.t-card tbody tr.st-row,table.t-card tbody tr.st-detail{display:block}
+  table.t-card tbody tr.st-row{border:1px solid var(--border);border-radius:10px;
+    background:var(--card);margin-bottom:8px;padding:7px 10px}
+  table.t-card tbody tr.st-row.st-open{background:var(--row-bal);margin-bottom:0;border-radius:10px 10px 0 0}
+  table.t-card tbody tr.st-row>td{display:flex;justify-content:space-between;align-items:baseline;
+    gap:10px;border:none;padding:2px 0;text-align:right;white-space:normal}
+  table.t-card tbody tr.st-row>td::before{content:attr(data-th);
+    flex:0 0 auto;color:var(--muted);font-size:11px;font-weight:600;text-align:left}
+  table.t-card tbody tr.st-row>td:empty{display:none}
+  table.t-card tbody tr.st-row>td.st-c-day{display:block;text-align:left;font-weight:700;
+    padding-bottom:5px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+  table.t-card tbody tr.st-row>td.st-c-day::before{content:''}
+  table.t-card tbody tr.st-row>td.actions-col{width:auto;justify-content:flex-end}
+  table.t-card tbody tr.st-row>td.actions-col::before{content:''}
+  table.t-card tbody tr.st-detail>td{display:block;padding:0;border-bottom:none}
+  table.t-card tbody tr.st-detail{margin-bottom:8px;border:1px solid var(--border);
+    border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
+}

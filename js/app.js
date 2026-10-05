@@ -35,6 +35,9 @@ function renderAll(){
   else renderDanhMuc();
   renderVayNoBadge();
   updateStickyOffsets();
+  // FAB chỉ có nghĩa ở Sổ tay (nơi có form nhập); tab khác hiện ra là nút chết
+  var fab = document.getElementById('fabAdd');
+  if (fab) fab.classList.toggle('fab-hien', state.tab === 'sotay');
 }
 
 // badge số trên tab nav "Vay - Nợ": đếm khoản sắp/đã tới hạn, thấy được dù đang ở tab khác
@@ -50,7 +53,14 @@ function updateStickyOffsets(){
   var header = document.querySelector('header');
   var tabs = document.querySelector('.tabs');
   if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
-  if (tabs) document.documentElement.style.setProperty('--tabs-h', tabs.offsetHeight + 'px');
+  // Ở <=700px CSS cho .tabs position:fixed xuống đáy -> nav KHÔNG còn chiếm chỗ
+  // ở đỉnh. .month-nav/.year-nav dán ở top: header-h + tabs-h, nên nếu vẫn đo
+  // offsetHeight thì có một dải trống đúng bằng chiều cao nav. Đọc computed
+  // position thay vì tự đoán breakpoint để CSS đổi là JS theo luôn.
+  if (tabs){
+    var navDuoi = getComputedStyle(tabs).position === 'fixed';
+    document.documentElement.style.setProperty('--tabs-h', navDuoi ? '0px' : tabs.offsetHeight + 'px');
+  }
 }
 window.addEventListener('resize', updateStickyOffsets);
 
@@ -72,6 +82,7 @@ document.addEventListener('click', function(ev){
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnSignOut').addEventListener('click', signOut);
+document.getElementById('btnTheme').addEventListener('click', doiTheme);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){
   state.errorMsg = null;
