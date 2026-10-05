@@ -477,6 +477,7 @@ function renderVayNo(){
         + '<td>'+(v.tatToan ? 'Đã tất toán' : (v.trangThai==='da_tra_het'?'Đã trả hết':'Đang vay'))+'</td>'
         + '<td class="actions-col">'
         + (loanIsActive(v) ? '<button class="btn sm secondary" data-act="vnTatToan" data-id="'+v.id+'" title="Tất toán sớm toàn bộ khoản vay">Tất toán</button>' : '')
+        + (v.tatToan ? '<button class="btn sm secondary" data-act="vnHuyTatToan" data-id="'+v.id+'" title="Hủy tất toán, hoàn lại giao dịch Sổ tay">Hủy tất toán</button>' : '')
         + '<button class="icon-btn" data-act="vnEditVayNo" data-id="'+v.id+'">✎</button>'
         + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'">🗑</button>'
         + '</td></tr>';
@@ -837,6 +838,15 @@ function handleVayNoAction(act, el){
     vnTT.tatToan = { soTien: amtTT, ngay: dateTT };
     vnTT.trangThai = 'da_tra_het';
     journalAddRef(dateTT, vnTT.id, 'tatToan', amtTT, 'Tất toán: '+vnTT.ten);
+    scheduleSave(); renderVayNo();
+  } else if (act === 'vnHuyTatToan'){
+    var idHTTV = el.getAttribute('data-id');
+    var vnHTTV = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===idHTTV; });
+    if (!vnHTTV || !vnHTTV.tatToan) return true;
+    if (!confirm('Hủy tất toán khoản "'+vnHTTV.ten+'"?\n\nGiao dịch "Tất toán" '+fmt(Math.round(vnHTTV.tatToan.soTien))+' ở Sổ tay sẽ bị xóa, dư nợ tính lại theo lịch.')) return true;
+    journalRemoveRefs(vnHTTV.id, 'tatToan', null);
+    vnHTTV.tatToan = null;
+    vnHTTV.trangThai = (soTienConLaiPhaiTra(vnHTTV) <= 0.01) ? 'da_tra_het' : 'dang_vay';
     scheduleSave(); renderVayNo();
   } else {
     return false;
