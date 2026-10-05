@@ -442,10 +442,19 @@ function handleSoTayAction(act, el){
       var v = numNonNeg(docSo(inp.value)) + num(inp.getAttribute('data-lock'));
       if (v) chi[inp.getAttribute('data-cat')] = v;
     });
-    // Trước đây số tiền được ghép vào cuối nội dung ("Ăn trưa" -> "Ăn trưa 40.000 ₫")
-    // vì ghi chú của ngày là chỗ DUY NHẤT thấy được từng khoản. Giờ mỗi lần Lưu sinh
-    // 1 dòng items[] có sẵn số tiền riêng -> ghép nữa là hiện số 2 lần.
+    // Mỗi lần Lưu = 1 khoản -> gắn tổng số tiền của lần đó vào cuối nội dung
+    // ("Ăn trưa" -> "Ăn trưa 40.000 ₫") để cột Nội dung của bảng ngày đọc ra luôn có số.
+    // CHỈ gắn vào ghi chú của NGÀY (ghiChuLuu). Dòng items[] bên dưới vẫn dùng
+    // `ghiChu` gốc: chúng đã có ô tiền riêng, gắn nữa là hiện số 2 lần ở bảng chi tiết.
+    // Sửa ngày cũ thì giữ nguyên nội dung, không bóc/ghép lại số (bóc đuôi số dễ cắt
+    // nhầm nội dung vốn kết thúc bằng con số).
     var ghiChuLuu = ghiChu;
+    if (!state.editingDate && ghiChu){
+      var tongLan = 0;
+      Object.keys(thu).forEach(function(cid){ tongLan += thu[cid]; });
+      Object.keys(chi).forEach(function(cid){ tongLan += chi[cid]; });
+      if (tongLan > 0) ghiChuLuu = ghiChu + ' ' + fmt(Math.round(tongLan));
+    }
     if (state.editingDate){
       var oldE = state.data.journal[date] || blankEntry();
       // GIỮ refs + items: ghi đè cả entry là làm mồ côi liên kết với khoản vay -> số dư/tiến độ lệch
