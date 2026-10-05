@@ -186,6 +186,16 @@ function soTienConLaiPhaiTra(loan){
   }
   return s;
 }
+// gốc còn lại sau kỳ đã đóng gần nhất (chưa đóng kỳ nào = toàn bộ gốc). Khác
+// soTienConLaiPhaiTra: số đó cộng cả lãi các kỳ tương lai, còn tất toán sớm
+// thực tế chỉ trả gốc còn lại + lãi tới ngày tất toán -> thường THẤP hơn.
+function gocConLai(loan){
+  var sch = tinhLichTraNo(loan), g = num(loan.soTienGoc);
+  for (var i = 0; i < sch.length; i++){
+    if (kyDaDong(loan, i)) g = sch[i].duNoConLai;
+  }
+  return g;
+}
 // tổng chênh lệch (âm = trả thiếu so với lịch) của các kỳ ĐÃ ĐÓNG. Kỳ đang trả
 // dở không tính vào đây — phần thiếu của nó vẫn đang nằm ở dư nợ.
 function tongLechTraNo(loan){
@@ -770,7 +780,9 @@ function handleVayNoAction(act, el){
   } else if (act === 'vnToggleDetail'){
     var idTD = el.getAttribute('data-id');
     state.vnDetailId = (state.vnDetailId === idTD) ? null : idTD;
+    var yTD = window.scrollY;
     renderVayNo();
+    window.scrollTo(0, yTD); // render lại innerHTML có thể làm trang nhảy; giữ nguyên vị trí đang xem
   } else if (act === 'vnTatToanChoVay'){
     // TẤT TOÁN cho vay = phần còn lại không đòi được (cho luôn/mất). KHÔNG sinh
     // giao dịch nào ở Sổ tay: tiền chi đã ghi đủ lúc cho vay, tiền thu chỉ ghi
@@ -886,11 +898,13 @@ function handleVayNoAction(act, el){
     var vnTT = state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===idTT; });
     if (!vnTT) return true;
     var duNoTT = soTienConLaiPhaiTra(vnTT);
+    var gocTT = gocConLai(vnTT);
     (async function(){
       var amtTT = await hoiSo('Tất toán khoản "'+vnTT.ten+'"',
-        'Dư nợ lý thuyết còn lại: '+fmt(Math.round(duNoTT))
-        + '\n\nNhập đúng số ngân hàng / bên cho vay báo (có thể khác số lý thuyết).',
-        'Số tiền tất toán', Math.round(duNoTT) || '');
+        'Tổng còn phải trả theo lịch (gồm lãi các kỳ sau): '+fmt(Math.round(duNoTT))
+        + '\nGốc còn lại: '+fmt(Math.round(gocTT))
+        + '\n\nTất toán sớm thường chỉ trả gốc còn lại + lãi/phí tới ngày tất toán, nên THẤP hơn tổng theo lịch. Nhập đúng số ngân hàng / bên cho vay báo.',
+        'Số tiền tất toán', Math.round(gocTT) || '');
       if (amtTT == null) return;
       // ghi nhận tất toán vào DATA (không chỉ là đổi trạng thái): số tiền + ngày,
       // kèm giao dịch chi ở Sổ tay có ref để xóa khoản vay thì hoàn lại được
