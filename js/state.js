@@ -196,6 +196,11 @@ function normalizeData(d){
   // Suy ra các kỳ đã trả ĐỦ từ daTraGoc cũ; các kỳ này không sinh giao dịch Sổ tay
   // (chúng đã xảy ra trước khi có ref) nên gắn cờ truocKhiDungApp để khỏi hiểu nhầm.
   d.vayNo.vayNoPhaiTra.forEach(function(loan){
+    // khoản cũ chưa có "ngày trả hàng tháng" (field nhập tay riêng, tách biệt ngày vay)
+    // -> tạm lấy ngày-trong-tháng của ngày vay làm mặc định, sửa lại sau nếu khác
+    if (!loan.ngayTraHangThang){
+      loan.ngayTraHangThang = loan.ngayVay ? parseInt(loan.ngayVay.slice(8,10),10) : 1;
+    }
     if (!Array.isArray(loan.traNo)){
       loan.traNo = [];
       var daTra = num(loan.daTraGoc);
@@ -254,6 +259,8 @@ function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMont
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
 function monthLabel(mk){ var p=mk.split('-'); return 'Tháng ' + parseInt(p[1],10) + '/' + p[0]; }
+// "YYYY-MM-DD" -> "DD/MM/YYYY", dùng hiển thị ngày trả/ngày thu cụ thể
+function ngayVN(d){ return d ? d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4) : ''; }
 function daysBetween(d1, d2){ return Math.round((new Date(d2) - new Date(d1)) / 86400000); }
 function slugify(s){
   var out = s.toString().toLowerCase()

@@ -32,7 +32,17 @@ function renderAll(){
   else if (state.tab === 'dongtien') renderDongTien();
   else if (state.tab === 'vayno') renderVayNo();
   else renderDanhMuc();
+  renderVayNoBadge();
   updateStickyOffsets();
+}
+
+// badge số trên tab nav "Vay - Nợ": đếm khoản sắp/đã tới hạn, thấy được dù đang ở tab khác
+function renderVayNoBadge(){
+  var el = document.getElementById('vnBadge');
+  if (!el) return;
+  var n = (state.data && state.data.vayNo) ? vnBadgeCount(7) : 0;
+  if (n > 0){ el.textContent = n; el.style.display = 'inline-block'; }
+  else { el.style.display = 'none'; }
 }
 
 function updateStickyOffsets(){
