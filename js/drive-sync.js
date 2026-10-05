@@ -59,6 +59,9 @@ async function findFileId(){
 }
 
 async function driveLoad(){
+  // Nạp lại từ Drive = dữ liệu gốc đã khác -> bản nháp mô phỏng (clone của bản cũ)
+  // trở thành lạc hậu. Xóa luôn thay vì để Đạt ngồi so số với một bản gốc không còn tồn tại.
+  if (state.mp) mpXoaNhap();
   try{
     var fileId = await findFileId();
     if (!fileId){
@@ -193,6 +196,9 @@ async function driveSave(){
 
 async function pollRefresh(){
   if (!accessToken || state.dirty || state.saving || isTypingNow() || isFormOpen()) return;
+  // đang có bản nháp mô phỏng: driveLoad() sẽ xóa nháp, mà poll chạy ngầm 35s/lần
+  // -> đang ngồi thử số thì nháp bốc hơi không rõ lý do. Chỉ xóa khi Đạt tự bấm "Làm mới".
+  if (typeof mpDaNap === 'function' && mpDaNap()) return;
   await driveLoad();
   renderAll();
 }
@@ -250,5 +256,6 @@ function signOut(){
   }
   accessToken = null;
   state.data = null;
+  if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');
 }

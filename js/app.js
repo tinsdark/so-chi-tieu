@@ -31,6 +31,7 @@ function renderAll(){
   if (state.tab === 'sotay') renderSoTay();
   else if (state.tab === 'dongtien') renderDongTien();
   else if (state.tab === 'vayno') renderVayNo();
+  else if (state.tab === 'mophong') renderMoPhong();
   else renderDanhMuc();
   renderVayNoBadge();
   updateStickyOffsets();
@@ -83,6 +84,7 @@ document.addEventListener('change', function(ev){
   if (handleSoTayChange(el)) return;
   if (handleVayNoChange(el)) return;
   if (handleDanhMucChange(el)) return;
+  if (handleMoPhongChange(el)) return;
 });
 
 // dispatcher: thử lần lượt handler của từng tab, dừng ở handler đầu tiên xử lý được (trả về true)
@@ -91,6 +93,7 @@ function handleAction(act, el){
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
+  if (handleMoPhongAction(act, el)) return;
 }
 
 /* ---------------- init ---------------- */

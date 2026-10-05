@@ -84,3 +84,28 @@ tr.balance-row .sticky-col{background:#eef2ff}
 .search-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
 .search-row .fld{flex:1;min-width:140px}
 .search-row .fld label{margin-bottom:3px}
+
+/* --- chi tiết giao dịch trong ngày (Sổ tay) --- */
+a.st-day{color:var(--text);text-decoration:none;font-weight:600}
+a.st-day:hover{color:var(--primary)}
+.st-caret{color:var(--muted);font-size:10px}
+.st-count{font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px;background:#f0f1f5;color:var(--muted)}
+tr.st-open>td{background:#eef2ff}
+tr.st-detail>td{padding:0;background:var(--bg);border-bottom:2px solid var(--border)}
+.st-detail-box{padding:8px 10px 10px}
+.st-detail-head{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+.st-detail-tbl{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.st-detail-tbl td{border-bottom:1px solid var(--border);padding:5px 8px}
+.st-detail-tbl tr:last-child td{border-bottom:none}
+.st-detail-tbl input,.st-detail-tbl select{font-size:12px;padding:4px 6px}
+tr.st-ref td{background:#fafafa;color:var(--muted)}
+.st-lock{font-size:10px;color:var(--amber)}
+.st-kind{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px}
+.st-kind.thu{background:var(--thu-bg);color:var(--green)}
+.st-kind.chi{background:var(--chi-bg);color:var(--red)}
+
+/* --- tab Mô phỏng --- */
+.mp-chk{width:32px;text-align:center}
+.mp-chk input{width:auto;margin:0}
+tr.mp-off td{opacity:.45}
+tr.mp-am td{background:var(--chi-bg)}

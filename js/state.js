@@ -43,6 +43,11 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
+  soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
+  // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
+  // Thoát trang / đăng xuất / tải lại từ Drive là mất sạch (cố ý).
+  mp: { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] },
 };
 
 /* ====================================================================
@@ -60,8 +65,17 @@ var REF_MAP = {
   traNo:        { kind: 'chi', cat: 'traNo'        },
   tatToan:      { kind: 'chi', cat: 'traNo'        }
 };
+// nhãn tiếng Việt của từng loại ref, dùng khi báo cho người dùng biết 1 ngày ở Sổ tay
+// đang chứa giao dịch gì của khoản vay (sotay.js nhánh delDay).
+var REF_LABEL = {
+  nhanTienVay:  'Nhận tiền vay',
+  thuHoiChoVay: 'Thu hồi cho vay',
+  choVay:       'Cho vay',
+  traNo:        'Trả nợ',
+  tatToan:      'Tất toán'
+};
 
-function blankEntry(){ return { thu: {}, chi: {}, ghiChu: '', refs: [] }; }
+function blankEntry(){ return { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; }
 
 // bỏ đúng 1 mẩu ghi chú do app tự sinh ra khỏi chuỗi "a; b; c"
 function journalRemoveNote(entry, note){
@@ -150,6 +164,158 @@ function entryRefSum(entry, kind, cat){
   return s;
 }
 
+/* ====================================================================
+   TẦNG CHI TIẾT GIAO DỊCH (items)
+   entry.items[] = { iid, kind:'thu'|'chi', catId, soTien, ghiChu }
+   CHỈ chứa các giao dịch NHẬP TAY. Phần tiền do khoản vay sinh ra vẫn
+   nằm ở entry.refs[] như cũ và CỐ Ý không đưa vào items.
+
+   entry.thu / entry.chi VẪN LÀ NGUỒN SỰ THẬT cho mọi phép tính
+   (thuTotal, chiTotal, balanceCache, actualCatInMonth, dòng tiền, biểu đồ,
+   xuất Excel). items chỉ là tầng chi tiết song song, có ràng buộc:
+
+     itemsSum(e, kind, cat) === num(e[kind][cat]) - entryRefSum(e, kind, cat)
+
+   => Thêm/sửa/xóa 1 item BẮT BUỘC đi qua entryAddItem/entryUpdateItem/
+      entryDeleteItem để 2 bên không lệch. repairEntryItems() là lưới an
+      toàn: chạy mỗi lần load, quy mọi sai số về 1 dòng "(chưa chi tiết)".
+   ==================================================================== */
+var _iidSeq = 0;
+function newIid(){ return 'i' + (_iidSeq++).toString(36) + '_' + Date.now().toString(36); }
+
+function entryItems(entry){ return (entry && Array.isArray(entry.items)) ? entry.items : []; }
+
+function itemsSum(entry, kind, catId){
+  var s = 0;
+  entryItems(entry).forEach(function(it){
+    if (it.kind === kind && it.catId === catId) s += num(it.soTien);
+  });
+  return s;
+}
+
+// cộng delta vào entry[kind][catId], tự xóa key khi về 0 (ngưỡng giống journalRemoveRefs)
+function _bucketAdd(entry, kind, catId, delta){
+  entry[kind] = entry[kind] || {};
+  var v = num(entry[kind][catId]) + num(delta);
+  if (v <= 0.004) delete entry[kind][catId];
+  else entry[kind][catId] = v;
+}
+
+function entryFindItem(entry, iid){
+  var arr = entryItems(entry);
+  for (var i=0;i<arr.length;i++){ if (arr[i].iid === iid) return arr[i]; }
+  return null;
+}
+
+function entryAddItem(date, kind, catId, soTien, ghiChu){
+  var v = num(soTien);
+  if (!date || !catId || (kind !== 'thu' && kind !== 'chi') || v <= 0) return null;
+  var e = state.data.journal[date] || blankEntry();
+  e.thu = e.thu || {}; e.chi = e.chi || {}; e.refs = e.refs || [];
+  e.items = Array.isArray(e.items) ? e.items : [];
+  var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '' };
+  e.items.push(it);
+  _bucketAdd(e, kind, catId, v);
+  state.data.journal[date] = e;
+  invalidateBalanceCache();
+  return it;
+}
+
+// sửa 1 dòng: đổi được cả số tiền, nội dung, loại thu/chi và danh mục.
+// Trừ hết ở chỗ cũ rồi cộng vào chỗ mới -> không bao giờ cộng dồn sai.
+function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi){
+  var e = state.data.journal[date];
+  if (!e) return false;
+  var it = entryFindItem(e, iid);
+  if (!it) return false;
+  var v = num(soTien);
+  if (v <= 0) return false;
+  var kindM = (kindMoi === 'thu' || kindMoi === 'chi') ? kindMoi : it.kind;
+  var catM  = catIdMoi || it.catId;
+  _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
+  it.kind = kindM; it.catId = catM; it.soTien = v;
+  if (ghiChu != null) it.ghiChu = ghiChu;
+  _bucketAdd(e, kindM, catM, v);
+  invalidateBalanceCache();
+  return true;
+}
+
+function entryDeleteItem(date, iid){
+  var e = state.data.journal[date];
+  if (!e || !Array.isArray(e.items)) return false;
+  var idx = -1;
+  for (var i=0;i<e.items.length;i++){ if (e.items[i].iid === iid){ idx = i; break; } }
+  if (idx < 0) return false;
+  var it = e.items[idx];
+  _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
+  e.items.splice(idx, 1);
+  if (entryIsEmpty(e)) delete state.data.journal[date];
+  invalidateBalanceCache();
+  return true;
+}
+
+// dữ liệu cũ chưa có items -> sinh 1 item cho mỗi danh mục có tiền nhập tay.
+// Chi tiết thật của quá khứ không tách được (chưa từng được lưu), lấy ghi chú của ngày.
+function migrateEntryItems(e){
+  if (Array.isArray(e.items)) return false;
+  e.items = [];
+  ['thu','chi'].forEach(function(kind){
+    var bucket = e[kind];
+    if (!bucket || typeof bucket !== 'object') return;
+    Object.keys(bucket).forEach(function(catId){
+      var conLai = num(bucket[catId]) - entryRefSum(e, kind, catId);
+      if (conLai > 0.004){
+        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: conLai, ghiChu: e.ghiChu || '' });
+      }
+    });
+  });
+  return true;
+}
+
+// lưới an toàn cho ràng buộc tổng. Thiếu -> thêm dòng "(chưa chi tiết)";
+// thừa -> trừ dần từ dòng mới nhất. Không bao giờ sửa thu/chi (nguồn sự thật).
+function repairEntryItems(e){
+  e.items = Array.isArray(e.items) ? e.items : [];
+  ['thu','chi'].forEach(function(kind){
+    var bucket = e[kind];
+    if (!bucket || typeof bucket !== 'object') return;
+    var cats = {};
+    Object.keys(bucket).forEach(function(c){ cats[c] = 1; });
+    e.items.forEach(function(it){ if (it.kind === kind) cats[it.catId] = 1; });
+    Object.keys(cats).forEach(function(catId){
+      var lech = (num(bucket[catId]) - entryRefSum(e, kind, catId)) - itemsSum(e, kind, catId);
+      if (lech > 0.004){
+        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: lech, ghiChu: '(chưa chi tiết)' });
+      } else if (lech < -0.004){
+        var con = -lech;
+        for (var i = e.items.length - 1; i >= 0 && con > 0.004; i--){
+          var it = e.items[i];
+          if (it.kind !== kind || it.catId !== catId) continue;
+          var tru = Math.min(con, num(it.soTien));
+          it.soTien = num(it.soTien) - tru;
+          con -= tru;
+          if (num(it.soTien) <= 0.004) e.items.splice(i, 1);
+        }
+      }
+    });
+  });
+}
+
+// tên danh mục để hiển thị. Danh mục đã bị xóa khỏi settings mà journal còn tiền
+// -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
+function catTen(kind, catId){
+  var arr = (state.data.categories[kind] || []);
+  for (var i=0;i<arr.length;i++){ if (arr[i].id === catId) return arr[i].ten; }
+  return '(' + catId + ')';
+}
+
+// escape khi nhồi text người dùng vào innerHTML
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function normalizeData(d){
   d.settings = d.settings || { soDuDauKy: 0, ngayBatDau: "2026-01-01" };
   d.journal = d.journal || {};
@@ -191,6 +357,12 @@ function normalizeData(d){
     }
     e.chi = e.chi || {};
     e.refs = e.refs || [];
+    // sinh items[] cho dữ liệu cũ. PHẢI chạy SAU bước scalar->object ở trên
+    // vì migrateEntryItems đọc Object.keys(e.thu).
+    migrateEntryItems(e);
+    // tự chữa lệch invariant (file sửa tay, bản cũ ghi thiếu item...) -> hiện
+    // thành dòng "(chưa chi tiết)" thay vì làm số liệu sai âm thầm.
+    repairEntryItems(e);
   });
   // migrate khoản vay: daTraGoc (1 số tổng) -> traNo[] (từng kỳ, có số tiền thực trả).
   // Suy ra các kỳ đã trả ĐỦ từ daTraGoc cũ; các kỳ này không sinh giao dịch Sổ tay
@@ -342,6 +514,35 @@ function isTypingNow(){
 }
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
-  return !!(state.vnFormKind || state.editingDate);
+  return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
+            || (state.mp && state.mp.formOpen));
+}
+
+/* ====================================================================
+   withData — chạy tạm 1 bộ dữ liệu KHÁC (bản nháp mô phỏng) rồi trả về
+   nguyên trạng. Mọi hàm tính toán (thuTotal, balanceAt, duTru*, tongThu...)
+   đều đọc thẳng state.data, nên đây là cách duy nhất để tính trên dữ liệu
+   nháp mà KHÔNG phải sửa chữ ký của ~15 hàm.
+
+   CỰC KỲ QUAN TRỌNG:
+   - try/finally bắt buộc: nếu fn() throw mà không restore, app sẽ cầm dữ liệu
+     nháp và ghi thẳng nó lên Drive -> mất data thật.
+   - fn() KHÔNG được async. await sẽ nhả stack ra ngoài khối finally,
+     lúc đó state.data đã bị trả lại -> tính sai, hoặc tệ hơn là timer khác
+     chen vào đúng lúc đang swap.
+   - state.dirty phải được giữ nguyên: tính toán trên nháp không được làm
+     app tưởng data thật đã đổi rồi đẩy lên Drive.
+   ==================================================================== */
+function withData(d, fn){
+  var goc = state.data;
+  var keoDirty = state.dirty;
+  state.data = d;
+  invalidateBalanceCache();
+  try { return fn(); }
+  finally {
+    state.data = goc;
+    state.dirty = keoDirty;
+    invalidateBalanceCache();
+  }
 }
 
