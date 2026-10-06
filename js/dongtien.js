@@ -36,6 +36,24 @@ function recentAvgActual(kind, catId, n){
 
 var DONGTIEN_GROUPS = [ { kind:'thu', title:'Thu nhập' }, { kind:'chi', title:'Chi' } ];
 
+/* Màu ở tab này theo TỐT / XẤU chứ không theo dấu của con số:
+     thu thiếu so với chỉ tiêu  = xấu (đỏ)     thu hơn chỉ tiêu   = tốt (xanh)
+     chi vượt chỉ tiêu          = xấu (đỏ)     chi ít hơn chỉ tiêu = tốt (xanh)
+   Vì vậy "-2.037.000" ở khoản chi màu XANH (tiết kiệm được) còn "-10.110.000" ở khoản thu
+   màu ĐỎ (thu thiếu). Trước đây không có chữ nào giải thích nên nhìn như 2 khối dùng màu ngược nhau
+   -> thêm nhãn chữ cạnh số + dòng chú thích. */
+function chenhHtml(kind, diff){
+  if (diff == null) return '—';
+  if (Math.round(diff) === 0) return fmt(0);
+  var xau = (kind === 'chi') ? diff > 0 : diff < 0;
+  var nhan = (kind === 'chi') ? (diff > 0 ? 'chi vượt' : 'chi ít hơn') : (diff < 0 ? 'thu thiếu' : 'thu hơn');
+  var cls = xau ? 'xau' : 'tot';
+  return '<span class="chenh '+cls+'">'+fmt(Math.round(diff))+'</span><span class="chenh-nhan '+cls+'">'+nhan+'</span>';
+}
+function chuThichMauHtml(dau){
+  return '<div class="chenh-chuthich">'+dau+'<span class="tot">Xanh</span> = tốt (thu hơn / chi ít hơn chỉ tiêu) · <span class="xau">Đỏ</span> = cần chú ý (thu thiếu / chi vượt chỉ tiêu).</div>';
+}
+
 function renderDongTien(){
   var root = document.getElementById('tabContent');
   if (!state.dongTienYear) state.dongTienYear = parseInt((state.data.settings.ngayBatDau||todayStr()).slice(0,4),10);
@@ -127,7 +145,8 @@ function renderDongTien(){
     + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
     + '</div>';
 
-  html += '<div class="card"><div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
+  html += '<div class="card">' + chuThichMauHtml('Màu số liệu từng tháng so với chỉ tiêu (hiện cạnh tên danh mục): ')
+    + '<div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
   months.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+(mk>currentMk?' *':'')+'</th>'; });
   html += '</tr></thead><tbody>';
 
@@ -182,6 +201,7 @@ function renderDongTien(){
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
+    + chuThichMauHtml('Chênh lệch = TB thực tế − Chỉ tiêu. ')
     + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   DONGTIEN_GROUPS.forEach(function(g){
     var kind = g.kind;
@@ -203,28 +223,22 @@ function renderDongTien(){
         : (kind==='thu' && c.id==='thuHoiChoVay') ? (tongThuHoiThang(currentMk) || 0)
         : baseVal(kind, c.id);
       var diff = (tbA!=null && base>0) ? (tbA-base) : null;
-      var diffStyle = '';
-      if (diff!=null && diff!==0){
-        var bad = kind==='chi' ? diff>0 : diff<0;
-        diffStyle = ' style="color:'+(bad?'var(--red)':'var(--green)')+'"';
-      }
       var goiY = suggestVal(kind, c.id, monthKeyAdd(currentMk, 1));
       tBase += (base>0?base:0); tTb += (tbA||0); tGoi += (goiY||0);
       html += '<tr>'
         + '<td style="text-align:left;padding-left:18px">'+c.ten+'</td>'
         + '<td>'+(base>0?fmt(base):'—')+'</td>'
         + '<td>'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
-        + '<td'+diffStyle+'>'+(diff!=null?fmt(Math.round(diff)):'—')+'</td>'
+        + '<td>'+chenhHtml(kind, diff)+'</td>'
         + '<td>'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
         + '</tr>';
     });
     var tDiff = tTb - tBase;
-    var tBad = kind==='chi' ? tDiff>0 : tDiff<0;
     html += '<tr class="total-row">'
       + '<td style="text-align:left">Tổng '+g.title.toLowerCase()+'</td>'
       + '<td>'+fmt(Math.round(tBase))+'</td>'
       + '<td>'+fmt(Math.round(tTb))+'</td>'
-      + '<td style="color:'+(tDiff===0?'inherit':(tBad?'var(--red)':'var(--green)'))+'">'+fmt(Math.round(tDiff))+'</td>'
+      + '<td>'+chenhHtml(kind, tDiff)+'</td>'
       + '<td>'+fmt(Math.round(tGoi))+'</td>'
       + '</tr>';
   });

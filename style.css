@@ -304,3 +304,37 @@ tr.mp-am td{background:var(--chi-bg)}
    tràn khỏi ô lưới và đè lên ô bên cạnh. min-width:0 để ô lưới được phép co. */
 .form-row > div, .search-row .fld{min-width:0}
 .form-row select, .search-row .fld select{width:100%;min-width:0;text-overflow:ellipsis}
+
+/* ---- Chênh lệch ở tab Dòng tiền: màu theo tốt/xấu + nhãn chữ ---- */
+.chenh.tot,.chenh-nhan.tot,.chenh-chuthich .tot{color:var(--green)}
+.chenh.xau,.chenh-nhan.xau,.chenh-chuthich .xau{color:var(--red)}
+.chenh-nhan{display:block;font-size:11px;font-weight:600;line-height:1.2}
+.chenh-chuthich{font-size:12px;color:var(--muted);padding:0 0 10px}
+.chenh-chuthich .tot,.chenh-chuthich .xau{font-weight:700}
+
+/* ---- Danh sách chuyển tiền giữa ví ---- */
+.vi-ds{margin-top:10px}
+.vi-ct{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border)}
+.vi-ct-main{flex:1;min-width:0;overflow-wrap:anywhere}
+.vi-ct-note{font-size:12px;color:var(--muted)}
+.vi-ct-tien{font-weight:600;white-space:nowrap}
+
+/* ---- Ô ngày/tháng: iOS Safari hiện ngày dạng dài theo hệ thống ("ngày 6 thg 10, 2026"), độ rộng nội tại
+        lớn hơn ô lưới nên tràn và đè ô bên cạnh. appearance:none + min-width:0 ép nó co theo ô;
+        min-height giữ chiều cao khi ô trống (iOS xẹp ô date rỗng về 0 nếu bỏ appearance). ---- */
+input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;min-height:38px;text-align:left;display:block}
+
+/* ---- Điện thoại ---- */
+@media (max-width:700px){
+  /* header dán đầu màn hình nên càng thấp càng đỡ chiếm chỗ: nút làm mới chỉ còn biểu tượng,
+     dòng trạng thái đồng bộ xuống 1 dòng nhỏ riêng thay vì đẩy nút Đăng xuất xuống hàng */
+  header{gap:6px;padding:8px 2px 10px}
+  .brand{font-size:16px;white-space:nowrap}
+  .sync-status{order:10;flex-basis:100%;font-size:11px;margin-top:-2px}
+  #btnRefresh .lbl{display:none}
+  #btnRefresh,#btnSignOut{padding:6px 10px;font-size:13px}
+  /* thanh lọc Sổ tay: 2 cột; ô tìm + danh mục (+ nút xóa lọc) chiếm cả hàng, 2 ô ngày nằm cạnh nhau */
+  .search-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .search-row .fld{min-width:0}
+  .search-row .fld:nth-child(1),.search-row .fld:nth-child(2),.search-row .fld:nth-child(5){grid-column:1/-1}
+}
