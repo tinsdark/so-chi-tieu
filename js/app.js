@@ -46,9 +46,6 @@ function renderAll(){
   else renderDanhMuc();
   renderVayNoBadge();
   updateStickyOffsets();
-  // FAB chỉ có nghĩa ở Sổ tay (nơi có form nhập); tab khác hiện ra là nút chết
-  var fab = document.getElementById('fabAdd');
-  if (fab) fab.classList.toggle('fab-hien', state.tab === 'sotay');
 }
 
 // badge số trên tab nav "Vay - Nợ": đếm khoản sắp/đã tới hạn, thấy được dù đang ở tab khác

@@ -1989,6 +1989,38 @@ test('Font Be Vietnam Pro: đủ file woff2 cho latin + vietnamese 400/600/700 v
   ok(css.indexOf("font-family:'Be Vietnam Pro'") >= 0 && css.indexOf('U+20AB') >= 0, '@font-face có phạm vi tiếng Việt (gồm ký hiệu ₫)');
 });
 
+test('Nút + nổi (FAB) đã bỏ hẳn; phím N vẫn ghi nhanh', function(){
+  var root = path.join(__dirname, '..');
+  var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  ok(html.indexOf('id="fabAdd"') < 0 && css.indexOf('.fab') < 0, 'còn sót FAB');
+  ok(fs.readFileSync(path.join(root, 'js', 'app.js'), 'utf8').indexOf("handleAction('fabAdd'") >= 0, 'mất phím tắt N');
+});
+
+test('Thẻ phân màu theo loại + "Số dư theo ví" nằm ngay dưới thẻ tổng quan', function(){
+  var root = path.join(__dirname, '..');
+  var st = fs.readFileSync(path.join(root, 'js', 'sotay.js'), 'utf8');
+  var i = st.indexOf('html += viSoDuCardHtml(mk);');
+  ok(i > 0 && i < st.indexOf('html += ghiNhanhHtml();'), 'thẻ ví phải đứng trước ghi nhanh');
+  ok(st.indexOf('card k-wal') > 0 && st.indexOf('k-bud') > 0 && st.indexOf('k-goal') > 0 && st.indexOf('k-act') > 0);
+  var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  ['k-act', 'k-bud', 'k-goal', 'k-wal', 'k-in', 'k-debt', 'k-asset'].forEach(function(k){
+    ok(css.indexOf('.' + k + '{') >= 0, 'thiếu CSS ' + k);
+    ok(css.indexOf('--' + k + ':') >= 0 && css.indexOf('[data-theme="dark"]{\n  --k-act') >= 0, 'thiếu biến ' + k);
+  });
+});
+
+test('Animation: motion.js được nạp, bọc đủ 5 hàm render, tôn trọng "giảm chuyển động"', function(){
+  var root = path.join(__dirname, '..');
+  var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  var m = fs.readFileSync(path.join(root, 'js', 'motion.js'), 'utf8');
+  var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  ok(html.indexOf('js/motion.js') > 0 && html.indexOf('js/motion.js') < html.indexOf('js/app.js'), 'motion.js phải nạp trước app.js');
+  ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderDanhMuc'].forEach(function(n){ ok(m.indexOf("'" + n + "'") >= 0, 'thiếu bọc ' + n); });
+  ok(m.indexOf('prefers-reduced-motion') >= 0 && css.indexOf('@media (prefers-reduced-motion:reduce)') >= 0, 'thiếu tắt animation khi giảm chuyển động');
+  ['anim-card', 'anim-mo', 'anim-moi', 'anim-xoa'].forEach(function(k){ ok(css.indexOf('.' + k + '{') >= 0, 'thiếu CSS ' + k); });
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

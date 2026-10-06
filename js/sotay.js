@@ -64,7 +64,7 @@ function ghiNhanhHtml(){
   var topIds = top.map(function(c){ return c.id; });
   var rest = cats.filter(function(c){ return topIds.indexOf(c.id) < 0; });
   var homNay = todayStr(), ngay = state.qa.date || homNay;
-  var h = '<div class="card qa" id="ghiNhanh">'
+  var h = '<div class="card qa k-in" id="ghiNhanh">'
     // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
     + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>'+icon('check')+' '+esc(state.qa.last.text)+'</span>'
         + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
@@ -237,11 +237,11 @@ function renderSoTay(){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc khóa sổ ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
   }
 
+  html += viSoDuCardHtml(mk);
   html += ghiNhanhHtml();
   html += dinhKyDenHanHtml();
   html += hanMucThangHtml(mk);
   html += mucTieuCardHtml();
-  html += viSoDuCardHtml(mk);
 
   // Entry form — mặc định GẤP LẠI (thẻ "Ghi nhanh" lo việc thường ngày); mở khi đang sửa 1 ngày hoặc bấm "Mở form"
   // id=formGiaoDich: mốc để cuộn tới khi sửa ngày
@@ -530,7 +530,7 @@ function mucTieuCardHtml(){
   var gs = state.data.mucTieu || [];
   if (!gs.length) return '';
   var hom = todayStr();
-  var h = '<div class="card"><h3>Mục tiêu tiết kiệm</h3><div class="hm-list">';
+  var h = '<div class="card k-goal"><h3>Mục tiêu tiết kiệm</h3><div class="hm-list">';
   gs.forEach(function(g){
     var t = mucTieuTienDo(g, hom);
     var rong = Math.min(100, Math.round(t.pct * 100));
@@ -564,7 +564,7 @@ function mucTieuCardHtml(){
 function dinhKyDenHanHtml(){
   var ds = dinhKyDenHan(todayStr());
   if (!ds.length) return '';
-  var h = '<div class="card dk-card" id="cardDinhKy"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
+  var h = '<div class="card dk-card k-act" id="cardDinhKy"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
   ds.forEach(function(x){
     var k = x.dk;
     h += '<div class="dk-row">'
@@ -588,12 +588,12 @@ function viSoDuCardHtml(mk){
   var ws = state.data.wallets || [];
   if (ws.length < 2) return '';
   var cuoi = mk + '-31';   // so sánh chuỗi ngày: '2026-10-31' >= mọi ngày trong tháng 10
-  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Số dư theo ví'
-    + '<button class="btn secondary sm" data-act="viChuyenMo">'+icon('transfer')+' Chuyển tiền giữa ví</button></h3>'
+  var h = '<div class="card k-wal"><h3>Số dư theo ví'
+    + '<button class="btn secondary sm" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></h3>'
     + '<div class="vi-grid">';
-  ws.forEach(function(w){
+  ws.forEach(function(w, i){
     var b = soDuTheoVi(w.id, cuoi);
-    h += '<div class="stat"><div class="lbl">'+esc(w.ten)+'</div><div class="val"'+(b < 0 ? ' style="color:var(--red)"' : '')+'>'+fmt(Math.round(b))+'</div></div>';
+    h += '<div class="stat" style="--vc:var(--vc'+(i % 5)+')"><div class="lbl">'+esc(w.ten)+'</div><div class="val"'+(b < 0 ? ' style="color:var(--red)"' : '')+'>'+fmt(Math.round(b))+'</div></div>';
   });
   h += '</div>';
   if (state.viFormOpen){
@@ -650,7 +650,7 @@ function hanMucThangHtml(mk){
   var rows = hanMucThangRows(mk);
   if (!rows.length) return '';
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var h = '<div class="card" id="cardHanMuc"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
+  var h = '<div class="card k-bud" id="cardHanMuc"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
     + (nVuot ? ' <span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3><div class="hm-list">';
   rows.forEach(function(r){
     var muc = hanMucMuc(r.pct);

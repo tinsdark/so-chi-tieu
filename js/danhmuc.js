@@ -6,7 +6,7 @@
    ==================================================================== */
 
 function categoryCardHtml(kind, title, cats){
-  var html = '<div class="card"><h3>'+title+'</h3>';
+  var html = '<div class="card '+(kind === 'thu' ? 'k-asset' : 'k-debt')+'"><h3>'+title+'</h3>';
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục nào.</div>';
   } else {
@@ -116,7 +116,7 @@ function attachCatDragDrop(){
 function viCardHtml(){
   var ws = state.data.wallets || [];
   var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
-  var h = '<div class="card"><h3>Ví / nguồn tiền</h3>'
+  var h = '<div class="card k-wal"><h3>Ví / nguồn tiền</h3>'
     + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
     + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.', 'Ví / nguồn tiền hoạt động thế nào?');
   ws.forEach(function(w){
@@ -137,7 +137,7 @@ function viCardHtml(){
 function mtCardHtml(){
   var gs = state.data.mucTieu || [];
   var coVi = (state.data.wallets || []).length > 1;
-  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Mục tiêu tiết kiệm'
+  var h = '<div class="card k-goal"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Mục tiêu tiết kiệm'
     + '<button class="btn secondary sm" data-act="mtThem">+ Thêm</button></h3>'
     + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt số tiền cần có và hạn chót, app tính còn thiếu và cần để dành bao nhiêu mỗi tháng.'
     + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự lấy từ số dư ví đó; không gắn thì tự bấm "+ Gom thêm" ở Sổ tay.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví để dành.')
