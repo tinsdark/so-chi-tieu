@@ -39,6 +39,7 @@ var state = {
   tab: 'sotay',
   soTayMonth: null,   // "YYYY-MM"
   dongTienYear: null,
+  dtThang: null,          // tháng đang xem ở tab Dòng tiền trên điện thoại (mỗi lần 1 tháng)
   editingDate: null,
   soTaySearch: '',
   soTayFrom: '',

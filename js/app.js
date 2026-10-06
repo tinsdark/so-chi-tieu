@@ -153,6 +153,13 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
+// xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
+(function(){
+  var mq = window.matchMedia && window.matchMedia('(max-width:700px)');
+  var khi = function(){ if (state.data && state.tab === 'dongtien') renderDongTien(); };
+  if (mq && mq.addEventListener) mq.addEventListener('change', khi);
+})();
+
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);

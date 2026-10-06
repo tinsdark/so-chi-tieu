@@ -1199,7 +1199,8 @@ ctx.scheduleSave = function(){};
 ctx.docSo = function(v){ if (typeof v === 'number') return v; var am = /^\s*-/.test(String(v)); var n = Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')) || 0; return am ? -n : n; };
 ctx.veSo = function(n){ var x = Math.round(ctx.docSo(n)); return x ? String(x) : ''; };
 ctx.xacNhan = function(){ return Promise.resolve(true); };
-['renderSoTay', 'renderDanhMuc', 'renderVayNo', 'renderMoPhong'].forEach(function(n){ ctx[n] = function(){}; });
+var renderThat = {};   // bản render thật, để test nào cần vẽ HTML thì lấy lại
+['renderSoTay', 'renderDanhMuc', 'renderVayNo', 'renderMoPhong'].forEach(function(n){ renderThat[n] = ctx[n]; ctx[n] = function(){}; });
 
 // chạy fn với DOM giả: els = {id: {value}}, lists = {selector: [phần tử]}
 function voiDom(els, lists, fn){
@@ -1525,6 +1526,60 @@ test('tongQuanHtml: không có việc gì thì báo gọn, không có chip', fun
   ok(h.indexOf('hero-chip') < 0 && h.indexOf('Không có khoản nào cần xử lý') >= 0, 'không chip');
   ok(h.indexOf('hero-bud') < 0, 'không có chỉ tiêu thì không hiện thanh');
   setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Danh mục');
+
+test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:3000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:1000000, coDinhChiTieu:true }];
+  loadData(d);
+  ctx.state.dongTienYear = 2026; ctx.state.dtThang = null;
+  var mm0 = ctx.window.matchMedia;
+  var root = { innerHTML:'' };
+  try{
+    ctx.window.matchMedia = function(){ return { matches:true }; };
+    voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
+    var bang = root.innerHTML.split('<table>')[1].split('</table>')[0];
+    eq((bang.match(/class="dt-input th-month"/g) || []).length, 1, 'bảng chính chỉ 1 cột tháng');
+    ok(root.innerHTML.indexOf('data-act="dtThang"') >= 0 && root.innerHTML.indexOf('>T12*<') >= 0, 'có nút chọn tháng');
+    ok(bang.indexOf('Tháng 10') >= 0, 'mặc định là tháng hiện tại');
+    voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtThang', elAct({ 'data-mk':'2026-12' })); });
+    var bang2 = root.innerHTML.split('<table>')[1].split('</table>')[0];
+    ok(bang2.indexOf('Tháng 12') >= 0 && bang2.indexOf('Tháng 10') < 0, 'đã chuyển sang tháng 12');
+    ctx.window.matchMedia = function(){ return { matches:false }; };
+    voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
+    var bang3 = root.innerHTML.split('<table>')[1].split('</table>')[0];
+    eq((bang3.match(/class="dt-input th-month"/g) || []).length, 3, 'máy tính: đủ 3 tháng T10-T12');
+  } finally { ctx.window.matchMedia = mm0; ctx.state.dtThang = null; setToday('2026-10-01'); }
+});
+
+test('Bảng Vay-Nợ dạng thẻ: có class m-cards, mỗi ô có nhãn cột (data-th)', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', ten:'Xe', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10 })];
+  d.vayNo.choVay = [{ id:'c1', ten:'A', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-10-12' }];
+  loadData(d);
+  ctx.state.vnDetailId = 'v1';
+  var root = { innerHTML:'' };
+  var rv0 = ctx.renderVayNo;
+  ctx.renderVayNo = renderThat.renderVayNo;
+  try{ voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); }); } finally { ctx.renderVayNo = rv0; }
+  var h = root.innerHTML;
+  eq((h.match(/<table class="m-cards">/g) || []).length, 4, '4 bảng: sắp đến hạn, cho vay, vay nợ, lịch trả');
+  ok(h.indexOf('data-th="Dư nợ còn lại"') >= 0 && h.indexOf('data-th="Dự kiến thu"') >= 0 && h.indexOf('data-th="Theo lịch"') >= 0, 'nhãn cột');
+  ok(h.indexOf('<tr class="m-detail">') >= 0, 'dòng chứa lịch trả');
+  ctx.state.vnDetailId = null;
+  setToday('2026-10-01');
+});
+
+test('Đăng xuất không còn ở thanh đầu trang mà ở tab Danh mục', function(){
+  var idx = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  ok(idx.indexOf('btnSignOut') < 0, 'index.html không còn nút Đăng xuất');
+  loadData(baseData());
+  ok(ctx.taiKhoanCardHtml().indexOf('data-act="dangXuat"') >= 0, 'thẻ Tài khoản có nút');
 });
 
 /* ==================================================================== */

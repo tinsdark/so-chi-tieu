@@ -141,28 +141,42 @@ function renderDongTien(){
     return s;
   }
 
+  // Điện thoại: bảng 12 cột tràn ngang, cột bị cắt giữa số -> mỗi lần xem MỘT tháng (chọn bằng hàng nút tháng),
+  // bảng chỉ còn 2 cột. Cùng code dựng bảng, chỉ khác danh sách tháng được vẽ (vm).
+  var laDienThoai = !!(window.matchMedia && window.matchMedia('(max-width:700px)').matches);
+  var vm = months;
+  var chipThang = '';
+  if (laDienThoai){
+    var chon = (months.indexOf(state.dtThang) >= 0) ? state.dtThang : (months.indexOf(currentMk) >= 0 ? currentMk : months[0]);
+    vm = [chon];
+    chipThang = '<div class="dt-chips" role="group" aria-label="Chọn tháng">'
+      + months.map(function(mk){
+          return '<button type="button" class="dt-chip'+(mk === chon ? ' on' : '')+'" data-act="dtThang" data-mk="'+mk+'" aria-pressed="'+(mk === chon)+'">T'+parseInt(mk.slice(5,7),10)+(mk > currentMk ? '*' : '')+'</button>';
+        }).join('') + '</div>';
+  }
+
   var html = '<div class="year-nav">'
     + '<button data-act="prevYear" class="icon-btn" title="Năm trước" aria-label="Năm trước">‹</button>'
     + '<div class="lbl">'+year+'</div>'
     + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
-    + '</div>';
+    + '</div>' + chipThang;
 
   html += '<div class="card">' + chuThichMauHtml('Màu số liệu từng tháng so với chỉ tiêu (hiện cạnh tên danh mục): ')
     + '<div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
-  months.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+(mk>currentMk?' *':'')+'</th>'; });
+  vm.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+(mk>currentMk?' *':'')+'</th>'; });
   html += '</tr></thead><tbody>';
 
   DONGTIEN_GROUPS.forEach(function(g){
     var cats = state.data.categories[g.kind];
-    html += '<tr><td colspan="'+(months.length+1)+'" class="group-title">'+g.title+'</td></tr>';
+    html += '<tr><td colspan="'+(vm.length+1)+'" class="group-title">'+g.title+'</td></tr>';
     if (!cats.length){
-      html += '<tr><td colspan="'+(months.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</td></tr>';
+      html += '<tr><td colspan="'+(vm.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</td></tr>';
     }
     cats.forEach(function(c){
       var base = baseVal(g.kind, c.id);
       var tagHtml = base>0 ? ' <span class="cat-tag" title="Chỉ tiêu/tháng">'+fmt(base)+'</span>' : '';
       html += '<tr><td class="sticky-col"><span class="cat-label">'+c.ten+tagHtml+'</span></td>';
-      months.forEach(function(mk){
+      vm.forEach(function(mk){
         var future = mk > currentMk;
         var val = cellVal(g.kind, c.id, mk);
         var showNum = future ? (val != null) : (!!val);
@@ -178,19 +192,19 @@ function renderDongTien(){
       html += '</tr>';
     });
     html += '<tr class="total-row"><td class="sticky-col">Tổng '+g.title.toLowerCase()+'</td>';
-    months.forEach(function(mk){ html += '<td>'+fmt(groupCell(g.kind,mk))+'</td>'; });
+    vm.forEach(function(mk){ html += '<td>'+fmt(groupCell(g.kind,mk))+'</td>'; });
     html += '</tr>';
   });
 
   // cân đối + lũy kế
   html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng</td>';
-  months.forEach(function(mk){ html += '<td>'+fmt(groupCell('thu',mk) - groupCell('chi',mk))+'</td>'; });
+  vm.forEach(function(mk){ html += '<td>'+fmt(groupCell('thu',mk) - groupCell('chi',mk))+'</td>'; });
   html += '</tr>';
 
   // Lũy kế: tháng đã qua = số dư thực; từ tháng hiện tại trở đi CỘNG DỒN dự báo (cùng cách tính với thẻ
   // "Dòng tiền tích lũy tương lai" ở tab Vay - Nợ). Trước đây tháng tương lai chỉ lấy số dư thực nên đứng yên.
   var luyKe = {};
-  var lastMk = months[months.length-1];
+  var lastMk = vm[vm.length-1];
   if (lastMk >= currentMk){
     var run = balanceBeforeMonth(currentMk), mc = currentMk, guard2 = 0;
     while (mc <= lastMk && guard2++ < 600){
@@ -200,7 +214,7 @@ function renderDongTien(){
     }
   }
   html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
-  months.forEach(function(mk){
+  vm.forEach(function(mk){
     html += (mk < startMk) ? '<td>—</td>' : '<td>'+fmt(luyKe[mk] != null ? luyKe[mk] : balanceAtEndOfMonth(mk))+'</td>';
   });
   html += '</tr>';
@@ -216,12 +230,12 @@ function renderDongTien(){
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
     + ghiChuGon('Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.', 'Bảng này tính thế nào?')
     + chuThichMauHtml('Chênh lệch = TB thực tế − Chỉ tiêu. ')
-    + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
+    + '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   DONGTIEN_GROUPS.forEach(function(g){
     var kind = g.kind;
     // tiêu đề nhóm + dòng tổng để tách hẳn khối thu với khối chi (trước đây 2 nhóm
     // dính liền nhau, chỉ phân biệt bằng cái tag nhỏ ở cuối tên danh mục)
-    html += '<tr><td colspan="5" class="group-title" style="background:var(--bg);text-align:left">'
+    html += '<tr class="m-group"><td colspan="5" class="group-title" style="background:var(--bg);text-align:left">'
       + (kind==='thu' ? '▲ ' : '▼ ') + g.title + '</td></tr>';
     var tBase=0, tTb=0, tGoi=0;
     state.data.categories[kind].forEach(function(c){
@@ -240,20 +254,20 @@ function renderDongTien(){
       var goiY = suggestVal(kind, c.id, monthKeyAdd(currentMk, 1));
       tBase += (base>0?base:0); tTb += (tbA||0); tGoi += (goiY||0);
       html += '<tr>'
-        + '<td style="text-align:left;padding-left:18px">'+c.ten+'</td>'
-        + '<td>'+(base>0?fmt(base):'—')+'</td>'
-        + '<td>'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
-        + '<td>'+chenhHtml(kind, diff)+'</td>'
-        + '<td>'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
+        + '<td class="m-title" style="text-align:left;padding-left:18px">'+c.ten+'</td>'
+        + '<td data-th="Chỉ tiêu/tháng">'+(base>0?fmt(base):'—')+'</td>'
+        + '<td data-th="TB thực tế/tháng">'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
+        + '<td data-th="Chênh lệch">'+chenhHtml(kind, diff)+'</td>'
+        + '<td data-th="Gợi ý tháng tới">'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
         + '</tr>';
     });
     var tDiff = tTb - tBase;
     html += '<tr class="total-row">'
-      + '<td style="text-align:left">Tổng '+g.title.toLowerCase()+'</td>'
-      + '<td>'+fmt(Math.round(tBase))+'</td>'
-      + '<td>'+fmt(Math.round(tTb))+'</td>'
-      + '<td>'+chenhHtml(kind, tDiff)+'</td>'
-      + '<td>'+fmt(Math.round(tGoi))+'</td>'
+      + '<td class="m-title" style="text-align:left">Tổng '+g.title.toLowerCase()+'</td>'
+      + '<td data-th="Chỉ tiêu/tháng">'+fmt(Math.round(tBase))+'</td>'
+      + '<td data-th="TB thực tế/tháng">'+fmt(Math.round(tTb))+'</td>'
+      + '<td data-th="Chênh lệch">'+chenhHtml(kind, tDiff)+'</td>'
+      + '<td data-th="Gợi ý tháng tới">'+fmt(Math.round(tGoi))+'</td>'
       + '</tr>';
   });
   html += '</tbody></table></div></div>';
@@ -265,6 +279,9 @@ function renderDongTien(){
 function handleDongTienAction(act, el){
   if (act === 'prevYear' || act === 'nextYear'){
     state.dongTienYear += (act==='nextYear'?1:-1);
+    renderDongTien();
+  } else if (act === 'dtThang'){
+    state.dtThang = el.getAttribute('data-mk');
     renderDongTien();
   } else {
     return false;

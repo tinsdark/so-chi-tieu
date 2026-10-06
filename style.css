@@ -412,3 +412,37 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .brand-logo{border-radius:7px;display:block}
 .auth-card .auth-logo{margin-bottom:10px}
 .auth-card .auth-logo img{border-radius:18px;display:block;margin:0 auto;box-shadow:var(--shadow)}
+
+/* ====================================================================
+   Bảng -> thẻ trên điện thoại (Vay-Nợ, phân tích Dòng tiền). Bảng 5-9 cột tràn ngang, cột bị cắt giữa số.
+   Cách dùng: <table class="m-cards">, ô đầu class="m-title", các ô sau có data-th="Nhãn cột",
+   ô nút bấm class="m-act" (hoặc actions-col), dòng chứa bảng con class="m-detail", dòng tiêu đề nhóm class="m-group".
+   Bảng 4 cột (class t-compact): giữ dạng bảng nhưng thu gọn để vừa màn hình.
+   ==================================================================== */
+@media (max-width:700px){
+  table.m-cards, table.m-cards tbody{display:block}
+  table.m-cards thead{display:none}
+  table.m-cards tbody tr{display:block;border:1px solid var(--border);border-radius:10px;background:var(--card);margin-bottom:8px;padding:8px 10px}
+  table.m-cards tbody tr>td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:none;padding:3px 0;text-align:right;white-space:normal;background:transparent}
+  table.m-cards tbody tr>td[data-th]::before{content:attr(data-th);flex:0 0 auto;color:var(--muted);font-size:12px;font-weight:600;text-align:left}
+  table.m-cards tbody tr>td:empty{display:none}
+  table.m-cards td.m-title{display:block;text-align:left;font-weight:700;font-size:15px;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+  table.m-cards td.actions-col, table.m-cards td.m-act{width:auto;justify-content:flex-end;flex-wrap:wrap;gap:6px;padding-top:6px}
+  table.m-cards td.actions-col::before, table.m-cards td.m-act::before{content:none}
+  table.m-cards tr.m-detail{border:none;background:none;padding:0}
+  table.m-cards tr.m-detail>td{display:block;padding:0;text-align:left}
+  table.m-cards tr.m-group{border:none;background:none;padding:0;margin:14px 0 6px}
+  table.m-cards tr.m-group>td{display:block;padding:0;text-align:left}
+  table.m-cards tr.total-row{background:var(--row-total)}
+
+  table.t-compact{font-size:12px}
+  table.t-compact th, table.t-compact td{padding:6px 3px}
+  table.t-compact th{white-space:normal}
+}
+td.m-act{white-space:nowrap}
+
+/* ---- Dòng tiền trên điện thoại: hàng nút chọn tháng ---- */
+.dt-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.dt-chips::-webkit-scrollbar{display:none}
+.dt-chip{flex:0 0 auto;min-width:50px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600}
+.dt-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
