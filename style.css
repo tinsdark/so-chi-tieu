@@ -288,3 +288,7 @@ tr.mp-am td{background:var(--chi-bg)}
 /* ---- Mục tiêu tiết kiệm: thanh tiến độ dùng màu chính, xanh khi đã đủ ---- */
 .hm-fill.mt{background:var(--primary)}
 .hm-fill.mt.done{background:var(--green)}
+
+/* ---- Màu danh mục ---- */
+.cat-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.cat-color{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex:none}

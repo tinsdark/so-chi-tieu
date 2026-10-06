@@ -17,6 +17,8 @@ function categoryCardHtml(kind, title, cats){
            chỉ tiêu và các nút ▲▼🗑 xuống dòng 2. */
         + '<div style="display:flex;gap:4px;align-items:center">'
         + '<span class="cat-drag" draggable="true" title="Kéo để đổi thứ tự" style="cursor:grab;color:var(--muted);user-select:none;padding:0 2px">⠿</span>'
+        + '<input type="color" class="cat-color" data-act="catMau" data-kind="'+kind+'" data-id="'+c.id+'" value="'+catMau(kind, c.id)+'" title="Màu danh mục (dùng ở biểu đồ)" aria-label="Màu danh mục '+esc(c.ten)+'">'
+        + (c.mau ? '<button class="icon-btn" data-act="catMauReset" data-kind="'+kind+'" data-id="'+c.id+'" title="Về màu mặc định" aria-label="Về màu mặc định '+esc(c.ten)+'">↺</button>' : '')
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '</div>'
         + '<div style="display:flex;gap:4px;align-items:center">'
@@ -298,6 +300,9 @@ function handleDanhMucAction(act, el){
         renderAll();
       }
     })();
+  } else if (act === 'catMauReset'){
+    var cR = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });
+    if (cR){ cR.mau = ''; scheduleSave(); renderDanhMuc(); }
   } else if (act === 'mtThem'){
     state.mtForm = { id: '' }; renderDanhMuc();
   } else if (act === 'mtSua'){
@@ -475,7 +480,11 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
-  if (el.matches('[data-act=dkBat]')){
+  if (el.matches('[data-act=catMau]')){
+    var cM = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });
+    if (cM && /^#[0-9a-f]{6}$/i.test(el.value)){ cM.mau = el.value; scheduleSave(); renderDanhMuc(); }
+    return true;
+  } else if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
     if (dkB){ dkB.bat = el.checked; scheduleSave(); }
     return true;

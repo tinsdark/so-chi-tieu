@@ -45,6 +45,7 @@ var state = {
   soTayTo: '',
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
+  imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
   mtForm: null,           // form mục tiêu tiết kiệm ở tab Danh mục (như dkForm)
   dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
@@ -314,6 +315,20 @@ function repairEntryItems(e){
 
 // tên danh mục để hiển thị. Danh mục đã bị xóa khỏi settings mà journal còn tiền
 // -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
+// màu danh mục: màu người dùng chọn (c.mau) hoặc màu mặc định theo vị trí trong danh sách,
+// để biểu đồ và chấm màu luôn nhất quán giữa các lần vẽ (trước đây màu theo thứ tự lọc, đổi mỗi lần)
+var CAT_PALETTE = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+function catMau(kind, catId){
+  var arr = (state.data.categories[kind] || []);
+  for (var i = 0; i < arr.length; i++){
+    if (arr[i].id === catId) return /^#[0-9a-f]{6}$/i.test(arr[i].mau || '') ? arr[i].mau : CAT_PALETTE[i % CAT_PALETTE.length];
+  }
+  return '#9ca3af';
+}
+function catDot(kind, catId){
+  return '<span class="cat-dot" style="background:'+catMau(kind, catId)+'"></span>';
+}
+
 function catTen(kind, catId){
   var arr = (state.data.categories[kind] || []);
   for (var i=0;i<arr.length;i++){ if (arr[i].id === catId) return arr[i].ten; }
@@ -423,6 +438,9 @@ function normalizeData(d){
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
   // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  ['thu', 'chi'].forEach(function(k){
+    d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
+  });
   // mục tiêu tiết kiệm (xem khối MỤC TIÊU TIẾT KIỆM)
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
@@ -752,7 +770,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen || state.dkForm || state.mtForm
+            || state.viFormOpen || state.dkForm || state.mtForm || state.imp
             || (state.mp && state.mp.formOpen));
 }
 

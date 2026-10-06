@@ -150,6 +150,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
 document.addEventListener('change', function(ev){
   var el = ev.target;
   if (handleSoTayChange(el)) return;
+  if (handleNhapChange(el)) return;
   if (handleVayNoChange(el)) return;
   if (handleDanhMucChange(el)) return;
   if (handleMoPhongChange(el)) return;
@@ -159,6 +160,7 @@ document.addEventListener('change', function(ev){
 function handleAction(act, el){
   if (act === 'dangNhapLai'){ signIn(); return; }
   if (handleSoTayAction(act, el)) return;
+  if (handleNhapAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;

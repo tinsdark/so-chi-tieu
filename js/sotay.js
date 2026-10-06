@@ -214,7 +214,8 @@ function renderSoTay(){
   }
   var filterActive = !!(state.soTaySearch || state.soTayFrom || state.soTayTo || state.soTayCat);
 
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <button class="btn secondary sm" data-act="exportExcel">⬇ Xuất Excel</button></h3>';
+  html += nhapCardHtml();
+  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <span style="display:flex;gap:6px"><button class="btn secondary sm" data-act="impMo">⬆ Nhập</button><button class="btn secondary sm" data-act="exportExcel">⬇ Xuất Excel</button></span></h3>';
   html += '<div class="search-row">'
     + '<div class="fld"><label>Tìm nội dung</label><input type="text" data-act="soTaySearchInput" value="'+(state.soTaySearch||'').replace(/"/g,'&quot;')+'" placeholder="Từ khóa trong ghi chú..."></div>'
     + '<div class="fld"><label>Danh mục</label><select data-act="soTayCatInput">'+soTayCatOptions(state.soTayCat)+'</select></div>'
@@ -331,7 +332,7 @@ function soTayDetailHtml(date){
       if (state.soTayEditIid === it.iid){ h += stItemEditRow(date, it); return; }
       h += '<tr>'
         + '<td style="text-align:left;width:46px"><span class="st-kind '+it.kind+'">'+(it.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+esc(catTen(it.kind, it.catId))
+        + '<td style="text-align:left">'+catDot(it.kind, it.catId)+esc(catTen(it.kind, it.catId))
           + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(it)))+'</span>' : '')+'</td>'
         + '<td style="color:var(--'+(it.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(it.soTien)))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+esc(it.ghiChu||'')+'</td>'
@@ -498,7 +499,7 @@ function hanMucThangHtml(mk){
     var muc = hanMucMuc(r.pct);
     var rong = Math.min(100, Math.round(r.pct * 100));
     h += '<div class="hm-row">'
-      + '<div class="hm-top"><span class="hm-ten">'+esc(r.ten)+'</span>'
+      + '<div class="hm-top"><span class="hm-ten">'+catDot('chi', r.id)+esc(r.ten)+'</span>'
       + '<span class="hm-so '+muc+'">'+fmt(Math.round(r.da))+' / '+fmt(Math.round(r.cap))+' · '+Math.round(r.pct * 100)+'%</span></div>'
       + '<div class="hm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(r.ten)+'">'
       + '<div class="hm-fill '+muc+'" style="width:'+rong+'%"></div></div>'
@@ -564,14 +565,13 @@ function drawCharts(mk, monthDates, cats){
     var e = state.data.journal[d];
     Object.keys(e.chi||{}).forEach(function(cid){ byCat[cid] = (byCat[cid]||0) + num(e.chi[cid]); });
   });
-  var labels1 = [], vals1 = [];
-  cats.forEach(function(c){ if (byCat[c.id] > 0){ labels1.push(c.ten); vals1.push(byCat[c.id]); } });
-  var palette = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+  var labels1 = [], vals1 = [], cols1 = [];
+  cats.forEach(function(c){ if (byCat[c.id] > 0){ labels1.push(c.ten); vals1.push(byCat[c.id]); cols1.push(catMau('chi', c.id)); } });
   if (chartDonut) chartDonut.destroy();
   var ctx1 = document.getElementById('chartDonut');
   if (ctx1){
     chartDonut = new Chart(ctx1, { type:'doughnut',
-      data:{ labels: labels1.length?labels1:['Chưa có dữ liệu'], datasets:[{ data: vals1.length?vals1:[1], backgroundColor: vals1.length?palette:['#e5e7eb'] }]},
+      data:{ labels: labels1.length?labels1:['Chưa có dữ liệu'], datasets:[{ data: vals1.length?vals1:[1], backgroundColor: vals1.length?cols1:['#e5e7eb'] }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Chi theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
     });
   }
@@ -584,13 +584,13 @@ function drawCharts(mk, monthDates, cats){
     var e = state.data.journal[d];
     Object.keys(e.thu||{}).forEach(function(cid){ byCatThu[cid] = (byCatThu[cid]||0) + num(e.thu[cid]); });
   });
-  var labels1b = [], vals1b = [];
-  catsThu.forEach(function(c){ if (byCatThu[c.id] > 0){ labels1b.push(c.ten); vals1b.push(byCatThu[c.id]); } });
+  var labels1b = [], vals1b = [], cols1b = [];
+  catsThu.forEach(function(c){ if (byCatThu[c.id] > 0){ labels1b.push(c.ten); vals1b.push(byCatThu[c.id]); cols1b.push(catMau('thu', c.id)); } });
   if (chartDonutThu) chartDonutThu.destroy();
   var ctx1b = document.getElementById('chartDonutThu');
   if (ctx1b){
     chartDonutThu = new Chart(ctx1b, { type:'doughnut',
-      data:{ labels: labels1b.length?labels1b:['Chưa có dữ liệu'], datasets:[{ data: vals1b.length?vals1b:[1], backgroundColor: vals1b.length?palette:['#e5e7eb'] }]},
+      data:{ labels: labels1b.length?labels1b:['Chưa có dữ liệu'], datasets:[{ data: vals1b.length?vals1b:[1], backgroundColor: vals1b.length?cols1b:['#e5e7eb'] }]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
     });
   }
