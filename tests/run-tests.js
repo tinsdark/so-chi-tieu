@@ -1646,6 +1646,81 @@ test('Dòng tiền: bảng chính không còn khung cuộn dọc riêng (chỉ c
 });
 
 /* ==================================================================== */
+group('X. Xóa 1 dòng chi tiết thì ghi chú của ngày cũng đi theo');
+
+test('journalRemoveNote chỉ bỏ MỘT mẩu: 2 khoản giống hệt nhau, xóa 1 vẫn còn 1', function(){
+  var e = { ghiChu: 'cf 30.000 ₫; ăn trưa 50.000 ₫; cf 30.000 ₫' };
+  ctx.journalRemoveNote(e, 'cf 30.000 ₫');
+  eq(e.ghiChu, 'ăn trưa 50.000 ₫; cf 30.000 ₫');
+  ctx.journalRemoveNote(e, 'không có');
+  eq(e.ghiChu, 'ăn trưa 50.000 ₫; cf 30.000 ₫', 'mẩu không tồn tại -> không đổi');
+});
+
+test('Xóa dòng ghi nhanh: tiền trừ VÀ chữ trong Nội dung cũng mất; ghi chú của khoản khác giữ nguyên', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var ghi = function(tien, note){
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  };
+  ghi('45.000', 'Ăn sáng');
+  ghi('30.000', 'Cà phê');
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Ăn sáng ' + ctx.fmt(45000) + '; Cà phê ' + ctx.fmt(30000), 'trước khi xóa');
+  var iidSai = e.items.filter(function(it){ return it.ghiChu === 'Ăn sáng'; })[0].iid;
+  ok(ctx.entryDeleteItem('2026-10-10', iidSai), 'xóa được');
+  e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000), 'chữ của khoản sai đã mất, khoản kia còn');
+  eq(ctx.num(e.chi.an), 30000, 'tiền trừ đúng');
+  var iidCon = e.items[0].iid;
+  ctx.entryDeleteItem('2026-10-10', iidCon);
+  eq(ctx.state.data.journal['2026-10-10'], undefined, 'xóa hết thì ngày rỗng bị xóa luôn');
+});
+
+test('Xóa dòng: hai khoản giống hệt nhau (cùng nội dung + số tiền) thì xóa 1, chữ còn đúng 1 mẩu', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  for (var i = 0; i < 2; i++){
+    voiDom({ qa_amount:{ value:'30.000' }, qa_note:{ value:'Cà phê' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  }
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.items.length, 2);
+  ctx.entryDeleteItem('2026-10-10', e.items[0].iid);
+  e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000), 'còn đúng 1 mẩu');
+  eq(ctx.num(e.chi.an), 30000);
+});
+
+test('Xóa dòng: dòng cũ chưa có gc vẫn gỡ được chữ theo dạng "<nội dung> <số tiền>"; không đoán bừa khi không khớp', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.journal['2026-10-05'] = { thu:{}, chi:{ an:80000 }, ghiChu:'Ăn trưa ' + ctx.fmt(50000) + '; ghi chú tự gõ', refs:[],
+    items:[ { iid:'a', kind:'chi', catId:'an', soTien:50000, ghiChu:'Ăn trưa' }, { iid:'b', kind:'chi', catId:'an', soTien:30000, ghiChu:'Nước' } ] };
+  loadData(d);
+  ctx.entryDeleteItem('2026-10-05', 'a');
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'ghi chú tự gõ', 'gỡ đúng mẩu "Ăn trưa …", giữ chữ tự gõ');
+  ctx.entryDeleteItem('2026-10-05', 'b');   // "Nước 30.000 ₫" không có trong ghi chú -> không đụng gì
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'ghi chú tự gõ', 'chữ tự gõ vẫn còn');
+});
+
+test('Xóa dòng của form đầy đủ nhiều danh mục: mẩu ghi chú dùng chung chỉ mất khi xóa dòng cuối', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.editingDate = null; ctx.state.fullFormOpen = true;
+  voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(150000), 'ghi chú ngày gắn tổng 2 khoản');
+  eq(e.items.length, 2);
+  ctx.entryDeleteItem('2026-10-10', e.items[0].iid);
+  eq(ctx.state.data.journal['2026-10-10'].ghiChu, 'Đi chợ ' + ctx.fmt(150000), 'còn 1 dòng dùng chung mẩu này -> giữ');
+  ctx.entryDeleteItem('2026-10-10', ctx.state.data.journal['2026-10-10'].items[0].iid);
+  eq(ctx.state.data.journal['2026-10-10'], undefined, 'xóa dòng cuối -> hết chữ, ngày rỗng bị xóa');
+  ctx.state.fullFormOpen = false;
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

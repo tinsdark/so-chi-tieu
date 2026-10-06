@@ -205,6 +205,7 @@ function nhapThucHien(imp, kq){
     var e = state.data.journal[x.ngay];
     var ghi = (x.note || x.catTen || '') + (x.note || x.catTen ? ' ' : '') + fmt(Math.round(x.soTien));
     e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + ghi : ghi;
+    it.gc = ghi;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     da.push({ date: x.ngay, iid: it.iid, note: ghi });
   });
   return { da: da, moi: moi };

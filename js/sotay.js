@@ -898,7 +898,10 @@ function handleSoTayAction(act, el){
           var src = (kind === 'thu') ? thu : chi;
           Object.keys(src).forEach(function(cid){
             if (daTag[kind+'|'+cid]) return;
-            eNew.items.push({ iid: newIid(), kind: kind, catId: cid, soTien: src[cid], ghiChu: ghiChu, walletId: viSel });
+            var itNew = { iid: newIid(), kind: kind, catId: cid, soTien: src[cid], ghiChu: ghiChu, walletId: viSel };
+            // mẩu ghi chú ngày của lần lưu này (có thể dùng chung cho nhiều dòng) — để xóa dòng thì gỡ chữ theo
+            if (ghiChuLuu) itNew.gc = ghiChuLuu;
+            eNew.items.push(itNew);
           });
         });
         repairEntryItems(eNew);
@@ -988,6 +991,7 @@ function handleSoTayAction(act, el){
     if (ghiQ){
       var eQ = state.data.journal[ngayQ];
       eQ.ghiChu = eQ.ghiChu ? eQ.ghiChu + '; ' + ghiQ : ghiQ;
+      itQ.gc = ghiQ;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
     state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';

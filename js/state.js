@@ -94,10 +94,32 @@ var REF_LABEL = {
 
 function blankEntry(){ return { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; }
 
-// bỏ đúng 1 mẩu ghi chú do app tự sinh ra khỏi chuỗi "a; b; c"
+// bỏ đúng 1 mẩu ghi chú do app tự sinh ra khỏi chuỗi "a; b; c".
+// Chỉ bỏ MỘT mẩu (mẩu đầu khớp): 2 khoản giống hệt nhau trong ngày (cùng nội dung, cùng số tiền) sinh ra 2 mẩu
+// giống nhau, xóa 1 khoản không được làm mất cả 2 mẩu.
 function journalRemoveNote(entry, note){
   if (!note || !entry.ghiChu) return;
-  entry.ghiChu = entry.ghiChu.split('; ').filter(function(s){ return s !== note; }).join('; ');
+  var parts = entry.ghiChu.split('; ');
+  var i = parts.indexOf(note);
+  if (i < 0) return;
+  parts.splice(i, 1);
+  entry.ghiChu = parts.join('; ');
+}
+// mẩu ghi chú NGÀY mà 1 dòng chi tiết đã sinh ra. Dòng mới lưu sẵn trong it.gc; dòng cũ chưa có gc thì đoán theo
+// cách ghi phổ biến "<nội dung> <số tiền>" (ghi nhanh, nhập file, định kỳ, form đầy đủ khi chỉ có 1 khoản).
+function itemGhiChuNgay(it){
+  return it.gc || (it.ghiChu ? it.ghiChu + ' ' + fmt(Math.round(num(it.soTien))) : '');
+}
+// xóa 1 dòng chi tiết thì mẩu ghi chú của nó trong cột Nội dung cũng phải đi theo (trước đây tiền trừ mà chữ vẫn còn).
+// Gọi TRƯỚC khi bỏ it khỏi e.items. Mẩu dùng chung bởi nhiều dòng (1 lần lưu form đầy đủ nhiều danh mục) chỉ bị gỡ
+// khi không còn dòng nào khác dùng nó: so số mẩu đang có với số dòng còn lại cùng mẩu.
+function entryGoGhiChuCuaItem(e, it){
+  var seg = itemGhiChuNgay(it);
+  if (!seg || !e.ghiChu) return;
+  var soMau = e.ghiChu.split('; ').filter(function(s){ return s === seg; }).length;
+  if (!soMau) return;
+  var conDung = entryItems(e).filter(function(x){ return x !== it && itemGhiChuNgay(x) === seg; }).length;
+  if (soMau > conDung) journalRemoveNote(e, seg);
 }
 
 function entryIsEmpty(entry){
@@ -266,6 +288,7 @@ function entryDeleteItem(date, iid){
   for (var i=0;i<e.items.length;i++){ if (e.items[i].iid === iid){ idx = i; break; } }
   if (idx < 0) return false;
   var it = e.items[idx];
+  entryGoGhiChuCuaItem(e, it);
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   e.items.splice(idx, 1);
   if (entryIsEmpty(e)) delete state.data.journal[date];
@@ -647,6 +670,7 @@ function dinhKyGhi(dk, mk, homNay){
   var e = state.data.journal[date];
   var note = dk.ten + ' ' + fmt(Math.round(dk.soTien));
   e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + note : note;
+  it.gc = note;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo (entryGoGhiChuCuaItem)
   return { date: date, iid: it.iid, note: note };
 }
 function dinhKyHoanTac(r){
