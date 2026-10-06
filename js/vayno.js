@@ -474,7 +474,7 @@ function vayNoScheduleHtml(loan){
       + '. Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay. Kỳ còn đang trả dở thì phần thiếu vẫn nằm trong dư nợ.</div>';
   }
   if (loan.tatToan){
-    html += '<div class="empty" style="padding:0 0 8px">Đã tất toán ngày '+(loan.tatToan.ngay||'')+' với số tiền '+fmt(loan.tatToan.soTien)+'.</div>';
+    html += '<div class="empty" style="padding:0 0 8px">Đã tất toán ngày '+(loan.tatToan.ngay ? ngayVN(loan.tatToan.ngay) : '')+' với số tiền '+fmt(loan.tatToan.soTien)+'.</div>';
   }
   return html;
 }
@@ -531,7 +531,7 @@ function renderVayNo(){
         + '<td data-th="Số tiền">'+fmt(c.soTien)+'</td>'
         + '<td data-th="Đã thu">'+fmt(c.daThu)+'</td>'
         + '<td data-th="Còn lại">'+fmt(conLai)+'</td>'
-        + '<td data-th="Dự kiến thu">'+(c.ngayDuKienThu||'')+'</td>'
+        + '<td data-th="Dự kiến thu">'+(c.ngayDuKienThu ? ngayVN(c.ngayDuKienThu) : '')+'</td>'
         + '<td data-th="Trạng thái">'+tt+'</td>'
         + '<td class="actions-col">'
         + (c.tatToan
