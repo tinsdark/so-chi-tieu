@@ -60,6 +60,7 @@ function renderDanhMuc(){
     + '<div class="form-row">'
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
     + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
+  html += caiAppCardHtml();
   html += backupCardHtml();
   root.innerHTML = html;
   attachCatDragDrop();
@@ -215,6 +216,30 @@ function dkCardHtml(){
     });
     h += '</tbody></table></div>';
   }
+  return h + '</div>';
+}
+
+/* ---- Cài lên màn hình chính (PWA): hướng dẫn theo thiết bị ---- */
+function caiAppCardHtml(){
+  var h = '<div class="card"><h3>Cài lên điện thoại / máy tính</h3>';
+  if (dangChayNhuApp()){
+    return h + '<div class="empty" style="padding:0;text-align:left">✓ Đang chạy như một app từ màn hình chính.</div></div>';
+  }
+  var buoc = function(t){ return '<li>'+t+'</li>'; };
+  h += '<div class="empty" style="padding:0 0 8px;text-align:left">Có biểu tượng ở màn hình chính, mở toàn màn hình như app, không cần gõ địa chỉ web.</div>';
+  h += '<div class="cai-app"><b>iPhone / iPad (dùng Safari)</b><ol>'
+    + buoc('Mở trang này bằng <b>Safari</b> (không phải Chrome trong app khác).')
+    + buoc('Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑) ở thanh dưới.')
+    + buoc('Kéo xuống chọn <b>Thêm vào Màn hình chính</b> → <b>Thêm</b>.')
+    + '</ol></div>';
+  h += '<div class="cai-app"><b>Android (Chrome)</b><ol>'
+    + buoc('Bấm menu <b>⋮</b> ở góc trên → <b>Cài đặt ứng dụng</b> (hoặc <b>Thêm vào Màn hình chính</b>).')
+    + '</ol></div>';
+  h += '<div class="cai-app"><b>Máy tính (Chrome / Edge)</b><ol>'
+    + buoc('Bấm biểu tượng <b>cài đặt</b> ở cuối thanh địa chỉ → <b>Cài đặt</b>.')
+    + '</ol></div>';
+  h += '<div class="empty" style="padding:8px 0 0;text-align:left">Lưu ý: app trên màn hình chính có bộ nhớ riêng nên <b>lần đầu phải đăng nhập Google lại trong app</b> (dữ liệu vẫn là file trên Drive, không mất). '
+    + 'Sau đó mở lại trong vòng khoảng 1 giờ thì vào thẳng; quá 1 giờ bấm đăng nhập 1 lần.</div>';
   return h + '</div>';
 }
 

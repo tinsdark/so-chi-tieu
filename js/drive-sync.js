@@ -17,6 +17,30 @@ var tokenClient = null;
 var accessToken = null;
 var _textDriveLanTai = null;   // nội dung thô của file Drive ở lần tải gần nhất (dùng làm bản sao lưu ngày)
 
+/* ====================================================================
+   GIỮ PHIÊN ĐĂNG NHẬP: mở app từ biểu tượng màn hình chính mà lần nào cũng phải bấm đăng nhập
+   Google thì không khác gì mở web. Token Google chỉ sống ~1 giờ (không có refresh token vì app
+   không có server), nên lưu token + giờ hết hạn vào localStorage: mở lại trong vòng ~1 giờ thì vào
+   thẳng, quá hạn mới hiện màn đăng nhập.
+   Đánh đổi bảo mật: token này chỉ có quyền drive.file (chỉ file do app tạo), sống ≤ 1 giờ, và cùng
+   chỗ với bản dữ liệu lưu cho chế độ ngoại tuyến (nhạy cảm hơn nhiều). Đăng xuất là xóa cả hai.
+   ==================================================================== */
+var TOKEN_KEY = 'chitieu_tok_v1';
+var TOKEN_DE_HAN_S = 120;       // coi như hết hạn sớm 2 phút để không dính token chết giữa chừng
+function saveToken(resp){
+  try{
+    var giay = parseInt(resp.expires_in, 10) || 3600;
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({ t: resp.access_token, exp: Date.now() + (giay - TOKEN_DE_HAN_S) * 1000 }));
+  }catch(e){}
+}
+function readSavedToken(){
+  try{
+    var o = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
+    return (o && o.t && o.exp > Date.now()) ? o.t : null;
+  }catch(e){ return null; }
+}
+function clearSavedToken(){ try{ localStorage.removeItem(TOKEN_KEY); }catch(e){} }
+
 function initTokenClient(){
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
@@ -30,6 +54,7 @@ function requestToken(interactive){
     tokenClient.callback = function(resp){
       if (resp && resp.error){ reject(resp); return; }
       accessToken = resp.access_token;
+      saveToken(resp);
       resolve(accessToken);
     };
     tokenClient.error_callback = function(err){ reject(err); };
@@ -42,6 +67,13 @@ async function driveFetch(url, options, retried){
   var headers = Object.assign({}, options.headers, { 'Authorization': 'Bearer ' + accessToken });
   var res = await fetch(url, Object.assign({}, options, { headers: headers }));
   if (res.status === 401 && !retried){
+    // token hết hạn/bị thu hồi. Xin lại âm thầm chỉ làm được khi Google Sign-In đã nạp (tokenClient);
+    // vào bằng token lưu sẵn thì chưa có -> báo hết phiên thay vì ném lỗi khó hiểu.
+    clearSavedToken();
+    if (!tokenClient){
+      if (window.google && google.accounts && google.accounts.oauth2) initTokenClient();
+      else throw new Error('token-expired');
+    }
     await requestToken(false);
     return driveFetch(url, options, true);
   }
@@ -95,6 +127,7 @@ async function driveLoad(){
       state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
       state.driveFileId = null;
       state.driveModified = null;
+      state.taiLoi = false;          // chưa có file thật sự = lần dùng đầu, được phép tạo file
       _textDriveLanTai = null;
       state.errorMsg = null;
       state.lastSync = new Date();
@@ -106,6 +139,7 @@ async function driveLoad(){
     state.data = normalizeData(parsed);
     state.driveFileId = file.id;
     state.driveModified = file.modifiedTime || null;   // mốc lấy từ lúc liệt kê, TRƯỚC khi tải nội dung
+    state.taiLoi = false;
     _textDriveLanTai = text;
     state.errorMsg = null;
     state.lastSync = new Date();
@@ -115,6 +149,9 @@ async function driveLoad(){
   }catch(e){
     if (!state.data){
       state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+      // KHÔNG tải được != chưa có file. Đánh dấu để driveSave không tạo file mới đè lên file thật
+      // (findFile chọn file sửa gần nhất, file trống mới tạo sẽ "thắng" file dữ liệu thật).
+      state.taiLoi = true;
       state.errorMsg = 'Không tải được dữ liệu từ Google Drive — đang dùng dữ liệu mặc định. Bấm "Làm mới" để thử lại.';
     } else {
       state.errorMsg = 'Làm mới thất bại, vẫn giữ dữ liệu hiện tại trên máy.';
@@ -249,6 +286,11 @@ function scheduleSave(){
 async function driveSave(){
   // ngoại tuyến (chưa đăng nhập): thay đổi đã nằm trong nháp trên máy, không có gì để gửi
   if (!accessToken){ renderSyncStatus(); return; }
+  if (state.taiLoi){
+    state.errorMsg = 'Chưa tải được dữ liệu từ Drive nên CHƯA lưu lên Drive (để khỏi tạo file mới đè lên file thật). Thay đổi vẫn được giữ trên máy — bấm "Làm mới" khi có mạng.';
+    renderSyncStatus();
+    return;
+  }
   if (state.saving) { saveTimer = setTimeout(driveSave, 1500); return; }
   state.saving = true;
   var seqAtStart = changeSeq;
@@ -451,10 +493,24 @@ function showApp(){
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('app').style.display = '';
 }
+/* ---- cài lên màn hình chính ---- */
+function laIos(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function dangChayNhuApp(){
+  return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+}
+// iOS không có nút "Cài đặt" như Android/Chrome: người dùng phải tự biết vào menu Chia sẻ -> nên nhắc 1 lần
+function iosNenGoiYCai(){
+  if (!laIos() || dangChayNhuApp()) return false;
+  try{ return localStorage.getItem('chitieu_ios_hint') !== '1'; }catch(e){ return true; }
+}
 function showGate(msg){
   document.getElementById('app').style.display = 'none';
   document.getElementById('authGate').style.display = 'flex';
   document.getElementById('authMsg').textContent = msg || '';
+  var gy = document.getElementById('iosHint');
+  if (gy) gy.style.display = iosNenGoiYCai() ? '' : 'none';
   var bo = document.getElementById('btnOffline');
   if (bo){
     var snap = readSyncedSnapshot();
@@ -473,6 +529,31 @@ function startPolling(){
   window.addEventListener('focus', pollRefresh);
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) pollRefresh(); });
   setInterval(pollRefresh, 35000);
+}
+
+// mở app: còn token lưu sẵn thì vào thẳng, không qua màn đăng nhập. Trả true nếu đã vào.
+async function tiepTucPhienDangNhap(){
+  var tok = readSavedToken();
+  if (!tok) return false;
+  accessToken = tok;
+  document.getElementById('authMsg').textContent = 'Đang vào bằng phiên đăng nhập gần nhất…';
+  var ok = false;
+  try{ ok = await driveLoad(); }catch(e){ ok = false; }
+  if (!ok){
+    // token đã chết / không có mạng: bỏ dữ liệu mặc định driveLoad vừa dựng tạm, quay về màn đăng nhập
+    accessToken = null; state.data = null; state.taiLoi = false;
+    clearSavedToken();
+    showGate('Phiên đăng nhập đã hết hạn hoặc không có mạng. Bấm đăng nhập để vào lại.');
+    return false;
+  }
+  state.offline = false; state.dirty = false;
+  showApp();
+  backupHangNgay();
+  renderAll();
+  await checkLocalDraft();
+  renderAll();
+  startPolling();
+  return true;
 }
 
 async function signIn(){
@@ -505,6 +586,7 @@ function signOut(){
   accessToken = null;
   state.data = null;
   state.offline = false;
+  clearSavedToken();
   try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');

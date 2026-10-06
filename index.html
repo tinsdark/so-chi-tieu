@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Chi Tiêu">
-<link rel="stylesheet" href="style.css?v=20261006k">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="style.css?v=20261006l">
 </head>
 <body>
 
@@ -23,6 +24,11 @@
     <button id="btnSignIn" class="btn">Đăng nhập với Google</button>
     <button id="btnOffline" class="btn secondary" style="display:none;margin-top:8px"></button>
     <div class="auth-msg" id="authMsg"></div>
+    <div id="iosHint" class="ios-hint" style="display:none">
+      <button id="iosHintDong" class="ios-hint-x" aria-label="Đóng gợi ý">✕</button>
+      <b>📲 Đưa lên màn hình chính cho tiện</b><br>
+      Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑) ở thanh dưới Safari → <b>Thêm vào Màn hình chính</b>.
+    </div>
   </div>
 </div>
 
@@ -53,16 +59,16 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=20261006k"></script>
-<script src="js/ui.js?v=20261006k"></script>
-<script src="js/drive-sync.js?v=20261006k"></script>
-<script src="js/vayno.js?v=20261006k"></script>
-<script src="js/sotay.js?v=20261006k"></script>
-<script src="js/nhap.js?v=20261006k"></script>
-<script src="js/danhmuc.js?v=20261006k"></script>
-<script src="js/dongtien.js?v=20261006k"></script>
-<script src="js/mophong.js?v=20261006k"></script>
-<script src="js/app.js?v=20261006k"></script>
+<script src="js/state.js?v=20261006l"></script>
+<script src="js/ui.js?v=20261006l"></script>
+<script src="js/drive-sync.js?v=20261006l"></script>
+<script src="js/vayno.js?v=20261006l"></script>
+<script src="js/sotay.js?v=20261006l"></script>
+<script src="js/nhap.js?v=20261006l"></script>
+<script src="js/danhmuc.js?v=20261006l"></script>
+<script src="js/dongtien.js?v=20261006l"></script>
+<script src="js/mophong.js?v=20261006l"></script>
+<script src="js/app.js?v=20261006l"></script>
 
 </body>
 </html>

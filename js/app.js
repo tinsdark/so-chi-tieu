@@ -149,8 +149,10 @@ document.getElementById('btnTheme').addEventListener('click', doiTheme);
 document.getElementById('btnRefresh').addEventListener('click', async function(){
   if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
   state.errorMsg = null;
-  await driveLoad();
+  var tuLoi = state.taiLoi;                   // lần trước tải lỗi: các sửa trong lúc đó chỉ nằm ở nháp trên máy
+  var ok = await driveLoad();
   renderAll();
+  if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
 document.addEventListener('change', function(ev){
@@ -175,6 +177,12 @@ function handleAction(act, el){
 
 /* ---------------- init ---------------- */
 showGate('');
+var _ihd = document.getElementById('iosHintDong');
+if (_ihd) _ihd.addEventListener('click', function(){
+  try{ localStorage.setItem('chitieu_ios_hint', '1'); }catch(e){}
+  document.getElementById('iosHint').style.display = 'none';
+});
+tiepTucPhienDangNhap();     // còn phiên đăng nhập chưa hết hạn thì vào thẳng
 
 // service worker (cần HTTPS hoặc localhost; mở bằng file:// thì bỏ qua) — xem sw.js
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
