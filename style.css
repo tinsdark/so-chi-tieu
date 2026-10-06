@@ -5,36 +5,39 @@
    ==================================================================== */
 :root{
   color-scheme: light dark;
-  --bg:#f8f6f3; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
-  --primary:#c5071c; --primary-d:#9d0516; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gold:#b8860b;
-  --thu-bg:#ecfdf5; --chi-bg:#fef2f2; --shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 6px rgba(0,0,0,.04);
+  /* Bảng màu lấy từ logo (đỏ + vàng trên nền kem): nền kem ấm thay cho trắng xám, thẻ kem nhạt, viền nâu nhạt,
+     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 14:1, chữ phụ >= 5:1, số xanh/đỏ >= 4.8:1). */
+  --bg:#f6efe6; --card:#fffaf3; --border:#e6d9c6; --text:#2a1f1b; --muted:#6f5f55;
+  --primary:#c5071c; --primary-d:#9d0516; --green:#15803d; --red:#c62828; --amber:#b45309; --gold:#8a6508;
+  --thu-bg:#eef5e3; --chi-bg:#fbe9e3; --shadow:0 1px 2px rgba(80,45,20,.06), 0 2px 8px rgba(80,45,20,.06);
   /* màu phụ, trước đây viết cứng trong rule */
-  --input-bg:#ffffff;      /* nền ô nhập + nền th sticky */
-  --hover:#f0f1f5;         /* nền khi hover nút phụ, nền thẻ tag */
-  --row-total:#f6f7fb;     /* dòng tổng */
-  --row-bal:#fdeff0;       /* dòng số dư / dòng đang mở chi tiết */
-  --row-sub:#fafafa;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
-  --danger-br:#fecaca;     /* viền nút nguy hiểm */
-  --warn-bg:#fffbeb; --warn-br:#fde68a; --warn-tx:#92400e;  /* banner cảnh báo */
-  --mask:rgba(17,24,39,.45);   /* nền mờ sau hộp thoại */
+  --input-bg:#fffdf9;      /* nền ô nhập + nền th sticky */
+  --hover:#f1e6d5;         /* nền khi hover nút phụ, nền thẻ tag */
+  --row-total:#f4eadb;     /* dòng tổng */
+  --row-bal:#fbe9e5;       /* dòng số dư / dòng đang mở chi tiết */
+  --row-sub:#faf3e8;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
+  --danger-br:#f0b9ae;     /* viền nút nguy hiểm */
+  --warn-bg:#fff4d6; --warn-br:#efd28a; --warn-tx:#7a4a07;  /* banner cảnh báo */
+  --mask:rgba(42,24,16,.45);   /* nền mờ sau hộp thoại */
   --hero-a:#a80518; --hero-b:#c5071c; --hero-c:#d63a2c;   /* thẻ tổng quan (đỏ theo logo) */
-  --chi-solid:#dc2626; --thu-solid:#15803d;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
+  --chi-solid:#c62828; --thu-solid:#15803d;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
 [data-theme="dark"]{
   color-scheme: dark;
-  --bg:#12151c; --card:#1a1f29; --border:#2b3240; --text:#e6e9ef; --muted:#9aa4b2;
-  --primary:#d6384d; --primary-d:#ff9aa8; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --gold:#d4af37;
-  --thu-bg:#10241a; --chi-bg:#2a1618; --shadow:0 1px 2px rgba(0,0,0,.4), 0 1px 6px rgba(0,0,0,.3);
-  --input-bg:#12161d;
-  --hover:#242b37;
-  --row-total:#1f242f;
-  --row-bal:#2e1b20;
-  --row-sub:#161a22;
-  --danger-br:#5c2b2b;
-  --warn-bg:#2b2410; --warn-br:#5c4a16; --warn-tx:#fcd34d;
-  --mask:rgba(0,0,0,.6);
+  /* tối ấm: nâu than thay cho đen xanh lạnh, cùng hệ với nền kem ở theme sáng */
+  --bg:#1c1412; --card:#271b18; --border:#3e2d28; --text:#f4ebe3; --muted:#b5a59b;
+  --primary:#cc3045; --primary-d:#ff9aa8; --green:#5fd38d; --red:#ff7a7a; --amber:#f4b740; --gold:#e5b94a;
+  --thu-bg:#17281d; --chi-bg:#33191a; --shadow:0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+  --input-bg:#201512;
+  --hover:#33241f;
+  --row-total:#2d201c;
+  --row-bal:#3a1f24;
+  --row-sub:#221815;
+  --danger-br:#6b2f2f;
+  --warn-bg:#332a12; --warn-br:#6b5517; --warn-tx:#f6d57a;
+  --mask:rgba(0,0,0,.65);
   --hero-a:#5e0a15; --hero-b:#7d0e1c; --hero-c:#92231c;
-  --chi-solid:#c53030; --thu-solid:#1e8f4e;
+  --chi-solid:#c53030; --thu-solid:#1a7a42;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
@@ -360,13 +363,14 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .form-head h3{margin:0 0 12px}
 .qa{padding:14px}
 .qa-top{margin-bottom:10px}
-.qa-amtrow{display:flex;gap:10px;margin-bottom:10px}
-.qa-wallet{flex:0 1 44%;min-width:0;width:auto;border-radius:10px}
+.qa-amtrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}   /* tài khoản : số tiền = 50 : 50 */
+.qa-amtrow.one{grid-template-columns:1fr}
+.qa-wallet{min-width:0;width:100%;border-radius:10px}
 .qa-seg{display:inline-flex;flex:0 0 auto;border:1px solid var(--border);border-radius:999px;overflow:hidden}
 .qa-seg button{border:none;background:var(--card);color:var(--muted);padding:8px 14px;font-weight:700;font-size:13px}
 .qa-seg button.chi.on{background:var(--chi-solid);color:#fff}
 .qa-seg button.thu.on{background:var(--thu-solid);color:#fff}
-.qa-amt{display:block;flex:1 1 auto;min-width:0;width:auto;font-size:20px;font-weight:700;padding:8px 10px;border-radius:10px}
+.qa-amt{display:block;min-width:0;width:100%;font-size:18px;font-weight:700;padding:8px 10px;border-radius:10px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
   padding:7px 13px;font-size:13px;line-height:1.2;display:inline-flex;align-items:center}

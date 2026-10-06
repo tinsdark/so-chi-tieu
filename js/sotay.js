@@ -73,7 +73,7 @@ function ghiNhanhHtml(){
     +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">▼ Chi</button>'
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">▲ Thu</button>'
     + '</div></div>'
-    + '<div class="qa-amtrow">'
+    + '<div class="qa-amtrow'+(((state.data.wallets || []).length > 1) ? '' : ' one')+'">'
     + (((state.data.wallets || []).length > 1)
         ? '<select id="qa_wallet" class="qa-wallet" data-act="qaWallet" aria-label="Tài khoản / ví">'
           + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()) + '</select>'
