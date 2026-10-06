@@ -65,6 +65,9 @@ function ghiNhanhHtml(){
   var rest = cats.filter(function(c){ return topIds.indexOf(c.id) < 0; });
   var homNay = todayStr(), ngay = state.qa.date || homNay;
   var h = '<div class="card qa" id="ghiNhanh">'
+    // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
+    + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>✓ '+esc(state.qa.last.text)+'</span>'
+        + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
     + '<div class="qa-seg" role="group" aria-label="Loại giao dịch">'
     +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">▼ Chi</button>'
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">▲ Thu</button>'
@@ -136,6 +139,16 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   return h + '</div>';
 }
 
+// hoàn tác 1 lần ghi nhanh. Gọi từ cả nút trong thẻ lẫn nút ở toast: cờ daHoan chặn hoàn tác 2 lần
+// (lần 2 sẽ gỡ nhầm một đoạn ghi chú trùng nội dung của khoản khác).
+function qaHoanTacLanGhi(ban){
+  if (!ban || ban.daHoan) return;
+  ban.daHoan = true;
+  if (state.qa.last === ban.moc) state.qa.last = null;
+  dinhKyHoanTac(ban);          // gỡ ghi chú + xóa dòng (xóa luôn ngày nếu rỗng)
+  scheduleSave();
+  renderSoTay();
+}
 function qaVeLai(){
   var box = document.getElementById('ghiNhanh');
   if (box) box.outerHTML = ghiNhanhHtml();
@@ -979,18 +992,29 @@ function handleSoTayAction(act, el){
     state.qa.cat[kQ] = catQ; qaGhiNho();
     state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
     if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viQ; }
-    var banGhi = { date: ngayQ, iid: itQ.iid, note: ghiQ };
+    var banGhi = { date: ngayQ, iid: itQ.iid, note: ghiQ, daHoan: false };
     var startQ = state.data.settings.ngayBatDau || '';
     var truocMoc = !!(startQ && ngayQ < startQ);
+    var tinQ = 'Đã ghi ' + (kQ === 'thu' ? 'thu' : 'chi') + ' ' + catTen(kQ, catQ) + ' ' + fmt(Math.round(tienQ))
+      + ' (' + ngayQ.slice(8,10) + '/' + ngayQ.slice(5,7) + ')'
+      + (truocMoc ? ' — trước mốc khóa sổ ' + ngayVN(startQ) + ', không tính vào số dư.' : '.');
+    state.qa.last = { text: tinQ, ban: banGhi };
+    banGhi.moc = state.qa.last;
+    // hạ bàn phím: bàn phím che toast ở đáy màn hình, và ô số tiền sắp được xóa trắng để nhập khoản sau
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     scheduleSave();
     renderSoTay();
-    toast('Đã ghi ' + (kQ === 'thu' ? 'thu' : 'chi') + ' ' + catTen(kQ, catQ) + ' ' + fmt(Math.round(tienQ))
-      + ' (' + ngayQ.slice(8,10) + '/' + ngayQ.slice(5,7) + ')'
-      + (truocMoc ? ' — trước mốc khóa sổ ' + ngayVN(startQ) + ', không tính vào số dư.' : '.'),
-      { loai: truocMoc ? 'warn' : undefined, giay: 6, hoanTac: function(){
-        dinhKyHoanTac(banGhi);      // gỡ ghi chú + xóa dòng (xóa luôn ngày nếu rỗng)
-        scheduleSave(); renderSoTay();
-      } });
+    var chotQ = state.qa.last;
+    setTimeout(function(){
+      if (state.qa.last === chotQ){
+        state.qa.last = null;
+        var eL = document.getElementById('qaLast');
+        if (eL && eL.parentNode) eL.parentNode.removeChild(eL);
+      }
+    }, 20000);
+    toast(tinQ, { loai: truocMoc ? 'warn' : undefined, giay: 8, hoanTac: function(){ qaHoanTacLanGhi(banGhi); } });
+  } else if (act === 'qaHoanTac'){
+    if (state.qa.last){ var banH = state.qa.last.ban; qaHoanTacLanGhi(banH); toast('Đã hoàn tác.'); }
   } else if (act === 'tqCuon'){
     var dich = document.getElementById(el.getAttribute('data-to') || '');
     if (dich && dich.scrollIntoView) dich.scrollIntoView({ behavior:'smooth', block:'start' });

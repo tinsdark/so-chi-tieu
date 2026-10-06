@@ -102,14 +102,14 @@ function danhSachSapDenHan(nNgay){
     if (c.tatToan || c.trangThai === 'da_thu_du') return;
     if (!c.ngayDuKienThu || conLaiPhaiThu(c) <= 0) return;
     var soNgay = daysBetween(todayStr(), c.ngayDuKienThu);
-    if (soNgay <= nNgay) out.push({ loai: 'choVay', ten: c.ten, ngay: c.ngayDuKienThu, soNgay: soNgay, soTien: conLaiPhaiThu(c) });
+    if (soNgay <= nNgay) out.push({ loai: 'choVay', id: c.id, ten: c.ten, ngay: c.ngayDuKienThu, soNgay: soNgay, soTien: conLaiPhaiThu(c) });
   });
   (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(v){
     if (!loanIsActive(v)) return;
     var ky = tienDoTraNo(v).kyTiepTheo;
     if (!ky) return;
     var soNgay = daysBetween(todayStr(), ky.ngayTra);
-    if (soNgay <= nNgay) out.push({ loai: 'vayNo', ten: v.ten, ngay: ky.ngayTra, soNgay: soNgay, soTien: ky.tongTra });
+    if (soNgay <= nNgay) out.push({ loai: 'vayNo', id: v.id, ten: v.ten, ngay: ky.ngayTra, soNgay: soNgay, soTien: ky.tongTra });
   });
   out.sort(function(a,b){ return a.soNgay - b.soNgay; });
   return out;
@@ -444,7 +444,8 @@ function vayNoScheduleHtml(loan){
 function sapDenHanHtml(nNgay){
   var list = danhSachSapDenHan(nNgay);
   if (!list.length) return '';
-  var html = '<div class="card"><h3>⏰ Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>';
+  var html = '<div class="card"><h3>⏰ Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>'
+    + '<div class="empty" style="padding:0 0 8px">Chạm vào một khoản để xem khoản đó ở bên dưới.</div>';
   html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Khoản</th><th>Loại</th><th>Ngày</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>';
   list.forEach(function(x){
     var trang;
@@ -452,7 +453,7 @@ function sapDenHanHtml(nNgay){
     else if (x.soNgay === 0) trang = '<span style="color:var(--red);font-weight:600">Hôm nay</span>';
     else if (x.soNgay <= 3) trang = '<span style="color:var(--amber);font-weight:600">Còn '+x.soNgay+' ngày</span>';
     else trang = '<span style="color:var(--gold)">Còn '+x.soNgay+' ngày</span>';
-    html += '<tr><td class="m-title" style="text-align:left">'+x.ten+'</td><td data-th="Loại">'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
+    html += '<tr class="vn-sap" data-act="vnCuonTo" data-loai="'+x.loai+'" data-id="'+esc(x.id)+'"><td class="m-title" style="text-align:left">'+x.ten+'</td><td data-th="Loại">'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
       + '<td data-th="Ngày">'+ngayVN(x.ngay)+'</td><td data-th="Số tiền">'+fmt(Math.round(x.soTien))+'</td><td data-th="Trạng thái">'+trang+'</td></tr>';
   });
   html += '</tbody></table></div></div>';
@@ -486,7 +487,7 @@ function renderVayNo(){
             : (qh > 0
                 ? '<span style="color:var(--red);font-weight:600">Quá hạn '+qh+' ngày</span>'
                 : 'Đang chờ'));
-      html += '<tr>'
+      html += '<tr id="vn-cv-'+esc(c.id)+'">'
         + '<td class="m-title" style="text-align:left">'+c.ten+'</td>'
         + '<td data-th="Số tiền">'+fmt(c.soTien)+'</td>'
         + '<td data-th="Đã thu">'+fmt(c.daThu)+'</td>'
@@ -517,7 +518,7 @@ function renderVayNo(){
       var duNo = soTienConLaiPhaiTra(v);
       var hetNoMk = thangDuKienHetNo(v);
       var tienDo = tienDoTraNo(v);
-      html += '<tr>'
+      html += '<tr id="vn-vn-'+esc(v.id)+'">'
         + '<td class="m-title" style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+v.ten+'</a></td>'
         + '<td data-th="Loại vay">'+LOAI_VAY_LABEL[v.loaiVay]+'</td>'
         + '<td data-th="Hình thức">'+HINH_THUC_LABEL[v.hinhThuc]+'</td>'
@@ -659,6 +660,15 @@ function handleVayNoAction(act, el){
     state.vnFormKind = 'choVay'; state.vnFormId = null; renderVayNo();
   } else if (act === 'vnAddVayNo'){
     state.vnFormKind = 'vayNoPhaiTra'; state.vnFormId = null; renderVayNo();
+  } else if (act === 'vnCuonTo'){
+    var dichVn = document.getElementById((el.getAttribute('data-loai') === 'choVay' ? 'vn-cv-' : 'vn-vn-') + el.getAttribute('data-id'));
+    if (dichVn){
+      if (dichVn.scrollIntoView) dichVn.scrollIntoView({ behavior:'smooth', block:'center' });
+      dichVn.classList.remove('vn-flash');
+      void dichVn.offsetWidth;                      // chạy lại hiệu ứng nếu bấm lần 2
+      dichVn.classList.add('vn-flash');
+      setTimeout(function(){ dichVn.classList.remove('vn-flash'); }, 2000);
+    }
   } else if (act === 'vnCancelForm'){
     state.vnFormKind = null; state.vnFormId = null; renderVayNo();
   } else if (act === 'vnEditChoVay'){
