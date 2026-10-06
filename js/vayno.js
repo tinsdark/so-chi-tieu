@@ -483,7 +483,7 @@ function vayNoScheduleHtml(loan){
 function sapDenHanHtml(nNgay){
   var list = danhSachSapDenHan(nNgay);
   if (!list.length) return '';
-  var html = '<div class="card"><h3>'+icon('clock')+' Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>'
+  var html = '<div class="card k-act"><h3>'+icon('clock')+' Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>'
     + '<div class="empty" style="padding:0 0 8px">Chạm vào một khoản để xem khoản đó ở bên dưới.</div>';
   html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Khoản</th><th>Loại</th><th>Ngày</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>';
   list.forEach(function(x){
@@ -507,7 +507,7 @@ function renderVayNo(){
 
   html += sapDenHanHtml(7);
 
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
+  html += '<div class="card k-asset"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   if (state.vnFormKind === 'choVay') html += choVayFormHtml();
   html += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút dấu tích ở đây chỉ dùng để TẤT TOÁN phần không đòi được.', 'Ghi tiền thu về thế nào?');
   if (!choVay.length){
@@ -545,7 +545,7 @@ function renderVayNo(){
   }
   html += '</div>';
 
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Vay - Nợ phải trả <button class="btn sm" data-act="vnAddVayNo">+ Thêm khoản vay</button></h3>';
+  html += '<div class="card k-debt"><h3 style="display:flex;align-items:center;justify-content:space-between">Vay - Nợ phải trả <button class="btn sm" data-act="vnAddVayNo">+ Thêm khoản vay</button></h3>';
   if (state.vnFormKind === 'vayNoPhaiTra') html += vayNoFormHtml();
   if (!vayNoPhaiTra.length){
     html += '<div class="empty-box">Chưa có khoản vay nào.'

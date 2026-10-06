@@ -212,14 +212,6 @@ tr.mp-am td{background:var(--chi-bg)}
 .giai-thich>summary:hover{color:var(--text);border-color:var(--primary)}
 .giai-thich>div{margin-top:7px;line-height:1.55}
 
-/* nút tròn nổi: việc làm nhiều nhất (ghi 1 khoản chi) không phải cuộn lên đầu trang.
-   Chỉ hiện ở tab Sổ tay — app.js bật/tắt .fab-hien trong renderAll(). */
-.fab{position:fixed;right:16px;bottom:18px;z-index:55;display:none;
-  width:52px;height:52px;border:none;border-radius:50%;
-  background:var(--primary);color:#fff;font-size:28px;line-height:1;
-  box-shadow:0 6px 18px rgba(0,0,0,.28)}
-.fab:hover{background:var(--primary-d)}
-.fab.fab-hien{display:block}
 
 @media (max-width:700px){
   /* điều hướng xuống đáy (vùng ngón tay). Markup + handler không đổi 1 dòng,
@@ -235,7 +227,6 @@ tr.mp-am td{background:var(--chi-bg)}
   .tab-ico{font-size:17px;line-height:1}
   .tab-badge{position:absolute;transform:translate(14px,-4px)}
   #app{padding-bottom:78px}
-  .fab{bottom:calc(72px + env(safe-area-inset-bottom))}
   /* thông báo lên ĐỈNH màn hình: ở đáy nó nằm sau bàn phím iOS đang mở nên người dùng không thấy (và không bấm được Hoàn tác) */
   .toast-wrap{bottom:auto;top:calc(10px + env(safe-area-inset-top))}
 
@@ -498,5 +489,34 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .toast-x .ic{width:14px;height:14px;vertical-align:middle}
 .ios-hint-x .ic{width:16px;height:16px;vertical-align:middle}
 
-/* nút + nổi: vuông bo góc (các nút chọn / nhãn giữ dạng viên thuốc như thiết kế gốc) */
-.fab{border-radius:14px;box-shadow:0 3px 10px rgba(80,30,10,.28)}
+
+/* ====================================================================
+   LỚP 5 — thẻ phân màu theo LOẠI (nhất quán ở mọi tab) để lướt nhanh vẫn nhận ra:
+   vàng = việc cần làm | xanh lá = hạn mức / khoản có (thu, cho vay) | xanh dương = mục tiêu
+   nâu vàng = ví | đỏ = nợ / chi | trắng viền đỏ = ô ghi nhanh
+   ==================================================================== */
+:root{
+  --k-act:#d98a00;--k-act-bg:#fff0c4; --k-bud:#3f8f4f;--k-bud-bg:#ecf4dc;
+  --k-goal:#3d7ea6;--k-goal-bg:#e6f0f3; --k-wal:#b8860b;--k-wal-bg:#fffdf2;
+  --k-in:#c5071c;--k-in-bg:#ffffff; --k-debt:#c62828;--k-debt-bg:#fbe9e0;
+  --k-asset:#3f8f4f;--k-asset-bg:#ecf4dc;
+  --vc0:#c5071c;--vc1:#3d7ea6;--vc2:#3f8f4f;--vc3:#d98a00;--vc4:#7b5ea7;
+}
+[data-theme="dark"]{
+  --k-act:#f0a92b;--k-act-bg:#3d3015; --k-bud:#5fd38d;--k-bud-bg:#22301f;
+  --k-goal:#6bb4dc;--k-goal-bg:#1f2f38; --k-wal:#e8bd4f;--k-wal-bg:#3a2a1a;
+  --k-in:#e0556a;--k-in-bg:var(--card); --k-debt:#ff8a80;--k-debt-bg:#43221b;
+  --k-asset:#5fd38d;--k-asset-bg:#22301f;
+  --vc0:#e0556a;--vc1:#6bb4dc;--vc2:#5fd38d;--vc3:#f0a92b;--vc4:#b79ae0;
+}
+.k-act{--k:var(--k-act);--kbg:var(--k-act-bg)} .k-bud{--k:var(--k-bud);--kbg:var(--k-bud-bg)}
+.k-goal{--k:var(--k-goal);--kbg:var(--k-goal-bg)} .k-wal{--k:var(--k-wal);--kbg:var(--k-wal-bg)}
+.k-in{--k:var(--k-in);--kbg:var(--k-in-bg)} .k-debt{--k:var(--k-debt);--kbg:var(--k-debt-bg)}
+.k-asset{--k:var(--k-asset);--kbg:var(--k-asset-bg)}
+.k-act,.k-bud,.k-goal,.k-wal,.k-in,.k-debt,.k-asset{border-left:5px solid var(--k);background:var(--kbg)}
+/* thẻ ví: dải gọn ngay dưới thẻ đỏ lớn */
+.k-wal{padding:12px 14px}
+.k-wal>h3{display:flex;align-items:center;justify-content:space-between;gap:8px;border:none;padding:0;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.k-wal .vi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.k-wal .stat{border-left:4px solid var(--vc,var(--k));padding:8px 12px;box-shadow:none}
+.k-wal .stat .val{font-size:16px}
