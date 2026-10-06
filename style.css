@@ -459,3 +459,10 @@ td.m-act{white-space:nowrap}
 .vn-sap>td:first-child::after{content:" ↓";color:var(--muted);font-weight:400}
 .vn-flash{animation:vn-flash 1.8s ease-out}
 @keyframes vn-flash{0%,45%{background:var(--row-bal);box-shadow:0 0 0 2px var(--primary)}100%{background:var(--card);box-shadow:0 0 0 0 transparent}}
+
+/* ---- Danh mục > Ví: nút chọn tài khoản mặc định ---- */
+.vi-md{display:flex;align-items:center;gap:6px;margin:0;padding:8px 2px;font-size:13px;color:var(--text);white-space:nowrap;cursor:pointer}
+.vi-md input{width:auto;margin:0}
+
+/* ô tích / nút chọn dùng màu chủ đạo thay vì xanh mặc định của trình duyệt */
+input[type=radio],input[type=checkbox]{accent-color:var(--primary)}

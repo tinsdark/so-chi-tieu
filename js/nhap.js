@@ -389,7 +389,7 @@ function handleNhapChange(el){
       var map = nhapDoanCot(rows, coHeader);
       state.imp = { buoc: 'xem', ten: f.name, rows: rows, coHeader: coHeader, map: map,
         soDuong: nhapSoDuongTuDong(rows, coHeader, map), catMD: { thu: '', chi: '' }, catMap: {},
-        viId: walletById(state.viChon) ? state.viChon : viMacDinhId(), boTrung: true };
+        viId: viDienSan(), boTrung: true };
       renderSoTay();
     }).catch(function(e){
       console.error('[chitieu] Đọc file nhập lỗi:', e);

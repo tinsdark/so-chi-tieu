@@ -510,6 +510,8 @@ function normalizeData(d){
     if (!w.ten) w.ten = 'Ví';
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   });
+  // ví mặc định đã tích chọn mà ví đó không còn (khôi phục bản sao lưu cũ, xóa ví...) -> bỏ, quay về ví đầu tiên
+  if (d.settings.viMacDinh && !d.wallets.some(function(w){ return w.id === d.settings.viMacDinh; })) d.settings.viMacDinh = '';
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
   // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
@@ -556,7 +558,27 @@ function normalizeData(d){
      biểu đồ và dự trù. Tổng số dư không đổi nên balanceAt() & mọi hàm tổng khỏi sửa.
    - Số dư theo ví chỉ tính từ ngayBatDau (cùng mốc khóa sổ với số dư tổng).
    ==================================================================== */
-function viMacDinhId(d){ d = d || state.data; return (d && d.wallets && d.wallets[0]) ? d.wallets[0].id : undefined; }
+// Ví do người dùng TÍCH CHỌN làm mặc định ở tab Danh mục (settings.viMacDinh); '' nếu chưa chọn / ví đó không còn.
+function viMacDinhDaChon(d){
+  d = d || state.data;
+  var id = d && d.settings && d.settings.viMacDinh;
+  return (id && walletById(id, d)) ? id : '';
+}
+// Ví mặc định cho mọi thứ MỚI (dòng nhập, khoản vay, khoản định kỳ...): ví đã tích chọn, chưa chọn thì ví đầu tiên.
+// Dòng/khoản ĐÃ có walletId thì không đổi theo — đổi mặc định không xếp lại lịch sử.
+function viMacDinhId(d){
+  d = d || state.data;
+  var dm = viMacDinhDaChon(d);
+  if (dm) return dm;
+  return (d && d.wallets && d.wallets[0]) ? d.wallets[0].id : undefined;
+}
+// Ví điền sẵn ở các form nhập: có ví mặc định đã tích chọn thì LUÔN là ví đó (mỗi lần nhập mới quay về mặc định);
+// chưa tích chọn thì giữ cách cũ: ví vừa chọn gần nhất.
+function viDienSan(){
+  var dm = viMacDinhDaChon();
+  if (dm) return dm;
+  return walletById(state.viChon) ? state.viChon : viMacDinhId();
+}
 function walletById(id, d){
   d = d || state.data;
   var a = (d && d.wallets) || [];

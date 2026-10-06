@@ -124,6 +124,7 @@ function viCardHtml(){
     h += '<div class="form-row vi-row" style="align-items:flex-end">'
       + '<div><label>Tên ví</label><input type="text" data-act="viTen" data-id="'+esc(w.id)+'" value="'+esc(w.ten)+'"></div>'
       + '<div><label>Số dư đầu kỳ</label><input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="viDu" data-id="'+esc(w.id)+'" value="'+veSo(w.soDuDauKy)+'" placeholder="0"></div>'
+      + '<div style="flex:0"><label class="vi-md" title="Ví điền sẵn khi nhập giao dịch, thêm khoản vay, khoản định kỳ mới"><input type="radio" name="viMd" data-act="viMd" data-id="'+esc(w.id)+'"'+(w.id === viMacDinhId() ? ' checked' : '')+'> Mặc định</label></div>'
       + '<div style="flex:0"><button class="icon-btn" data-act="viXoa" data-id="'+esc(w.id)+'" title="'+(dung ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được' : 'Xóa ví này')+'" aria-label="Xóa ví '+esc(w.ten)+'"'
       + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>🗑</button></div></div>';
   });
@@ -434,6 +435,7 @@ function handleDanhMucAction(act, el){
             'Số dư đầu kỳ '+fmt(Math.round(num(viX.soDuDauKy)))+' của ví này sẽ bị bỏ khỏi tổng số dư.',
             { nguyHiem:true, chuOk:'Xóa ví' })) return;
       state.data.wallets = state.data.wallets.filter(function(w){ return w.id !== viX.id; });
+      if (state.data.settings.viMacDinh === viX.id) state.data.settings.viMacDinh = '';
       state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
       scheduleSave();
       renderDanhMuc();
@@ -556,6 +558,17 @@ function handleDanhMucChange(el){
     }
     wT.ten = tenMoi;
     scheduleSave();
+    return true;
+  } else if (el.matches('[data-act=viMd]')){
+    // chỉ ví đang tích mới có hiệu lực; ví khác không còn là mặc định. Không đụng gì tới dòng/khoản đã ghi.
+    var wM = walletById(el.getAttribute('data-id'));
+    if (wM && el.checked){
+      state.data.settings.viMacDinh = wM.id;
+      state.qa.wallet = '';      // thẻ Ghi nhanh quay về ví mặc định mới
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã đặt "'+wM.ten+'" làm tài khoản mặc định.');
+    }
     return true;
   } else if (el.matches('[data-act=viDu]')){
     var wD = walletById(el.getAttribute('data-id'));

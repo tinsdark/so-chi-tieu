@@ -76,7 +76,7 @@ function ghiNhanhHtml(){
     + '<div class="qa-amtrow">'
     + (((state.data.wallets || []).length > 1)
         ? '<select id="qa_wallet" class="qa-wallet" data-act="qaWallet" aria-label="Tài khoản / ví">'
-          + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : (walletById(state.viChon) ? state.viChon : viMacDinhId())) + '</select>'
+          + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()) + '</select>'
         : '')
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền" value="'+esc(state.qa.amt)+'"></div>';
   if (!cats.length){
@@ -257,7 +257,7 @@ function renderSoTay(){
   // chỉnh ở bảng chi tiết. Khoản vay/cho vay luôn đi theo ví của chính khoản đó.
   if ((state.data.wallets || []).length > 1 && !state.editingDate){
     html += '<div><label>Ví / nguồn tiền</label><select id="f_wallet">'
-      + viOptionsHtml(walletById(state.viChon) ? state.viChon : viMacDinhId()) + '</select></div>';
+      + viOptionsHtml(viDienSan()) + '</select></div>';
   }
   html += '</div>';
   // THU và CHI là 2 khối riêng (màu + viền + tiêu đề), nhưng vẫn CÙNG 1 form / 1 nút Lưu:
@@ -462,7 +462,7 @@ function stItemEditRow(date, it){
       + '</select>'
       + ((state.data.wallets || []).length > 1
           ? '<select id="st_it_wallet" style="margin-top:4px" aria-label="Ví / nguồn tiền">'
-            + viOptionsHtml(it ? viCuaItem(it) : (walletById(state.viChon) ? state.viChon : viMacDinhId())) + '</select>'
+            + viOptionsHtml(it ? viCuaItem(it) : viDienSan()) + '</select>'
           : '')
       + '</td>'
     + '<td><input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" value="'+(it?veSo(num(it.soTien)):'')+'"></td>'
@@ -597,7 +597,7 @@ function viSoDuCardHtml(mk){
   });
   h += '</div>';
   if (state.viFormOpen){
-    var tuMd = walletById(state.viChon) ? state.viChon : ws[0].id;
+    var tuMd = walletById(viDienSan()) ? viDienSan() : ws[0].id;
     var denMd = (ws.find(function(w){ return w.id !== tuMd; }) || ws[1]).id;
     h += '<div class="vi-form"><div class="form-row">'
       + '<div><label>Từ ví</label><select id="vi_tu">'+viOptionsHtml(tuMd)+'</select></div>'
@@ -997,7 +997,8 @@ function handleSoTayAction(act, el){
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
     state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
-    if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viQ; }
+    // có ví mặc định đã tích chọn: lần nhập sau quay về ví đó; chưa có thì nhớ ví vừa chọn như trước
+    if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viMacDinhDaChon() ? '' : viQ; }
     var banGhi = { date: ngayQ, iid: itQ.iid, note: ghiQ, daHoan: false };
     var startQ = state.data.settings.ngayBatDau || '';
     var truocMoc = !!(startQ && ngayQ < startQ);
