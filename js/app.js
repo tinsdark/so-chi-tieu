@@ -22,7 +22,15 @@ function renderSyncStatus(){
   }
   var banner = document.getElementById('bannerZone');
   if (banner){
-    banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+    if (state.offline){
+      var tu = state.offlineTu ? new Date(state.offlineTu) : null;
+      banner.innerHTML = '<div class="banner">⚠ Đang ngoại tuyến'
+        + (tu ? ' — dữ liệu trên máy lúc ' + pad2(tu.getHours()) + ':' + pad2(tu.getMinutes()) + ' ' + tu.toLocaleDateString('vi-VN') : '')
+        + '. Thay đổi chỉ lưu trên máy, chưa lên Drive. '
+        + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đăng nhập để đồng bộ</button></div>';
+    } else {
+      banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+    }
   }
 }
 
@@ -83,10 +91,12 @@ document.addEventListener('click', function(ev){
 });
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
+document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
 document.getElementById('btnSignOut').addEventListener('click', signOut);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){
+  if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
   state.errorMsg = null;
   await driveLoad();
   renderAll();
@@ -102,6 +112,7 @@ document.addEventListener('change', function(ev){
 
 // dispatcher: thử lần lượt handler của từng tab, dừng ở handler đầu tiên xử lý được (trả về true)
 function handleAction(act, el){
+  if (act === 'dangNhapLai'){ signIn(); return; }
   if (handleSoTayAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
@@ -111,3 +122,10 @@ function handleAction(act, el){
 
 /* ---------------- init ---------------- */
 showGate('');
+
+// service worker (cần HTTPS hoặc localhost; mở bằng file:// thì bỏ qua) — xem sw.js
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(e){ console.error('[chitieu] Không đăng ký được service worker:', e); });
+  });
+}

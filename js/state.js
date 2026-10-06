@@ -43,6 +43,8 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
+  offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
   dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
   viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)

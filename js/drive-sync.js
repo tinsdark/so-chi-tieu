@@ -11,6 +11,7 @@ var DRIVE_FILE_TITLE = 'chitieu-canhan-data.json';
 var API_BASE = 'https://www.googleapis.com/drive/v3';
 var UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 var LOCAL_DRAFT_KEY = 'chitieu_draft_v1';
+var SYNCED_KEY = 'chitieu_synced_v1';   // bản dữ liệu ĐÃ khớp Drive gần nhất, để mở ngoại tuyến
 
 var tokenClient = null;
 var accessToken = null;
@@ -109,6 +110,7 @@ async function driveLoad(){
     state.errorMsg = null;
     state.lastSync = new Date();
     state.loading = false;
+    saveSyncedSnapshot();
     return true;
   }catch(e){
     if (!state.data){
@@ -124,7 +126,50 @@ async function driveLoad(){
 
 /* ---- bản nháp cục bộ: chống mất dữ liệu nếu mất mạng/đóng tab trước khi Drive lưu xong ---- */
 function saveLocalDraft(){
-  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: Date.now() })); }catch(e){}
+  // baseModified = mốc Drive mà bản nháp này dựa trên: sau này khôi phục nháp mới biết Drive đã đổi chưa
+  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
+}
+function saveSyncedSnapshot(){
+  try{ localStorage.setItem(SYNCED_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
+}
+function readSyncedSnapshot(){
+  try{
+    var raw = localStorage.getItem(SYNCED_KEY);
+    var s = raw ? JSON.parse(raw) : null;
+    return (s && s.data && typeof s.data.journal === 'object') ? s : null;
+  }catch(e){ return null; }
+}
+function readLocalDraft(){
+  try{
+    var raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    var dr = raw ? JSON.parse(raw) : null;
+    return (dr && dr.data && typeof dr.data.journal === 'object') ? dr : null;
+  }catch(e){ return null; }
+}
+
+/* ====================================================================
+   MỞ NGOẠI TUYẾN — không có mạng thì không đăng nhập Google được, nên không lấy được Drive.
+   Mở bằng bản dữ liệu đã lưu trên máy lần đồng bộ gần nhất (+ nháp nếu có thay đổi chưa lưu).
+   Sửa được: thay đổi vào nháp trên máy, KHÔNG gửi lên Drive. Khi có mạng, bấm "Đăng nhập để
+   đồng bộ": app tải bản Drive rồi hỏi khôi phục nháp (kèm cảnh báo nếu Drive đã đổi từ lúc đó).
+   ==================================================================== */
+function coTheMoNgoaiTuyen(){ return !!readSyncedSnapshot(); }
+function moNgoaiTuyen(){
+  var snap = readSyncedSnapshot();
+  if (!snap) return;
+  var dr = readLocalDraft();
+  var dungNhap = !!(dr && dr.savedAt >= snap.savedAt);    // nháp mới hơn bản đồng bộ = các sửa ngoại tuyến trước đó
+  state.data = normalizeData(JSON.parse(JSON.stringify(dungNhap ? dr.data : snap.data)));
+  state.driveModified = (dungNhap ? dr.baseModified : snap.baseModified) || null;
+  state.driveFileId = null;
+  state.dirty = dungNhap;
+  state.offline = true;
+  state.offlineTu = dungNhap ? dr.savedAt : snap.savedAt;
+  state.errorMsg = null;
+  state.loading = false;
+  accessToken = null;
+  showApp();
+  renderAll();
 }
 function clearLocalDraft(){
   try{ localStorage.removeItem(LOCAL_DRAFT_KEY); }catch(e){}
@@ -160,7 +205,11 @@ async function checkLocalDraft(){
   }
   if (!draft || !draft.data) return;
   var t = new Date(draft.savedAt);
-  var msg = 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
+  // nháp dựa trên 1 bản Drive cũ hơn bản đang có: khôi phục nháp sẽ đè mất thay đổi của máy khác
+  var driveDaDoi = !!(draft.baseModified && state.driveModified && draft.baseModified !== state.driveModified);
+  var msg = (driveDaDoi ? '⚠ File trên Drive đã được sửa SAU lúc nháp này được lưu (có thể từ máy khác). '
+      + 'Khôi phục nháp sẽ đè lên thay đổi đó — bản Drive hiện tại vẫn được sao lưu lại trước khi đè.\n\n' : '')
+    + 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
     + '  ' + describeData(draft.data) + '\n\n'
     + 'Dữ liệu hiện tại trên Drive:\n'
     + '  ' + describeData(state.data) + '\n\n'
@@ -170,6 +219,14 @@ async function checkLocalDraft(){
     chuHuy: 'Dùng dữ liệu Drive'
   });
   if (ok){
+    if (driveDaDoi && _textDriveLanTai){
+      try{ await saoLuuNgay('truoc-khoi-phuc-nhap', _textDriveLanTai); }
+      catch(e){
+        console.error('[chitieu] Không sao lưu được bản Drive trước khi khôi phục nháp:', e);
+        toast('Không sao lưu được bản Drive nên chưa khôi phục nháp (nháp vẫn được giữ). Thử lại sau.', { loai:'err' });
+        return;
+      }
+    }
     state.data = normalizeData(draft.data);
     scheduleSave();           // scheduleSave sẽ ghi lại nháp, clearLocalDraft chỉ chạy khi Drive lưu xong
     toast('Đã khôi phục bản nháp cục bộ, đang lưu lên Drive.');
@@ -190,6 +247,8 @@ function scheduleSave(){
 }
 
 async function driveSave(){
+  // ngoại tuyến (chưa đăng nhập): thay đổi đã nằm trong nháp trên máy, không có gì để gửi
+  if (!accessToken){ renderSyncStatus(); return; }
   if (state.saving) { saveTimer = setTimeout(driveSave, 1500); return; }
   state.saving = true;
   var seqAtStart = changeSeq;
@@ -234,6 +293,7 @@ async function driveSave(){
     if (changeSeq === seqAtStart){
       state.dirty = false;
       clearLocalDraft();
+      saveSyncedSnapshot();
     }
   }catch(e){
     // Giữ state.dirty = true: pollRefresh sẽ không nạp đè dữ liệu Drive lên thay đổi chưa lưu,
@@ -395,6 +455,15 @@ function showGate(msg){
   document.getElementById('app').style.display = 'none';
   document.getElementById('authGate').style.display = 'flex';
   document.getElementById('authMsg').textContent = msg || '';
+  var bo = document.getElementById('btnOffline');
+  if (bo){
+    var snap = readSyncedSnapshot();
+    bo.style.display = snap ? '' : 'none';
+    if (snap){
+      var t = new Date(snap.savedAt);
+      bo.textContent = 'Mở ngoại tuyến (dữ liệu trên máy lúc ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ' ' + t.toLocaleDateString('vi-VN') + ')';
+    }
+  }
 }
 
 var polling = false;
@@ -415,6 +484,8 @@ async function signIn(){
   document.getElementById('authMsg').textContent = 'Đang đăng nhập…';
   try{
     await requestToken(true);
+    // từ ngoại tuyến đăng nhập lại: các sửa ngoại tuyến nằm trong nháp, checkLocalDraft sẽ hỏi khôi phục
+    state.offline = false; state.dirty = false;
     showApp();
     await driveLoad();
     backupHangNgay();       // không await: sao lưu chậm không được làm chậm màn hình đầu tiên
@@ -433,6 +504,8 @@ function signOut(){
   }
   accessToken = null;
   state.data = null;
+  state.offline = false;
+  try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');
 }
