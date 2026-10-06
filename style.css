@@ -292,3 +292,9 @@ tr.mp-am td{background:var(--chi-bg)}
 /* ---- Màu danh mục ---- */
 .cat-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
 .cat-color{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex:none}
+
+/* ---- Form nhập: tách rõ khối THU / khối CHI ---- */
+.form-sec{border:1px solid var(--border);border-left:4px solid var(--green);border-radius:10px;padding:10px 12px 6px;margin:14px 0;background:var(--thu-bg)}
+.form-sec.chi{border-left-color:var(--red);background:var(--chi-bg)}
+.form-sec-head{font-weight:700;font-size:13px;letter-spacing:.2px;margin-bottom:8px;color:var(--green)}
+.form-sec.chi .form-sec-head{color:var(--red)}

@@ -112,7 +112,9 @@ function renderSoTay(){
       + viOptionsHtml(walletById(state.viChon) ? state.viChon : viMacDinhId()) + '</select></div>';
   }
   html += '</div>';
-  html += '<label style="margin-top:4px">Các khoản thu theo danh mục</label>';
+  // THU và CHI là 2 khối riêng (màu + viền + tiêu đề), nhưng vẫn CÙNG 1 form / 1 nút Lưu:
+  // saveEntry là đường lưu duy nhất, tách thành 2 form là dựng đường lưu thứ hai.
+  html += '<div class="form-sec thu"><div class="form-sec-head">▲ Khoản thu</div>';
   html += '<div class="form-row">';
   if (!thuCats.length){
     html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
@@ -144,8 +146,8 @@ function renderSoTay(){
     }
     html += '</div>';
   });
-  html += '</div>';
-  html += '<label style="margin-top:4px">Các khoản chi theo danh mục</label>';
+  html += '</div></div>';     // đóng form-row + khối THU
+  html += '<div class="form-sec chi"><div class="form-sec-head">▼ Khoản chi</div>';
   html += '<div class="form-row">';
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
@@ -185,7 +187,7 @@ function renderSoTay(){
     }
     html += '</div>';
   });
-  html += '</div>';
+  html += '</div></div>';     // đóng form-row + khối CHI
   if (hasRefs){
     html += '<div class="empty" style="padding:0 0 4px">Ngày này có giao dịch do khoản vay/cho vay sinh ra (phần "khóa"). Ô nhập chỉ chứa phần nhập tay; phần khóa muốn sửa thì vào tab Vay - Nợ.</div>';
   }
