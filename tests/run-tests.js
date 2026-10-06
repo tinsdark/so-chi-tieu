@@ -1496,6 +1496,38 @@ test('ghiNhanhHtml: có chip danh mục + nút ghi theo loại; không lộ danh
 });
 
 /* ==================================================================== */
+group('T. Thẻ tổng quan (đầu Sổ tay)');
+
+test('tongQuanHtml: số dư, thu/chi, còn lại theo chỉ tiêu, chip việc cần làm', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:3000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:1000000 }, { id:'xang', ten:'Xăng', chiTieu:200000 }];
+  d.journal['2026-10-02'] = { thu:{}, chi:{ an:400000, xang:300000 }, ghiChu:'', refs:[], items:[] };
+  d.dinhKy = [{ id:'dk1', ten:'Tiền net', kind:'chi', catId:'an', soTien:200000, ngay:5, bat:true, bo:[] }];
+  d.vayNo.choVay = [{ id:'c1', ten:'A', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-10-12' }];
+  loadData(d);
+  var h = ctx.tongQuanHtml('2026-10', 0, 700000, 3000000, 2300000, false);
+  ok(h.indexOf('Số dư hiện tại') >= 0, 'tháng này gọi là "hiện tại"');
+  ok(h.indexOf(ctx.fmt(2300000)) >= 0, 'số dư');
+  ok(h.indexOf('còn ' + ctx.fmt(500000)) >= 0, 'đã chi 700k / chỉ tiêu 1,2tr -> còn 500k: ' + h);
+  ok(h.indexOf('1 khoản định kỳ đến hạn') >= 0, 'chip định kỳ');
+  ok(h.indexOf('1 khoản vay/nợ sắp đến hạn') >= 0, 'chip vay nợ');
+  ok(h.indexOf('1 danh mục vượt chỉ tiêu') >= 0, 'Xăng 300k > 200k');
+  var h2 = ctx.tongQuanHtml('2026-09', 0, 0, 0, 0, true);
+  ok(h2.indexOf('Số dư cuối tháng') >= 0 && h2.indexOf('>—<') >= 0, 'tháng khác/trước mốc: nhãn "cuối tháng", số dư "—"');
+  setToday('2026-10-01');
+});
+
+test('tongQuanHtml: không có việc gì thì báo gọn, không có chip', function(){
+  setToday('2026-10-10');
+  loadData(baseData({ settings:{ soDuDauKy:1000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } }));
+  var h = ctx.tongQuanHtml('2026-10', 0, 0, 1000000, 1000000, false);
+  ok(h.indexOf('hero-chip') < 0 && h.indexOf('Không có khoản nào cần xử lý') >= 0, 'không chip');
+  ok(h.indexOf('hero-bud') < 0, 'không có chỉ tiêu thì không hiện thanh');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

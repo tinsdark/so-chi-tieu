@@ -96,6 +96,46 @@ function ghiNhanhHtml(){
     + '</div>';
   return h;
 }
+/* ====================================================================
+   TỔNG QUAN — thẻ đầu Sổ tay: số dư to, thu/chi tháng, đã chi bao nhiêu so với chỉ tiêu,
+   và "việc cần làm" (định kỳ đến hạn, vay/nợ đến hạn, danh mục vượt hạn mức) bấm là nhảy tới.
+   Chỉ ĐỌC dữ liệu, không ghi gì. Số liệu giống các thẻ bên dưới (hanMucThangRows, dinhKyDenHan,
+   danhSachSapDenHan) nên không có con số thứ hai nào để lệch.
+   ==================================================================== */
+function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
+  var laThangNay = (mk === monthKey(todayStr()));
+  var so = function(v){ return beforeLock ? '—' : fmt(Math.round(v)); };
+  var rows = hanMucThangRows(mk);
+  var tongDa = 0, tongCap = 0;
+  rows.forEach(function(r){ tongDa += r.da; tongCap += r.cap; });
+  var h = '<div class="card hero">'
+    + '<div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+' · '+monthLabel(mk)+'</div>'
+    + '<div class="hero-val">'+so(duCuoi)+'</div>'
+    + '<div class="hero-sub">Đầu tháng '+so(duDau)+'</div>'
+    + '<div class="hero-split">'
+    +   '<div><div class="l">▲ Thu tháng</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
+    +   '<div><div class="l">▼ Chi tháng</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    + '</div>';
+  if (rows.length){
+    var pct = tongCap > 0 ? tongDa / tongCap : 0;
+    var muc = hanMucMuc(pct);
+    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo chỉ tiêu</span><span>'
+      + (tongDa > tongCap ? 'vượt ' + fmt(Math.round(tongDa - tongCap)) : 'còn ' + fmt(Math.round(tongCap - tongDa))) + '</span></div>'
+      + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với chỉ tiêu tháng">'
+      + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
+      + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
+  }
+  var nDk = dinhKyDenHan(todayStr()).length;
+  var nVn = danhSachSapDenHan(7).length;
+  var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
+  var chips = '';
+  if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">🔁 '+nDk+' khoản định kỳ đến hạn</button>';
+  if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">⏰ '+nVn+' khoản vay/nợ sắp đến hạn</button>';
+  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">⚠ '+nVuot+' danh mục vượt chỉ tiêu</button>';
+  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">✓ Không có khoản nào cần xử lý</div>';
+  return h + '</div>';
+}
+
 function qaVeLai(){
   var box = document.getElementById('ghiNhanh');
   if (box) box.outerHTML = ghiNhanhHtml();
@@ -177,12 +217,7 @@ function renderSoTay(){
     + '<select data-act="jumpMonth">'+monthOpts+'</select>'
     + '<button data-act="nextMonth" aria-label="Tháng sau">›</button>'
     + '</div>';
-  html += '<div class="grid-summary">'
-    + '<div class="stat"><div class="lbl">Số dư đầu tháng</div><div class="val">'+(beforeLock?'—':fmt(duDauThang))+'</div></div>'
-    + '<div class="stat thu"><div class="lbl">Tổng thu tháng</div><div class="val">'+fmt(tongThu)+'</div></div>'
-    + '<div class="stat chi"><div class="lbl">Tổng chi tháng</div><div class="val">'+fmt(tongChi)+'</div></div>'
-    + '<div class="stat gold"><div class="lbl">Số dư cuối tháng</div><div class="val">'+(beforeLock?'—':fmt(duCuoiThang))+'</div></div>'
-    + '</div>';
+  html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock);
   if (beforeLock){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc khóa sổ ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
   }
@@ -514,7 +549,7 @@ function mucTieuCardHtml(){
 function dinhKyDenHanHtml(){
   var ds = dinhKyDenHan(todayStr());
   if (!ds.length) return '';
-  var h = '<div class="card dk-card"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
+  var h = '<div class="card dk-card" id="cardDinhKy"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
   ds.forEach(function(x){
     var k = x.dk;
     h += '<div class="dk-row">'
@@ -600,7 +635,7 @@ function hanMucThangHtml(mk){
   var rows = hanMucThangRows(mk);
   if (!rows.length) return '';
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
+  var h = '<div class="card" id="cardHanMuc"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
     + (nVuot ? ' <span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3><div class="hm-list">';
   rows.forEach(function(r){
     var muc = hanMucMuc(r.pct);
@@ -956,6 +991,9 @@ function handleSoTayAction(act, el){
         dinhKyHoanTac(banGhi);      // gỡ ghi chú + xóa dòng (xóa luôn ngày nếu rỗng)
         scheduleSave(); renderSoTay();
       } });
+  } else if (act === 'tqCuon'){
+    var dich = document.getElementById(el.getAttribute('data-to') || '');
+    if (dich && dich.scrollIntoView) dich.scrollIntoView({ behavior:'smooth', block:'start' });
   } else if (act === 'formToggle'){
     state.fullFormOpen = !state.fullFormOpen;
     renderSoTay();
