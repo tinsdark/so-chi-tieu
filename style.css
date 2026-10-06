@@ -5,37 +5,37 @@
    ==================================================================== */
 :root{
   color-scheme: light dark;
-  /* Bảng màu lấy từ logo (đỏ + vàng trên nền kem): nền kem ấm thay cho trắng xám, thẻ kem nhạt, viền nâu nhạt,
-     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 14:1, chữ phụ >= 5:1, số xanh/đỏ >= 4.8:1). */
-  --bg:#f6efe6; --card:#fffaf3; --border:#e6d9c6; --text:#2a1f1b; --muted:#6f5f55;
-  --primary:#c5071c; --primary-d:#9d0516; --green:#15803d; --red:#c62828; --amber:#b45309; --gold:#8a6508;
-  --thu-bg:#eef5e3; --chi-bg:#fbe9e3; --shadow:0 1px 2px rgba(80,45,20,.06), 0 2px 8px rgba(80,45,20,.06);
+  /* Bảng màu lấy từ logo (đỏ + vàng): nền KEM VÀNG (như giấy hoa văn Tết), thẻ kem nhạt, viền vàng nâu nhạt,
+     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 13:1, chữ phụ >= 5,6:1, số xanh/đỏ >= 4,5:1). */
+  --bg:#f8eccb; --card:#fff9e6; --border:#e6d3a0; --text:#2b2012; --muted:#6b5a3e;
+  --primary:#c5071c; --primary-d:#9d0516; --green:#14753a; --red:#c62828; --amber:#a85208; --gold:#7d5a06;
+  --thu-bg:#eef3d6; --chi-bg:#fbe6d6; --shadow:0 1px 2px rgba(110,80,20,.08), 0 2px 8px rgba(110,80,20,.08);
   /* màu phụ, trước đây viết cứng trong rule */
-  --input-bg:#fffdf9;      /* nền ô nhập + nền th sticky */
-  --hover:#f1e6d5;         /* nền khi hover nút phụ, nền thẻ tag */
-  --row-total:#f4eadb;     /* dòng tổng */
-  --row-bal:#fbe9e5;       /* dòng số dư / dòng đang mở chi tiết */
-  --row-sub:#faf3e8;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
-  --danger-br:#f0b9ae;     /* viền nút nguy hiểm */
-  --warn-bg:#fff4d6; --warn-br:#efd28a; --warn-tx:#7a4a07;  /* banner cảnh báo */
-  --mask:rgba(42,24,16,.45);   /* nền mờ sau hộp thoại */
+  --input-bg:#fffdf3;      /* nền ô nhập + nền th sticky */
+  --hover:#f2e1b0;         /* nền khi hover nút phụ, nền thẻ tag */
+  --row-total:#f3e3b8;     /* dòng tổng */
+  --row-bal:#fbe6d9;       /* dòng số dư / dòng đang mở chi tiết */
+  --row-sub:#fbf2d8;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
+  --danger-br:#eab29c;     /* viền nút nguy hiểm */
+  --warn-bg:#ffefb8; --warn-br:#e6c566; --warn-tx:#70440a;  /* banner cảnh báo */
+  --mask:rgba(50,32,10,.45);   /* nền mờ sau hộp thoại */
   --hero-a:#a80518; --hero-b:#c5071c; --hero-c:#d63a2c;   /* thẻ tổng quan (đỏ theo logo) */
-  --chi-solid:#c62828; --thu-solid:#15803d;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
+  --chi-solid:#c62828; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
 [data-theme="dark"]{
   color-scheme: dark;
-  /* tối ấm: nâu than thay cho đen xanh lạnh, cùng hệ với nền kem ở theme sáng */
-  --bg:#1c1412; --card:#271b18; --border:#3e2d28; --text:#f4ebe3; --muted:#b5a59b;
-  --primary:#cc3045; --primary-d:#ff9aa8; --green:#5fd38d; --red:#ff7a7a; --amber:#f4b740; --gold:#e5b94a;
-  --thu-bg:#17281d; --chi-bg:#33191a; --shadow:0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
-  --input-bg:#201512;
-  --hover:#33241f;
-  --row-total:#2d201c;
-  --row-bal:#3a1f24;
-  --row-sub:#221815;
-  --danger-br:#6b2f2f;
-  --warn-bg:#332a12; --warn-br:#6b5517; --warn-tx:#f6d57a;
-  --mask:rgba(0,0,0,.65);
+  /* tối NÂU ẤM rõ (cà phê / gỗ), không còn đen: cùng hệ với nền kem vàng ở theme sáng */
+  --bg:#2a1c14; --card:#37261b; --border:#54402e; --text:#f6ead9; --muted:#c9b49c;
+  --primary:#cc3045; --primary-d:#ffa3ae; --green:#6fd99a; --red:#ff8a80; --amber:#f6bb4a; --gold:#e8bd4f;
+  --thu-bg:#21301d; --chi-bg:#43221b; --shadow:0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+  --input-bg:#2f2017;
+  --hover:#46321f;
+  --row-total:#3f2d20;
+  --row-bal:#4a2a26;
+  --row-sub:#2f2118;
+  --danger-br:#7a3c32;
+  --warn-bg:#40331a; --warn-br:#7a6120; --warn-tx:#f6d57a;
+  --mask:rgba(10,5,0,.65);
   --hero-a:#5e0a15; --hero-b:#7d0e1c; --hero-c:#92231c;
   --chi-solid:#c53030; --thu-solid:#1a7a42;
 }
