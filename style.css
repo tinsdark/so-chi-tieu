@@ -272,3 +272,12 @@ tr.mp-am td{background:var(--chi-bg)}
 .vi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .vi-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .vi-chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--hover);color:var(--muted);margin-left:4px;vertical-align:1px}
+
+/* ---- Giao dịch định kỳ đến hạn ---- */
+.dk-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border)}
+.dk-row:first-of-type{border-top:0}
+.dk-main{flex:1;min-width:160px}
+.dk-ten{font-weight:600}
+.dk-sub{font-size:12px;color:var(--muted)}
+.dk-tien{font-weight:600;white-space:nowrap}
+.dk-btn{display:flex;gap:6px}

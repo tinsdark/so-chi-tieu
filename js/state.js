@@ -43,6 +43,7 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
   viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
   backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
@@ -417,6 +418,16 @@ function normalizeData(d){
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   });
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
+  // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
+  d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  d.dinhKy.forEach(function(k){
+    if (!k.id) k.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    if (k.bat == null) k.bat = true;
+    if (!Array.isArray(k.bo)) k.bo = [];
+    k.ngay = Math.max(1, Math.min(31, Math.round(num(k.ngay)) || 1));
+    k.soTien = num(k.soTien);
+    k.kind = (k.kind === 'thu') ? 'thu' : 'chi';
+  });
   // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
   d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
   // gắn walletId tường minh cho mọi dòng/khoản vay còn thiếu, để sau này đổi ví mặc định
@@ -539,6 +550,58 @@ function viChotSoDuDauKy(dateStr){
   state.data.settings.soDuDauKy = tong;
 }
 
+/* ====================================================================
+   GIAO DỊCH ĐỊNH KỲ — lương, tiền nhà, tiền net...
+   dinhKy[] = [{id, ten, kind, catId, soTien, ngay(1-31), walletId, ghiChu, bat, bo[]}]
+   App KHÔNG tự sinh tiền: "tiền thật chỉ nhập ở Sổ tay". Chỉ NHẮC khi tới ngày mà
+   tháng đó chưa ghi, và điền hộ khi người dùng bấm "Ghi vào Sổ tay".
+   Dòng được ghi mang dkId (+ dkMk) -> biết chắc khoản nào của tháng nào đã ghi, không
+   đoán theo số tiền/danh mục. bo[] = các tháng đã chọn "Bỏ qua".
+   Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
+   Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
+   ==================================================================== */
+function dinhKyDaGhi(dk, mk){
+  var da = false;
+  Object.keys(state.data.journal).forEach(function(date){
+    if (da || monthKey(date) !== mk) return;
+    if (entryItems(state.data.journal[date]).some(function(it){ return it.dkId === dk.id; })) da = true;
+  });
+  return da;
+}
+// các khoản đã tới ngày trong tháng của homNay mà chưa ghi / chưa bỏ qua
+function dinhKyDenHan(homNay){
+  var mk = monthKey(homNay), out = [];
+  (state.data.dinhKy || []).forEach(function(dk){
+    if (!dk.bat || num(dk.soTien) <= 0) return;
+    var han = ngayTraCuaKy(mk, dk.ngay);
+    if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
+    out.push({ dk: dk, mk: mk, han: han });
+  });
+  out.sort(function(a, b){ return a.han < b.han ? -1 : (a.han > b.han ? 1 : 0); });
+  return out;
+}
+// ghi 1 khoản định kỳ vào Sổ tay. Ngày ghi = ngày đến hạn; nếu ngày đó đã nằm trước mốc
+// khóa sổ (không còn tính vào số dư) thì ghi vào hôm nay để tiền không biến mất khỏi số dư.
+// Trả về {date, iid, note} để hoàn tác được; null nếu không ghi được.
+function dinhKyGhi(dk, mk, homNay){
+  var han = ngayTraCuaKy(mk, dk.ngay);
+  var start = state.data.settings.ngayBatDau || '';
+  var date = (!start || han >= start) ? han : homNay;
+  var it = entryAddItem(date, dk.kind, dk.catId, dk.soTien, dk.ghiChu || dk.ten, dk.walletId);
+  if (!it) return null;
+  it.dkId = dk.id; it.dkMk = mk;
+  var e = state.data.journal[date];
+  var note = dk.ten + ' ' + fmt(Math.round(dk.soTien));
+  e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + note : note;
+  return { date: date, iid: it.iid, note: note };
+}
+function dinhKyHoanTac(r){
+  var e = state.data.journal[r.date];
+  if (!e) return;
+  journalRemoveNote(e, r.note);
+  entryDeleteItem(r.date, r.iid);   // xóa luôn ngày nếu rỗng
+}
+
 function thuTotal(entry){
   var s = 0;
   var thu = entry.thu;
@@ -650,7 +713,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen
+            || state.viFormOpen || state.dkForm
             || (state.mp && state.mp.formOpen));
 }
 

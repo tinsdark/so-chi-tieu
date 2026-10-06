@@ -885,6 +885,77 @@ test('viChotSoDuDauKy: chốt từng ví, tổng giữ nguyên = số dư thật
 });
 
 /* ==================================================================== */
+group('K. Giao dịch định kỳ');
+
+function dataDinhKy(){
+  var d = baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.categories = { thu: [{id:'luong',ten:'Lương',chiTieu:0}], chi: [{id:'nha',ten:'Tiền nhà',chiTieu:0},{id:'net',ten:'Net',chiTieu:0}] };
+  d.dinhKy = [
+    { id:'k1', ten:'Lương', kind:'thu', catId:'luong', soTien:10000000, ngay:5 },
+    { id:'k2', ten:'Tiền nhà', kind:'chi', catId:'nha', soTien:3000000, ngay:31 },
+    { id:'k3', ten:'Net', kind:'chi', catId:'net', soTien:200000, ngay:10, bat:false }
+  ];
+  return d;
+}
+
+test('dinhKyDenHan: chưa tới ngày thì không nhắc; tới ngày thì nhắc; tắt thì không', function(){
+  loadData(dataDinhKy());
+  eq(ctx.dinhKyDenHan('2026-10-04').length, 0, 'chưa tới ngày 5');
+  var r = ctx.dinhKyDenHan('2026-10-05');
+  eq(r.length, 1); eq(r[0].dk.id, 'k1'); eq(r[0].han, '2026-10-05');
+  eq(ctx.dinhKyDenHan('2026-10-20').some(function(x){ return x.dk.id === 'k3'; }), false, 'k3 đang tắt');
+});
+
+test('dinhKyDenHan: ngày 31 co về cuối tháng ngắn', function(){
+  loadData(dataDinhKy());
+  eq(ctx.dinhKyDenHan('2026-11-29').some(function(x){ return x.dk.id === 'k2'; }), false, 'T11 có 30 ngày, chưa tới');
+  var r = ctx.dinhKyDenHan('2026-11-30').filter(function(x){ return x.dk.id === 'k2'; });
+  eq(r.length, 1); eq(r[0].han, '2026-11-30');
+});
+
+test('dinhKyGhi: tạo đúng dòng, mang dkId, cộng đúng tiền, hết nhắc sau khi ghi', function(){
+  loadData(dataDinhKy());
+  var dk = ctx.state.data.dinhKy[0];
+  var r = ctx.dinhKyGhi(dk, '2026-10', '2026-10-07');
+  eq(r.date, '2026-10-05');
+  var e = ctx.state.data.journal['2026-10-05'];
+  eq(e.thu.luong, 10000000); eq(ctx.entryItems(e)[0].dkId, 'k1');
+  ok(e.ghiChu.indexOf('Lương') === 0, 'ghi chú ngày có tên khoản');
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 0, 'đã ghi thì hết nhắc');
+  eq(ctx.dinhKyDaGhi(dk, '2026-11'), false, 'tháng sau thì chưa ghi');
+  eq(ctx.dinhKyDenHan('2026-11-06').filter(function(x){ return x.dk.id === 'k1'; }).length, 1, 'tháng sau nhắc lại');
+});
+
+test('dinhKyGhi: ngày đến hạn trước mốc khóa sổ thì ghi vào hôm nay', function(){
+  var d = dataDinhKy(); d.settings.ngayBatDau = '2026-10-10';
+  loadData(d);
+  var r = ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-12');
+  eq(r.date, '2026-10-12', 'không ghi vào 05/10 (đã khóa sổ)');
+});
+
+test('bỏ qua tháng: hết nhắc tháng đó nhưng tháng sau vẫn nhắc', function(){
+  loadData(dataDinhKy());
+  ctx.state.data.dinhKy[0].bo.push('2026-10');
+  eq(ctx.dinhKyDenHan('2026-10-20').filter(function(x){ return x.dk.id === 'k1'; }).length, 0);
+  eq(ctx.dinhKyDenHan('2026-11-20').filter(function(x){ return x.dk.id === 'k1'; }).length, 1);
+});
+
+test('dinhKyHoanTac: trả lại tiền, xóa ghi chú và xóa ngày nếu rỗng', function(){
+  loadData(dataDinhKy());
+  var r = ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-07');
+  ctx.dinhKyHoanTac(r);
+  eq(ctx.state.data.journal['2026-10-05'], undefined, 'ngày rỗng bị xóa');
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 1, 'lại nhắc');
+});
+
+test('dinhKy: ghi đè walletId + migrate giá trị lạ', function(){
+  var d = dataDinhKy(); d.dinhKy.push({ ten:'x', kind:'??', catId:'net', soTien:'5', ngay:99 });
+  loadData(d);
+  var k = ctx.state.data.dinhKy[3];
+  eq(k.kind, 'chi'); eq(k.ngay, 31, 'ngày bị kẹp về 1-31'); eq(k.soTien, 5); ok(k.id && Array.isArray(k.bo) && k.bat === true);
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

@@ -51,6 +51,7 @@ function renderDanhMuc(){
     + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += viCardHtml();
+  html += dkCardHtml();
   html += '<div class="card"><h3>Khóa sổ</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
     + '<div class="form-row">'
@@ -124,6 +125,56 @@ function viCardHtml(){
   return h + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">'
     + '<button class="btn secondary sm" data-act="viThem">+ Thêm ví</button>'
     + '<span style="color:var(--muted);font-size:13px">Tổng số dư đầu kỳ: <b style="color:var(--text)">'+fmt(Math.round(tong))+'</b></span></div></div>';
+}
+
+/* ---- Giao dịch định kỳ: khai báo mẫu (nhắc ở Sổ tay, logic ở state.js) ----
+   Loại các danh mục của Vay - Nợ: tiền vay/trả nợ đã có lịch riêng, khai ở đây là trùng. */
+var DK_CAT_LOAI = { nhanTienVay: 1, thuHoiChoVay: 1, choVay: 1, traNo: 1 };
+function dkCatOptions(sel){
+  function nhom(kind, nhan){
+    var o = (state.data.categories[kind] || []).filter(function(c){ return !DK_CAT_LOAI[c.id]; }).map(function(c){
+      var v = kind + '|' + c.id;
+      return '<option value="'+esc(v)+'"'+(v === sel ? ' selected' : '')+'>'+esc(c.ten)+'</option>';
+    }).join('');
+    return o ? '<optgroup label="'+nhan+'">'+o+'</optgroup>' : '';
+  }
+  return '<option value="">— chọn danh mục —</option>' + nhom('thu', 'Thu') + nhom('chi', 'Chi');
+}
+function dkCardHtml(){
+  var ds = state.data.dinhKy || [];
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Giao dịch định kỳ'
+    + '<button class="btn secondary sm" data-act="dkThem">+ Thêm</button></h3>'
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.</div>';
+  if (state.dkForm){
+    var ed = state.dkForm.id ? ds.find(function(k){ return k.id === state.dkForm.id; }) : null;
+    var k0 = ed || { ten:'', kind:'chi', catId:'', soTien:'', ngay:'', walletId: viMacDinhId(), ghiChu:'' };
+    h += '<div class="form-row">'
+      + '<div><label>Tên</label><input type="text" id="dk_ten" value="'+esc(k0.ten)+'" placeholder="Tiền nhà, Lương..."></div>'
+      + '<div><label>Danh mục</label><select id="dk_cat">'+dkCatOptions(k0.catId ? k0.kind+'|'+k0.catId : '')+'</select></div>'
+      + '<div><label>Số tiền</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="dk_tien" value="'+veSo(k0.soTien)+'" placeholder="0"></div>'
+      + '<div><label>Ngày trong tháng (1-31)</label><input type="number" id="dk_ngay" min="1" max="31" value="'+(k0.ngay || '')+'" placeholder="5"></div>'
+      + ((state.data.wallets || []).length > 1 ? '<div><label>Ví</label><select id="dk_vi">'+viOptionsHtml(k0.walletId)+'</select></div>' : '')
+      + '<div><label>Ghi chú (tùy chọn)</label><input type="text" id="dk_note" value="'+esc(k0.ghiChu || '')+'"></div>'
+      + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
+      + '<button class="btn sm" data-act="dkLuu">'+(ed ? 'Cập nhật' : 'Lưu')+'</button>'
+      + '<button class="btn secondary sm" data-act="dkHuy">Hủy</button></div>';
+  }
+  if (!ds.length && !state.dkForm){
+    h += '<div class="empty">Chưa có khoản định kỳ nào.</div>';
+  } else if (ds.length){
+    h += '<div class="table-wrap"><table><thead><tr><th>Bật</th><th style="text-align:left">Tên</th><th style="text-align:left">Danh mục</th><th>Số tiền</th><th>Ngày</th><th class="actions-col"></th></tr></thead><tbody>';
+    ds.forEach(function(k){
+      h += '<tr><td><input type="checkbox" data-act="dkBat" data-id="'+esc(k.id)+'"'+(k.bat ? ' checked' : '')+' aria-label="Bật nhắc '+esc(k.ten)+'"></td>'
+        + '<td style="text-align:left">'+esc(k.ten)+'</td>'
+        + '<td style="text-align:left">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+'</td>'
+        + '<td style="color:var(--'+(k.kind === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(k.soTien))+'</td>'
+        + '<td>ngày '+k.ngay+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="dkSua" data-id="'+esc(k.id)+'" title="Sửa" aria-label="Sửa '+esc(k.ten)+'">✎</button>'
+        + '<button class="icon-btn" data-act="dkXoa" data-id="'+esc(k.id)+'" title="Xóa" aria-label="Xóa '+esc(k.ten)+'">🗑</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  return h + '</div>';
 }
 
 /* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
@@ -208,6 +259,43 @@ function handleDanhMucAction(act, el){
         renderAll();
       }
     })();
+  } else if (act === 'dkThem'){
+    state.dkForm = { id: '' }; renderDanhMuc();
+    var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();
+  } else if (act === 'dkSua'){
+    state.dkForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'dkHuy'){
+    state.dkForm = null; renderDanhMuc();
+  } else if (act === 'dkLuu'){
+    var dkTen = (document.getElementById('dk_ten') || {}).value.trim();
+    var dkCat = ((document.getElementById('dk_cat') || {}).value || '').split('|');
+    var dkTien = numNonNeg(docSo((document.getElementById('dk_tien') || {}).value));
+    var dkNgay = Math.round(num((document.getElementById('dk_ngay') || {}).value));
+    if (!dkTen){ toast('Nhập tên khoản định kỳ.', { loai:'warn' }); return true; }
+    if (dkCat.length !== 2 || !dkCat[1]){ toast('Chọn danh mục.', { loai:'warn' }); return true; }
+    if (dkTien <= 0){ toast('Số tiền phải lớn hơn 0.', { loai:'warn' }); return true; }
+    if (dkNgay < 1 || dkNgay > 31){ toast('Ngày trong tháng phải từ 1 đến 31.', { loai:'warn' }); return true; }
+    var dkVi = (document.getElementById('dk_vi') || {}).value;
+    var dkObj = { ten: dkTen, kind: dkCat[0], catId: dkCat[1], soTien: dkTien, ngay: dkNgay,
+                  walletId: walletById(dkVi) ? dkVi : viMacDinhId(),
+                  ghiChu: (document.getElementById('dk_note') || {}).value.trim() };
+    var dkCu = state.dkForm && state.dkForm.id ? state.data.dinhKy.find(function(k){ return k.id === state.dkForm.id; }) : null;
+    if (dkCu){ Object.assign(dkCu, dkObj); }
+    else { dkObj.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); dkObj.bat = true; dkObj.bo = []; state.data.dinhKy.push(dkObj); }
+    state.dkForm = null;
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã lưu khoản định kỳ "'+dkTen+'".');
+  } else if (act === 'dkXoa'){
+    var dkXi = state.data.dinhKy.findIndex(function(k){ return k.id === el.getAttribute('data-id'); });
+    if (dkXi < 0) return true;
+    var dkXk = state.data.dinhKy.splice(dkXi, 1)[0];
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã xóa "'+dkXk.ten+'". Các giao dịch đã ghi từ khoản này ở Sổ tay vẫn giữ nguyên.', { hoanTac: function(){
+      state.data.dinhKy.splice(Math.min(dkXi, state.data.dinhKy.length), 0, dkXk);
+      scheduleSave(); renderDanhMuc();
+    } });
   } else if (act === 'viThem'){
     (async function(){
       var ten = await hoiChu('Thêm ví / nguồn tiền', 'Ví dụ: Tiền mặt, Vietcombank, Momo.', 'Tên ví');
@@ -316,7 +404,11 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
-  if (el.matches('[data-act=viTen]')){
+  if (el.matches('[data-act=dkBat]')){
+    var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
+    if (dkB){ dkB.bat = el.checked; scheduleSave(); }
+    return true;
+  } else if (el.matches('[data-act=viTen]')){
     var wT = walletById(el.getAttribute('data-id'));
     if (!wT) return true;
     var tenMoi = el.value.trim();

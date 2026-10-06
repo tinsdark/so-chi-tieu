@@ -95,6 +95,7 @@ function renderSoTay(){
     + '<button data-act="nextMonth">›</button>'
     + '</div>';
 
+  html += dinhKyDenHanHtml();
   html += hanMucThangHtml(mk);
   html += viSoDuCardHtml(mk);
 
@@ -362,6 +363,28 @@ function soTayDetailHtml(date){
   }
   h += '</div></td></tr>';
   return h;
+}
+
+/* ====================================================================
+   KHOẢN ĐỊNH KỲ ĐẾN HẠN — card nhắc ở đầu Sổ tay. Mẫu khai báo ở tab Danh mục;
+   logic nằm ở state.js (dinhKyDenHan / dinhKyGhi). Bấm "Ghi vào Sổ tay" mới có tiền.
+   ==================================================================== */
+function dinhKyDenHanHtml(){
+  var ds = dinhKyDenHan(todayStr());
+  if (!ds.length) return '';
+  var h = '<div class="card dk-card"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
+  ds.forEach(function(x){
+    var k = x.dk;
+    h += '<div class="dk-row">'
+      + '<div class="dk-main"><div class="dk-ten">'+esc(k.ten)
+        + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(k)))+'</span>' : '') + '</div>'
+        + '<div class="dk-sub">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · hạn '+ngayVN(x.han).slice(0, 5)+'</div></div>'
+      + '<div class="dk-tien" style="color:var(--'+(k.kind === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(k.soTien))+'</div>'
+      + '<div class="dk-btn"><button class="btn sm" data-act="dkGhi" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'">Ghi vào Sổ tay</button>'
+      + '<button class="btn secondary sm" data-act="dkBo" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'" title="Không ghi khoản này trong tháng này">Bỏ qua</button></div>'
+      + '</div>';
+  });
+  return h + '</div>';
 }
 
 /* ====================================================================
@@ -800,6 +823,29 @@ function handleSoTayAction(act, el){
     state.soTayDetailDate = el.getAttribute('data-date');
     state.soTayEditIid = el.getAttribute('data-iid');
     renderSoTay();
+  } else if (act === 'dkGhi' || act === 'dkBo'){
+    var dkS = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
+    var dkMk = el.getAttribute('data-mk') || monthKey(todayStr());
+    if (!dkS) return true;
+    if (act === 'dkBo'){
+      dkS.bo = dkS.bo || [];
+      if (dkS.bo.indexOf(dkMk) < 0) dkS.bo.push(dkMk);
+      scheduleSave();
+      renderSoTay();
+      toast('Đã bỏ qua "'+dkS.ten+'" tháng này.', { hoanTac: function(){
+        dkS.bo = dkS.bo.filter(function(m){ return m !== dkMk; });
+        scheduleSave(); renderSoTay();
+      } });
+      return true;
+    }
+    var kq = dinhKyGhi(dkS, dkMk, todayStr());
+    if (!kq){ toast('Không ghi được khoản này (kiểm tra danh mục / số tiền).', { loai:'err' }); return true; }
+    scheduleSave();
+    renderSoTay();
+    toast('Đã ghi "'+dkS.ten+'" vào ngày '+kq.date.slice(8,10)+'/'+kq.date.slice(5,7)+'.', { hoanTac: function(){
+      dinhKyHoanTac(kq);
+      scheduleSave(); renderSoTay();
+    } });
   } else if (act === 'viChuyenMo'){
     state.viFormOpen = !state.viFormOpen;
     renderSoTay();
