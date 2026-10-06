@@ -97,10 +97,14 @@ function mpBuildScenario(){
       // tính dư nợ TRÊN BẢN NHÁP (sau các điều chỉnh trước đó), rồi tắt khoản vay.
       // tongTraNoThang() lọc theo loanIsActive() nên phải set trangThai,
       // chỉ gắn cờ tatToan là nó vẫn tiếp tục dự trù các kỳ còn lại.
+      // số tiền tất toán: nhập ở điều chỉnh > số dự kiến của khoản vay > tổng còn phải trả theo lịch
+      // (tổng theo lịch gồm cả lãi các kỳ sau nên thường CAO hơn số thực trả)
       var duNo = withData(d, function(){ return soTienConLaiPhaiTra(loan); });
+      var soTT = num(dc.soTienTatToan) > 0 ? num(dc.soTienTatToan)
+               : (num(loan.soTienTatToan) > 0 ? num(loan.soTienTatToan) : duNo);
       loan.trangThai = 'da_tra_het';
-      loan.tatToan = { mk: dc.mk, soTien: duNo };
-      overlay.push({ loai:'traSom', kind:'chi', mk: dc.mk, soTien: duNo, bat:true });
+      loan.tatToan = { mk: dc.mk, soTien: soTT };
+      overlay.push({ loai:'traSom', kind:'chi', mk: dc.mk, soTien: soTT, bat:true });
     }
   });
   return { data: d, overlay: overlay };
@@ -178,6 +182,7 @@ function mpFormHtml(){
                   + '</option>'; }).join('')
          + '</select></div>';
       h += '<div><label>Tất toán vào tháng</label><select id="mp_mk">'+mkOpts(dc?dc.mk:curMk)+'</select></div>';
+      h += '<div><label>Số tiền tất toán</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTienTatToan" value="'+(dc?veSo(dc.soTienTatToan):'')+'" placeholder="Bỏ trống = số dự kiến của khoản vay / tổng còn phải trả"></div>';
     }
   }
   h += '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
@@ -202,7 +207,8 @@ function mpDcMoTa(dc){
   }
   if (dc.loai === 'traSom'){
     var l = ((state.mp.data.vayNo||{}).vayNoPhaiTra||[]).find(function(x){ return x.id===dc.loanId; });
-    return 'Tất toán sớm "' + esc(l?l.ten:dc.loanId) + '" vào ' + monthLabel(dc.mk);
+    return 'Tất toán sớm "' + esc(l?l.ten:dc.loanId) + '" vào ' + monthLabel(dc.mk)
+         + (num(dc.soTienTatToan) > 0 ? ' · số tiền ' + fmt(Math.round(num(dc.soTienTatToan))) : '');
   }
   return dc.loai;
 }
@@ -393,6 +399,7 @@ function handleMoPhongAction(act, el){
     } else if (loai === 'traSom'){
       dc.loanId = g('mp_loanId');
       dc.mk = g('mp_mk');
+      dc.soTienTatToan = numNonNeg(docSo(g('mp_soTienTatToan')));
       if (!dc.loanId){ toast('Chưa chọn khoản vay.', { loai:'warn' }); return true; }
     }
     if (state.mp.editIdx >= 0){
