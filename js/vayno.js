@@ -8,7 +8,6 @@
 
 var LOAI_VAY_LABEL = { ngan_hang:'Ngân hàng', vi:'Ví', ban_be:'Bạn bè', nguoi_than:'Người thân' };
 var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất' };
-var chartTichLuy = null;
 
 function monthKeyAdd(mk, n){
   var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + n;
@@ -605,23 +604,13 @@ function renderVayNo(){
     html += '<tr><td style="text-align:left">T'+parseInt(r.mk.slice(5,7),10)+'/'+r.mk.slice(0,4)+'</td><td style="color:var(--green)">'+fmt(Math.round(r.thu))+'</td><td style="color:var(--red)">'+fmt(Math.round(r.chi))+'</td><td>'+fmt(Math.round(r.bal))+'</td></tr>';
   });
   html += '</tbody></table></div>';
-  html += '<div class="chart-box" style="margin-top:10px"><canvas id="chartTichLuy"></canvas></div>';
+  html += '<div class="bd-h" style="margin-top:14px">Số dư lũy kế dự kiến</div><div class="bd-box">'
+    + bdLine({ W: 350, H: 190, labels: rowsData.map(function(r){ return 'T' + parseInt(r.mk.slice(5, 7), 10) + (r.mk.slice(0, 4) !== rowsData[0].mk.slice(0, 4) ? '/' + r.mk.slice(2, 4) : ''); }),
+      series: [{ ten: 'Số dư', vals: rowsData.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
+      tipTitle: function(i){ return monthLabel(rowsData[i].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế dự kiến' }) + '</div>';
   html += '</div>';
 
   root.innerHTML = html;
-  drawTichLuyChart(rowsData);
-}
-
-function drawTichLuyChart(rowsData){
-  if (chartTichLuy) chartTichLuy.destroy();
-  var ctx = document.getElementById('chartTichLuy');
-  if (!ctx) return;
-  chartTichLuy = new Chart(ctx, { type:'line',
-    data:{ labels: rowsData.map(function(r){ return monthLabel(r.mk); }), datasets:[
-      { label:'Số dư lũy kế', data: rowsData.map(function(r){ return Math.round(r.bal); }), borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.1)', fill:true, tension:.25 }
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Số dư lũy kế dự kiến'}, legend:{display:false} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
-  });
 }
 
 /* ---- hoàn tác phần ở KHOẢN VAY của 1 ref (phần journal do nơi gọi tự xóa) ----

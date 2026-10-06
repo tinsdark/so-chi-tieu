@@ -5,7 +5,6 @@
    Cần state.js, drive-sync.js, vayno.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
    ==================================================================== */
 
-var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null, chartBal=null;
 
 /* Hai danh mục này CHỈ được sinh ra từ tab Vay - Nợ (tạo khoản vay / khoản cho vay)
    rồi tự hạch toán sang Sổ tay. Nhập tay ở đây sẽ tạo tiền mồ côi không gắn với
@@ -426,17 +425,10 @@ function renderSoTay(){
   }
   html += '</div></div>';
 
-  // Charts
-  html += '<div class="card"><h3>Biểu đồ chi tiêu</h3><div class="charts-grid">'
-    + '<div class="chart-box full"><canvas id="chartBal"></canvas></div>'
-    + '<div class="chart-box"><canvas id="chartDonut"></canvas></div>'
-    + '<div class="chart-box"><canvas id="chartDonutThu"></canvas></div>'
-    + '<div class="chart-box"><canvas id="chartDay"></canvas></div>'
-    + '<div class="chart-box full"><canvas id="chartMonth"></canvas></div>'
-    + '</div></div>';
+  // Biểu đồ: js/bieudo.js (SVG tự vẽ, 3 tab)
+  html += bieuDoCardHtml(mk);
 
   root.innerHTML = html;
-  drawCharts(mk, monthDates, cats);
 }
 
 /* ====================================================================
@@ -698,106 +690,9 @@ function balanceSeries(mk){
   }
   return { labels: labels, vals: vals };
 }
-function drawBalanceChart(mk){
-  if (chartBal) chartBal.destroy();
-  var cv = document.getElementById('chartBal');
-  if (!cv) return;
-  var s = balanceSeries(mk);
-  chartBal = new Chart(cv, { type:'line',
-    data:{ labels: s.labels.length ? s.labels : ['—'],
-      datasets:[{ label:'Số dư cuối ngày', data: s.vals.length ? s.vals : [0],
-        borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.12)', fill:true, tension:.25, pointRadius:2 }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'Số dư cuối ngày — '+monthLabel(mk)}, legend:{display:false} },
-      scales:{ y:{ ticks:{ callback:function(v){ return Math.abs(v)>=1000000?(v/1000000)+'tr':(Math.abs(v)>=1000?(v/1000)+'k':v); } } } } }
-  });
-}
-
-function drawCharts(mk, monthDates, cats){
-  drawBalanceChart(mk);
-  // 1. donut chi theo danh mục
-  var byCat = {};
-  cats.forEach(function(c){ byCat[c.id] = 0; });
-  monthDates.forEach(function(d){
-    var e = state.data.journal[d];
-    Object.keys(e.chi||{}).forEach(function(cid){ byCat[cid] = (byCat[cid]||0) + num(e.chi[cid]); });
-  });
-  var labels1 = [], vals1 = [], cols1 = [];
-  cats.forEach(function(c){ if (byCat[c.id] > 0){ labels1.push(c.ten); vals1.push(byCat[c.id]); cols1.push(catMau('chi', c.id)); } });
-  if (chartDonut) chartDonut.destroy();
-  var ctx1 = document.getElementById('chartDonut');
-  if (ctx1){
-    chartDonut = new Chart(ctx1, { type:'doughnut',
-      data:{ labels: labels1.length?labels1:['Chưa có dữ liệu'], datasets:[{ data: vals1.length?vals1:[1], backgroundColor: vals1.length?cols1:['#e5e7eb'] }]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Chi theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
-    });
-  }
-
-  // 1b. donut thu theo danh mục
-  var catsThu = state.data.categories.thu;
-  var byCatThu = {};
-  catsThu.forEach(function(c){ byCatThu[c.id] = 0; });
-  monthDates.forEach(function(d){
-    var e = state.data.journal[d];
-    Object.keys(e.thu||{}).forEach(function(cid){ byCatThu[cid] = (byCatThu[cid]||0) + num(e.thu[cid]); });
-  });
-  var labels1b = [], vals1b = [], cols1b = [];
-  catsThu.forEach(function(c){ if (byCatThu[c.id] > 0){ labels1b.push(c.ten); vals1b.push(byCatThu[c.id]); cols1b.push(catMau('thu', c.id)); } });
-  if (chartDonutThu) chartDonutThu.destroy();
-  var ctx1b = document.getElementById('chartDonutThu');
-  if (ctx1b){
-    chartDonutThu = new Chart(ctx1b, { type:'doughnut',
-      data:{ labels: labels1b.length?labels1b:['Chưa có dữ liệu'], datasets:[{ data: vals1b.length?vals1b:[1], backgroundColor: vals1b.length?cols1b:['#e5e7eb'] }]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu theo danh mục (tháng)'}, legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}} } }
-    });
-  }
-
-  // 2. bar thu/chi theo ngày trong tháng
-  var days = [], thuArr = [], chiArr = [];
-  monthDates.forEach(function(d){
-    var e = state.data.journal[d];
-    days.push(d.slice(8,10));
-    thuArr.push(thuTotal(e));
-    chiArr.push(chiTotal(e));
-  });
-  if (chartDay) chartDay.destroy();
-  var ctx2 = document.getElementById('chartDay');
-  if (ctx2){
-    chartDay = new Chart(ctx2, { type:'bar',
-      data:{ labels: days, datasets:[
-        { label:'Thu', data: thuArr, backgroundColor:'#16a34a' },
-        { label:'Chi', data: chiArr, backgroundColor:'#dc2626' }
-      ]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu / Chi theo ngày'}, legend:{position:'bottom'} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
-    });
-  }
-
-  // 3. bar thu/chi theo tháng (cả năm của tháng đang xem)
-  var year = mk.slice(0,4);
-  var mLabels=[], mThu=[], mChi=[];
-  for (var m=1;m<=12;m++){
-    var key = year+'-'+pad2(m);
-    var t=0,c=0;
-    Object.keys(state.data.journal).forEach(function(d){
-      if (monthKey(d) === key){ var e=state.data.journal[d]; t+=thuTotal(e); c+=chiTotal(e); }
-    });
-    mLabels.push(MONTH_NAMES[m-1]); mThu.push(t); mChi.push(c);
-  }
-  if (chartMonth) chartMonth.destroy();
-  var ctx3 = document.getElementById('chartMonth');
-  if (ctx3){
-    chartMonth = new Chart(ctx3, { type:'bar',
-      data:{ labels:mLabels, datasets:[
-        { label:'Thu', data:mThu, backgroundColor:'#16a34a' },
-        { label:'Chi', data:mChi, backgroundColor:'#dc2626' }
-      ]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Thu / Chi theo tháng — '+year}, legend:{position:'bottom'} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
-    });
-  }
-}
-
 /* ---- Sổ tay: handlers ---- */
 function handleSoTayAction(act, el){
+  if (handleBieuDoAction(act, el)) return true;
   if (act === 'prevMonth' || act === 'nextMonth'){
     var p = state.soTayMonth.split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10);
     m += (act==='nextMonth'?1:-1);

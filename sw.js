@@ -6,7 +6,7 @@
    Chiến lược chọn để KHÔNG BAO GIỜ kẹt bản cũ (bẫy kinh điển của service worker):
    - file của chính app: MẠNG TRƯỚC. Có mạng là luôn lấy bản mới nhất rồi ghi đè cache.
      Cache chỉ được dùng khi mất mạng, hoặc mạng treo quá MANG_CHO_MS mà đã có cache.
-   - thư viện CDN (Chart.js, SheetJS): CACHE TRƯỚC, vì URL đã gắn phiên bản cố định.
+   - thư viện CDN (SheetJS): CACHE TRƯỚC, vì URL đã gắn phiên bản cố định.
    - mọi thứ khác (đăng nhập Google, Drive API): KHÔNG can thiệp.
    Đổi file này (ví dụ tăng VERSION) thì trình duyệt tự cài bản mới, xóa cache cũ.
    ==================================================================== */

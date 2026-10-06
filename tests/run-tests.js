@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -2019,6 +2019,83 @@ test('Animation: motion.js được nạp, bọc đủ 5 hàm render, tôn trọ
   ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderDanhMuc'].forEach(function(n){ ok(m.indexOf("'" + n + "'") >= 0, 'thiếu bọc ' + n); });
   ok(m.indexOf('prefers-reduced-motion') >= 0 && css.indexOf('@media (prefers-reduced-motion:reduce)') >= 0, 'thiếu tắt animation khi giảm chuyển động');
   ['anim-card', 'anim-mo', 'anim-moi', 'anim-xoa'].forEach(function(k){ ok(css.indexOf('.' + k + '{') >= 0, 'thiếu CSS ' + k); });
+});
+
+group('BD. Biểu đồ tự vẽ (bieudo.js)');
+
+test('bdRut / bdBuoc / bdTruc: số ngắn và trục chia đẹp', function(){
+  eq(ctx.bdRut(1200000), '1,2tr'); eq(ctx.bdRut(2000000), '2tr'); eq(ctx.bdRut(350000), '350k'); eq(ctx.bdRut(-2500000), '-2,5tr'); eq(ctx.bdRut(900), '900');
+  var ax = ctx.bdTruc(0, 29390000);
+  ok(ax.ticks.length >= 3 && ax.ticks.length <= 6, 'số vạch ' + ax.ticks.length);
+  ok(ax.mx >= 29390000 && ax.mn === 0, 'trục phủ hết dữ liệu');
+  var neg = ctx.bdTruc(-5000000, 3000000);
+  ok(neg.mn <= -5000000 && neg.mx >= 3000000 && neg.ticks.indexOf(0) >= 0, 'trục có số âm vẫn có vạch 0');
+  eq(ctx.bdTruc(0, 0).ticks.length >= 2, true, 'dữ liệu rỗng không vỡ');
+});
+
+test('bdLine: 1 và nhiều đường, 1 điểm không vỡ, thẻ giá trị theo điểm chọn', function(){
+  var h = ctx.bdLine({ W: 350, H: 190, labels: ['01', '02', '03'], series: [{ ten: 'A', vals: [1000000, 3000000, 2000000], cls: 'chi', fill: true }], sel: 1,
+    tipTitle: function(i){ return 'Ngày ' + (i + 1); }, money: function(v){ return v + 'đ'; } });
+  ok(h.indexOf('<svg') === 0 && h.indexOf('class="bd-ln bd-s-chi') > 0, 'có đường');
+  ok(h.indexOf('Ngày 2') > 0 && h.indexOf('3000000đ') > 0, 'thẻ giá trị theo sel');
+  var h2 = ctx.bdLine({ W: 350, H: 190, labels: ['a', 'b'], series: [{ ten: 'X', vals: [1, 2], cls: 'gray', dash: true }, { ten: 'Y', vals: [2, 3], cls: 'chi' }] });
+  ok(h2.indexOf('X: ') > 0 && h2.indexOf('Y: ') > 0, 'nhiều đường hiện đủ giá trị');
+  ok(h2.indexOf('dash') > 0 && h2.indexOf('bd-draw') > 0, 'đường nét đứt không bị animation vẽ đè (chỉ đường liền có bd-draw)');
+  ctx.bdLine({ W: 350, H: 190, labels: ['a'], series: [{ ten: 'X', vals: [5], cls: 'chi', fill: true }] });   // 1 điểm: không ném lỗi
+});
+
+test('bdXepCat: xếp giảm dần, gộp phần dư thành "Khác", giữ tổng', function(){
+  var d = baseData({ categories: { thu: [], chi: ['a','b','c','d','e','f','g','h'].map(function(k, i){ return { id: k, ten: k.toUpperCase(), chiTieu: 0 }; }) } });
+  loadData(d);
+  var theo = { a: 10, b: 80, c: 30, d: 5, e: 60, f: 20, g: 1, h: 0 };
+  var r = ctx.bdXepCat('chi', theo, null, 6);
+  eq(r.length, 6, 'tối đa 6 mục'); eq(r[0].id, 'b'); eq(r[1].id, 'e');
+  eq(r[5].id, '_khac'); eq(r[5].v, 6, 'Khác = mục thứ 6 trở đi (5 + 1)');
+  var tong = 0; r.forEach(function(x){ tong += x.v; });
+  eq(tong, 206, 'tổng không đổi sau khi gộp');
+});
+
+test('bieuDoCardHtml: 3 tab vẽ được với dữ liệu thật; tháng trống không vỡ', function(){
+  var d = baseData({ settings: { soDuDauKy: 1000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' }, journal: {
+    '2026-09-10': { thu: { luong: 10000000 }, chi: { an: 2000000 }, ghiChu: '' },
+    '2026-10-02': { thu: {}, chi: { an: 500000 }, ghiChu: '' },
+    '2026-10-05': { thu: { luong: 12000000 }, chi: { an: 1500000 }, ghiChu: '' } } });
+  loadData(d); setToday('2026-10-06');
+  ctx.state.bdTab = 'tq';
+  var tq = ctx.bieuDoCardHtml('2026-10');
+  ok(tq.indexOf('id="bieuDoCard"') > 0 && tq.indexOf('Phân tích') > 0 && tq.indexOf('bd-cal') > 0, 'tab Tổng quan');
+  ok(tq.indexOf('so với tháng 9') > 0, 'có câu so sánh với tháng trước');
+  ctx.state.bdTab = 'dm'; ctx.state.bdMode = 'vong';
+  ok(ctx.bieuDoCardHtml('2026-10').indexOf('bd-donut') > 0, 'donut');
+  ctx.state.bdMode = 'thanh';
+  ok(ctx.bieuDoCardHtml('2026-10').indexOf('bd-hb-r') > 0, 'thanh ngang');
+  ctx.state.bdTab = 'xh';
+  ok(ctx.bieuDoCardHtml('2026-10').indexOf('bd-lc') > 0, 'tab Xu hướng');
+  ['tq', 'dm', 'xh'].forEach(function(t){ ctx.state.bdTab = t; ok(ctx.bieuDoCardHtml('2026-03').indexOf('bieuDoCard') > 0, 'tháng không dữ liệu (' + t + ')'); });
+  ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; ctx.state.bdCat = null; setToday('2026-10-01');
+});
+
+test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ đổi state, không ghi dữ liệu', function(){
+  loadData(baseData()); ctx.state.soTayMonth = '2026-10';
+  var kt = JSON.stringify(ctx.state.data);
+  var el = function(o){ return { getAttribute: function(k){ return o[k]; } }; };
+  ok(ctx.handleBieuDoAction('bdTab', el({ 'data-tab': 'dm' })) === true && ctx.state.bdTab === 'dm');
+  ctx.handleBieuDoAction('bdMode', el({ 'data-mode': 'thanh' })); eq(ctx.state.bdMode, 'thanh');
+  ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, 2);
+  ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, null, 'bấm lại bỏ chọn');
+  ctx.handleBieuDoAction('bdDay', el({ 'data-date': '2026-10-03' })); eq(ctx.state.bdDay, '2026-10-03');
+  eq(ctx.handleBieuDoAction('khac', el({})), false);
+  eq(JSON.stringify(ctx.state.data), kt, 'không đụng dữ liệu');
+  ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; ctx.state.bdDay = null;
+});
+
+test('Chart.js đã gỡ: không còn nạp thư viện, không còn <canvas> biểu đồ', function(){
+  var root = path.join(__dirname, '..');
+  ok(fs.readFileSync(path.join(root, 'index.html'), 'utf8').indexOf('chart.js') < 0, 'index.html còn nạp Chart.js');
+  ['sotay.js', 'vayno.js', 'mophong.js'].forEach(function(f){
+    var c = fs.readFileSync(path.join(root, 'js', f), 'utf8');
+    ok(c.indexOf('new Chart') < 0 && c.indexOf('<canvas') < 0, f + ' còn dùng Chart.js');
+  });
 });
 
 /* ==================================================================== */
