@@ -43,6 +43,7 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.

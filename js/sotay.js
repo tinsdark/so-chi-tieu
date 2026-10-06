@@ -5,7 +5,7 @@
    Cần state.js, drive-sync.js, vayno.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
    ==================================================================== */
 
-var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null;
+var chartDonut=null, chartDonutThu=null, chartDay=null, chartMonth=null, chartBal=null;
 
 /* Hai danh mục này CHỈ được sinh ra từ tab Vay - Nợ (tạo khoản vay / khoản cho vay)
    rồi tự hạch toán sang Sổ tay. Nhập tay ở đây sẽ tạo tiền mồ côi không gắn với
@@ -94,6 +94,8 @@ function renderSoTay(){
     + '<select data-act="jumpMonth">'+monthOpts+'</select>'
     + '<button data-act="nextMonth">›</button>'
     + '</div>';
+
+  html += hanMucThangHtml(mk);
 
   // Entry form
   // id=formGiaoDich: mốc để nút FAB cuộn tới (data-act="fabAdd")
@@ -194,17 +196,32 @@ function renderSoTay(){
     if ((ed.ghiChu||'').toLowerCase().indexOf(kw) !== -1) return true;
     return entryItems(ed).some(function(it){ return (it.ghiChu||'').toLowerCase().indexOf(kw) !== -1; });
   }) : baseDates;
-  var filterActive = !!(state.soTaySearch || state.soTayFrom || state.soTayTo);
+  // lọc theo danh mục: giữ ngày có phát sinh ở danh mục đó (tiền nằm ở bucket thu/chi của ngày)
+  var catSel = (state.soTayCat || '').split(':');
+  if (catSel.length === 2 && catSel[1]){
+    displayDates = displayDates.filter(function(d){
+      return num((state.data.journal[d][catSel[0]] || {})[catSel[1]]) > 0;
+    });
+  }
+  var filterActive = !!(state.soTaySearch || state.soTayFrom || state.soTayTo || state.soTayCat);
 
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <button class="btn secondary sm" data-act="exportExcel">⬇ Xuất Excel</button></h3>';
   html += '<div class="search-row">'
     + '<div class="fld"><label>Tìm nội dung</label><input type="text" data-act="soTaySearchInput" value="'+(state.soTaySearch||'').replace(/"/g,'&quot;')+'" placeholder="Từ khóa trong ghi chú..."></div>'
+    + '<div class="fld"><label>Danh mục</label><select data-act="soTayCatInput">'+soTayCatOptions(state.soTayCat)+'</select></div>'
     + '<div class="fld"><label>Từ ngày</label><input type="date" data-act="soTayFromInput" value="'+(state.soTayFrom||'')+'"></div>'
     + '<div class="fld"><label>Đến ngày</label><input type="date" data-act="soTayToInput" value="'+(state.soTayTo||'')+'"></div>'
     + (filterActive ? '<div class="fld" style="flex:0"><label>&nbsp;</label><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div>' : '')
     + '</div>';
   if (hasRange){
     html += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' → '+state.soTayTo+'), bảng dưới không theo tháng đang chọn ở trên nữa.</div>';
+  }
+  if (catSel.length === 2 && catSel[1] && displayDates.length){
+    var tongCat = 0;
+    displayDates.forEach(function(d){ tongCat += num((state.data.journal[d][catSel[0]] || {})[catSel[1]]); });
+    html += '<div class="empty" style="padding:0 0 8px">'+displayDates.length+' ngày có '
+      + (catSel[0] === 'thu' ? 'thu' : 'chi') + ' "'+esc(catTenTheoId(catSel[0], catSel[1]))+'" · tổng '
+      + '<b style="color:var(--'+(catSel[0] === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(tongCat))+'</b></div>';
   }
   html += '<div class="table-wrap">';
   if (!displayDates.length){
@@ -245,6 +262,7 @@ function renderSoTay(){
 
   // Charts
   html += '<div class="card"><h3>Biểu đồ chi tiêu</h3><div class="charts-grid">'
+    + '<div class="chart-box full"><canvas id="chartBal"></canvas></div>'
     + '<div class="chart-box"><canvas id="chartDonut"></canvas></div>'
     + '<div class="chart-box"><canvas id="chartDonutThu"></canvas></div>'
     + '<div class="chart-box"><canvas id="chartDay"></canvas></div>'
@@ -332,7 +350,94 @@ function soTayDetailHtml(date){
   return h;
 }
 
+/* ====================================================================
+   HẠN MỨC THÁNG — progress bar thực tế / chỉ tiêu cho từng danh mục chi có
+   đặt "chỉ tiêu/tháng" ở tab Danh mục. Thuần hiển thị: chỉ ĐỌC categories +
+   journal, không ghi gì. Danh mục khongDuTru (Cho vay...) bị loại vì không
+   phải chi tiêu thật. Sắp theo % giảm dần để cái sắp/đã vượt nằm trên cùng.
+   ==================================================================== */
+function hanMucThangRows(mk){
+  var rows = [];
+  (state.data.categories.chi || []).forEach(function(c){
+    var cap = num(c.chiTieu);
+    if (cap <= 0 || c.khongDuTru) return;
+    var da = actualCatInMonth('chi', c.id, mk);
+    rows.push({ id: c.id, ten: c.ten, da: da, cap: cap, pct: da / cap });
+  });
+  rows.sort(function(a, b){ return b.pct - a.pct; });
+  return rows;
+}
+// mức: 'ok' < 80% · 'warn' 80–100% · 'over' > 100%
+function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok'); }
+function hanMucThangHtml(mk){
+  var rows = hanMucThangRows(mk);
+  if (!rows.length) return '';
+  var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
+    + (nVuot ? ' <span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3><div class="hm-list">';
+  rows.forEach(function(r){
+    var muc = hanMucMuc(r.pct);
+    var rong = Math.min(100, Math.round(r.pct * 100));
+    h += '<div class="hm-row">'
+      + '<div class="hm-top"><span class="hm-ten">'+esc(r.ten)+'</span>'
+      + '<span class="hm-so '+muc+'">'+fmt(Math.round(r.da))+' / '+fmt(Math.round(r.cap))+' · '+Math.round(r.pct * 100)+'%</span></div>'
+      + '<div class="hm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(r.ten)+'">'
+      + '<div class="hm-fill '+muc+'" style="width:'+rong+'%"></div></div>'
+      + (r.pct > 1 ? '<div class="hm-vuot">Vượt '+fmt(Math.round(r.da - r.cap))+'</div>' : '')
+      + '</div>';
+  });
+  return h + '</div></div>';
+}
+
+// <option> cho bộ lọc danh mục: nhóm Thu / Chi, giá trị dạng 'thu:<id>' | 'chi:<id>'
+function soTayCatOptions(sel){
+  function nhom(kind, nhan){
+    var o = (state.data.categories[kind] || []).map(function(c){
+      var v = kind + ':' + c.id;
+      return '<option value="'+esc(v)+'"'+(v === sel ? ' selected' : '')+'>'+esc(c.ten)+'</option>';
+    }).join('');
+    return o ? '<optgroup label="'+nhan+'">'+o+'</optgroup>' : '';
+  }
+  return '<option value="">Tất cả</option>' + nhom('thu', 'Thu') + nhom('chi', 'Chi');
+}
+function catTenTheoId(kind, id){
+  var c = (state.data.categories[kind] || []).find(function(x){ return x.id === id; });
+  return c ? c.ten : id;
+}
+
+// số dư cuối ngày trong tháng mk. Tháng đang diễn ra chỉ vẽ tới hôm nay (sau đó
+// là đường phẳng vô nghĩa); tháng trước mốc khóa sổ thì không có số dư để vẽ.
+function balanceSeries(mk){
+  var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
+  if (startLock && mk < startLock) return { labels: [], vals: [] };
+  var hom = todayStr();
+  var soNgay = daysInMonth(mk);
+  var labels = [], vals = [];
+  for (var i = 1; i <= soNgay; i++){
+    var d = mk + '-' + pad2(i);
+    if (d > hom && mk === monthKey(hom)) break;
+    labels.push(pad2(i));
+    vals.push(balanceAt(d));
+  }
+  return { labels: labels, vals: vals };
+}
+function drawBalanceChart(mk){
+  if (chartBal) chartBal.destroy();
+  var cv = document.getElementById('chartBal');
+  if (!cv) return;
+  var s = balanceSeries(mk);
+  chartBal = new Chart(cv, { type:'line',
+    data:{ labels: s.labels.length ? s.labels : ['—'],
+      datasets:[{ label:'Số dư cuối ngày', data: s.vals.length ? s.vals : [0],
+        borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.12)', fill:true, tension:.25, pointRadius:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'Số dư cuối ngày — '+monthLabel(mk)}, legend:{display:false} },
+      scales:{ y:{ ticks:{ callback:function(v){ return Math.abs(v)>=1000000?(v/1000000)+'tr':(Math.abs(v)>=1000?(v/1000)+'k':v); } } } } }
+  });
+}
+
 function drawCharts(mk, monthDates, cats){
+  drawBalanceChart(mk);
   // 1. donut chi theo danh mục
   var byCat = {};
   cats.forEach(function(c){ byCat[c.id] = 0; });
@@ -704,7 +809,7 @@ function handleSoTayAction(act, el){
   } else if (act === 'exportExcel'){
     exportExcel();
   } else if (act === 'soTayClearFilter'){
-    state.soTaySearch = ''; state.soTayFrom = ''; state.soTayTo = '';
+    state.soTaySearch = ''; state.soTayFrom = ''; state.soTayTo = ''; state.soTayCat = '';
     renderSoTay();
   } else {
     return false;
@@ -738,6 +843,10 @@ function handleSoTayChange(el){
     return true;
   } else if (el.matches('[data-act=soTaySearchInput]')){
     state.soTaySearch = el.value;
+    renderSoTay();
+    return true;
+  } else if (el.matches('[data-act=soTayCatInput]')){
+    state.soTayCat = el.value;
     renderSoTay();
     return true;
   } else if (el.matches('[data-act=soTayFromInput]')){

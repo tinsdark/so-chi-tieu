@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -726,6 +726,64 @@ test('entryIsEmpty', function(){
   eq(ctx.entryIsEmpty({ thu:{}, chi:{an:1}, ghiChu:'', refs:[] }), false, 'có tiền');
   eq(ctx.entryIsEmpty({ thu:{}, chi:{}, ghiChu:'ghi chú', refs:[] }), false, 'có ghi chú');
   eq(ctx.entryIsEmpty({ thu:{}, chi:{}, ghiChu:'', refs:[{loanId:'x',loai:'traNo',soTien:0}] }), false, 'có ref');
+});
+
+/* ==================================================================== */
+group('H. Hạn mức tháng + chuỗi số dư theo ngày (sotay.js)');
+
+function dataHanMuc(){
+  var d = baseData({
+    settings: { soDuDauKy: 1000000, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' },
+    categories: {
+      thu: [{id:'luong',ten:'Lương',chiTieu:0}],
+      chi: [{id:'an',ten:'Ăn',chiTieu:1000000},{id:'xang',ten:'Xăng',chiTieu:500000},
+            {id:'khac',ten:'Khác',chiTieu:0},{id:'choVay',ten:'Cho vay',chiTieu:900000,khongDuTru:true}]
+    }
+  });
+  d.journal['2026-10-02'] = { thu:{luong:5000000}, chi:{an:900000}, ghiChu:'', refs:[], items:[] };
+  d.journal['2026-10-05'] = { thu:{}, chi:{an:200000, xang:100000, choVay:700000}, ghiChu:'', refs:[], items:[] };
+  return d;
+}
+
+test('hanMucMuc: ngưỡng 80% / 100%', function(){
+  eq(ctx.hanMucMuc(0.79), 'ok'); eq(ctx.hanMucMuc(0.8), 'warn');
+  eq(ctx.hanMucMuc(1), 'warn', 'đúng 100% chưa vượt'); eq(ctx.hanMucMuc(1.01), 'over');
+});
+
+test('hanMucThangRows: chỉ danh mục có chỉ tiêu, bỏ khongDuTru, sắp % giảm dần', function(){
+  loadData(dataHanMuc());
+  var r = ctx.hanMucThangRows('2026-10');
+  eq(r.length, 2, 'Khác (chỉ tiêu 0) và Cho vay (khongDuTru) bị loại');
+  eq(r[0].id, 'an', 'Ăn 110% đứng đầu');
+  eq(r[0].da, 1100000, 'cộng dồn cả 2 ngày');
+  near(r[0].pct, 1.1, 0.0001, '% của Ăn');
+  eq(r[1].id, 'xang'); near(r[1].pct, 0.2, 0.0001, '% của Xăng');
+});
+
+test('hanMucThangRows: tháng không có phát sinh -> 0%', function(){
+  loadData(dataHanMuc());
+  var r = ctx.hanMucThangRows('2026-11');
+  eq(r.length, 2); eq(r[0].da, 0);
+});
+
+test('balanceSeries: số dư cuối ngày khớp balanceAt, tháng quá khứ đủ ngày', function(){
+  loadData(dataHanMuc());
+  setToday('2026-12-15');
+  var s = ctx.balanceSeries('2026-10');
+  eq(s.vals.length, 31, 'tháng 10 đủ 31 ngày khi đã qua');
+  eq(s.vals[0], 1000000, 'trước ngày 02 chưa có phát sinh');
+  eq(s.vals[1], 5100000, '02/10: +5tr -900k');
+  eq(s.vals[4], 4100000, '05/10: 5,1tr trừ 1tr (gồm cả khoản cho vay 700k)');
+  eq(s.vals[30], ctx.balanceAt('2026-10-31'));
+  setToday('2026-10-01');
+});
+
+test('balanceSeries: tháng đang diễn ra chỉ tới hôm nay; trước mốc khóa sổ thì rỗng', function(){
+  loadData(dataHanMuc());
+  setToday('2026-10-07');
+  eq(ctx.balanceSeries('2026-10').vals.length, 7);
+  eq(ctx.balanceSeries('2026-08').vals.length, 0, 'tháng 8 trước mốc khóa sổ 09/2026');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */
