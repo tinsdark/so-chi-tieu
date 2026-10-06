@@ -1416,6 +1416,86 @@ test('fmt: làm tròn đồng, không hiện phần lẻ (tổng cộng từ lã
 });
 
 /* ==================================================================== */
+group('Q. Ghi nhanh (thẻ đầu Sổ tay)');
+
+function dataGhiNhanh(){
+  var d = baseData({ settings:{ soDuDauKy:1000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }, { id:'xang', ten:'Xăng', chiTieu:0 }, { id:'tieu', ten:'Tiêu', chiTieu:0 },
+                      { id:'traNo', ten:'Trả nợ', chiTieu:0 }, { id:'choVay', ten:'Cho vay', chiTieu:0 }];
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'Thu hồi', chiTieu:0 }, { id:'nhanTienVay', ten:'Nhận vay', chiTieu:0 }];
+  return d;
+}
+
+test('qaCats: loại các danh mục của Vay-Nợ (cần gắn khoản vay)', function(){
+  loadData(dataGhiNhanh());
+  eq(ctx.qaCats('chi').map(function(c){ return c.id; }).join(','), 'an,xang,tieu');
+  eq(ctx.qaCats('thu').map(function(c){ return c.id; }).join(','), 'luong');
+});
+
+test('qaTopCats: xếp theo số lần dùng trong 90 ngày, bù theo thứ tự danh mục, bỏ giao dịch cũ hơn 90 ngày', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  var it = function(date, cat){ return { iid:'i'+Math.random(), kind:'chi', catId:cat, soTien:1000, ghiChu:'', walletId:'w_chinh' }; };
+  d.journal['2026-10-01'] = { thu:{}, chi:{ tieu:2000, xang:1000 }, ghiChu:'', refs:[], items:[ it('', 'tieu'), it('', 'tieu'), it('', 'xang') ] };
+  d.journal['2026-02-01'] = { thu:{}, chi:{ an:9000 }, ghiChu:'', refs:[], items:[ it('', 'an'), it('', 'an'), it('', 'an') ] };   // quá cũ
+  loadData(d);
+  eq(ctx.qaTopCats('chi', 5).map(function(c){ return c.id; }).join(','), 'tieu,xang,an', 'tieu(2) > xang(1) > an(0, bù)');
+  eq(ctx.qaTopCats('chi', 1).length, 1);
+  eq(ctx.qaCatChon('chi'), 'tieu', 'chưa chọn gì -> cái dùng nhiều nhất');
+  ctx.state.qa.cat = { chi: 'an' };
+  eq(ctx.qaCatChon('chi'), 'an', 'đã chọn lần trước');
+  ctx.state.qa.cat = { chi: 'khong-co' };
+  eq(ctx.qaCatChon('chi'), 'tieu', 'lần chọn cũ không còn -> quay về cái dùng nhiều nhất');
+  ctx.state.qa.cat = {};
+  setToday('2026-10-01');
+});
+
+test('qaSave: ghi 1 khoản chi qua entryAddItem — tổng, số dư, dòng chi tiết, ghi chú ngày khớp nhau', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
+  thongBao.length = 0;
+  voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'Ăn sáng' }, qa_date:{ value:'2026-10-10' } }, null, function(){
+    ctx.handleSoTayAction('qaSave', {});
+  });
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(ctx.num(e.chi.an), 45000, 'tiền vào danh mục');
+  eq(ctx.itemsSum(e, 'chi', 'an'), 45000, 'có dòng chi tiết khớp tổng');
+  eq(e.ghiChu, 'Ăn sáng ' + ctx.fmt(45000), 'ghi chú ngày kèm số tiền');
+  eq(ctx.balanceAt('2026-10-10'), 1000000 - 45000, 'số dư');
+  eq(ctx.state.qa.amt, '', 'xóa số đã gõ sau khi ghi');
+  ok(thongBao.some(function(m){ return m.indexOf('Đã ghi chi') === 0; }), 'có thông báo: ' + thongBao.join('|'));
+});
+
+test('qaSave: không có số tiền thì không ghi; ghi thu vào danh mục thu; ngày trước mốc khóa sổ có cảnh báo', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{}, amt:'', note:'', date:'', wallet:'' };
+  voiDom({ qa_amount:{ value:'' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  eq(Object.keys(ctx.state.data.journal).length, 0, 'số tiền rỗng -> không tạo ngày nào');
+  ctx.state.qa = { kind:'thu', cat:{}, amt:'', note:'', date:'', wallet:'' };
+  voiDom({ qa_amount:{ value:'2.000.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  eq(ctx.num(ctx.state.data.journal['2026-10-10'].thu.luong), 2000000, 'vào danh mục thu đầu tiên dùng được');
+  thongBao.length = 0;
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-09-01' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  ok(thongBao.some(function(m){ return m.indexOf('trước mốc khóa sổ') >= 0; }), 'cảnh báo mốc: ' + thongBao.join('|'));
+  eq(ctx.state.qa.date, '2026-09-01', 'giữ ngày đã chọn để ghi tiếp cùng ngày');
+});
+
+test('ghiNhanhHtml: có chip danh mục + nút ghi theo loại; không lộ danh mục Vay-Nợ', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{}, amt:'12.000', note:'cf', date:'', wallet:'' };
+  var h = ctx.ghiNhanhHtml();
+  ok(h.indexOf('data-act="qaSave"') >= 0 && h.indexOf('Ghi khoản chi') >= 0, 'nút ghi chi');
+  ok(h.indexOf('data-cat="an"') >= 0, 'chip Ăn');
+  ok(h.indexOf('traNo') < 0 && h.indexOf('choVay') < 0, 'không lộ danh mục Vay-Nợ');
+  ok(h.indexOf('value="12.000"') >= 0 && h.indexOf('value="cf"') >= 0, 'giữ bản nháp đang gõ khi vẽ lại');
+  ctx.state.qa = { kind:'chi', cat:{}, amt:'', note:'', date:'', wallet:'' };
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

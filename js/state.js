@@ -56,6 +56,10 @@ var state = {
   backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
+  fullFormOpen: false,    // form nhập đầy đủ ở Sổ tay đang mở (mặc định gấp lại, thẻ "Ghi nhanh" lo việc thường ngày)
+  // thẻ "Ghi nhanh" ở đầu Sổ tay. Bản nháp (amt/note/date) giữ ở đây chứ không chỉ trong ô nhập,
+  // để vẽ lại trang (poll Drive, đổi tab) không làm mất số vừa gõ.
+  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '' },
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
   // Thoát trang / đăng xuất / tải lại từ Drive là mất sạch (cố ý).
@@ -785,7 +789,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen || state.dkForm || state.mtForm || state.imp
+            || state.viFormOpen || state.dkForm || state.mtForm || state.imp || state.fullFormOpen
             || (state.mp && state.mp.formOpen));
 }
 

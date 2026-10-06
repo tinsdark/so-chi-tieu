@@ -348,3 +348,35 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 
 /* ---- Banner "Có bản mới" ---- */
 .banner-moi{background:var(--row-bal);border-color:var(--primary);color:var(--text)}
+
+
+/* ====================================================================
+   LỚP 3 — Ghi nhanh (đầu Sổ tay), form đầy đủ gấp lại
+   ==================================================================== */
+.form-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.form-head h3{margin:0 0 12px}
+.qa{padding:14px}
+.qa-seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-bottom:10px}
+.qa-seg button{border:none;background:var(--card);color:var(--muted);padding:7px 20px;font-weight:700;font-size:13px}
+.qa-seg button.chi.on{background:var(--red);color:#fff}
+.qa-seg button.thu.on{background:var(--green);color:#fff}
+.qa-amt{display:block;width:100%;font-size:26px;font-weight:700;padding:10px 12px;margin-bottom:10px;border-radius:10px}
+.qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
+  padding:7px 13px;font-size:13px;line-height:1.2;display:inline-flex;align-items:center}
+.qa-chip.on,.qa-more.on{border-color:var(--primary);background:var(--row-bal);color:var(--primary-d);font-weight:700}
+.qa-more{width:auto;padding-right:8px}
+.qa-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
+.qa-row.one{grid-template-columns:1fr}
+.qa-row input[type=date]{width:auto;min-width:130px}
+.qa-date.lech{border-color:var(--amber);background:var(--warn-bg)}
+.qa-save{width:100%;padding:12px;font-size:15px}
+.qa-save.chi{background:var(--red)}
+.qa-save.thu{background:var(--green)}
+.qa-save[disabled]{opacity:.45}
+
+/* iOS Safari tự phóng to trang khi chạm vào ô nhập có chữ < 16px, và không thu lại -> phải ép 16px trên điện thoại */
+@media (max-width:700px){
+  input[type=number],input[type=date],input[type=month],input[type=text],select,textarea{font-size:16px}
+  .qa-chip,.qa-more{font-size:14px}
+}

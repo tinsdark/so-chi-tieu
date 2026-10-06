@@ -144,6 +144,15 @@ document.addEventListener('keydown', function(ev){
 var btnPT = document.getElementById('btnPhimTat');
 if (btnPT) btnPT.addEventListener('click', hienPhimTat);
 
+// Enter ở ô số tiền / ghi chú của thẻ Ghi nhanh = bấm Ghi
+document.addEventListener('keydown', function(ev){
+  if (ev.key !== 'Enter' || ev.isComposing || !ev.target || !ev.target.id) return;
+  if (ev.target.id === 'qa_amount' || ev.target.id === 'qa_note'){
+    ev.preventDefault();
+    handleAction('qaSave', null);
+  }
+});
+
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
 document.getElementById('btnSignOut').addEventListener('click', signOut);
