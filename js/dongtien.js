@@ -125,6 +125,8 @@ function renderDongTien(){
     if (mk === currentMk){
       // thực tế + phần lịch vay còn phải trả/thu mà Sổ tay chưa ghi (xem bietTruocChuaGhi ở vayno.js)
       if ((kind==='chi' && cid==='traNo') || (kind==='thu' && cid==='thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
+      var dkChua = dinhKyChuaGhiThang(mk, kind, cid);    // khoản định kỳ chưa ghi trong tháng (kể cả chưa tới ngày)
+      if (dkChua > 0) return av + dkChua;
       if (!av){
         var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
         if (cat0 && cat0.coDinhChiTieu){

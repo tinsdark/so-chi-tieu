@@ -281,13 +281,24 @@ function renderMoPhong(){
 
   var cuoiGoc = rowsGoc.length ? rowsGoc[rowsGoc.length-1].bal : 0;
   var cuoiMoi = rowsMoi.length ? rowsMoi[rowsMoi.length-1].bal : 0;
+  // số dư HIỆN TẠI (đã cộng khoản định kỳ / trả vay đã tới hạn mà chưa ghi), tính trên bản nháp
+  var hienTai = withData(state.mp.data, function(){ return soDuHienTaiDieuChinh(todayStr()); });
+  var thangNayGoc = rowsGoc.length ? rowsGoc[0].bal : 0;
+  var thangNayMoi = rowsMoi.length ? rowsMoi[0].bal : 0;
+  var ghiChuHienTai = hienTai.items.length
+    ? 'Đã tính thêm ' + hienTai.items.length + ' khoản đến hạn chưa ghi: '
+      + hienTai.items.map(function(x){ return esc(x.ten) + ' ' + (x.kind === 'thu' ? '+' : '−') + fmt(Math.round(x.soTien)); }).join(', ')
+      + '. Số dư theo Sổ tay: ' + fmt(Math.round(hienTai.goc))
+    : 'Theo Sổ tay, không có khoản nào đến hạn mà chưa ghi';
   var amDauTien = null;
   for (var i=0;i<rowsMoi.length;i++){ if (rowsMoi[i].bal < 0){ amDauTien = rowsMoi[i].mk; break; } }
 
   html += '<div class="grid-summary">'
-    + '<div class="stat"><div class="lbl">Số dư cuối kỳ — hiện tại</div><div class="val">'+fmt(Math.round(cuoiGoc))+'</div></div>'
-    + '<div class="stat gold"><div class="lbl">Số dư cuối kỳ — kịch bản</div><div class="val">'+fmt(Math.round(cuoiMoi))+'</div></div>'
-    + '<div class="stat '+(cuoiMoi>=cuoiGoc?'thu':'chi')+'"><div class="lbl">Chênh lệch</div><div class="val">'
+    + '<div class="stat gold"><div class="lbl">Số dư hiện tại</div><div class="val">'+fmt(Math.round(hienTai.tong))+'</div>'
+      + '<div class="stat-sub">'+ghiChuHienTai+'</div></div>'
+    + '<div class="stat"><div class="lbl">Cuối tháng này — kịch bản</div><div class="val">'+fmt(Math.round(thangNayMoi))+'</div>'
+      + '<div class="stat-sub">Chưa điều chỉnh: '+fmt(Math.round(thangNayGoc))+'</div></div>'
+    + '<div class="stat '+(cuoiMoi>=cuoiGoc?'thu':'chi')+'"><div class="lbl">Chênh lệch sau '+hz+' tháng</div><div class="val">'
       + (cuoiMoi-cuoiGoc>=0?'+':'')+fmt(Math.round(cuoiMoi-cuoiGoc))+'</div></div>'
     + '<div class="stat '+(amDauTien?'chi':'thu')+'"><div class="lbl">Tháng âm tiền đầu tiên</div><div class="val">'
       + (amDauTien?monthLabel(amDauTien):'Không có')+'</div></div>'

@@ -303,9 +303,11 @@ function tongThuThangCard(mk){
   var s = actualCatMonthAll('thu', mk);
   if (mk === currentMk){
     s += bietTruocChuaGhi('thu', 'thuHoiChoVay', mk);
+    s += dinhKyChuaGhiThang(mk, 'thu');       // lương... đã khai định kỳ mà tháng này chưa ghi
     state.data.categories.thu.forEach(function(c){
       if (c.id === 'thuHoiChoVay') return;
-      if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk)){
+      // danh mục đã có khoản định kỳ chưa ghi thì dùng số định kỳ ở trên, không cộng thêm chỉ tiêu cố định (tránh tính 2 lần)
+      if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk) && !dinhKyChuaGhiThang(mk, 'thu', c.id)){
         var b = num(c.chiTieu);
         if (b > 0) s += b;
       }
@@ -319,15 +321,52 @@ function tongChiThangCard(mk){
   var s = actualCatMonthAll('chi', mk);
   if (mk === currentMk){
     s += bietTruocChuaGhi('chi', 'traNo', mk);
+    s += dinhKyChuaGhiThang(mk, 'chi');       // tiền nhà... đã khai định kỳ mà tháng này chưa ghi
     state.data.categories.chi.forEach(function(c){
       if (c.id === 'traNo') return;
-      if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk)){
+      if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk) && !dinhKyChuaGhiThang(mk, 'chi', c.id)){
         var b = num(c.chiTieu);
         if (b > 0) s += b;
       }
     });
   }
   return s;
+}
+
+/* ====================================================================
+   SỐ DƯ HIỆN TẠI "ĐÃ ĐIỀU CHỈNH" — dùng ở tab Mô phỏng.
+   Số dư thật trong Sổ tay + các khoản biết trước ĐÃ TỚI HẠN tính tới hôm nay mà chưa ghi (người dùng hay quên ghi):
+     - giao dịch định kỳ (lương, tiền nhà...) đã tới ngày, chưa ghi, chưa bấm Bỏ qua
+     - kỳ trả vay chưa đóng có ngày trả <= hôm nay (kể cả kỳ quá hạn của tháng trước); phần nhập tay "Trả nợ"
+       không gắn khoản trong tháng được trừ bớt (tiền đó đã đi), giống bietTruocChuaGhi
+   KHÔNG tính thu hồi cho vay (tiền người khác trả, chưa chắc đã về) và khoản CHƯA tới ngày.
+   Trả về { goc: số dư thật, tong: số dư đã điều chỉnh, items: [{ten, kind, soTien}] }.
+   ==================================================================== */
+function soDuHienTaiDieuChinh(homNay){
+  var items = [];
+  dinhKyDenHan(homNay).forEach(function(x){
+    items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: num(x.dk.soTien) });
+  });
+  var curMk = monthKey(homNay), tongVay = 0;
+  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){
+    if (!loanIsActive(loan)) return;
+    var sch = tinhLichTraNo(loan);
+    sch.forEach(function(row, idx){
+      if (kyDaDong(loan, idx) || row.ngayTra > homNay) return;
+      tongVay += conThieuKy(loan, idx, sch);
+    });
+  });
+  if (tongVay > 0){
+    var tay = actualCatInMonth('chi', 'traNo', curMk);
+    Object.keys(state.data.journal).forEach(function(d){
+      if (monthKey(d) === curMk) tay -= entryRefSum(state.data.journal[d], 'chi', 'traNo');
+    });
+    tongVay = Math.max(0, tongVay - Math.max(0, tay));
+    if (tongVay > 0) items.push({ ten: 'Trả vay', kind: 'chi', soTien: tongVay });
+  }
+  var goc = balanceAt(homNay), tong = goc;
+  items.forEach(function(x){ tong += (x.kind === 'thu' ? 1 : -1) * x.soTien; });
+  return { goc: goc, tong: tong, items: items };
 }
 
 // ví của khoản vay/cho vay lấy từ ô chọn trong form. Form chỉ có ô này khi có >= 2 ví;

@@ -1865,6 +1865,95 @@ test('Ghi nhanh: có ví mặc định thì lần nhập sau quay về ví đó 
 });
 
 /* ==================================================================== */
+group('Z. Mô phỏng: số dư hiện tại + khoản định kỳ / trả vay đã tới hạn mà chưa ghi');
+
+function dataMoPhong(){
+  var d = baseData({ settings:{ soDuDauKy:10000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }, { id:'nha', ten:'Nhà', chiTieu:0 }, { id:'traNo', ten:'Trả nợ', chiTieu:0 }];
+  d.dinhKy = [
+    { id:'dk1', ten:'Lương', kind:'thu', catId:'luong', soTien:15000000, ngay:5, bat:true, bo:[] },
+    { id:'dk2', ten:'Tiền nhà', kind:'chi', catId:'nha', soTien:3000000, ngay:8, bat:true, bo:[] },
+    { id:'dk3', ten:'Tiền net', kind:'chi', catId:'an', soTien:200000, ngay:25, bat:true, bo:[] },
+    { id:'dk4', ten:'Đã tắt', kind:'chi', catId:'an', soTien:999000, ngay:2, bat:false, bo:[] }
+  ];
+  d.vayNo.vayNoPhaiTra = [ loanKhongLai({ id:'v1', ten:'Vay xe', soTienGoc:3000000, soThangVay:3, ngayVay:'2026-09-10', ngayTraHangThang:8 }) ];   // kỳ T10 ngày 8: 1tr
+  return d;
+}
+
+test('dinhKyChuaGhiThang: gồm cả khoản chưa tới ngày; bỏ khoản đã ghi / đã bỏ qua / đang tắt', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'thu'), 15000000, 'thu: lương');
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'chi'), 3200000, 'chi: nhà + net (khoản tắt không tính)');
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'chi', 'nha'), 3000000, 'theo danh mục');
+  ctx.dinhKyGhi(ctx.state.data.dinhKy[1], '2026-10', '2026-10-10');            // ghi tiền nhà
+  ctx.state.data.dinhKy[2].bo.push('2026-10');                                  // bỏ qua tiền net
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'chi'), 0, 'đã ghi + đã bỏ qua -> hết');
+  eq(ctx.dinhKyChuaGhiThang('2026-11', 'chi'), 3200000, 'ghi / bỏ qua của tháng 10 không ảnh hưởng tháng 11 (nhà + net đều chưa ghi)');
+});
+
+test('Dự báo tháng này cộng khoản định kỳ chưa ghi (cả khoản chưa tới ngày), không tính 2 lần với chỉ tiêu cố định', function(){
+  setToday('2026-10-10');
+  var d = dataMoPhong();
+  d.categories.chi[1].coDinhChiTieu = true; d.categories.chi[1].chiTieu = 3000000;   // Nhà vừa có chỉ tiêu cố định vừa có định kỳ
+  loadData(d);
+  // chi: nhà 3tr (định kỳ, KHÔNG cộng thêm chỉ tiêu cố định) + net 0,2tr + trả vay kỳ T10 1tr
+  eq(ctx.tongChiThangCard('2026-10'), 3000000 + 200000 + 1000000, 'chi tháng này');
+  eq(ctx.tongThuThangCard('2026-10'), 15000000, 'thu tháng này gồm lương chưa ghi');
+  // ghi lương rồi thì không tính lại
+  ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-10');
+  ctx.invalidateBalanceCache();
+  eq(ctx.tongThuThangCard('2026-10'), 15000000, 'đã ghi lương: 15tr là số thật, không cộng thêm lần nữa');
+  // tháng sau không bị ảnh hưởng bởi khoản định kỳ chưa ghi
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'thu'), 0);
+});
+
+test('soDuHienTaiDieuChinh: số dư thật + định kỳ & kỳ trả vay ĐÃ TỚI HẠN chưa ghi; bỏ khoản chưa tới ngày', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  var r = ctx.soDuHienTaiDieuChinh('2026-10-10');
+  eq(r.goc, 10000000, 'số dư theo Sổ tay');
+  eq(r.items.map(function(x){ return x.ten; }).join(','), 'Lương,Tiền nhà,Trả vay', 'tiền net (ngày 25) chưa tới nên không có; khoản tắt không có');
+  eq(r.tong, 10000000 + 15000000 - 3000000 - 1000000, 'cộng lương, trừ nhà và kỳ vay');
+  // trước ngày lương: chưa tính lương
+  var r2 = ctx.soDuHienTaiDieuChinh('2026-10-04');
+  eq(r2.items.length, 0, 'ngày 4: chưa có khoản nào tới hạn');
+  eq(r2.tong, 10000000);
+});
+
+test('soDuHienTaiDieuChinh: khoản đã ghi thì không cộng 2 lần; trả nợ nhập tay không gắn khoản được trừ bớt', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-10');            // đã ghi lương 15tr
+  ctx.entryAddItem('2026-10-09', 'chi', 'traNo', 400000, 'trả vay tay', undefined);   // trả tay 400k, không gắn khoản
+  ctx.invalidateBalanceCache();
+  var r = ctx.soDuHienTaiDieuChinh('2026-10-10');
+  eq(r.goc, 10000000 + 15000000 - 400000, 'số dư thật đã có lương và 400k trả tay');
+  eq(r.items.map(function(x){ return x.ten; }).join(','), 'Tiền nhà,Trả vay', 'lương đã ghi nên không còn trong danh sách');
+  var vay = r.items.filter(function(x){ return x.ten === 'Trả vay'; })[0];
+  eq(vay.soTien, 600000, 'kỳ 1tr trừ 400k trả tay');
+  eq(r.tong, r.goc - 3000000 - 600000);
+});
+
+test('Tab Mô phỏng: ô đầu là "Số dư hiện tại" (kèm khoản đã cộng), không còn "Số dư cuối kỳ"', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  ctx.state.mp = { data: JSON.parse(JSON.stringify(ctx.state.data)), napLuc: new Date(), horizon: 12, formOpen:false, editIdx:-1, dieuChinh:[] };
+  var root = { innerHTML:'' };
+  var rm0 = ctx.renderMoPhong; ctx.renderMoPhong = renderThat.renderMoPhong;
+  try{ voiDom({ tabContent: root }, null, function(){ ctx.renderMoPhong(); }); } finally { ctx.renderMoPhong = rm0; }
+  var h = root.innerHTML;
+  ok(h.indexOf('Số dư hiện tại') >= 0, 'có ô Số dư hiện tại');
+  ok(h.indexOf(ctx.fmt(21000000)) >= 0, 'giá trị đã điều chỉnh 21tr: ' + h.slice(h.indexOf('Số dư hiện tại'), h.indexOf('Số dư hiện tại') + 400));
+  ok(h.indexOf('Đã tính thêm 3 khoản đến hạn chưa ghi') >= 0 && h.indexOf('Lương +') >= 0, 'nói rõ đã cộng khoản nào');
+  ok(h.indexOf('Số dư cuối kỳ') < 0, 'không còn ô cuối kỳ');
+  ok(h.indexOf('Cuối tháng này — kịch bản') >= 0 && h.indexOf('Chênh lệch sau 12 tháng') >= 0, 'các ô còn lại');
+  ctx.state.mp = { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] };
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
