@@ -340,6 +340,9 @@ function vayNoFormHtml(){
     + '<div><label>Kỳ hạn (số tháng)</label><input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="Bỏ trống nếu trả 1 lần" min="0"></div>'
     + '<div><label>Ngày đáo hạn (nếu trả 1 lần)</label><input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'"></div>'
     + '<div><label>Lãi suất %/năm</label><input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="Chỉ cần nếu có lãi suất" min="0"></div>'
+    // số thực trả khi tất toán thường THẤP hơn tổng còn phải trả theo lịch (lãi các kỳ sau
+    // không phải trả) -> nhập 1 lần ở đây, hộp thoại Tất toán + tab Mô phỏng lấy làm mặc định
+    + '<div><label>Số tiền tất toán dự kiến</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_tatToan" value="'+veSo(d.soTienTatToan)+'" placeholder="Bỏ trống = tự tính theo gốc còn lại"></div>'
     // "Số kỳ đã trả" CHỈ có khi thêm mới (khoản vay cũ đã trả được mấy kỳ trước khi nhập vào app).
     // Khi SỬA thì không được có ô này: sửa số kỳ ở đây sẽ ghi đè lịch sử trả nợ thực tế
     // mà không sinh/xóa giao dịch tương ứng -> số dư lệch. Sửa lịch sử bằng "Hủy ghi nhận" ở lịch trả.
@@ -684,7 +687,8 @@ function handleVayNoAction(act, el){
       ngayTraHangThang: ngayTraHangThangVN,
       soThangVay: numNonNeg(document.getElementById('vn_vn_soThang').value),
       ngayDaoHan: document.getElementById('vn_vn_daoHan').value || '',
-      laiSuatNam: numNonNeg(document.getElementById('vn_vn_laiSuat').value)
+      laiSuatNam: numNonNeg(document.getElementById('vn_vn_laiSuat').value),
+      soTienTatToan: numNonNeg(docSo(document.getElementById('vn_vn_tatToan').value))
     };
     if (hinh === 'tra_1_lan' && !objVN.ngayDaoHan && !objVN.soThangVay){
       toast('Nhập ngày đáo hạn hoặc kỳ hạn (số tháng) cho khoản vay trả 1 lần.', { loai:'warn' }); return true;
@@ -899,12 +903,14 @@ function handleVayNoAction(act, el){
     if (!vnTT) return true;
     var duNoTT = soTienConLaiPhaiTra(vnTT);
     var gocTT = gocConLai(vnTT);
+    var duKienTT = num(vnTT.soTienTatToan);   // số đã nhập ở form khoản vay (0 = chưa nhập)
     (async function(){
       var amtTT = await hoiSo('Tất toán khoản "'+vnTT.ten+'"',
         'Tổng còn phải trả theo lịch (gồm lãi các kỳ sau): '+fmt(Math.round(duNoTT))
         + '\nGốc còn lại: '+fmt(Math.round(gocTT))
+        + (duKienTT > 0 ? '\nSố tiền tất toán dự kiến: '+fmt(Math.round(duKienTT)) : '')
         + '\n\nTất toán sớm thường chỉ trả gốc còn lại + lãi/phí tới ngày tất toán, nên THẤP hơn tổng theo lịch. Nhập đúng số ngân hàng / bên cho vay báo.',
-        'Số tiền tất toán', Math.round(gocTT) || '');
+        'Số tiền tất toán', Math.round(duKienTT > 0 ? duKienTT : gocTT) || '');
       if (amtTT == null) return;
       // ghi nhận tất toán vào DATA (không chỉ là đổi trạng thái): số tiền + ngày,
       // kèm giao dịch chi ở Sổ tay có ref để xóa khoản vay thì hoàn lại được
