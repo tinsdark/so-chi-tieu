@@ -475,7 +475,7 @@ input[type=radio],input[type=checkbox]{accent-color:var(--primary)}
 .stat .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.35}
 
 /* ====================================================================
-   LỚP 4 — font Be Vietnam Pro, icon nét mảnh (thay emoji), bỏ dạng "viên thuốc" (pill).
+   LỚP 4 — font Be Vietnam Pro, icon nét mảnh (thay emoji), nút + nổi vuông bo góc.
    Font nằm trong /fonts (giấy phép OFL), mất mạng vẫn dùng được; thiếu font thì rơi về font hệ thống.
    ==================================================================== */
 @font-face{font-family:'Be Vietnam Pro';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/be-vietnam-pro-latin-400.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
@@ -498,8 +498,5 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .toast-x .ic{width:14px;height:14px;vertical-align:middle}
 .ios-hint-x .ic{width:16px;height:16px;vertical-align:middle}
 
-/* viên thuốc -> chữ nhật bo nhẹ */
-.qa-seg,.qa-chip,.qa-more,.dt-chip,.hero-chip,.vi-chip,.st-count,.cat-tag,.hm-badge,.st-kind,.toast-undo{border-radius:6px}
-.qa-seg button{border-radius:0}
-.hm-bar,.hm-fill,.hero-bar,.hero-bar>i{border-radius:3px}
-.fab{border-radius:14px;box-shadow:0 3px 10px rgba(80,30,10,.28)}   /* nút + nổi: vuông bo góc */
+/* nút + nổi: vuông bo góc (các nút chọn / nhãn giữ dạng viên thuốc như thiết kế gốc) */
+.fab{border-radius:14px;box-shadow:0 3px 10px rgba(80,30,10,.28)}
