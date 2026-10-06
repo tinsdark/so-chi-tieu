@@ -122,13 +122,15 @@ function renderDongTien(){
   function cellVal(kind, cid, mk){
     if (mk > currentMk) return suggestVal(kind, cid, mk);
     var av = actualVal(kind, cid, mk);
-    if (mk === currentMk && !av){
-      if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || 0;
-      if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || 0;
-      var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
-      if (cat0 && cat0.coDinhChiTieu){
-        var bF = baseVal(kind, cid);
-        if (bF > 0) return bF;
+    if (mk === currentMk){
+      // thực tế + phần lịch vay còn phải trả/thu mà Sổ tay chưa ghi (xem bietTruocChuaGhi ở vayno.js)
+      if ((kind==='chi' && cid==='traNo') || (kind==='thu' && cid==='thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
+      if (!av){
+        var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
+        if (cat0 && cat0.coDinhChiTieu){
+          var bF = baseVal(kind, cid);
+          if (bF > 0) return bF;
+        }
       }
     }
     return av;
@@ -185,9 +187,21 @@ function renderDongTien(){
   months.forEach(function(mk){ html += '<td>'+fmt(groupCell('thu',mk) - groupCell('chi',mk))+'</td>'; });
   html += '</tr>';
 
+  // Lũy kế: tháng đã qua = số dư thực; từ tháng hiện tại trở đi CỘNG DỒN dự báo (cùng cách tính với thẻ
+  // "Dòng tiền tích lũy tương lai" ở tab Vay - Nợ). Trước đây tháng tương lai chỉ lấy số dư thực nên đứng yên.
+  var luyKe = {};
+  var lastMk = months[months.length-1];
+  if (lastMk >= currentMk){
+    var run = balanceBeforeMonth(currentMk), mc = currentMk, guard2 = 0;
+    while (mc <= lastMk && guard2++ < 600){
+      run += tongThuThangCard(mc) - tongChiThangCard(mc);
+      luyKe[mc] = run;
+      mc = monthKeyAdd(mc, 1);
+    }
+  }
   html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
   months.forEach(function(mk){
-    html += (mk < startMk) ? '<td>—</td>' : '<td>'+fmt(balanceAtEndOfMonth(mk))+'</td>';
+    html += (mk < startMk) ? '<td>—</td>' : '<td>'+fmt(luyKe[mk] != null ? luyKe[mk] : balanceAtEndOfMonth(mk))+'</td>';
   });
   html += '</tr>';
 
@@ -196,7 +210,7 @@ function renderDongTien(){
   html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
     + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
     + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng Chỉ tiêu/tháng ở tab Danh mục')
-    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay.</div>';
+    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. "Lũy kế số dư" từ tháng hiện tại trở đi đã cộng cả số dự báo.</div>';
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'

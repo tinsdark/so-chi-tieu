@@ -208,15 +208,21 @@ function tongLechTraNo(loan){
   return s;
 }
 // dự trù trả nợ tháng mk: kỳ đã đóng thì bỏ qua, kỳ trả dở chỉ dự trù PHẦN CÒN
-// THIẾU (phần đã trả nằm trong Sổ tay rồi, dự trù cả kỳ nữa là tính 2 lần)
+// THIẾU (phần đã trả nằm trong Sổ tay rồi, dự trù cả kỳ nữa là tính 2 lần).
+// Kỳ QUÁ HẠN mà chưa đóng dồn vào tháng hiện tại (giống tongThuHoiThang): để ở tháng cũ
+// là khoản phải trả đó biến mất khỏi mọi dự báo.
+// loan.mpTatToanMk: chỉ tab Mô phỏng đặt — từ tháng này trở đi khoản vay đã tất toán, không còn kỳ nào.
 function tongTraNoThang(mk){
+  var curMk = monthKey(todayStr());
   var s = 0;
   (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(loan){
     if (!loanIsActive(loan)) return;
     var sch = tinhLichTraNo(loan);
     sch.forEach(function(row, idx){
-      if (row.mk !== mk) return;
+      if (loan.mpTatToanMk && row.mk >= loan.mpTatToanMk) return;
       if (kyDaDong(loan, idx)) return;
+      var eff = (row.mk < curMk) ? curMk : row.mk;
+      if (eff !== mk) return;
       s += conThieuKy(loan, idx, sch);
     });
   });
@@ -275,6 +281,19 @@ function duTruThuThang(mk){
 function duTruChiThang(mk){
   var s=0; state.data.categories.chi.forEach(function(c){ s += duTruDanhMucThang('chi', c.id, mk); }); return s;
 }
+// phần Trả nợ / Thu hồi cho vay BIẾT TRƯỚC của tháng mk mà Sổ tay chưa phản ánh.
+// tongTraNoThang/tongThuHoiThang đã tự bỏ phần đã ghi nhận qua khoản vay (kỳ đóng, đã thu),
+// nên chỉ cần trừ thêm phần NHẬP TAY không gắn khoản nào (tiền đó đã đi mà lịch vay vẫn còn nợ).
+// Tính theo từng khoản vay chứ không theo cả danh mục: trả 1 khoản không làm khoản kia mất khỏi dự báo.
+function bietTruocChuaGhi(kind, cid, mk){
+  var known = (kind === 'chi') ? tongTraNoThang(mk) : tongThuHoiThang(mk);
+  if (known <= 0) return 0;
+  var tay = actualCatInMonth(kind, cid, mk);
+  Object.keys(state.data.journal).forEach(function(d){
+    if (monthKey(d) === mk) tay -= entryRefSum(state.data.journal[d], kind, cid);
+  });
+  return Math.max(0, known - Math.max(0, tay));
+}
 // tháng hiện tại: các khoản BIẾT TRƯỚC (Trả nợ/Thu hồi cho vay theo lịch vay, hoặc danh mục có cờ
 // "Cố định theo Chỉ tiêu") mà chưa ghi Sổ tay thì cộng thêm số biết trước đó; các danh mục còn lại
 // (ước lượng, không cố định) vẫn giữ nguyên thực tế (có thể 0)
@@ -283,7 +302,7 @@ function tongThuThangCard(mk){
   if (mk > currentMk) return duTruThuThang(mk);
   var s = actualCatMonthAll('thu', mk);
   if (mk === currentMk){
-    if (!actualCatInMonth('thu','thuHoiChoVay',mk)) s += (tongThuHoiThang(mk) || 0);
+    s += bietTruocChuaGhi('thu', 'thuHoiChoVay', mk);
     state.data.categories.thu.forEach(function(c){
       if (c.id === 'thuHoiChoVay') return;
       if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk)){
@@ -299,7 +318,7 @@ function tongChiThangCard(mk){
   if (mk > currentMk) return duTruChiThang(mk);
   var s = actualCatMonthAll('chi', mk);
   if (mk === currentMk){
-    if (!actualCatInMonth('chi','traNo',mk)) s += (tongTraNoThang(mk) || 0);
+    s += bietTruocChuaGhi('chi', 'traNo', mk);
     state.data.categories.chi.forEach(function(c){
       if (c.id === 'traNo') return;
       if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk)){
@@ -772,7 +791,9 @@ function handleVayNoAction(act, el){
       daTraKyInput = Math.min(daTraKyInput, schVN.length);
       objVN.traNo = [];
       for (var iDK=0; iDK<daTraKyInput; iDK++){
-        objVN.traNo.push({ ky: iDK, mk: schVN[iDK].mk, soTien: schVN[iDK].tongTra, ngay: objVN.ngayVay, truocKhiDungApp: true });
+        // dongKy + rid đặt ngay (normalizeData chỉ bù khi tải lại): thiếu thì tới lúc tải lại
+        // các kỳ này hiện là "trả dở" và tiến độ báo 0 kỳ
+        objVN.traNo.push({ rid: 'r' + iDK + '_' + iDK + '_' + objVN.ngayVay, ky: iDK, mk: schVN[iDK].mk, soTien: schVN[iDK].tongTra, ngay: objVN.ngayVay, dongKy: true, truocKhiDungApp: true });
       }
       if (daTraKyInput >= schVN.length && schVN.length) objVN.trangThai = 'da_tra_het';
       state.data.vayNo.vayNoPhaiTra.push(objVN);
