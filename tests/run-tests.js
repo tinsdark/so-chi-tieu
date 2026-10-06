@@ -1720,6 +1720,60 @@ test('Xóa dòng của form đầy đủ nhiều danh mục: mẩu ghi chú dùn
   ctx.state.fullFormOpen = false;
 });
 
+test('Sửa dòng: đổi số tiền / nội dung thì chữ ở Nội dung đổi theo, đúng chỗ, không đụng khoản khác', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var ghi = function(tien, note){
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  };
+  ghi('45.000', 'Ăn sáng'); ghi('30.000', 'Cà phê'); ghi('20.000', 'Nước');
+  var e = ctx.state.data.journal['2026-10-10'];
+  var iid = e.items.filter(function(it){ return it.ghiChu === 'Ăn sáng'; })[0].iid;
+  ok(ctx.entryUpdateItem('2026-10-10', iid, 50000, 'Ăn sáng ngon', 'chi', 'an', ''), 'sửa được');
+  eq(e.ghiChu, 'Ăn sáng ngon ' + ctx.fmt(50000) + '; Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'thay tại chỗ, giữ thứ tự, khoản khác nguyên');
+  eq(ctx.num(e.chi.an), 100000, 'tiền: 50k + 30k + 20k');
+  // chỉ đổi số tiền
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Ăn sáng ngon', 'chi', 'an', '');
+  ok(e.ghiChu.indexOf('Ăn sáng ngon ' + ctx.fmt(60000)) === 0 && e.ghiChu.indexOf(ctx.fmt(50000)) < 0, 'số cũ không còn: ' + e.ghiChu);
+  // xóa nội dung -> bỏ mẩu chữ
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, '', 'chi', 'an', '');
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'không còn nội dung -> mẩu chữ bị bỏ');
+  // thêm nội dung cho dòng chưa có
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Bữa tối', 'chi', 'an', '');
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000) + '; Bữa tối ' + ctx.fmt(60000), 'thêm vào cuối');
+  // chỉ đổi danh mục: chữ không đổi
+  var truoc = e.ghiChu;
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Bữa tối', 'chi', 'xang', '');
+  eq(e.ghiChu, truoc, 'đổi danh mục không làm đổi chữ');
+  // xóa sau khi sửa vẫn gỡ đúng mẩu mới
+  ctx.entryDeleteItem('2026-10-10', iid);
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'xóa dòng đã sửa -> gỡ đúng mẩu mới');
+});
+
+test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị đụng; mẩu dùng chung thì dòng đã sửa có mẩu riêng', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.journal['2026-10-05'] = { thu:{}, chi:{ an:50000 }, ghiChu:'tự gõ lại hết', refs:[],
+    items:[ { iid:'a', kind:'chi', catId:'an', soTien:50000, ghiChu:'Ăn trưa' } ] };
+  loadData(d);
+  ctx.entryUpdateItem('2026-10-05', 'a', 70000, 'Ăn trưa', 'chi', 'an', '');
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'tự gõ lại hết', 'không tìm thấy mẩu cũ -> không đụng chữ người dùng');
+  // mẩu dùng chung (form đầy đủ 2 danh mục)
+  loadData(dataGhiNhanh());
+  ctx.state.fullFormOpen = true;
+  voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  ctx.state.fullFormOpen = false;
+  var e = ctx.state.data.journal['2026-10-10'];
+  var a = e.items.filter(function(it){ return it.catId === 'an'; })[0];
+  ctx.entryUpdateItem('2026-10-10', a.iid, 120000, 'Đi chợ', 'chi', 'an', '');
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(150000) + '; Đi chợ ' + ctx.fmt(120000), 'mẩu chung giữ cho dòng xăng, dòng đã sửa có mẩu riêng');
+  var xang = e.items.filter(function(it){ return it.catId === 'xang'; })[0];
+  ctx.entryDeleteItem('2026-10-10', xang.iid);
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(120000), 'xóa dòng xăng -> chỉ gỡ mẩu chung, còn mẩu của dòng đã sửa');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

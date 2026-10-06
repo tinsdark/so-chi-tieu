@@ -263,6 +263,31 @@ function entryAddItem(date, kind, catId, soTien, ghiChu, walletId){
 
 // sửa 1 dòng: đổi được cả số tiền, nội dung, loại thu/chi và danh mục.
 // Trừ hết ở chỗ cũ rồi cộng vào chỗ mới -> không bao giờ cộng dồn sai.
+// sửa 1 dòng chi tiết (đổi số tiền / nội dung) thì mẩu ghi chú của nó trong cột Nội dung của ngày cũng đổi theo.
+// segCu = mẩu cũ (tính TRƯỚC khi sửa dòng), segMoi = mẩu mới ('' nếu dòng không còn nội dung).
+//  - mẩu của riêng dòng này: thay tại chỗ (giữ nguyên thứ tự), hoặc bỏ nếu không còn nội dung
+//  - mẩu dùng chung với dòng khác (1 lần lưu form đầy đủ nhiều danh mục): để nguyên cho các dòng kia, dòng này có mẩu riêng
+//  - không tìm thấy mẩu cũ (người dùng đã tự sửa chữ ở ngày): KHÔNG đụng vào chữ đó
+//  - dòng trước đó chưa có nội dung mà giờ có: thêm mẩu mới vào cuối
+function entryDoiGhiChuCuaItem(e, it, segCu, segMoi){
+  if (segMoi === segCu) return;
+  var mau = e.ghiChu ? e.ghiChu.split('; ') : [];
+  var viTri = segCu ? mau.indexOf(segCu) : -1;
+  if (segCu && viTri >= 0){
+    var soMau = mau.filter(function(s){ return s === segCu; }).length;
+    var conDung = entryItems(e).filter(function(x){ return x !== it && itemGhiChuNgay(x) === segCu; }).length;
+    if (soMau > conDung){
+      if (segMoi) mau[viTri] = segMoi; else mau.splice(viTri, 1);
+      e.ghiChu = mau.join('; ');
+    } else if (segMoi){
+      e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + segMoi : segMoi;
+    }
+  } else if (!segCu && segMoi){
+    e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + segMoi : segMoi;
+  }
+  if (segMoi) it.gc = segMoi; else delete it.gc;
+}
+
 function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdMoi){
   var e = state.data.journal[date];
   if (!e) return false;
@@ -272,9 +297,11 @@ function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdM
   if (v <= 0) return false;
   var kindM = (kindMoi === 'thu' || kindMoi === 'chi') ? kindMoi : it.kind;
   var catM  = catIdMoi || it.catId;
+  var segCu = itemGhiChuNgay(it);
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   it.kind = kindM; it.catId = catM; it.soTien = v;
   if (ghiChu != null) it.ghiChu = ghiChu;
+  entryDoiGhiChuCuaItem(e, it, segCu, it.ghiChu ? it.ghiChu + ' ' + fmt(Math.round(v)) : '');
   if (walletIdMoi && walletById(walletIdMoi)) it.walletId = walletIdMoi;
   _bucketAdd(e, kindM, catM, v);
   invalidateBalanceCache();
