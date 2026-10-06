@@ -62,8 +62,8 @@ button{cursor:pointer;font-family:inherit}
 .month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
 .month-nav select{font-weight:700;font-size:15px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:var(--input-bg);color:var(--text);text-align:center;text-align-last:center}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
-input[type=number],input[type=date],input[type=text],select{padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--input-bg);color:var(--text)}
-input[type=number],input[type=date],input[type=text]{width:100%}
+input[type=number],input[type=date],input[type=month],input[type=text],select{padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--input-bg);color:var(--text)}
+input[type=number],input[type=date],input[type=month],input[type=text]{width:100%}
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
 .cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:10px}
@@ -298,3 +298,9 @@ tr.mp-am td{background:var(--chi-bg)}
 .form-sec.chi{border-left-color:var(--red);background:var(--chi-bg)}
 .form-sec-head{font-weight:700;font-size:13px;letter-spacing:.2px;margin-bottom:8px;color:var(--green)}
 .form-sec.chi .form-sec-head{color:var(--red)}
+
+/* ---- Ô chọn (select) trong lưới form phải co theo ô, không theo tên dài nhất ----
+   input đã có width:100% còn select thì không: select tự giãn theo option dài nhất,
+   tràn khỏi ô lưới và đè lên ô bên cạnh. min-width:0 để ô lưới được phép co. */
+.form-row > div, .search-row .fld{min-width:0}
+.form-row select, .search-row .fld select{width:100%;min-width:0;text-overflow:ellipsis}
