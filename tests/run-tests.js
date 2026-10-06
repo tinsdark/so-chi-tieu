@@ -1583,6 +1583,69 @@ test('Đăng xuất không còn ở thanh đầu trang mà ở tab Danh mục', 
 });
 
 /* ==================================================================== */
+group('V2. Sau khi thử trên iPhone: xác nhận trong thẻ, chạm khoản nhảy tới khoản, Dòng tiền không cuộn lồng');
+
+test('Ghi nhanh: có dòng xác nhận + Hoàn tác ngay trong thẻ; hoàn tác 1 lần duy nhất, số dư về như cũ', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var truoc = ctx.balanceAt('9999-12-31');
+  voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'Ăn sáng' }, qa_date:{ value:'2026-10-10' } }, null, function(){
+    ctx.handleSoTayAction('qaSave', {});
+  });
+  ok(ctx.state.qa.last && ctx.state.qa.last.text.indexOf('Đã ghi chi') === 0, 'có bản ghi cuối');
+  var h = ctx.ghiNhanhHtml();
+  ok(h.indexOf('id="qaLast"') >= 0 && h.indexOf('data-act="qaHoanTac"') >= 0, 'thẻ hiện dòng xác nhận + nút Hoàn tác');
+  eq(ctx.balanceAt('9999-12-31'), truoc - 45000, 'đã ghi');
+  var ban = ctx.state.qa.last.ban;
+  ctx.handleSoTayAction('qaHoanTac', {});
+  ctx.invalidateBalanceCache();
+  eq(ctx.balanceAt('9999-12-31'), truoc, 'hoàn tác: số dư về cũ');
+  eq(ctx.state.data.journal['2026-10-10'], undefined, 'ngày rỗng bị xóa');
+  eq(ctx.state.qa.last, null, 'dòng xác nhận biến mất');
+  ctx.qaHoanTacLanGhi(ban);   // bấm thêm lần nữa (nút ở toast) không được làm gì
+  eq(ctx.balanceAt('9999-12-31'), truoc, 'hoàn tác lần 2 không đổi gì');
+  ok(ctx.ghiNhanhHtml().indexOf('qaLast') < 0, 'thẻ hết dòng xác nhận');
+});
+
+test('Vay-Nợ: thẻ Sắp đến hạn — chạm vào khoản nhảy tới đúng khoản (cho vay / vay nợ) bên dưới', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', ten:'Xe', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:12 })];
+  d.vayNo.choVay = [{ id:'c1', ten:'Hùng', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-10-12' }];
+  loadData(d);
+  var ds = ctx.danhSachSapDenHan(7);
+  eq(ds.map(function(x){ return x.loai + ':' + x.id; }).sort().join(','), 'choVay:c1,vayNo:v1', 'mỗi khoản có id');
+  var root = { innerHTML:'' };
+  var rv0 = ctx.renderVayNo; ctx.renderVayNo = renderThat.renderVayNo;
+  try{ voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); }); } finally { ctx.renderVayNo = rv0; }
+  var h = root.innerHTML;
+  ok(h.indexOf('data-act="vnCuonTo" data-loai="choVay" data-id="c1"') >= 0, 'dòng cho vay chạm được');
+  ok(h.indexOf('data-act="vnCuonTo" data-loai="vayNo" data-id="v1"') >= 0, 'dòng vay nợ chạm được');
+  ok(h.indexOf('id="vn-cv-c1"') >= 0 && h.indexOf('id="vn-vn-v1"') >= 0, 'dòng đích có id');
+  // bấm: phải cuộn tới đúng phần tử đích và bật hiệu ứng
+  var got = {};
+  var mkEl = function(name){ var cls = {}; return { scrollIntoView:function(o){ got[name] = o; }, offsetWidth:0, classList:{ add:function(c){ cls[c]=1; got[name+'+']=c; }, remove:function(c){ delete cls[c]; } } }; };
+  var phanTu = { 'vn-cv-c1': mkEl('cv'), 'vn-vn-v1': mkEl('vn') };
+  voiDom(phanTu, null, function(){
+    ctx.handleVayNoAction('vnCuonTo', elAct({ 'data-loai':'choVay', 'data-id':'c1' }));
+    ctx.handleVayNoAction('vnCuonTo', elAct({ 'data-loai':'vayNo', 'data-id':'v1' }));
+  });
+  ok(got.cv && got.cv.block === 'center', 'cuộn tới khoản cho vay');
+  ok(got.vn && got.vn.block === 'center', 'cuộn tới khoản vay');
+  eq(got['cv+'], 'vn-flash', 'có hiệu ứng nhấp nháy');
+  setToday('2026-10-01');
+});
+
+test('Dòng tiền: bảng chính không còn khung cuộn dọc riêng (chỉ cuộn ngang khi nhiều cột)', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  var rule = /\.table-wrap-year\{[^}]*\}/.exec(css);
+  ok(rule, 'còn class table-wrap-year');
+  ok(rule[0].indexOf('max-height') < 0, 'không giới hạn chiều cao: ' + rule[0]);
+  ok(!/overflow:auto/.test(rule[0]) && /overflow-x:auto/.test(rule[0]), 'chỉ overflow-x');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

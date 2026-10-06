@@ -85,9 +85,7 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 tr.total-row td{font-weight:700;background:var(--row-total)}
 tr.balance-row td{font-weight:700;background:var(--row-bal);color:var(--primary-d)}
 .table-wrap{overflow-x:auto}
-.table-wrap-year{overflow:auto;max-height:65vh}
-.table-wrap-year thead th{position:sticky;top:0;background:var(--card);z-index:3}
-.table-wrap-year thead th.sticky-col{z-index:4}
+.table-wrap-year{overflow-x:auto}   /* chỉ cuộn NGANG khi nhiều cột; không có khung cuộn dọc riêng (cuộn lồng nhau khó thao tác trên điện thoại) */
 .actions-col{width:70px}
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .charts-grid .full{grid-column:1/-1}
@@ -235,7 +233,8 @@ tr.mp-am td{background:var(--chi-bg)}
   .tab-badge{position:absolute;transform:translate(14px,-4px)}
   #app{padding-bottom:78px}
   .fab{bottom:calc(72px + env(safe-area-inset-bottom))}
-  .toast-wrap{bottom:calc(76px + env(safe-area-inset-bottom))}
+  /* thông báo lên ĐỈNH màn hình: ở đáy nó nằm sau bàn phím iOS đang mở nên người dùng không thấy (và không bấm được Hoàn tác) */
+  .toast-wrap{bottom:auto;top:calc(10px + env(safe-area-inset-top))}
 
   /* bảng Sổ tay -> thẻ. CHỈ bảng này (class t-card): bảng Dòng tiền 13 cột
      thì scroll ngang + sticky cột đầu mới đọc được, đổi sang thẻ là vô dụng. */
@@ -446,3 +445,14 @@ td.m-act{white-space:nowrap}
 .dt-chips::-webkit-scrollbar{display:none}
 .dt-chip{flex:0 0 auto;min-width:50px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600}
 .dt-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* ---- Ghi nhanh: dòng xác nhận + Hoàn tác trong thẻ ---- */
+.qa-last{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--thu-bg);color:var(--text);
+  border:1px solid var(--border);border-left:4px solid var(--green);border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:13px}
+.qa-undo{flex:0 0 auto;background:none;border:none;color:var(--primary-d);font-weight:700;font-size:14px;padding:6px 4px;text-decoration:underline}
+
+/* ---- Vay-Nợ: chạm vào khoản ở thẻ "Sắp đến hạn" để nhảy tới khoản đó bên dưới ---- */
+.vn-sap{cursor:pointer}
+.vn-sap>td:first-child::after{content:" ↓";color:var(--muted);font-weight:400}
+.vn-flash{animation:vn-flash 1.8s ease-out}
+@keyframes vn-flash{0%,45%{background:var(--row-bal);box-shadow:0 0 0 2px var(--primary)}100%{background:var(--card);box-shadow:0 0 0 0 transparent}}
