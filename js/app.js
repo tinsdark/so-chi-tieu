@@ -24,15 +24,15 @@ function renderSyncStatus(){
   if (banner){
     // bản mới luôn hiện đầu tiên, độc lập với các cảnh báo khác
     var bMoi = state.coBanMoi
-      ? '<div class="banner banner-moi">🔄 Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
+      ? '<div class="banner banner-moi">'+icon('refresh')+' Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
     if (state.offline){
       var tu = state.offlineTu ? new Date(state.offlineTu) : null;
-      banner.innerHTML = bMoi + '<div class="banner">⚠ Đang ngoại tuyến'
+      banner.innerHTML = bMoi + '<div class="banner">'+icon('alert')+' Đang ngoại tuyến'
         + (tu ? ' — dữ liệu trên máy lúc ' + pad2(tu.getHours()) + ':' + pad2(tu.getMinutes()) + ' ' + tu.toLocaleDateString('vi-VN') : '')
         + '. Thay đổi chỉ lưu trên máy, chưa lên Drive. '
         + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đăng nhập để đồng bộ</button></div>';
     } else {
-      banner.innerHTML = bMoi + (state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '');
+      banner.innerHTML = bMoi + (state.errorMsg ? '<div class="banner">' + icon('alert') + ' ' + state.errorMsg + '</div>' : '');
     }
   }
 }

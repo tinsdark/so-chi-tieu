@@ -248,7 +248,7 @@ async function checkLocalDraft(){
   var t = new Date(draft.savedAt);
   // nháp dựa trên 1 bản Drive cũ hơn bản đang có: khôi phục nháp sẽ đè mất thay đổi của máy khác
   var driveDaDoi = !!(draft.baseModified && state.driveModified && draft.baseModified !== state.driveModified);
-  var msg = (driveDaDoi ? '⚠ File trên Drive đã được sửa SAU lúc nháp này được lưu (có thể từ máy khác). '
+  var msg = (driveDaDoi ? 'Lưu ý: File trên Drive đã được sửa SAU lúc nháp này được lưu (có thể từ máy khác). '
       + 'Khôi phục nháp sẽ đè lên thay đổi đó — bản Drive hiện tại vẫn được sao lưu lại trước khi đè.\n\n' : '')
     + 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
     + '  ' + describeData(draft.data) + '\n\n'

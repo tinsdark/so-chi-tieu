@@ -1523,7 +1523,7 @@ test('tongQuanHtml: không có việc gì thì báo gọn, không có chip', fun
   setToday('2026-10-10');
   loadData(baseData({ settings:{ soDuDauKy:1000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } }));
   var h = ctx.tongQuanHtml('2026-10', 0, 0, 1000000, 1000000, false);
-  ok(h.indexOf('hero-chip') < 0 && h.indexOf('Không có khoản nào cần xử lý') >= 0, 'không chip');
+  ok(h.indexOf('hero-chip') < 0 && h.indexOf('phải lo') >= 0, 'không chip');
   ok(h.indexOf('hero-bud') < 0, 'không có chỉ tiêu thì không hiện thanh');
   setToday('2026-10-01');
 });
@@ -1951,6 +1951,42 @@ test('Tab Mô phỏng: ô đầu là "Số dư hiện tại" (kèm khoản đã 
   ok(h.indexOf('Cuối tháng này — kịch bản') >= 0 && h.indexOf('Chênh lệch sau 12 tháng') >= 0, 'các ô còn lại');
   ctx.state.mp = { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] };
   setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('I. Icon thay emoji, font tự lưu');
+
+test('icon(): trả SVG nét mảnh dùng currentColor; tên lạ trả chuỗi rỗng', function(){
+  var s = ctx.icon('trash');
+  ok(s.indexOf('<svg') === 0 && s.indexOf('stroke="currentColor"') > 0 && s.indexOf('aria-hidden="true"') > 0, 'có svg: ' + s.slice(0, 80));
+  eq(ctx.icon('khong-co'), '', 'tên lạ');
+  ok(ctx.icon('check', 'to').indexOf('class="ic to"') > 0, 'nhận thêm class');
+});
+
+test('Mã nguồn giao diện không còn emoji / ký tự biểu tượng (dùng icon() thay)', function(){
+  var re = /[\u{1F300}-\u{1FAFF}☀-➿⬀-⯿⏩-⏿▲▼⟳◐]/u;
+  var files = ['index.html'].concat(fs.readdirSync(JS_DIR).filter(function(f){ return /\.js$/.test(f); }).map(function(f){ return 'js/' + f; }));
+  var vi = [];
+  files.forEach(function(f){
+    fs.readFileSync(path.join(__dirname, '..', f), 'utf8').split('\n').forEach(function(l, i){
+      var t = l.trim();
+      if (/^(\/\/|\/\*|\*)/.test(t)) return;                  // bỏ qua dòng chú thích
+      if (re.test(l)) vi.push(f + ':' + (i + 1) + ' ' + t.slice(0, 60));
+    });
+  });
+  eq(vi.length, 0, 'còn ký tự biểu tượng: ' + vi.slice(0, 3).join(' | '));
+});
+
+test('Font Be Vietnam Pro: đủ file woff2 cho latin + vietnamese 400/600/700 và có giấy phép', function(){
+  var dir = path.join(__dirname, '..', 'fonts');
+  ['latin', 'vietnamese'].forEach(function(sub){
+    [400, 600, 700].forEach(function(w){
+      ok(fs.existsSync(path.join(dir, 'be-vietnam-pro-' + sub + '-' + w + '.woff2')), 'thiếu ' + sub + '-' + w);
+    });
+  });
+  ok(fs.existsSync(path.join(dir, 'OFL.txt')), 'thiếu giấy phép OFL');
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  ok(css.indexOf("font-family:'Be Vietnam Pro'") >= 0 && css.indexOf('U+20AB') >= 0, '@font-face có phạm vi tiếng Việt (gồm ký hiệu ₫)');
 });
 
 /* ==================================================================== */

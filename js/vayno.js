@@ -438,9 +438,9 @@ function vayNoScheduleHtml(loan){
     var st = kyStatus(loan, idx, sch);
     var coTien = st.trangThai !== 'chua';
     var badge;
-    if (st.trangThai === 'du')         badge = '<span style="color:var(--green)">✓ đã trả đủ kỳ</span>';
-    else if (st.trangThai === 'thieu') badge = '<span style="color:var(--green)">✓ xong kỳ</span> <span style="color:var(--red)">(thiếu '+fmt(Math.round(-st.lech))+')</span>';
-    else if (st.trangThai === 'motphan')badge = '<span style="color:var(--red)">⚠ chưa trả đủ kỳ (còn '+fmt(Math.round(st.can - st.da))+')</span>';
+    if (st.trangThai === 'du')         badge = '<span style="color:var(--green)">'+icon('check')+' đã trả đủ kỳ</span>';
+    else if (st.trangThai === 'thieu') badge = '<span style="color:var(--green)">'+icon('check')+' xong kỳ</span> <span style="color:var(--red)">(thiếu '+fmt(Math.round(-st.lech))+')</span>';
+    else if (st.trangThai === 'motphan')badge = '<span style="color:var(--red)">'+icon('alert')+' chưa trả đủ kỳ (còn '+fmt(Math.round(st.can - st.da))+')</span>';
     else                               badge = '<span style="color:var(--muted)">chưa trả</span>';
     var btn = '';
     if (idx === tienDo.kyTiepIdx){
@@ -474,7 +474,7 @@ function vayNoScheduleHtml(loan){
       + '. Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay. Kỳ còn đang trả dở thì phần thiếu vẫn nằm trong dư nợ.</div>';
   }
   if (loan.tatToan){
-    html += '<div class="empty" style="padding:0 0 8px">Đã tất toán ngày '+(loan.tatToan.ngay||'')+' với số tiền '+fmt(loan.tatToan.soTien)+'.</div>';
+    html += '<div class="empty" style="padding:0 0 8px">Đã tất toán ngày '+(loan.tatToan.ngay ? ngayVN(loan.tatToan.ngay) : '')+' với số tiền '+fmt(loan.tatToan.soTien)+'.</div>';
   }
   return html;
 }
@@ -483,7 +483,7 @@ function vayNoScheduleHtml(loan){
 function sapDenHanHtml(nNgay){
   var list = danhSachSapDenHan(nNgay);
   if (!list.length) return '';
-  var html = '<div class="card"><h3>⏰ Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>'
+  var html = '<div class="card"><h3>'+icon('clock')+' Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>'
     + '<div class="empty" style="padding:0 0 8px">Chạm vào một khoản để xem khoản đó ở bên dưới.</div>';
   html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Khoản</th><th>Loại</th><th>Ngày</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>';
   list.forEach(function(x){
@@ -509,9 +509,9 @@ function renderVayNo(){
 
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   if (state.vnFormKind === 'choVay') html += choVayFormHtml();
-  html += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.', 'Ghi tiền thu về thế nào?');
+  html += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút dấu tích ở đây chỉ dùng để TẤT TOÁN phần không đòi được.', 'Ghi tiền thu về thế nào?');
   if (!choVay.length){
-    html += '<div class="empty-box"><span class="ico">🤝</span>Chưa có khoản cho vay nào.'
+    html += '<div class="empty-box">Chưa có khoản cho vay nào.'
       + (state.vnFormKind === 'choVay' ? '' : '<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div>')
       + '</div>';
   } else {
@@ -531,14 +531,14 @@ function renderVayNo(){
         + '<td data-th="Số tiền">'+fmt(c.soTien)+'</td>'
         + '<td data-th="Đã thu">'+fmt(c.daThu)+'</td>'
         + '<td data-th="Còn lại">'+fmt(conLai)+'</td>'
-        + '<td data-th="Dự kiến thu">'+(c.ngayDuKienThu||'')+'</td>'
+        + '<td data-th="Dự kiến thu">'+(c.ngayDuKienThu ? ngayVN(c.ngayDuKienThu) : '')+'</td>'
         + '<td data-th="Trạng thái">'+tt+'</td>'
         + '<td class="actions-col">'
         + (c.tatToan
-            ? '<button class="icon-btn" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy tất toán, mở lại khoản">↺</button>'
-            : (conLai>0 ? '<button class="icon-btn" data-act="vnTatToanChoVay" data-id="'+c.id+'" title="Tất toán: bỏ phần không đòi được. KHÔNG ghi giao dịch nào ở Sổ tay">✓</button>' : ''))
-        + '<button class="icon-btn" data-act="vnEditChoVay" data-id="'+c.id+'" title="Sửa khoản cho vay" aria-label="Sửa khoản cho vay '+esc(c.ten)+'">✎</button>'
-        + '<button class="icon-btn" data-act="vnDelChoVay" data-id="'+c.id+'" title="Xóa khoản cho vay" aria-label="Xóa khoản cho vay '+esc(c.ten)+'">🗑</button>'
+            ? '<button class="icon-btn" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy tất toán, mở lại khoản" aria-label="Hủy tất toán, mở lại khoản">'+icon('undo')+'</button>'
+            : (conLai>0 ? '<button class="icon-btn" data-act="vnTatToanChoVay" data-id="'+c.id+'" title="Tất toán: bỏ phần không đòi được. KHÔNG ghi giao dịch nào ở Sổ tay" aria-label="Tất toán khoản cho vay">'+icon('check')+'</button>' : ''))
+        + '<button class="icon-btn" data-act="vnEditChoVay" data-id="'+c.id+'" title="Sửa khoản cho vay" aria-label="Sửa khoản cho vay '+esc(c.ten)+'">'+icon('pencil')+'</button>'
+        + '<button class="icon-btn" data-act="vnDelChoVay" data-id="'+c.id+'" title="Xóa khoản cho vay" aria-label="Xóa khoản cho vay '+esc(c.ten)+'">'+icon('trash')+'</button>'
         + '</td></tr>';
     });
     html += '</tbody></table></div>';
@@ -548,7 +548,7 @@ function renderVayNo(){
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Vay - Nợ phải trả <button class="btn sm" data-act="vnAddVayNo">+ Thêm khoản vay</button></h3>';
   if (state.vnFormKind === 'vayNoPhaiTra') html += vayNoFormHtml();
   if (!vayNoPhaiTra.length){
-    html += '<div class="empty-box"><span class="ico">🏦</span>Chưa có khoản vay nào.'
+    html += '<div class="empty-box">Chưa có khoản vay nào.'
       + (state.vnFormKind === 'vayNoPhaiTra' ? '' : '<div><button class="btn" data-act="vnAddVayNo">+ Thêm khoản vay</button></div>')
       + '</div>';
   } else {
@@ -569,8 +569,8 @@ function renderVayNo(){
         + '<td class="actions-col">'
         + (loanIsActive(v) ? '<button class="btn sm secondary" data-act="vnTatToan" data-id="'+v.id+'" title="Tất toán sớm toàn bộ khoản vay">Tất toán</button>' : '')
         + (v.tatToan ? '<button class="btn sm secondary" data-act="vnHuyTatToan" data-id="'+v.id+'" title="Hủy tất toán, hoàn lại giao dịch Sổ tay">Hủy tất toán</button>' : '')
-        + '<button class="icon-btn" data-act="vnEditVayNo" data-id="'+v.id+'" title="Sửa khoản vay" aria-label="Sửa khoản vay '+esc(v.ten)+'">✎</button>'
-        + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'" title="Xóa khoản vay" aria-label="Xóa khoản vay '+esc(v.ten)+'">🗑</button>'
+        + '<button class="icon-btn" data-act="vnEditVayNo" data-id="'+v.id+'" title="Sửa khoản vay" aria-label="Sửa khoản vay '+esc(v.ten)+'">'+icon('pencil')+'</button>'
+        + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'" title="Xóa khoản vay" aria-label="Xóa khoản vay '+esc(v.ten)+'">'+icon('trash')+'</button>'
         + '</td></tr>';
       if (state.vnDetailId === v.id){
         html += '<tr class="m-detail"><td colspan="9">'+vayNoScheduleHtml(v)+'</td></tr>';
