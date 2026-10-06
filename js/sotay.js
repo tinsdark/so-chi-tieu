@@ -459,15 +459,16 @@ function viSoDuCardHtml(mk){
   var ds = (state.data.chuyenVi || []).filter(function(t){ return monthKey(t.ngay) === mk; })
     .sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
   if (ds.length){
-    h += '<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th style="text-align:left">Ngày</th><th style="text-align:left">Chuyển</th><th>Số tiền</th><th style="text-align:left">Ghi chú</th><th class="actions-col"></th></tr></thead><tbody>';
+    // danh sách (không phải bảng): bảng 4 cột tràn ngang màn hình điện thoại, cột Ghi chú bị cắt
+    h += '<div class="vi-ds">';
     ds.forEach(function(t){
-      h += '<tr><td style="text-align:left">'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</td>'
-        + '<td style="text-align:left">'+esc(viTen(t.tuVi))+' → '+esc(viTen(t.denVi))+'</td>'
-        + '<td>'+fmt(Math.round(num(t.soTien)))+'</td>'
-        + '<td style="text-align:left;white-space:normal">'+esc(t.ghiChu||'')+'</td>'
-        + '<td class="actions-col"><button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">🗑</button></td></tr>';
+      h += '<div class="vi-ct">'
+        + '<div class="vi-ct-main"><div><b>'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</b> · '+esc(viTen(t.tuVi))+' → '+esc(viTen(t.denVi))+'</div>'
+        + (t.ghiChu ? '<div class="vi-ct-note">'+esc(t.ghiChu)+'</div>' : '') + '</div>'
+        + '<div class="vi-ct-tien">'+fmt(Math.round(num(t.soTien)))+'</div>'
+        + '<button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">🗑</button></div>';
     });
-    h += '</tbody></table></div>';
+    h += '</div>';
   }
   return h + '</div>';
 }

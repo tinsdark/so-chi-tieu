@@ -71,6 +71,12 @@ function updateStickyOffsets(){
   }
 }
 window.addEventListener('resize', updateStickyOffsets);
+// Chiều cao header/thanh tab đổi SAU lần vẽ (chữ "Đã đồng bộ lúc..." hiện ra, xuống dòng, đổi cỡ chữ): nếu chỉ
+// đo trong renderAll thì --header-h cũ làm các thanh dán dưới nó (chọn tháng, chọn năm) lệch chỗ / bị che.
+if (window.ResizeObserver){
+  var _ro = new ResizeObserver(updateStickyOffsets);
+  ['header', '.tabs'].forEach(function(sel){ var el = document.querySelector(sel); if (el) _ro.observe(el); });
+}
 
 /* ---------------- events ---------------- */
 document.addEventListener('click', function(ev){
