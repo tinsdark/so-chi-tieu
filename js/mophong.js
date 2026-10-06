@@ -14,7 +14,6 @@
    tongChiThangCard, monthKeyAdd, soTienConLaiPhaiTra, tinhLichTraNo) load trước.
    ==================================================================== */
 
-var chartMoPhong = null;
 
 var MP_LOAI_LABEL = {
   motLan: 'Khoản 1 lần',
@@ -244,7 +243,6 @@ function renderMoPhong(){
 
   if (!mpDaNap()){
     root.innerHTML = html;
-    if (chartMoPhong){ chartMoPhong.destroy(); chartMoPhong = null; }
     return;
   }
 
@@ -328,28 +326,15 @@ function renderMoPhong(){
       + '</tr>';
   });
   html += '</tbody></table></div>';
-  html += '<div class="chart-box" style="margin-top:10px"><canvas id="chartMoPhong"></canvas></div>';
+  html += '<div class="bd-h" style="margin-top:14px">Số dư lũy kế: hiện tại và kịch bản</div><div class="bd-box">'
+    + bdLine({ W: 350, H: 200, labels: rowsMoi.map(function(r){ return 'T' + parseInt(r.mk.slice(5, 7), 10) + (r.mk.slice(0, 4) !== rowsMoi[0].mk.slice(0, 4) ? '/' + r.mk.slice(2, 4) : ''); }),
+      series: [{ ten: 'Hiện tại', vals: rowsGoc.map(function(r){ return Math.round(r.bal); }), cls: 'gray', dash: true },
+               { ten: 'Kịch bản', vals: rowsMoi.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
+      tipTitle: function(i){ return monthLabel(rowsMoi[i].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế: hiện tại và kịch bản' }) + '</div>'
+    + '<div class="bd-key" style="margin-top:6px"><span class="l gray"></span> Hiện tại <span class="l chi"></span> Kịch bản</div>';
   html += '</div>';
 
   root.innerHTML = html;
-  mpDrawChart(rowsGoc, rowsMoi);
-}
-
-function mpDrawChart(rowsGoc, rowsMoi){
-  if (chartMoPhong) chartMoPhong.destroy();
-  var ctx = document.getElementById('chartMoPhong');
-  if (!ctx) return;
-  chartMoPhong = new Chart(ctx, { type:'line',
-    data:{ labels: rowsMoi.map(function(r){ return monthLabel(r.mk); }), datasets:[
-      { label:'Hiện tại', data: rowsGoc.map(function(r){ return Math.round(r.bal); }),
-        borderColor:'#9ca3af', borderDash:[5,4], fill:false, tension:.25 },
-      { label:'Kịch bản', data: rowsMoi.map(function(r){ return Math.round(r.bal); }),
-        borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.1)', fill:true, tension:.25 }
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'Số dư lũy kế: hiện tại vs kịch bản'}, legend:{display:true,position:'bottom'} },
-      scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
-  });
 }
 
 /* ---- actions ---- */

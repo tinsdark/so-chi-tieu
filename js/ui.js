@@ -283,11 +283,6 @@ function apDungTheme(){
     btn.setAttribute('aria-label', 'Giao diện: ' + (t==='auto'?'theo hệ thống':(t==='dark'?'tối':'sáng')) + ' — bấm để đổi');
     btn.title = btn.getAttribute('aria-label');
   }
-  // Chart.js đọc màu chữ/lưới MỘT LẦN lúc vẽ -> phải set trước khi render lại
-  if (window.Chart){
-    Chart.defaults.color = thuc === 'dark' ? '#c9b49c' : '#6b5a3e';       // = --muted của từng theme
-    Chart.defaults.borderColor = thuc === 'dark' ? '#54402e' : '#e6d3a0';   // = --border của từng theme
-  }
 }
 function doiTheme(){
   var vong = ['auto','light','dark'];
