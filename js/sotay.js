@@ -68,11 +68,16 @@ function ghiNhanhHtml(){
     // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
     + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>✓ '+esc(state.qa.last.text)+'</span>'
         + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
-    // Chi/Thu và ô số tiền chung 1 hàng: ô tiền không còn kéo hết chiều ngang màn hình
+    // hàng 1: Chi/Thu. Hàng 2: tài khoản (trái, chỉ khi có từ 2 ví) + số tiền (phải)
     + '<div class="qa-top"><div class="qa-seg" role="group" aria-label="Loại giao dịch">'
     +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">▼ Chi</button>'
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">▲ Thu</button>'
-    + '</div>'
+    + '</div></div>'
+    + '<div class="qa-amtrow">'
+    + (((state.data.wallets || []).length > 1)
+        ? '<select id="qa_wallet" class="qa-wallet" data-act="qaWallet" aria-label="Tài khoản / ví">'
+          + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : (walletById(state.viChon) ? state.viChon : viMacDinhId())) + '</select>'
+        : '')
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền" value="'+esc(state.qa.amt)+'"></div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
@@ -92,10 +97,6 @@ function ghiNhanhHtml(){
     + '<input type="text" id="qa_note" placeholder="Ghi chú (tùy chọn)" aria-label="Ghi chú" value="'+esc(state.qa.note)+'">'
     + '<input type="date" id="qa_date" class="qa-date'+(ngay !== homNay ? ' lech' : '')+'" aria-label="Ngày" data-act="qaDate" value="'+esc(ngay)+'">'
     + '</div>';
-  if ((state.data.wallets || []).length > 1){
-    h += '<div class="qa-row one"><select id="qa_wallet" aria-label="Ví / nguồn tiền">'
-      + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : (walletById(state.viChon) ? state.viChon : viMacDinhId())) + '</select></div>';
-  }
   h += '<button type="button" class="btn qa-save '+kind+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>Ghi khoản '+(kind === 'thu' ? 'thu' : 'chi')+'</button>'
     + '</div>';
   return h;
@@ -1255,6 +1256,10 @@ function handleSoTayChange(el){
   } else if (el.matches('[data-act=qaCatSel]')){
     if (el.value){ state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.value; qaGhiNho(); }
     qaVeLai();
+    return true;
+  } else if (el.matches('[data-act=qaWallet]')){
+    // nhớ ví đang chọn: các lần vẽ lại thẻ (chạm nút danh mục, đổi Chi/Thu) không được đặt lại về ví mặc định
+    if (walletById(el.value)) state.qa.wallet = el.value;
     return true;
   } else if (el.matches('[data-act=qaDate]')){
     state.qa.date = (el.value && el.value !== todayStr()) ? el.value : '';

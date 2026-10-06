@@ -359,7 +359,9 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .form-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .form-head h3{margin:0 0 12px}
 .qa{padding:14px}
-.qa-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.qa-top{margin-bottom:10px}
+.qa-amtrow{display:flex;gap:10px;margin-bottom:10px}
+.qa-wallet{flex:0 1 44%;min-width:0;width:auto;border-radius:10px}
 .qa-seg{display:inline-flex;flex:0 0 auto;border:1px solid var(--border);border-radius:999px;overflow:hidden}
 .qa-seg button{border:none;background:var(--card);color:var(--muted);padding:8px 14px;font-weight:700;font-size:13px}
 .qa-seg button.chi.on{background:var(--chi-solid);color:#fff}

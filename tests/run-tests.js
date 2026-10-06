@@ -1774,6 +1774,37 @@ test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị
   eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(120000), 'xóa dòng xăng -> chỉ gỡ mẩu chung, còn mẩu của dòng đã sửa');
 });
 
+test('Ghi nhanh: có từ 2 ví thì ô tài khoản nằm TRƯỚC (bên trái) ô số tiền, cùng hàng; 1 ví thì không có ô tài khoản', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
+  loadData(d);
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var h = ctx.ghiNhanhHtml();
+  var iVi = h.indexOf('id="qa_wallet"'), iTien = h.indexOf('id="qa_amount"'), iHang = h.indexOf('class="qa-amtrow"');
+  ok(iVi > 0 && iTien > iVi, 'ô tài khoản đứng trước ô số tiền');
+  ok(iHang > 0 && iHang < iVi, 'cả hai nằm trong cùng hàng qa-amtrow');
+  ok(h.indexOf('Techcombank') >= 0 && h.indexOf('Tiền mặt') >= 0, 'liệt kê các tài khoản');
+  loadData(dataGhiNhanh());
+  ok(ctx.ghiNhanhHtml().indexOf('qa_wallet') < 0, '1 ví: không có ô tài khoản');
+});
+
+test('Ghi nhanh: chọn tài khoản được nhớ qua các lần vẽ lại và dùng khi ghi', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
+  loadData(d);
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  ctx.handleSoTayChange({ value:'w2', matches:function(s){ return s === '[data-act=qaWallet]'; } });
+  eq(ctx.state.qa.wallet, 'w2', 'đã nhớ ví chọn');
+  ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'vẽ lại vẫn chọn Tiền mặt');
+  voiDom({ qa_amount:{ value:'20.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  var it = ctx.state.data.journal['2026-10-10'].items[0];
+  eq(it.walletId, 'w2', 'ghi vào ví Tiền mặt');
+  eq(ctx.soDuTheoVi('w2', '2026-10-10'), 480000, 'số dư ví Tiền mặt giảm');
+  eq(ctx.soDuTheoVi('w1', '2026-10-10'), 500000, 'ví Techcombank không đổi');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
