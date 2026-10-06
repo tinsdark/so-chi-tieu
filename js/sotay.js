@@ -97,6 +97,7 @@ function renderSoTay(){
 
   html += dinhKyDenHanHtml();
   html += hanMucThangHtml(mk);
+  html += mucTieuCardHtml();
   html += viSoDuCardHtml(mk);
 
   // Entry form
@@ -363,6 +364,40 @@ function soTayDetailHtml(date){
   }
   h += '</div></td></tr>';
   return h;
+}
+
+/* ====================================================================
+   MỤC TIÊU TIẾT KIỆM — card tiến độ. Logic ở state.js (mucTieuTienDo); khai báo ở tab Danh mục.
+   ==================================================================== */
+function mucTieuCardHtml(){
+  var gs = state.data.mucTieu || [];
+  if (!gs.length) return '';
+  var hom = todayStr();
+  var h = '<div class="card"><h3>Mục tiêu tiết kiệm</h3><div class="hm-list">';
+  gs.forEach(function(g){
+    var t = mucTieuTienDo(g, hom);
+    var rong = Math.min(100, Math.round(t.pct * 100));
+    var phu;
+    if (t.xong) phu = '<span style="color:var(--green)">🎉 Đã đủ mục tiêu</span>';
+    else if (t.quaHan) phu = '<span style="color:var(--red)">Quá hạn '+g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4)+' · còn thiếu '+fmt(Math.round(t.conThieu))+'</span>';
+    else {
+      phu = 'Còn thiếu '+fmt(Math.round(t.conThieu));
+      if (t.canMoiThang != null){
+        phu += ' · cần ~<b>'+fmt(Math.round(t.canMoiThang))+'</b>/tháng ('+t.soThangCon+' tháng tới hết '+g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4)+')';
+      }
+    }
+    h += '<div class="hm-row">'
+      + '<div class="hm-top"><span class="hm-ten">'+esc(g.ten)
+        + (t.theoVi ? ' <span class="vi-chip">'+esc(viTen(g.walletId))+'</span>' : '') + '</span>'
+      + '<span class="hm-so">'+fmt(Math.round(t.da))+' / '+fmt(Math.round(t.dich))+' · '+Math.round(t.pct * 100)+'%</span></div>'
+      + '<div class="hm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(g.ten)+'">'
+      + '<div class="hm-fill mt'+(t.xong ? ' done' : '')+'" style="width:'+rong+'%"></div></div>'
+      + '<div class="hm-vuot" style="color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px">'
+        + '<span>'+phu+'</span>'
+        + (t.theoVi ? '' : '<button class="btn secondary sm" data-act="mtGom" data-id="'+esc(g.id)+'">+ Gom thêm</button>')
+      + '</div></div>';
+  });
+  return h + '</div></div>';
 }
 
 /* ====================================================================
@@ -823,6 +858,20 @@ function handleSoTayAction(act, el){
     state.soTayDetailDate = el.getAttribute('data-date');
     state.soTayEditIid = el.getAttribute('data-iid');
     renderSoTay();
+  } else if (act === 'mtGom'){
+    var mtG = (state.data.mucTieu || []).find(function(g){ return g.id === el.getAttribute('data-id'); });
+    if (!mtG) return true;
+    (async function(){
+      var them = await hoiSo('Gom thêm cho "'+mtG.ten+'"', 'Số tiền vừa để dành thêm cho mục tiêu này. Chỉ cộng vào số đã gom, không ghi thu/chi ở Sổ tay.', 'Số tiền gom thêm');
+      if (them == null) return;
+      mtG.daGom = num(mtG.daGom) + them;
+      scheduleSave();
+      renderSoTay();
+      toast('Đã gom thêm '+fmt(Math.round(them))+' cho "'+mtG.ten+'".', { hoanTac: function(){
+        mtG.daGom = num(mtG.daGom) - them;
+        scheduleSave(); renderSoTay();
+      } });
+    })();
   } else if (act === 'dkGhi' || act === 'dkBo'){
     var dkS = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
     var dkMk = el.getAttribute('data-mk') || monthKey(todayStr());

@@ -45,6 +45,7 @@ var state = {
   soTayTo: '',
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
+  mtForm: null,           // form mục tiêu tiết kiệm ở tab Danh mục (như dkForm)
   dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
   viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
@@ -422,6 +423,14 @@ function normalizeData(d){
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
   // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  // mục tiêu tiết kiệm (xem khối MỤC TIÊU TIẾT KIỆM)
+  d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
+  d.mucTieu.forEach(function(g){
+    if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    g.soTien = num(g.soTien); g.daGom = num(g.daGom);
+    if (!g.hanChot || !/^\d{4}-\d{2}$/.test(g.hanChot)) g.hanChot = '';
+    if (g.walletId && !d.wallets.some(function(w){ return w.id === g.walletId; })) g.walletId = '';
+  });
   d.dinhKy.forEach(function(k){
     if (!k.id) k.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     if (k.bat == null) k.bat = true;
@@ -604,6 +613,34 @@ function dinhKyHoanTac(r){
   entryDeleteItem(r.date, r.iid);   // xóa luôn ngày nếu rỗng
 }
 
+/* ====================================================================
+   MỤC TIÊU TIẾT KIỆM
+   mucTieu[] = [{id, ten, soTien (đích), hanChot ('YYYY-MM' hoặc ''), walletId ('' = gom tay), daGom}]
+   - Gắn ví: số đã gom = số dư HIỆN TẠI của ví đó (ví chuyên để dành, vd "Quỹ mua xe").
+     Cộng tiền vào ví bằng giao dịch/chuyển tiền bình thường là mục tiêu tự tăng, không nhập 2 lần.
+   - Không gắn ví: số đã gom do người dùng tự cộng tay (daGom).
+   Thuần hiển thị: mục tiêu KHÔNG phải tiền, không đổi số dư/dự trù/biểu đồ.
+   ==================================================================== */
+function monthDiff(mk1, mk2){
+  var a = mk1.split('-'), b = mk2.split('-');
+  return (parseInt(b[0], 10) - parseInt(a[0], 10)) * 12 + (parseInt(b[1], 10) - parseInt(a[1], 10));
+}
+function mucTieuTienDo(g, homNay){
+  var theoVi = !!(g.walletId && walletById(g.walletId));
+  var da = Math.max(0, theoVi ? soDuTheoVi(g.walletId, homNay) : num(g.daGom));
+  var dich = num(g.soTien);
+  var conThieu = Math.max(0, dich - da);
+  var xong = dich > 0 && da >= dich - 0.5;
+  var r = { da: da, dich: dich, conThieu: conThieu, pct: dich > 0 ? da / dich : 0, xong: xong,
+            theoVi: theoVi, quaHan: false, soThangCon: null, canMoiThang: null };
+  if (g.hanChot && !xong){
+    var diff = monthDiff(monthKey(homNay), g.hanChot);     // 0 = hạn chót ngay trong tháng này
+    if (diff < 0) r.quaHan = true;
+    else { r.soThangCon = diff + 1; r.canMoiThang = conThieu / (diff + 1); }
+  }
+  return r;
+}
+
 function thuTotal(entry){
   var s = 0;
   var thu = entry.thu;
@@ -715,7 +752,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen || state.dkForm
+            || state.viFormOpen || state.dkForm || state.mtForm
             || (state.mp && state.mp.formOpen));
 }
 

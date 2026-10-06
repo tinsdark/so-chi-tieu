@@ -284,3 +284,7 @@ tr.mp-am td{background:var(--chi-bg)}
 
 /* ---- Phím tắt: chỉ có nghĩa ở desktop ---- */
 @media (max-width:700px), (hover:none){ #btnPhimTat{display:none} }
+
+/* ---- Mục tiêu tiết kiệm: thanh tiến độ dùng màu chính, xanh khi đã đủ ---- */
+.hm-fill.mt{background:var(--primary)}
+.hm-fill.mt.done{background:var(--green)}

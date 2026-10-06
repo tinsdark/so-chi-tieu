@@ -956,6 +956,68 @@ test('dinhKy: ghi đè walletId + migrate giá trị lạ', function(){
 });
 
 /* ==================================================================== */
+group('M. Mục tiêu tiết kiệm');
+
+function dataMucTieu(){
+  var d = baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.wallets = [ { id:'a', ten:'Chính', soDuDauKy: 1000000 }, { id:'q', ten:'Quỹ mua xe', soDuDauKy: 2000000 } ];
+  d.mucTieu = [
+    { id:'m1', ten:'Mua xe', soTien:10000000, hanChot:'2027-03', walletId:'q', daGom:0 },
+    { id:'m2', ten:'Du lịch', soTien:6000000, hanChot:'', walletId:'', daGom:1500000 }
+  ];
+  return d;
+}
+
+test('monthDiff', function(){
+  eq(ctx.monthDiff('2026-10','2026-10'), 0); eq(ctx.monthDiff('2026-10','2027-03'), 5);
+  eq(ctx.monthDiff('2026-12','2026-10'), -2, 'âm khi hạn đã qua');
+});
+
+test('gắn ví: số đã gom = số dư ví, tự tăng khi chuyển tiền vào ví', function(){
+  loadData(dataMucTieu());
+  var g = ctx.state.data.mucTieu[0];
+  var t = ctx.mucTieuTienDo(g, '2026-10-06');
+  eq(t.da, 2000000); eq(t.theoVi, true); near(t.pct, 0.2, 1e-9); eq(t.conThieu, 8000000);
+  ctx.chuyenViThem('2026-10-07','a','q',500000,'');
+  eq(ctx.mucTieuTienDo(g, '2026-10-31').da, 2500000, 'chuyển 500k vào ví quỹ');
+  eq(ctx.mucTieuTienDo(g, '2026-10-06').da, 2000000, 'tính tới đúng ngày');
+});
+
+test('cần gom mỗi tháng = còn thiếu / số tháng còn lại (tính cả tháng hạn chót)', function(){
+  loadData(dataMucTieu());
+  var t = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06');
+  eq(t.soThangCon, 6, 'T10/2026 -> T3/2027 gồm cả 2 đầu = 6 tháng');
+  near(t.canMoiThang, 8000000 / 6, 0.01);
+  var cuoi = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2027-03-02');
+  eq(cuoi.soThangCon, 1, 'tháng hạn chót: phải gom hết trong tháng này');
+});
+
+test('gom tay (không gắn ví) + không có hạn chót thì không tính cần/tháng', function(){
+  loadData(dataMucTieu());
+  var t = ctx.mucTieuTienDo(ctx.state.data.mucTieu[1], '2026-10-06');
+  eq(t.da, 1500000); eq(t.theoVi, false); eq(t.canMoiThang, null); eq(t.soThangCon, null); near(t.pct, 0.25, 1e-9);
+});
+
+test('đã đủ / quá hạn', function(){
+  var d = dataMucTieu(); d.mucTieu[1].daGom = 6000000; d.mucTieu[0].hanChot = '2026-08';
+  loadData(d);
+  var xong = ctx.mucTieuTienDo(ctx.state.data.mucTieu[1], '2026-10-06');
+  eq(xong.xong, true); eq(xong.conThieu, 0);
+  var qua = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06');
+  eq(qua.quaHan, true); eq(qua.canMoiThang, null);
+  d.mucTieu[0].soTien = 1000000; loadData(d);
+  eq(ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06').quaHan, false, 'đã đủ thì không tính là quá hạn');
+});
+
+test('số âm không làm tiến độ âm; walletId lạ bị gỡ khi normalize; mục tiêu không đổi số dư tổng', function(){
+  var d = dataMucTieu(); d.wallets[1].soDuDauKy = -500000; d.mucTieu[1].walletId = 'khong-co';
+  loadData(d);
+  eq(ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06').da, 0, 'ví âm -> 0, không âm theo');
+  eq(ctx.state.data.mucTieu[1].walletId, '', 'ví không tồn tại bị gỡ');
+  eq(ctx.balanceAt('2026-10-31'), 500000, 'số dư tổng chỉ từ ví, không dính mục tiêu');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

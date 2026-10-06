@@ -52,6 +52,7 @@ function renderDanhMuc(){
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += viCardHtml();
   html += dkCardHtml();
+  html += mtCardHtml();
   html += '<div class="card"><h3>Khóa sổ</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
     + '<div class="form-row">'
@@ -125,6 +126,44 @@ function viCardHtml(){
   return h + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">'
     + '<button class="btn secondary sm" data-act="viThem">+ Thêm ví</button>'
     + '<span style="color:var(--muted);font-size:13px">Tổng số dư đầu kỳ: <b style="color:var(--text)">'+fmt(Math.round(tong))+'</b></span></div></div>';
+}
+
+/* ---- Mục tiêu tiết kiệm: khai báo (tiến độ hiện ở Sổ tay, logic ở state.js) ---- */
+function mtCardHtml(){
+  var gs = state.data.mucTieu || [];
+  var coVi = (state.data.wallets || []).length > 1;
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Mục tiêu tiết kiệm'
+    + '<button class="btn secondary sm" data-act="mtThem">+ Thêm</button></h3>'
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt số tiền cần có và hạn chót, app tính còn thiếu và cần để dành bao nhiêu mỗi tháng.'
+    + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự lấy từ số dư ví đó; không gắn thì tự bấm "+ Gom thêm" ở Sổ tay.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví để dành.')
+    + ' Mục tiêu chỉ để theo dõi, không ghi thu/chi và không đổi số dư.</div>';
+  if (state.mtForm){
+    var ed = state.mtForm.id ? gs.find(function(g){ return g.id === state.mtForm.id; }) : null;
+    var g0 = ed || { ten:'', soTien:'', hanChot:'', walletId:'', daGom:'' };
+    h += '<div class="form-row">'
+      + '<div><label>Tên mục tiêu</label><input type="text" id="mt_ten" value="'+esc(g0.ten)+'" placeholder="Mua xe, Du lịch..."></div>'
+      + '<div><label>Số tiền cần có</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_tien" value="'+veSo(g0.soTien)+'" placeholder="0"></div>'
+      + '<div><label>Hạn chót (tùy chọn)</label><input type="month" id="mt_han" value="'+esc(g0.hanChot || '')+'"></div>'
+      + (coVi ? '<div><label>Gắn ví</label><select id="mt_vi"><option value="">Không gắn — tự gom tay</option>'+viOptionsHtml(g0.walletId)+'</select></div>' : '')
+      + '<div><label>Đã gom (khi gom tay)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_gom" value="'+veSo(g0.daGom)+'" placeholder="0"></div>'
+      + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
+      + '<button class="btn sm" data-act="mtLuu">'+(ed ? 'Cập nhật' : 'Lưu')+'</button>'
+      + '<button class="btn secondary sm" data-act="mtHuy">Hủy</button></div>';
+  }
+  if (!gs.length && !state.mtForm){
+    h += '<div class="empty">Chưa có mục tiêu nào.</div>';
+  } else if (gs.length){
+    h += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Cần có</th><th>Hạn chót</th><th style="text-align:left">Nguồn</th><th class="actions-col"></th></tr></thead><tbody>';
+    gs.forEach(function(g){
+      h += '<tr><td style="text-align:left">'+esc(g.ten)+'</td><td>'+fmt(Math.round(g.soTien))+'</td>'
+        + '<td>'+(g.hanChot ? g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4) : '—')+'</td>'
+        + '<td style="text-align:left">'+(g.walletId && walletById(g.walletId) ? 'Ví: '+esc(viTen(g.walletId)) : 'Gom tay: '+fmt(Math.round(num(g.daGom))))+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="mtSua" data-id="'+esc(g.id)+'" title="Sửa" aria-label="Sửa '+esc(g.ten)+'">✎</button>'
+        + '<button class="icon-btn" data-act="mtXoa" data-id="'+esc(g.id)+'" title="Xóa" aria-label="Xóa '+esc(g.ten)+'">🗑</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  return h + '</div>';
 }
 
 /* ---- Giao dịch định kỳ: khai báo mẫu (nhắc ở Sổ tay, logic ở state.js) ----
@@ -259,6 +298,38 @@ function handleDanhMucAction(act, el){
         renderAll();
       }
     })();
+  } else if (act === 'mtThem'){
+    state.mtForm = { id: '' }; renderDanhMuc();
+  } else if (act === 'mtSua'){
+    state.mtForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'mtHuy'){
+    state.mtForm = null; renderDanhMuc();
+  } else if (act === 'mtLuu'){
+    var mtTen = (document.getElementById('mt_ten') || {}).value.trim();
+    var mtTien = numNonNeg(docSo((document.getElementById('mt_tien') || {}).value));
+    var mtHan = (document.getElementById('mt_han') || {}).value || '';
+    var mtVi = (document.getElementById('mt_vi') || {}).value || '';
+    var mtGom = numNonNeg(docSo((document.getElementById('mt_gom') || {}).value));
+    if (!mtTen){ toast('Nhập tên mục tiêu.', { loai:'warn' }); return true; }
+    if (mtTien <= 0){ toast('Số tiền cần có phải lớn hơn 0.', { loai:'warn' }); return true; }
+    var mtObj = { ten: mtTen, soTien: mtTien, hanChot: mtHan, walletId: walletById(mtVi) ? mtVi : '', daGom: mtGom };
+    var mtCu = state.mtForm && state.mtForm.id ? state.data.mucTieu.find(function(g){ return g.id === state.mtForm.id; }) : null;
+    if (mtCu){ Object.assign(mtCu, mtObj); }
+    else { mtObj.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); state.data.mucTieu.push(mtObj); }
+    state.mtForm = null;
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã lưu mục tiêu "'+mtTen+'".');
+  } else if (act === 'mtXoa'){
+    var mtXi = state.data.mucTieu.findIndex(function(g){ return g.id === el.getAttribute('data-id'); });
+    if (mtXi < 0) return true;
+    var mtXg = state.data.mucTieu.splice(mtXi, 1)[0];
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã xóa mục tiêu "'+mtXg.ten+'".', { hoanTac: function(){
+      state.data.mucTieu.splice(Math.min(mtXi, state.data.mucTieu.length), 0, mtXg);
+      scheduleSave(); renderDanhMuc();
+    } });
   } else if (act === 'dkThem'){
     state.dkForm = { id: '' }; renderDanhMuc();
     var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();
