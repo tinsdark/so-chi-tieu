@@ -470,3 +470,6 @@ td.m-act{white-space:nowrap}
 
 /* ô tích / nút chọn dùng màu chủ đạo thay vì xanh mặc định của trình duyệt */
 input[type=radio],input[type=checkbox]{accent-color:var(--primary)}
+
+/* ---- dòng chú thích nhỏ dưới số trong ô thống kê (Mô phỏng: số dư hiện tại đã cộng khoản nào) ---- */
+.stat .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.35}

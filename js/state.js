@@ -694,6 +694,19 @@ function dinhKyDaGhi(dk, mk){
   });
   return da;
 }
+// tổng các khoản định kỳ ĐANG BẬT của tháng mk mà chưa ghi Sổ tay và chưa bấm "Bỏ qua" — kể cả khoản CHƯA tới ngày
+// (dùng cho dự báo cuối tháng). kind/catId bỏ trống = tính tất cả.
+function dinhKyChuaGhiThang(mk, kind, catId){
+  var s = 0;
+  (state.data.dinhKy || []).forEach(function(dk){
+    if (!dk.bat || num(dk.soTien) <= 0) return;
+    if (kind && dk.kind !== kind) return;
+    if (catId && dk.catId !== catId) return;
+    if ((dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
+    s += num(dk.soTien);
+  });
+  return s;
+}
 // các khoản đã tới ngày trong tháng của homNay mà chưa ghi / chưa bỏ qua
 function dinhKyDenHan(homNay){
   var mk = monthKey(homNay), out = [];
