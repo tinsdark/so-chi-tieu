@@ -43,6 +43,7 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  coBanMoi: false,        // trên mạng đã có bản app mới hơn bản đang chạy (xem kiemTraBanMoi ở app.js)
   taiLoi: false,          // lần tải Drive gần nhất THẤT BẠI (khác với 'chưa có file'): cấm tạo file mới đè lên file thật
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)

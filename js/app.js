@@ -22,14 +22,17 @@ function renderSyncStatus(){
   }
   var banner = document.getElementById('bannerZone');
   if (banner){
+    // bản mới luôn hiện đầu tiên, độc lập với các cảnh báo khác
+    var bMoi = state.coBanMoi
+      ? '<div class="banner banner-moi">🔄 Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
     if (state.offline){
       var tu = state.offlineTu ? new Date(state.offlineTu) : null;
-      banner.innerHTML = '<div class="banner">⚠ Đang ngoại tuyến'
+      banner.innerHTML = bMoi + '<div class="banner">⚠ Đang ngoại tuyến'
         + (tu ? ' — dữ liệu trên máy lúc ' + pad2(tu.getHours()) + ':' + pad2(tu.getMinutes()) + ' ' + tu.toLocaleDateString('vi-VN') : '')
         + '. Thay đổi chỉ lưu trên máy, chưa lên Drive. '
         + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đăng nhập để đồng bộ</button></div>';
     } else {
-      banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+      banner.innerHTML = bMoi + (state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '');
     }
   }
 }
@@ -167,6 +170,7 @@ document.addEventListener('change', function(ev){
 // dispatcher: thử lần lượt handler của từng tab, dừng ở handler đầu tiên xử lý được (trả về true)
 function handleAction(act, el){
   if (act === 'dangNhapLai'){ signIn(); return; }
+  if (act === 'capNhatApp'){ capNhatApp(); return; }
   if (handleSoTayAction(act, el)) return;
   if (handleNhapAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
@@ -174,6 +178,40 @@ function handleAction(act, el){
   if (handleDanhMucAction(act, el)) return;
   if (handleMoPhongAction(act, el)) return;
 }
+
+/* ---------------- cập nhật bản mới ----------------
+   Trên iPhone, thoát app rồi quay lại chỉ TIẾP TỤC trang đang chạy dở (code cũ trong bộ nhớ),
+   không tải lại — nên merge bản mới lên git mà không báo gì thì phải tự tắt hẳn app mới thấy.
+   Cách làm: số ?v= trong index.html là dấu vân tay của bản code (tools/bump.js băm từ nội dung file).
+   Định kỳ + mỗi lần quay lại app, tải index.html (bỏ qua cache) đọc ?v= trên mạng; khác bản đang
+   chạy thì hiện banner "Có bản mới". Chỉ báo khi index.html ĐỔI: sửa file mà quên chạy bump thì không báo. */
+var APP_VER = (function(){
+  var s = document.querySelector('script[src*="js/app.js"]');
+  var m = s ? /[?&]v=([^&"']+)/.exec(s.getAttribute('src') || '') : null;
+  return m ? m[1] : null;
+})();
+var _lanKiemTraMoi = 0;
+async function kiemTraBanMoi(){
+  if (!APP_VER || state.coBanMoi || !/^https?:$/.test(location.protocol)) return;
+  var now = Date.now();
+  if (now - _lanKiemTraMoi < 60000) return;      // tối đa 1 lần/phút dù bị gọi từ nhiều sự kiện
+  _lanKiemTraMoi = now;
+  try{
+    var res = await fetch('index.html?_=' + now, { cache: 'no-store' });
+    if (!res.ok) return;
+    var m = /js\/app\.js\?v=([^"'&]+)/.exec(await res.text());
+    if (m && m[1] !== APP_VER){ state.coBanMoi = true; renderSyncStatus(); }
+  }catch(e){ /* mất mạng: bỏ qua, lần sau kiểm tra lại */ }
+}
+function capNhatApp(){
+  // đang lưu dở thì tải lại là bỏ dở lần lưu (nháp vẫn giữ nhưng cứ đợi xong cho chắc)
+  if (state.dirty || state.saving){ toast('Đang lưu dữ liệu — đợi vài giây rồi bấm Cập nhật lại.', { loai:'warn' }); return; }
+  location.reload();
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) kiemTraBanMoi(); });
+window.addEventListener('focus', kiemTraBanMoi);
+setInterval(kiemTraBanMoi, 10 * 60 * 1000);
+setTimeout(kiemTraBanMoi, 4000);
 
 /* ---------------- init ---------------- */
 showGate('');
