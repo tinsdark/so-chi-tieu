@@ -68,11 +68,12 @@ function ghiNhanhHtml(){
     // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
     + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>✓ '+esc(state.qa.last.text)+'</span>'
         + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
-    + '<div class="qa-seg" role="group" aria-label="Loại giao dịch">'
+    // Chi/Thu và ô số tiền chung 1 hàng: ô tiền không còn kéo hết chiều ngang màn hình
+    + '<div class="qa-top"><div class="qa-seg" role="group" aria-label="Loại giao dịch">'
     +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">▼ Chi</button>'
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">▲ Thu</button>'
     + '</div>'
-    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền" value="'+esc(state.qa.amt)+'">';
+    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền" value="'+esc(state.qa.amt)+'"></div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
   } else {
