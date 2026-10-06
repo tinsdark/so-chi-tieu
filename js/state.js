@@ -43,6 +43,8 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
+  backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)

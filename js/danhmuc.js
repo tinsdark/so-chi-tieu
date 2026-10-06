@@ -56,6 +56,7 @@ function renderDanhMuc(){
     + '<div class="form-row">'
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
     + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
+  html += backupCardHtml();
   root.innerHTML = html;
   attachCatDragDrop();
 }
@@ -105,6 +106,45 @@ function attachCatDragDrop(){
   });
 }
 
+/* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
+var BACKUP_NHAN = {
+  'may-nay':         'phần chưa lưu của máy này, bị bỏ khi lấy bản Drive',
+  'truoc-ghi-de':    'bản trên Drive trước khi bị ghi đè',
+  'truoc-khoi-phuc': 'bản dữ liệu trước khi khôi phục'
+};
+// 'chitieu-canhan-backup-2026-10-06-may-nay-143015.json' -> 'Ngày 06/10/2026 · ... (14:30:15)'
+function backupTenDep(name){
+  var m = /^chitieu-canhan-backup-(\d{4})-(\d{2})-(\d{2})(?:-(.+?)(?:-(\d{2})(\d{2})(\d{2}))?)?\.json$/.exec(name);
+  if (!m) return name;
+  var s = 'Ngày ' + m[3] + '/' + m[2] + '/' + m[1];
+  if (m[4]) s += ' · ' + (BACKUP_NHAN[m[4]] || m[4]) + (m[5] ? ' (' + m[5] + ':' + m[6] + ':' + m[7] + ')' : '');
+  return s;
+}
+function backupCardHtml(){
+  var h = '<div class="card"><h3>Sao lưu dữ liệu</h3>'
+    + '<div class="empty" style="padding:0 0 10px">Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
+    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    + '<button class="btn sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? '⟳ Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
+    + '<button class="btn secondary sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
+    + '</div>';
+  if (state.backupDs){
+    if (!state.backupDs.length){
+      h += '<div class="empty">Chưa có bản sao lưu nào.</div>';
+    } else {
+      h += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Bản sao lưu</th><th>Dung lượng</th><th class="actions-col"></th></tr></thead><tbody>';
+      state.backupDs.forEach(function(f){
+        h += '<tr><td style="text-align:left;white-space:normal">'+esc(backupTenDep(f.name))+'</td>'
+          + '<td>'+(f.size ? Math.max(1, Math.round(num(f.size) / 1024)) + ' KB' : '—')+'</td>'
+          + '<td class="actions-col"><button class="btn sm secondary" data-act="bkKhoiPhuc" data-id="'+esc(f.id)+'" data-name="'+esc(f.name)+'"'
+          + (state.backupBusy?' disabled':'')+'>Khôi phục</button></td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+  }
+  return h + '</div>';
+}
+
 /* ---- Danh mục: helper validate trùng tên ---- */
 function catNameExists(kind, name, excludeId){
   var n = name.trim().toLowerCase();
@@ -113,7 +153,42 @@ function catNameExists(kind, name, excludeId){
 
 /* ---- Danh mục: handlers ---- */
 function handleDanhMucAction(act, el){
-  if (act === 'addCat'){
+  if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
+    // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
+    if (state.backupBusy) return true;
+    (async function(){
+      state.backupBusy = true; renderDanhMuc();
+      try{
+        if (act === 'bkTao'){
+          await saoLuuNgay('thu-cong', JSON.stringify(state.data));
+          toast('Đã sao lưu dữ liệu hiện tại lên Drive.');
+          state.backupDs = await driveListBackups();
+        } else if (act === 'bkXem'){
+          state.backupDs = await driveListBackups();
+        } else {
+          var bkId = el.getAttribute('data-id'), bkTen = el.getAttribute('data-name');
+          if (!await xacNhan('Khôi phục "'+backupTenDep(bkTen)+'"?',
+                'Toàn bộ dữ liệu hiện tại sẽ được thay bằng bản này. Dữ liệu hiện tại được sao lưu lại trước khi thay.',
+                { nguyHiem:true, chuOk:'Khôi phục' })) return;
+          var bkText = await driveDocText(bkId);
+          var bkData = JSON.parse(bkText);
+          if (!bkData || typeof bkData.journal !== 'object') throw new Error('bản sao lưu không đúng định dạng');
+          await saoLuuNgay('truoc-khoi-phuc', JSON.stringify(state.data));
+          if (state.mp) mpXoaNhap();
+          state.data = normalizeData(bkData);
+          scheduleSave();
+          state.backupDs = await driveListBackups();
+          toast('Đã khôi phục dữ liệu từ bản sao lưu.');
+        }
+      }catch(e){
+        console.error('[chitieu] Sao lưu/khôi phục lỗi:', e);
+        toast('Không thực hiện được: ' + (e && e.message ? e.message : 'lỗi mạng'), { loai:'err' });
+      }finally{
+        state.backupBusy = false;
+        renderAll();
+      }
+    })();
+  } else if (act === 'addCat'){
     var kind = el.getAttribute('data-kind') || 'chi';
     // hoiChu trả về Promise -> bọc IIFE async. KHÔNG được làm handler thành async:
     // dispatcher trong app.js đọc giá trị trả về đồng bộ, async luôn trả Promise (truthy)
