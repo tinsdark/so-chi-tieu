@@ -691,7 +691,8 @@ function chiTotal(entry){
 }
 
 /* ---------------- helpers chung ---------------- */
-function fmt(n){ return (Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
+// VND không có phần lẻ: làm tròn ở đây để số tổng (cộng từ nhiều khoản chia lẻ như lãi) không hiện ",303"
+function fmt(n){ return Math.round(Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 // giống num() nhưng chặn số âm -> về 0 (dùng cho các ô nhập tiền)
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }

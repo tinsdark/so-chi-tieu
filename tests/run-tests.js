@@ -1408,6 +1408,13 @@ test('Sổ tay: nhập thu hồi / trả nợ mà không chọn khoản thì có
   eq(ctx.state.data.vayNo.choVay[0].daThu, 0, 'khoản cho vay không đổi');
 });
 
+test('fmt: làm tròn đồng, không hiện phần lẻ (tổng cộng từ lãi chia lẻ)', function(){
+  eq(ctx.fmt(3323544.303), ctx.fmt(3323544), 'bỏ phần lẻ');
+  eq(ctx.fmt(13676455.697), ctx.fmt(13676456), 'làm tròn lên');
+  ok(ctx.fmt(1234.4).indexOf(',') < 0, 'không còn dấu thập phân: ' + ctx.fmt(1234.4));
+  eq(ctx.fmt(null), ctx.fmt(0), 'null -> 0');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
