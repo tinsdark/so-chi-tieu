@@ -1170,6 +1170,26 @@ test('catMau: màu người dùng chọn thắng; mặc định theo vị trí v
 });
 
 /* ==================================================================== */
+group('V. Số phiên bản ?v= (tools/bump.js)');
+
+test('?v= trong index.html khớp nội dung file — nếu lệch: chạy "node tools/bump.js"', function(){
+  var bump = require(path.join(__dirname, '..', 'tools', 'bump.js'));
+  var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  var r = bump.capNhat(html);
+  ok(r.html === html, 'index.html còn ?v= cũ (đúng phải là ' + r.ver + '). Banner "Có bản mới" sẽ KHÔNG báo nếu quên bước này. Chạy: node tools/bump.js');
+});
+
+test('bump: băm đổi khi nội dung đổi, ổn định khi không đổi, mọi file đều có ?v= cùng số', function(){
+  var bump = require(path.join(__dirname, '..', 'tools', 'bump.js'));
+  var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  var files = bump.filesInIndex(html);
+  ok(files.length >= 10 && files.indexOf('js/app.js') >= 0 && files.indexOf('style.css') >= 0, 'đọc được danh sách file: ' + files.join(','));
+  eq(bump.tinhVer(html), bump.tinhVer(html), 'cùng nội dung -> cùng số');
+  var vers = {}; html.replace(/\?v=([0-9a-f]+)"/g, function(_, v){ vers[v] = 1; });
+  eq(Object.keys(vers).length, 1, 'tất cả file dùng chung 1 số ?v=');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
