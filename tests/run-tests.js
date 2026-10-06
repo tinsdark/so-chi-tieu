@@ -1646,6 +1646,135 @@ test('Dòng tiền: bảng chính không còn khung cuộn dọc riêng (chỉ c
 });
 
 /* ==================================================================== */
+group('X. Xóa 1 dòng chi tiết thì ghi chú của ngày cũng đi theo');
+
+test('journalRemoveNote chỉ bỏ MỘT mẩu: 2 khoản giống hệt nhau, xóa 1 vẫn còn 1', function(){
+  var e = { ghiChu: 'cf 30.000 ₫; ăn trưa 50.000 ₫; cf 30.000 ₫' };
+  ctx.journalRemoveNote(e, 'cf 30.000 ₫');
+  eq(e.ghiChu, 'ăn trưa 50.000 ₫; cf 30.000 ₫');
+  ctx.journalRemoveNote(e, 'không có');
+  eq(e.ghiChu, 'ăn trưa 50.000 ₫; cf 30.000 ₫', 'mẩu không tồn tại -> không đổi');
+});
+
+test('Xóa dòng ghi nhanh: tiền trừ VÀ chữ trong Nội dung cũng mất; ghi chú của khoản khác giữ nguyên', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var ghi = function(tien, note){
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  };
+  ghi('45.000', 'Ăn sáng');
+  ghi('30.000', 'Cà phê');
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Ăn sáng ' + ctx.fmt(45000) + '; Cà phê ' + ctx.fmt(30000), 'trước khi xóa');
+  var iidSai = e.items.filter(function(it){ return it.ghiChu === 'Ăn sáng'; })[0].iid;
+  ok(ctx.entryDeleteItem('2026-10-10', iidSai), 'xóa được');
+  e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000), 'chữ của khoản sai đã mất, khoản kia còn');
+  eq(ctx.num(e.chi.an), 30000, 'tiền trừ đúng');
+  var iidCon = e.items[0].iid;
+  ctx.entryDeleteItem('2026-10-10', iidCon);
+  eq(ctx.state.data.journal['2026-10-10'], undefined, 'xóa hết thì ngày rỗng bị xóa luôn');
+});
+
+test('Xóa dòng: hai khoản giống hệt nhau (cùng nội dung + số tiền) thì xóa 1, chữ còn đúng 1 mẩu', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  for (var i = 0; i < 2; i++){
+    voiDom({ qa_amount:{ value:'30.000' }, qa_note:{ value:'Cà phê' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  }
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.items.length, 2);
+  ctx.entryDeleteItem('2026-10-10', e.items[0].iid);
+  e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000), 'còn đúng 1 mẩu');
+  eq(ctx.num(e.chi.an), 30000);
+});
+
+test('Xóa dòng: dòng cũ chưa có gc vẫn gỡ được chữ theo dạng "<nội dung> <số tiền>"; không đoán bừa khi không khớp', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.journal['2026-10-05'] = { thu:{}, chi:{ an:80000 }, ghiChu:'Ăn trưa ' + ctx.fmt(50000) + '; ghi chú tự gõ', refs:[],
+    items:[ { iid:'a', kind:'chi', catId:'an', soTien:50000, ghiChu:'Ăn trưa' }, { iid:'b', kind:'chi', catId:'an', soTien:30000, ghiChu:'Nước' } ] };
+  loadData(d);
+  ctx.entryDeleteItem('2026-10-05', 'a');
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'ghi chú tự gõ', 'gỡ đúng mẩu "Ăn trưa …", giữ chữ tự gõ');
+  ctx.entryDeleteItem('2026-10-05', 'b');   // "Nước 30.000 ₫" không có trong ghi chú -> không đụng gì
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'ghi chú tự gõ', 'chữ tự gõ vẫn còn');
+});
+
+test('Xóa dòng của form đầy đủ nhiều danh mục: mẩu ghi chú dùng chung chỉ mất khi xóa dòng cuối', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.editingDate = null; ctx.state.fullFormOpen = true;
+  voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  var e = ctx.state.data.journal['2026-10-10'];
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(150000), 'ghi chú ngày gắn tổng 2 khoản');
+  eq(e.items.length, 2);
+  ctx.entryDeleteItem('2026-10-10', e.items[0].iid);
+  eq(ctx.state.data.journal['2026-10-10'].ghiChu, 'Đi chợ ' + ctx.fmt(150000), 'còn 1 dòng dùng chung mẩu này -> giữ');
+  ctx.entryDeleteItem('2026-10-10', ctx.state.data.journal['2026-10-10'].items[0].iid);
+  eq(ctx.state.data.journal['2026-10-10'], undefined, 'xóa dòng cuối -> hết chữ, ngày rỗng bị xóa');
+  ctx.state.fullFormOpen = false;
+});
+
+test('Sửa dòng: đổi số tiền / nội dung thì chữ ở Nội dung đổi theo, đúng chỗ, không đụng khoản khác', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var ghi = function(tien, note){
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  };
+  ghi('45.000', 'Ăn sáng'); ghi('30.000', 'Cà phê'); ghi('20.000', 'Nước');
+  var e = ctx.state.data.journal['2026-10-10'];
+  var iid = e.items.filter(function(it){ return it.ghiChu === 'Ăn sáng'; })[0].iid;
+  ok(ctx.entryUpdateItem('2026-10-10', iid, 50000, 'Ăn sáng ngon', 'chi', 'an', ''), 'sửa được');
+  eq(e.ghiChu, 'Ăn sáng ngon ' + ctx.fmt(50000) + '; Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'thay tại chỗ, giữ thứ tự, khoản khác nguyên');
+  eq(ctx.num(e.chi.an), 100000, 'tiền: 50k + 30k + 20k');
+  // chỉ đổi số tiền
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Ăn sáng ngon', 'chi', 'an', '');
+  ok(e.ghiChu.indexOf('Ăn sáng ngon ' + ctx.fmt(60000)) === 0 && e.ghiChu.indexOf(ctx.fmt(50000)) < 0, 'số cũ không còn: ' + e.ghiChu);
+  // xóa nội dung -> bỏ mẩu chữ
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, '', 'chi', 'an', '');
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'không còn nội dung -> mẩu chữ bị bỏ');
+  // thêm nội dung cho dòng chưa có
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Bữa tối', 'chi', 'an', '');
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000) + '; Bữa tối ' + ctx.fmt(60000), 'thêm vào cuối');
+  // chỉ đổi danh mục: chữ không đổi
+  var truoc = e.ghiChu;
+  ctx.entryUpdateItem('2026-10-10', iid, 60000, 'Bữa tối', 'chi', 'xang', '');
+  eq(e.ghiChu, truoc, 'đổi danh mục không làm đổi chữ');
+  // xóa sau khi sửa vẫn gỡ đúng mẩu mới
+  ctx.entryDeleteItem('2026-10-10', iid);
+  eq(e.ghiChu, 'Cà phê ' + ctx.fmt(30000) + '; Nước ' + ctx.fmt(20000), 'xóa dòng đã sửa -> gỡ đúng mẩu mới');
+});
+
+test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị đụng; mẩu dùng chung thì dòng đã sửa có mẩu riêng', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.journal['2026-10-05'] = { thu:{}, chi:{ an:50000 }, ghiChu:'tự gõ lại hết', refs:[],
+    items:[ { iid:'a', kind:'chi', catId:'an', soTien:50000, ghiChu:'Ăn trưa' } ] };
+  loadData(d);
+  ctx.entryUpdateItem('2026-10-05', 'a', 70000, 'Ăn trưa', 'chi', 'an', '');
+  eq(ctx.state.data.journal['2026-10-05'].ghiChu, 'tự gõ lại hết', 'không tìm thấy mẩu cũ -> không đụng chữ người dùng');
+  // mẩu dùng chung (form đầy đủ 2 danh mục)
+  loadData(dataGhiNhanh());
+  ctx.state.fullFormOpen = true;
+  voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  ctx.state.fullFormOpen = false;
+  var e = ctx.state.data.journal['2026-10-10'];
+  var a = e.items.filter(function(it){ return it.catId === 'an'; })[0];
+  ctx.entryUpdateItem('2026-10-10', a.iid, 120000, 'Đi chợ', 'chi', 'an', '');
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(150000) + '; Đi chợ ' + ctx.fmt(120000), 'mẩu chung giữ cho dòng xăng, dòng đã sửa có mẩu riêng');
+  var xang = e.items.filter(function(it){ return it.catId === 'xang'; })[0];
+  ctx.entryDeleteItem('2026-10-10', xang.iid);
+  eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(120000), 'xóa dòng xăng -> chỉ gỡ mẩu chung, còn mẩu của dòng đã sửa');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

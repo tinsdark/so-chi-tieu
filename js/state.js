@@ -94,10 +94,32 @@ var REF_LABEL = {
 
 function blankEntry(){ return { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; }
 
-// bỏ đúng 1 mẩu ghi chú do app tự sinh ra khỏi chuỗi "a; b; c"
+// bỏ đúng 1 mẩu ghi chú do app tự sinh ra khỏi chuỗi "a; b; c".
+// Chỉ bỏ MỘT mẩu (mẩu đầu khớp): 2 khoản giống hệt nhau trong ngày (cùng nội dung, cùng số tiền) sinh ra 2 mẩu
+// giống nhau, xóa 1 khoản không được làm mất cả 2 mẩu.
 function journalRemoveNote(entry, note){
   if (!note || !entry.ghiChu) return;
-  entry.ghiChu = entry.ghiChu.split('; ').filter(function(s){ return s !== note; }).join('; ');
+  var parts = entry.ghiChu.split('; ');
+  var i = parts.indexOf(note);
+  if (i < 0) return;
+  parts.splice(i, 1);
+  entry.ghiChu = parts.join('; ');
+}
+// mẩu ghi chú NGÀY mà 1 dòng chi tiết đã sinh ra. Dòng mới lưu sẵn trong it.gc; dòng cũ chưa có gc thì đoán theo
+// cách ghi phổ biến "<nội dung> <số tiền>" (ghi nhanh, nhập file, định kỳ, form đầy đủ khi chỉ có 1 khoản).
+function itemGhiChuNgay(it){
+  return it.gc || (it.ghiChu ? it.ghiChu + ' ' + fmt(Math.round(num(it.soTien))) : '');
+}
+// xóa 1 dòng chi tiết thì mẩu ghi chú của nó trong cột Nội dung cũng phải đi theo (trước đây tiền trừ mà chữ vẫn còn).
+// Gọi TRƯỚC khi bỏ it khỏi e.items. Mẩu dùng chung bởi nhiều dòng (1 lần lưu form đầy đủ nhiều danh mục) chỉ bị gỡ
+// khi không còn dòng nào khác dùng nó: so số mẩu đang có với số dòng còn lại cùng mẩu.
+function entryGoGhiChuCuaItem(e, it){
+  var seg = itemGhiChuNgay(it);
+  if (!seg || !e.ghiChu) return;
+  var soMau = e.ghiChu.split('; ').filter(function(s){ return s === seg; }).length;
+  if (!soMau) return;
+  var conDung = entryItems(e).filter(function(x){ return x !== it && itemGhiChuNgay(x) === seg; }).length;
+  if (soMau > conDung) journalRemoveNote(e, seg);
 }
 
 function entryIsEmpty(entry){
@@ -241,6 +263,31 @@ function entryAddItem(date, kind, catId, soTien, ghiChu, walletId){
 
 // sửa 1 dòng: đổi được cả số tiền, nội dung, loại thu/chi và danh mục.
 // Trừ hết ở chỗ cũ rồi cộng vào chỗ mới -> không bao giờ cộng dồn sai.
+// sửa 1 dòng chi tiết (đổi số tiền / nội dung) thì mẩu ghi chú của nó trong cột Nội dung của ngày cũng đổi theo.
+// segCu = mẩu cũ (tính TRƯỚC khi sửa dòng), segMoi = mẩu mới ('' nếu dòng không còn nội dung).
+//  - mẩu của riêng dòng này: thay tại chỗ (giữ nguyên thứ tự), hoặc bỏ nếu không còn nội dung
+//  - mẩu dùng chung với dòng khác (1 lần lưu form đầy đủ nhiều danh mục): để nguyên cho các dòng kia, dòng này có mẩu riêng
+//  - không tìm thấy mẩu cũ (người dùng đã tự sửa chữ ở ngày): KHÔNG đụng vào chữ đó
+//  - dòng trước đó chưa có nội dung mà giờ có: thêm mẩu mới vào cuối
+function entryDoiGhiChuCuaItem(e, it, segCu, segMoi){
+  if (segMoi === segCu) return;
+  var mau = e.ghiChu ? e.ghiChu.split('; ') : [];
+  var viTri = segCu ? mau.indexOf(segCu) : -1;
+  if (segCu && viTri >= 0){
+    var soMau = mau.filter(function(s){ return s === segCu; }).length;
+    var conDung = entryItems(e).filter(function(x){ return x !== it && itemGhiChuNgay(x) === segCu; }).length;
+    if (soMau > conDung){
+      if (segMoi) mau[viTri] = segMoi; else mau.splice(viTri, 1);
+      e.ghiChu = mau.join('; ');
+    } else if (segMoi){
+      e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + segMoi : segMoi;
+    }
+  } else if (!segCu && segMoi){
+    e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + segMoi : segMoi;
+  }
+  if (segMoi) it.gc = segMoi; else delete it.gc;
+}
+
 function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdMoi){
   var e = state.data.journal[date];
   if (!e) return false;
@@ -250,9 +297,11 @@ function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdM
   if (v <= 0) return false;
   var kindM = (kindMoi === 'thu' || kindMoi === 'chi') ? kindMoi : it.kind;
   var catM  = catIdMoi || it.catId;
+  var segCu = itemGhiChuNgay(it);
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   it.kind = kindM; it.catId = catM; it.soTien = v;
   if (ghiChu != null) it.ghiChu = ghiChu;
+  entryDoiGhiChuCuaItem(e, it, segCu, it.ghiChu ? it.ghiChu + ' ' + fmt(Math.round(v)) : '');
   if (walletIdMoi && walletById(walletIdMoi)) it.walletId = walletIdMoi;
   _bucketAdd(e, kindM, catM, v);
   invalidateBalanceCache();
@@ -266,6 +315,7 @@ function entryDeleteItem(date, iid){
   for (var i=0;i<e.items.length;i++){ if (e.items[i].iid === iid){ idx = i; break; } }
   if (idx < 0) return false;
   var it = e.items[idx];
+  entryGoGhiChuCuaItem(e, it);
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   e.items.splice(idx, 1);
   if (entryIsEmpty(e)) delete state.data.journal[date];
@@ -647,6 +697,7 @@ function dinhKyGhi(dk, mk, homNay){
   var e = state.data.journal[date];
   var note = dk.ten + ' ' + fmt(Math.round(dk.soTien));
   e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + note : note;
+  it.gc = note;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo (entryGoGhiChuCuaItem)
   return { date: date, iid: it.iid, note: note };
 }
 function dinhKyHoanTac(r){
