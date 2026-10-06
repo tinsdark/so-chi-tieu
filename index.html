@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sổ Chi Tiêu</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4f46e5">
+<meta name="theme-color" content="#c5071c">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Chi Tiêu">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="style.css?v=2f0822dd">
+<link rel="stylesheet" href="style.css?v=500f9f62">
 </head>
 <body>
 
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
-    <div class="auth-logo">💰</div>
+    <div class="auth-logo"><img src="icons/icon-192.png" alt="" width="84" height="84"></div>
     <h2>Sổ Chi Tiêu</h2>
     <p>Đăng nhập Google để đồng bộ dữ liệu qua Google Drive.</p>
     <button id="btnSignIn" class="btn">Đăng nhập với Google</button>
@@ -34,12 +34,11 @@
 
 <div id="app" style="display:none">
   <header>
-    <div class="brand">💰 Sổ Chi Tiêu</div>
+    <div class="brand"><img class="brand-logo" src="icons/icon-192.png" alt="" width="28" height="28"> Sổ Chi Tiêu</div>
     <div class="sync-status" id="syncStatus">Đang tải dữ liệu…</div>
     <button id="btnPhimTat" aria-label="Phím tắt" title="Phím tắt (?)">⌨</button>
     <button id="btnTheme" aria-label="Đổi giao diện sáng/tối">◐</button>
     <button id="btnRefresh" aria-label="Làm mới"><span aria-hidden="true">⟳</span><span class="lbl"> Làm mới</span></button>
-    <button id="btnSignOut">Đăng xuất</button>
   </header>
   <div id="bannerZone"></div>
   <!-- Cùng 1 markup cho cả desktop và mobile: ở <=700px CSS đẩy .tabs xuống đáy
@@ -59,16 +58,16 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=2f0822dd"></script>
-<script src="js/ui.js?v=2f0822dd"></script>
-<script src="js/drive-sync.js?v=2f0822dd"></script>
-<script src="js/vayno.js?v=2f0822dd"></script>
-<script src="js/sotay.js?v=2f0822dd"></script>
-<script src="js/nhap.js?v=2f0822dd"></script>
-<script src="js/danhmuc.js?v=2f0822dd"></script>
-<script src="js/dongtien.js?v=2f0822dd"></script>
-<script src="js/mophong.js?v=2f0822dd"></script>
-<script src="js/app.js?v=2f0822dd"></script>
+<script src="js/state.js?v=500f9f62"></script>
+<script src="js/ui.js?v=500f9f62"></script>
+<script src="js/drive-sync.js?v=500f9f62"></script>
+<script src="js/vayno.js?v=500f9f62"></script>
+<script src="js/sotay.js?v=500f9f62"></script>
+<script src="js/nhap.js?v=500f9f62"></script>
+<script src="js/danhmuc.js?v=500f9f62"></script>
+<script src="js/dongtien.js?v=500f9f62"></script>
+<script src="js/mophong.js?v=500f9f62"></script>
+<script src="js/app.js?v=500f9f62"></script>
 
 </body>
 </html>

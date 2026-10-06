@@ -155,7 +155,6 @@ document.addEventListener('keydown', function(ev){
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
-document.getElementById('btnSignOut').addEventListener('click', signOut);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){

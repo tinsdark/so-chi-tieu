@@ -5,34 +5,36 @@
    ==================================================================== */
 :root{
   color-scheme: light dark;
-  --bg:#f6f7fb; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
-  --primary:#4f46e5; --primary-d:#4338ca; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gold:#b8860b;
+  --bg:#f8f6f3; --card:#ffffff; --border:#e5e7eb; --text:#1f2430; --muted:#6b7280;
+  --primary:#c5071c; --primary-d:#9d0516; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gold:#b8860b;
   --thu-bg:#ecfdf5; --chi-bg:#fef2f2; --shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 6px rgba(0,0,0,.04);
   /* màu phụ, trước đây viết cứng trong rule */
   --input-bg:#ffffff;      /* nền ô nhập + nền th sticky */
   --hover:#f0f1f5;         /* nền khi hover nút phụ, nền thẻ tag */
   --row-total:#f6f7fb;     /* dòng tổng */
-  --row-bal:#eef2ff;       /* dòng số dư / dòng đang mở chi tiết */
+  --row-bal:#fdeff0;       /* dòng số dư / dòng đang mở chi tiết */
   --row-sub:#fafafa;       /* dòng phụ chỉ đọc (giao dịch gốc từ Vay-Nợ) */
   --danger-br:#fecaca;     /* viền nút nguy hiểm */
   --warn-bg:#fffbeb; --warn-br:#fde68a; --warn-tx:#92400e;  /* banner cảnh báo */
   --mask:rgba(17,24,39,.45);   /* nền mờ sau hộp thoại */
   --hero-a:#a80518; --hero-b:#c5071c; --hero-c:#d63a2c;   /* thẻ tổng quan (đỏ theo logo) */
+  --chi-solid:#dc2626; --thu-solid:#15803d;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
 [data-theme="dark"]{
   color-scheme: dark;
   --bg:#12151c; --card:#1a1f29; --border:#2b3240; --text:#e6e9ef; --muted:#9aa4b2;
-  --primary:#6d63f0; --primary-d:#a5a0ff; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --gold:#d4af37;
+  --primary:#d6384d; --primary-d:#ff9aa8; --green:#4ade80; --red:#f87171; --amber:#fbbf24; --gold:#d4af37;
   --thu-bg:#10241a; --chi-bg:#2a1618; --shadow:0 1px 2px rgba(0,0,0,.4), 0 1px 6px rgba(0,0,0,.3);
   --input-bg:#12161d;
   --hover:#242b37;
   --row-total:#1f242f;
-  --row-bal:#232540;
+  --row-bal:#2e1b20;
   --row-sub:#161a22;
   --danger-br:#5c2b2b;
   --warn-bg:#2b2410; --warn-br:#5c4a16; --warn-tx:#fcd34d;
   --mask:rgba(0,0,0,.6);
   --hero-a:#5e0a15; --hero-b:#7d0e1c; --hero-c:#92231c;
+  --chi-solid:#c53030; --thu-solid:#1e8f4e;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
@@ -43,8 +45,8 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
 button{cursor:pointer;font-family:inherit}
-#btnRefresh,#btnSignOut,#btnTheme,#btnPhimTat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
-#btnRefresh:hover,#btnSignOut:hover,#btnTheme:hover,#btnPhimTat:hover{background:var(--hover)}
+#btnRefresh,#btnTheme,#btnPhimTat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
+#btnRefresh:hover,#btnTheme:hover,#btnPhimTat:hover{background:var(--hover)}
 #btnTheme,#btnPhimTat{padding:6px 10px;font-size:15px;line-height:1}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);position:sticky;top:var(--header-h,52px);background:var(--bg);z-index:19}
 .tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
@@ -334,7 +336,7 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
   .brand{font-size:16px;white-space:nowrap}
   .sync-status{order:10;flex-basis:100%;font-size:11px;margin-top:-2px}
   #btnRefresh .lbl{display:none}
-  #btnRefresh,#btnSignOut{padding:6px 10px;font-size:13px}
+  #btnRefresh{padding:6px 10px;font-size:13px}
   /* thanh lọc Sổ tay: 2 cột; ô tìm + danh mục (+ nút xóa lọc) chiếm cả hàng, 2 ô ngày nằm cạnh nhau */
   .search-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .search-row .fld{min-width:0}
@@ -360,8 +362,8 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .qa{padding:14px}
 .qa-seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-bottom:10px}
 .qa-seg button{border:none;background:var(--card);color:var(--muted);padding:7px 20px;font-weight:700;font-size:13px}
-.qa-seg button.chi.on{background:var(--red);color:#fff}
-.qa-seg button.thu.on{background:var(--green);color:#fff}
+.qa-seg button.chi.on{background:var(--chi-solid);color:#fff}
+.qa-seg button.thu.on{background:var(--thu-solid);color:#fff}
 .qa-amt{display:block;width:100%;font-size:26px;font-weight:700;padding:10px 12px;margin-bottom:10px;border-radius:10px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
@@ -373,8 +375,8 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .qa-row input[type=date]{width:auto;min-width:130px}
 .qa-date.lech{border-color:var(--amber);background:var(--warn-bg)}
 .qa-save{width:100%;padding:12px;font-size:15px}
-.qa-save.chi{background:var(--red)}
-.qa-save.thu{background:var(--green)}
+.qa-save.chi{background:var(--chi-solid)}
+.qa-save.thu{background:var(--thu-solid)}
 .qa-save[disabled]{opacity:.45}
 
 /* iOS Safari tự phóng to trang khi chạm vào ô nhập có chữ < 16px, và không thu lại -> phải ép 16px trên điện thoại */
@@ -404,3 +406,9 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .hero-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .hero-chip{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.38);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600}
 .hero-ok{font-size:12px;opacity:.88;margin-top:12px}
+
+/* ---- Thương hiệu: logo thay emoji ---- */
+.brand{display:flex;align-items:center;gap:8px}
+.brand-logo{border-radius:7px;display:block}
+.auth-card .auth-logo{margin-bottom:10px}
+.auth-card .auth-logo img{border-radius:18px;display:block;margin:0 auto;box-shadow:var(--shadow)}

@@ -469,7 +469,7 @@ function renderVayNo(){
 
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   if (state.vnFormKind === 'choVay') html += choVayFormHtml();
-  html += '<div class="empty" style="padding:0 0 10px">Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.</div>';
+  html += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.', 'Ghi tiền thu về thế nào?');
   if (!choVay.length){
     html += '<div class="empty-box"><span class="ico">🤝</span>Chưa có khoản cho vay nào.'
       + (state.vnFormKind === 'choVay' ? '' : '<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div>')
@@ -578,7 +578,7 @@ function drawTichLuyChart(rowsData){
   if (!ctx) return;
   chartTichLuy = new Chart(ctx, { type:'line',
     data:{ labels: rowsData.map(function(r){ return monthLabel(r.mk); }), datasets:[
-      { label:'Số dư lũy kế', data: rowsData.map(function(r){ return Math.round(r.bal); }), borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)', fill:true, tension:.25 }
+      { label:'Số dư lũy kế', data: rowsData.map(function(r){ return Math.round(r.bal); }), borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.1)', fill:true, tension:.25 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Số dư lũy kế dự kiến'}, legend:{display:false} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
   });

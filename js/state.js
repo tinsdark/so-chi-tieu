@@ -323,7 +323,7 @@ function repairEntryItems(e){
 // -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
 // màu danh mục: màu người dùng chọn (c.mau) hoặc màu mặc định theo vị trí trong danh sách,
 // để biểu đồ và chấm màu luôn nhất quán giữa các lần vẽ (trước đây màu theo thứ tự lọc, đổi mỗi lần)
-var CAT_PALETTE = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+var CAT_PALETTE = ['#2563eb','#16a34a','#d97706','#9333ea','#0891b2','#db2777','#ca8a04','#64748b'];
 function catMau(kind, catId){
   var arr = (state.data.categories[kind] || []);
   for (var i = 0; i < arr.length; i++){
@@ -351,6 +351,12 @@ function catDangCoTien(kind, catId){
     if (num((e[kind] || {})[catId]) > 0 || entryItems(e).some(function(it){ return it.kind === kind && it.catId === catId; })) n++;
   });
   return n;
+}
+
+// đoạn giải thích dài gấp lại sau nút ⓘ: nhìn số liệu trước, đọc luật sau (CSS .giai-thich).
+// noiDung là HTML do code tự dựng, KHÔNG đưa text người dùng vào đây.
+function ghiChuGon(noiDung, nhan){
+  return '<details class="giai-thich"><summary>ⓘ '+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
 }
 
 // escape khi nhồi text người dùng vào innerHTML

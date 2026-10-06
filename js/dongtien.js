@@ -207,14 +207,14 @@ function renderDongTien(){
 
   html += '</tbody></table></div></div>';
   var fcM = forecastEligibleMonths();
-  html += '<div class="empty" style="margin-top:-8px">* Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
+  html += ghiChuGon('* Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
     + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
     + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng Chỉ tiêu/tháng ở tab Danh mục')
-    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. "Lũy kế số dư" từ tháng hiện tại trở đi đã cộng cả số dự báo.</div>';
+    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. "Lũy kế số dư" từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý (*) cho tháng chưa tới tính thế nào?');
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.</div>'
+    + ghiChuGon('Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.', 'Bảng này tính thế nào?')
     + chuThichMauHtml('Chênh lệch = TB thực tế − Chỉ tiêu. ')
     + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   DONGTIEN_GROUPS.forEach(function(g){

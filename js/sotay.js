@@ -691,7 +691,7 @@ function drawBalanceChart(mk){
   chartBal = new Chart(cv, { type:'line',
     data:{ labels: s.labels.length ? s.labels : ['—'],
       datasets:[{ label:'Số dư cuối ngày', data: s.vals.length ? s.vals : [0],
-        borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.12)', fill:true, tension:.25, pointRadius:2 }] },
+        borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.12)', fill:true, tension:.25, pointRadius:2 }] },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ title:{display:true,text:'Số dư cuối ngày — '+monthLabel(mk)}, legend:{display:false} },
       scales:{ y:{ ticks:{ callback:function(v){ return Math.abs(v)>=1000000?(v/1000000)+'tr':(Math.abs(v)>=1000?(v/1000)+'k':v); } } } } }
