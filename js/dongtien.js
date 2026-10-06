@@ -238,7 +238,7 @@ function renderDongTien(){
     // tiêu đề nhóm + dòng tổng để tách hẳn khối thu với khối chi (trước đây 2 nhóm
     // dính liền nhau, chỉ phân biệt bằng cái tag nhỏ ở cuối tên danh mục)
     html += '<tr class="m-group"><td colspan="5" class="group-title" style="background:var(--bg);text-align:left">'
-      + (kind==='thu' ? '▲ ' : '▼ ') + g.title + '</td></tr>';
+      + icon(kind==='thu' ? 'arrow-up' : 'arrow-down') + ' ' + g.title + '</td></tr>';
     var tBase=0, tTb=0, tGoi=0;
     state.data.categories[kind].forEach(function(c){
       var sumA=0, cntA=0;

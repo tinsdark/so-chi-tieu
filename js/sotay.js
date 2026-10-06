@@ -66,12 +66,12 @@ function ghiNhanhHtml(){
   var homNay = todayStr(), ngay = state.qa.date || homNay;
   var h = '<div class="card qa" id="ghiNhanh">'
     // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
-    + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>✓ '+esc(state.qa.last.text)+'</span>'
+    + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>'+icon('check')+' '+esc(state.qa.last.text)+'</span>'
         + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
     // hàng 1: Chi/Thu. Hàng 2: tài khoản (trái, chỉ khi có từ 2 ví) + số tiền (phải)
     + '<div class="qa-top"><div class="qa-seg" role="group" aria-label="Loại giao dịch">'
-    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">▼ Chi</button>'
-    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">▲ Thu</button>'
+    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-down')+' Chi</button>'
+    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-up')+' Thu</button>'
     + '</div></div>'
     + '<div class="qa-amtrow'+(((state.data.wallets || []).length > 1) ? '' : ' one')+'">'
     + (((state.data.wallets || []).length > 1)
@@ -94,7 +94,7 @@ function ghiNhanhHtml(){
       + '</div>';
   }
   h += '<div class="qa-row">'
-    + '<input type="text" id="qa_note" placeholder="Ghi chú (tùy chọn)" aria-label="Ghi chú" value="'+esc(state.qa.note)+'">'
+    + '<input type="text" id="qa_note" placeholder="Ghi chú" aria-label="Ghi chú" value="'+esc(state.qa.note)+'">'
     + '<input type="date" id="qa_date" class="qa-date'+(ngay !== homNay ? ' lech' : '')+'" aria-label="Ngày" data-act="qaDate" value="'+esc(ngay)+'">'
     + '</div>';
   h += '<button type="button" class="btn qa-save '+kind+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>Ghi khoản '+(kind === 'thu' ? 'thu' : 'chi')+'</button>'
@@ -118,13 +118,13 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
     + '<div class="hero-sub">Đầu tháng '+so(duDau)+'</div>'
     + '<div class="hero-split">'
-    +   '<div><div class="l">▲ Thu tháng</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
-    +   '<div><div class="l">▼ Chi tháng</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    +   '<div><div class="l">'+icon('arrow-up')+' Thu tháng</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
+    +   '<div><div class="l">'+icon('arrow-down')+' Chi tháng</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
     + '</div>';
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
-    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo chỉ tiêu</span><span>'
+    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi so với chỉ tiêu</span><span>'
       + (tongDa > tongCap ? 'vượt ' + fmt(Math.round(tongDa - tongCap)) : 'còn ' + fmt(Math.round(tongCap - tongDa))) + '</span></div>'
       + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với chỉ tiêu tháng">'
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
@@ -134,10 +134,10 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var nVn = danhSachSapDenHan(7).length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
   var chips = '';
-  if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">🔁 '+nDk+' khoản định kỳ đến hạn</button>';
-  if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">⏰ '+nVn+' khoản vay/nợ sắp đến hạn</button>';
-  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">⚠ '+nVuot+' danh mục vượt chỉ tiêu</button>';
-  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">✓ Không có khoản nào cần xử lý</div>';
+  if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
+  if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
+  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt chỉ tiêu</button>';
+  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">Hôm nay không có khoản nào phải lo.</div>';
   return h + '</div>';
 }
 
@@ -262,7 +262,7 @@ function renderSoTay(){
   html += '</div>';
   // THU và CHI là 2 khối riêng (màu + viền + tiêu đề), nhưng vẫn CÙNG 1 form / 1 nút Lưu:
   // saveEntry là đường lưu duy nhất, tách thành 2 form là dựng đường lưu thứ hai.
-  html += '<div class="form-sec thu"><div class="form-sec-head">▲ Khoản thu</div>';
+  html += '<div class="form-sec thu"><div class="form-sec-head">'+icon('arrow-up')+' Khoản thu</div>';
   html += '<div class="form-row">';
   if (!thuCats.length){
     html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
@@ -280,7 +280,7 @@ function renderSoTay(){
     if (VN_ONLY_THU[c.id]){
       html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
         + (roThu ? 'Ghi ở tab Vay - Nợ (thêm khoản vay) — tự hạch toán sang đây.'
-                 : '⚠ Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+                 : 'Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
         + '</div>';
     }
     if (c.id === 'thuHoiChoVay' && !state.editingDate){
@@ -295,7 +295,7 @@ function renderSoTay(){
     html += '</div>';
   });
   html += '</div></div>';     // đóng form-row + khối THU
-  html += '<div class="form-sec chi"><div class="form-sec-head">▼ Khoản chi</div>';
+  html += '<div class="form-sec chi"><div class="form-sec-head">'+icon('arrow-down')+' Khoản chi</div>';
   html += '<div class="form-row">';
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
@@ -313,7 +313,7 @@ function renderSoTay(){
     if (VN_ONLY_CHI[c.id]){
       html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
         + (roChi ? 'Ghi ở tab Vay - Nợ (thêm khoản cho vay) — tự hạch toán sang đây.'
-                 : '⚠ Số này nhập tay, không gắn khoản cho vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+                 : 'Số này nhập tay, không gắn khoản cho vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
         + '</div>';
     }
     if (c.id === 'traNo' && !state.editingDate){
@@ -371,7 +371,7 @@ function renderSoTay(){
   var filterActive = !!(state.soTaySearch || state.soTayFrom || state.soTayTo || state.soTayCat);
 
   html += nhapCardHtml();
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <span style="display:flex;gap:6px"><button class="btn secondary sm" data-act="impMo">⬆ Nhập</button><button class="btn secondary sm" data-act="exportExcel">⬇ Xuất Excel</button></span></h3>';
+  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <span style="display:flex;gap:6px"><button class="btn secondary sm" data-act="impMo">'+icon('upload')+' Nhập</button><button class="btn secondary sm" data-act="exportExcel">'+icon('download')+' Xuất Excel</button></span></h3>';
   html += '<div class="search-row">'
     + '<div class="fld"><label>Tìm nội dung</label><input type="text" data-act="soTaySearchInput" value="'+(state.soTaySearch||'').replace(/"/g,'&quot;')+'" placeholder="Từ khóa trong ghi chú..."></div>'
     + '<div class="fld"><label>Danh mục</label><select data-act="soTayCatInput">'+soTayCatOptions(state.soTayCat)+'</select></div>'
@@ -392,10 +392,10 @@ function renderSoTay(){
   html += '<div class="table-wrap">';
   if (!displayDates.length){
     html += filterActive
-      ? '<div class="empty-box"><span class="ico">🔍</span>Không có giao dịch khớp với bộ lọc.'
+      ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
         + '<div><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div></div>'
-      : '<div class="empty-box"><span class="ico">📝</span>Chưa có giao dịch trong '+monthLabel(mk)+'.'
-        + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
+      : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
+        + '<div><button class="btn" data-act="fabAdd">Ghi khoản đầu tiên</button></div></div>';
   } else {
     // class t-card: ở <=700px CSS đổi bảng này (và CHỈ bảng này) thành danh sách thẻ
     html += '<table class="t-card"><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Số dư</th><th>Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
@@ -416,8 +416,8 @@ function renderSoTay(){
         + '<td data-th="Số dư">'+fmt(balanceAt(d))+'</td>'
         + '<td data-th="Nội dung" style="text-align:left;white-space:normal">'+esc(e.ghiChu||'')+'</td>'
         + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="editDay" data-date="'+d+'" title="Sửa ngày này" aria-label="Sửa giao dịch ngày '+d+'">✎</button>'
-          + '<button class="icon-btn" data-act="delDay" data-date="'+d+'" title="Xóa ngày này" aria-label="Xóa giao dịch ngày '+d+'">🗑</button>'
+          + '<button class="icon-btn" data-act="editDay" data-date="'+d+'" title="Sửa ngày này" aria-label="Sửa giao dịch ngày '+d+'">'+icon('pencil')+'</button>'
+          + '<button class="icon-btn" data-act="delDay" data-date="'+d+'" title="Xóa ngày này" aria-label="Xóa giao dịch ngày '+d+'">'+icon('trash')+'</button>'
           + '</td>'
         + '</tr>';
       if (moRong) html += soTayDetailHtml(d);
@@ -468,8 +468,8 @@ function stItemEditRow(date, it){
     + '<td><input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" value="'+(it?veSo(num(it.soTien)):'')+'"></td>'
     + '<td style="text-align:left"><input type="text" id="st_it_note" placeholder="Nội dung..." value="'+(it?esc(it.ghiChu):'')+'"></td>'
     + '<td class="actions-col">'
-      + '<button class="icon-btn" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it?it.iid:'')+'" title="Lưu">✔</button>'
-      + '<button class="icon-btn" data-act="stCancelItem" title="Hủy">✕</button>'
+      + '<button class="icon-btn" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it?it.iid:'')+'" title="Lưu" aria-label="Lưu">'+icon('check')+'</button>'
+      + '<button class="icon-btn" data-act="stCancelItem" title="Hủy" aria-label="Hủy">'+icon('x')+'</button>'
     + '</td></tr>';
 }
 
@@ -493,8 +493,8 @@ function soTayDetailHtml(date){
         + '<td style="color:var(--'+(it.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(it.soTien)))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+esc(it.ghiChu||'')+'</td>'
         + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Sửa dòng này">✎</button>'
-          + '<button class="icon-btn" data-act="stDelItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Xóa dòng này">🗑</button>'
+          + '<button class="icon-btn" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Sửa dòng này" aria-label="Sửa dòng này">'+icon('pencil')+'</button>'
+          + '<button class="icon-btn" data-act="stDelItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Xóa dòng này" aria-label="Xóa dòng này">'+icon('trash')+'</button>'
         + '</td></tr>';
     });
     // refs: chỉ đọc, bấm vào là nhảy sang tab Vay - Nợ để sửa cho đúng chỗ
@@ -503,13 +503,13 @@ function soTayDetailHtml(date){
       if (!m) return;
       h += '<tr class="st-ref">'
         + '<td style="text-align:left"><span class="st-kind '+m.kind+'">'+(m.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+esc(catTen(m.kind, m.cat))+' <span class="st-lock">🔒 Vay-Nợ</span>'
+        + '<td style="text-align:left">'+esc(catTen(m.kind, m.cat))+' <span class="st-lock">'+icon('lock')+' Vay-Nợ</span>'
           + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaRef(r)))+'</span>' : '')+'</td>'
         + '<td style="color:var(--'+(m.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(r.soTien)))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+esc(REF_LABEL[r.loai]||r.loai)
           + (r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')
           + (r.note ? ' — '+esc(r.note) : '')+'</td>'
-        + '<td class="actions-col"><button class="icon-btn" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">↗</button></td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="goVayNo" title="Sửa ở tab Vay - Nợ" aria-label="Sửa ở tab Vay - Nợ">'+icon('up-right')+'</button></td>'
         + '</tr>';
     });
     h += '</tbody></table>';
@@ -535,7 +535,7 @@ function mucTieuCardHtml(){
     var t = mucTieuTienDo(g, hom);
     var rong = Math.min(100, Math.round(t.pct * 100));
     var phu;
-    if (t.xong) phu = '<span style="color:var(--green)">🎉 Đã đủ mục tiêu</span>';
+    if (t.xong) phu = '<span style="color:var(--green)">Đã đủ mục tiêu</span>';
     else if (t.quaHan) phu = '<span style="color:var(--red)">Quá hạn '+g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4)+' · còn thiếu '+fmt(Math.round(t.conThieu))+'</span>';
     else {
       phu = 'Còn thiếu '+fmt(Math.round(t.conThieu));
@@ -589,7 +589,7 @@ function viSoDuCardHtml(mk){
   if (ws.length < 2) return '';
   var cuoi = mk + '-31';   // so sánh chuỗi ngày: '2026-10-31' >= mọi ngày trong tháng 10
   var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Số dư theo ví'
-    + '<button class="btn secondary sm" data-act="viChuyenMo">⇄ Chuyển tiền giữa ví</button></h3>'
+    + '<button class="btn secondary sm" data-act="viChuyenMo">'+icon('transfer')+' Chuyển tiền giữa ví</button></h3>'
     + '<div class="vi-grid">';
   ws.forEach(function(w){
     var b = soDuTheoVi(w.id, cuoi);
@@ -620,7 +620,7 @@ function viSoDuCardHtml(mk){
         + '<div class="vi-ct-main"><div><b>'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</b> · '+esc(viTen(t.tuVi))+' → '+esc(viTen(t.denVi))+'</div>'
         + (t.ghiChu ? '<div class="vi-ct-note">'+esc(t.ghiChu)+'</div>' : '') + '</div>'
         + '<div class="vi-ct-tien">'+fmt(Math.round(num(t.soTien)))+'</div>'
-        + '<button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">🗑</button></div>';
+        + '<button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">'+icon('trash')+'</button></div>';
     });
     h += '</div>';
   }

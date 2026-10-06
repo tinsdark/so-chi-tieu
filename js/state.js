@@ -407,7 +407,45 @@ function catDangCoTien(kind, catId){
 // đoạn giải thích dài gấp lại sau nút ⓘ: nhìn số liệu trước, đọc luật sau (CSS .giai-thich).
 // noiDung là HTML do code tự dựng, KHÔNG đưa text người dùng vào đây.
 function ghiChuGon(noiDung, nhan){
-  return '<details class="giai-thich"><summary>ⓘ '+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
+  return '<details class="giai-thich"><summary>'+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
+}
+
+/* ====================================================================
+   BỘ ICON — nét mảnh 1.8px, tô bằng currentColor (đổi màu theo chữ, sáng/tối đều đúng).
+   Thay cho emoji: emoji mỗi máy một kiểu, màu chói và là dấu hiệu "app làm bằng máy" dễ thấy nhất.
+   Dùng: icon('trash') -> chuỗi <svg>. Icon thuần trang trí (aria-hidden): nút bấm vẫn phải có title/aria-label/chữ.
+   ==================================================================== */
+var ICON_PATHS = {
+  'book': "<path d=\"M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5z\"/><path d=\"M5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3\"/><path d=\"M9 7h6\"/>",
+  'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
+  'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
+  'sliders': "<path d=\"M4 7h9\"/><path d=\"M17 7h3\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><path d=\"M4 17h3\"/><path d=\"M11 17h9\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
+  'list': "<path d=\"M9 6h11\"/><path d=\"M9 12h11\"/><path d=\"M9 18h11\"/><path d=\"M4.5 6h.01\"/><path d=\"M4.5 12h.01\"/><path d=\"M4.5 18h.01\"/>",
+  'refresh': "<path d=\"M20 12a8 8 0 1 1-2.3-5.7\"/><path d=\"M20 4v5h-5\"/>",
+  'sun': "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4\"/>",
+  'moon': "<path d=\"M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z\"/>",
+  'contrast': "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 3.5v17a8.5 8.5 0 0 0 0-17z\" fill=\"currentColor\"/>",
+  'pencil': "<path d=\"M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z\"/><path d=\"M14.5 6.5l3 3\"/>",
+  'trash': "<path d=\"M4 7h16\"/><path d=\"M9 7V4.5h6V7\"/><path d=\"M6.5 7l1 13h9l1-13\"/><path d=\"M10 11v5M14 11v5\"/>",
+  'check': "<path d=\"M5 12.5l4.5 4.5L19 7\"/>",
+  'undo': "<path d=\"M9 14L4 9l5-5\"/><path d=\"M4 9h9a6 6 0 0 1 0 12h-2\"/>",
+  'alert': "<path d=\"M12 4l9.5 16.5h-19z\"/><path d=\"M12 10v4.5\"/><path d=\"M12 17.5h.01\"/>",
+  'clock': "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>",
+  'repeat': "<path d=\"M17 3l3.5 3.5L17 10\"/><path d=\"M3.5 11V9.5a3 3 0 0 1 3-3H20\"/><path d=\"M7 21l-3.5-3.5L7 14\"/><path d=\"M20.5 13v1.5a3 3 0 0 1-3 3H4\"/>",
+  'plus': "<path d=\"M12 5v14M5 12h14\"/>",
+  'x': "<path d=\"M6 6l12 12M18 6L6 18\"/>",
+  'up-right': "<path d=\"M7 17L17 7\"/><path d=\"M8 7h9v9\"/>",
+  'lock': "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"1.5\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>",
+  'download': "<path d=\"M12 4v11\"/><path d=\"M7.5 11L12 15.5 16.5 11\"/><path d=\"M5 20h14\"/>",
+  'upload': "<path d=\"M12 15V4\"/><path d=\"M7.5 8L12 3.5 16.5 8\"/><path d=\"M5 20h14\"/>",
+  'transfer': "<path d=\"M4 8h14\"/><path d=\"M14.5 4.5L18 8l-3.5 3.5\"/><path d=\"M20 16H6\"/><path d=\"M9.5 12.5L6 16l3.5 3.5\"/>",
+  'arrow-up': "<path d=\"M12 19V5\"/><path d=\"M6 11l6-6 6 6\"/>",
+  'arrow-down': "<path d=\"M12 5v14\"/><path d=\"M18 13l-6 6-6-6\"/>"
+};
+function icon(ten, lop){
+  var d = ICON_PATHS[ten];
+  if (!d) return '';
+  return '<svg class="ic'+(lop ? ' '+lop : '')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+d+'</svg>';
 }
 
 // escape khi nhồi text người dùng vào innerHTML

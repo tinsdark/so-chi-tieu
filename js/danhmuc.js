@@ -14,18 +14,18 @@ function categoryCardHtml(kind, title, cats){
     cats.forEach(function(c, idx){
       html += '<div class="cat-item" data-kind="'+kind+'" data-id="'+c.id+'" style="display:flex;flex-direction:column;gap:4px">'
         /* Dòng 1 chỉ có tay cầm kéo + TÊN để tên không bị bóp còn mấy ký tự;
-           chỉ tiêu và các nút ▲▼🗑 xuống dòng 2. */
+           chỉ tiêu và các nút lên/xuống/xóa xuống dòng 2. */
         + '<div style="display:flex;gap:4px;align-items:center">'
         + '<span class="cat-drag" draggable="true" title="Kéo để đổi thứ tự" style="cursor:grab;color:var(--muted);user-select:none;padding:0 2px">⠿</span>'
         + '<input type="color" class="cat-color" data-act="catMau" data-kind="'+kind+'" data-id="'+c.id+'" value="'+catMau(kind, c.id)+'" title="Màu danh mục (dùng ở biểu đồ)" aria-label="Màu danh mục '+esc(c.ten)+'">'
-        + (c.mau ? '<button class="icon-btn" data-act="catMauReset" data-kind="'+kind+'" data-id="'+c.id+'" title="Về màu mặc định" aria-label="Về màu mặc định '+esc(c.ten)+'">↺</button>' : '')
+        + (c.mau ? '<button class="icon-btn" data-act="catMauReset" data-kind="'+kind+'" data-id="'+c.id+'" title="Về màu mặc định" aria-label="Về màu mặc định '+esc(c.ten)+'">'+icon('undo')+'</button>' : '')
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '</div>'
         + '<div style="display:flex;gap:4px;align-items:center">'
         + '<input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+veSo(c.chiTieu)+'" placeholder="Chỉ tiêu/tháng" style="flex:1;min-width:0" title="Chỉ tiêu/tháng">'
-        + '<button class="icon-btn" data-act="catUp" data-kind="'+kind+'" data-id="'+c.id+'" title="Lên trên"'+(idx===0?' disabled style="opacity:.3"':'')+'>▲</button>'
-        + '<button class="icon-btn" data-act="catDown" data-kind="'+kind+'" data-id="'+c.id+'" title="Xuống dưới"'+(idx===cats.length-1?' disabled style="opacity:.3"':'')+'>▼</button>'
-        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'" title="Xóa danh mục" aria-label="Xóa danh mục '+esc(c.ten)+'">🗑</button>'
+        + '<button class="icon-btn" data-act="catUp" data-kind="'+kind+'" data-id="'+c.id+'" title="Lên trên" aria-label="Lên trên"'+(idx===0?' disabled style="opacity:.3"':'')+'>'+icon('arrow-up')+'</button>'
+        + '<button class="icon-btn" data-act="catDown" data-kind="'+kind+'" data-id="'+c.id+'" title="Xuống dưới" aria-label="Xuống dưới"'+(idx===cats.length-1?' disabled style="opacity:.3"':'')+'>'+icon('arrow-down')+'</button>'
+        + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'" title="Xóa danh mục" aria-label="Xóa danh mục '+esc(c.ten)+'">'+icon('trash')+'</button>'
         + '</div>'
         + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
         + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
@@ -126,7 +126,7 @@ function viCardHtml(){
       + '<div><label>Số dư đầu kỳ</label><input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="viDu" data-id="'+esc(w.id)+'" value="'+veSo(w.soDuDauKy)+'" placeholder="0"></div>'
       + '<div style="flex:0"><label class="vi-md" title="Ví điền sẵn khi nhập giao dịch, thêm khoản vay, khoản định kỳ mới"><input type="radio" name="viMd" data-act="viMd" data-id="'+esc(w.id)+'"'+(w.id === viMacDinhId() ? ' checked' : '')+'> Mặc định</label></div>'
       + '<div style="flex:0"><button class="icon-btn" data-act="viXoa" data-id="'+esc(w.id)+'" title="'+(dung ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được' : 'Xóa ví này')+'" aria-label="Xóa ví '+esc(w.ten)+'"'
-      + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>🗑</button></div></div>';
+      + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>'+icon('trash')+'</button></div></div>';
   });
   return h + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">'
     + '<button class="btn secondary sm" data-act="viThem">+ Thêm ví</button>'
@@ -163,8 +163,8 @@ function mtCardHtml(){
       h += '<tr><td style="text-align:left">'+esc(g.ten)+'</td><td>'+fmt(Math.round(g.soTien))+'</td>'
         + '<td>'+(g.hanChot ? g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4) : '—')+'</td>'
         + '<td style="text-align:left">'+(g.walletId && walletById(g.walletId) ? 'Ví: '+esc(viTen(g.walletId)) : 'Gom tay: '+fmt(Math.round(num(g.daGom))))+'</td>'
-        + '<td class="actions-col"><button class="icon-btn" data-act="mtSua" data-id="'+esc(g.id)+'" title="Sửa" aria-label="Sửa '+esc(g.ten)+'">✎</button>'
-        + '<button class="icon-btn" data-act="mtXoa" data-id="'+esc(g.id)+'" title="Xóa" aria-label="Xóa '+esc(g.ten)+'">🗑</button></td></tr>';
+        + '<td class="actions-col"><button class="icon-btn" data-act="mtSua" data-id="'+esc(g.id)+'" title="Sửa" aria-label="Sửa '+esc(g.ten)+'">'+icon('pencil')+'</button>'
+        + '<button class="icon-btn" data-act="mtXoa" data-id="'+esc(g.id)+'" title="Xóa" aria-label="Xóa '+esc(g.ten)+'">'+icon('trash')+'</button></td></tr>';
     });
     h += '</tbody></table></div>';
   }
@@ -213,8 +213,8 @@ function dkCardHtml(){
         + '<td style="text-align:left">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+'</td>'
         + '<td style="color:var(--'+(k.kind === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(k.soTien))+'</td>'
         + '<td>ngày '+k.ngay+'</td>'
-        + '<td class="actions-col"><button class="icon-btn" data-act="dkSua" data-id="'+esc(k.id)+'" title="Sửa" aria-label="Sửa '+esc(k.ten)+'">✎</button>'
-        + '<button class="icon-btn" data-act="dkXoa" data-id="'+esc(k.id)+'" title="Xóa" aria-label="Xóa '+esc(k.ten)+'">🗑</button></td></tr>';
+        + '<td class="actions-col"><button class="icon-btn" data-act="dkSua" data-id="'+esc(k.id)+'" title="Sửa" aria-label="Sửa '+esc(k.ten)+'">'+icon('pencil')+'</button>'
+        + '<button class="icon-btn" data-act="dkXoa" data-id="'+esc(k.id)+'" title="Xóa" aria-label="Xóa '+esc(k.ten)+'">'+icon('trash')+'</button></td></tr>';
     });
     h += '</tbody></table></div>';
   }
@@ -225,7 +225,7 @@ function dkCardHtml(){
 function caiAppCardHtml(){
   var h = '<div class="card"><h3>Cài lên điện thoại / máy tính</h3>';
   if (dangChayNhuApp()){
-    return h + '<div class="empty" style="padding:0;text-align:left">✓ Đang chạy như một app từ màn hình chính.</div></div>';
+    return h + '<div class="empty" style="padding:0;text-align:left">'+icon('check')+' Đang chạy như một app từ màn hình chính.</div></div>';
   }
   var buoc = function(t){ return '<li>'+t+'</li>'; };
   h += '<div class="empty" style="padding:0 0 8px;text-align:left">Có biểu tượng ở màn hình chính, mở toàn màn hình như app, không cần gõ địa chỉ web.</div>';
@@ -271,7 +271,7 @@ function backupCardHtml(){
     + ghiChuGon('Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
     + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?')
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
-    + '<button class="btn sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? '⟳ Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
+    + '<button class="btn sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? icon('refresh')+' Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
     + '<button class="btn secondary sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
     + '</div>';
   if (state.backupDs){
@@ -337,7 +337,7 @@ function handleDanhMucAction(act, el){
   } else if (act === 'dangXuat'){
     (async function(){
       if (!await xacNhan('Đăng xuất khỏi Google?',
-            'Dữ liệu trên Google Drive vẫn còn. Bản lưu để mở ngoại tuyến trên máy này sẽ bị xóa; các thay đổi chưa kịp đồng bộ (nếu có) cũng nằm trong đó.' + (state.dirty ? '\n\n⚠ Đang có thay đổi CHƯA đồng bộ lên Drive.' : ''),
+            'Dữ liệu trên Google Drive vẫn còn. Bản lưu để mở ngoại tuyến trên máy này sẽ bị xóa; các thay đổi chưa kịp đồng bộ (nếu có) cũng nằm trong đó.' + (state.dirty ? '\n\nĐang có thay đổi CHƯA đồng bộ lên Drive.' : ''),
             { nguyHiem:true, chuOk:'Đăng xuất' })) return;
       signOut();
     })();

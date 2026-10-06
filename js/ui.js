@@ -45,8 +45,8 @@ function toast(msg, opts){
   var giay = opts.giay || (loai === 'err' ? 7 : (opts.hoanTac ? 8 : 4));
   var el = document.createElement('div');
   el.className = 'toast ' + loai;
-  var icon = loai === 'err' ? '⚠' : (loai === 'warn' ? '!' : '✓');
-  el.innerHTML = '<span class="toast-ico">'+icon+'</span><span class="toast-msg">'+esc(msg)+'</span>';
+  var bieuTuong = (loai === 'err' || loai === 'warn') ? icon('alert') : icon('check');
+  el.innerHTML = '<span class="toast-ico">'+bieuTuong+'</span><span class="toast-msg">'+esc(msg)+'</span>';
   var hen = null;
   var dong = function(){
     if (hen) clearTimeout(hen);
@@ -63,7 +63,7 @@ function toast(msg, opts){
   var x = document.createElement('button');
   x.className = 'toast-x';
   x.setAttribute('aria-label', 'Đóng thông báo');
-  x.textContent = '✕';
+  x.innerHTML = icon('x');
   x.addEventListener('click', dong);
   el.appendChild(x);
   _toastRoot().appendChild(el);
@@ -279,7 +279,7 @@ function apDungTheme(){
   document.documentElement.setAttribute('data-theme', thuc);
   var btn = document.getElementById('btnTheme');
   if (btn){
-    btn.textContent = (t === 'auto') ? '◐' : (t === 'dark' ? '☾' : '☀');
+    btn.innerHTML = icon(t === 'auto' ? 'contrast' : (t === 'dark' ? 'moon' : 'sun'));
     btn.setAttribute('aria-label', 'Giao diện: ' + (t==='auto'?'theo hệ thống':(t==='dark'?'tối':'sáng')) + ' — bấm để đổi');
     btn.title = btn.getAttribute('aria-label');
   }

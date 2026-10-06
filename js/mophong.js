@@ -230,14 +230,14 @@ function renderMoPhong(){
          + 'Bấm nút dưới để copy dữ liệu hiện tại sang nháp rồi thử thoải mái — sửa ở đây '
          + '<b>không</b> ảnh hưởng Sổ tay / Vay-Nợ và <b>không</b> được lưu lên Drive. '
          + 'Thoát trang hoặc bấm "Làm mới" là nháp mất sạch.</div>';
-    html += '<button class="btn" data-act="mpNapGoc">⬇ Nạp dữ liệu gốc</button>';
+    html += '<button class="btn" data-act="mpNapGoc">'+icon('download')+' Nạp dữ liệu gốc</button>';
   } else {
     html += '<div class="empty" style="padding:0 0 10px">Đã nạp bản nháp lúc '
          + pad2(state.mp.napLuc.getHours())+':'+pad2(state.mp.napLuc.getMinutes())
          + '. Mọi con số dưới đây là <b>nháp</b> — không ghi vào dữ liệu thật, không lên Drive.</div>';
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-         + '<button class="btn secondary sm" data-act="mpNapGoc">⟳ Nạp lại từ gốc</button>'
-         + '<button class="btn danger sm" data-act="mpXoaNhap">🗑 Xóa nháp</button>'
+         + '<button class="btn secondary sm" data-act="mpNapGoc">'+icon('refresh')+' Nạp lại từ gốc</button>'
+         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Xóa nháp</button>'
          + '</div>';
   }
   html += '</div>';
@@ -264,8 +264,8 @@ function renderMoPhong(){
         + '<td style="text-align:left">'+MP_LOAI_LABEL[dc.loai]+'</td>'
         + '<td style="text-align:left;white-space:normal">'+mpDcMoTa(dc)+'</td>'
         + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh">✎</button>'
-          + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh">🗑</button>'
+          + '<button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh">'+icon('pencil')+'</button>'
+          + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh">'+icon('trash')+'</button>'
         + '</td></tr>';
     });
     html += '</tbody></table></div>';
