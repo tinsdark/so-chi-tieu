@@ -520,3 +520,35 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .k-wal .vi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .k-wal .stat{border-left:4px solid var(--vc,var(--k));padding:8px 12px;box-shadow:none}
 .k-wal .stat .val{font-size:16px}
+
+/* ====================================================================
+   LỚP 6 — chuyển động. Chỉ transform/opacity (mượt trên iPhone); một đường cong chung.
+   Tắt hết khi máy bật "Giảm chuyển động" (khối prefers-reduced-motion ở cuối).
+   JS bật các lớp .anim-* ở js/motion.js.
+   ==================================================================== */
+:root{--ease:cubic-bezier(.22,.8,.3,1);--spring:cubic-bezier(.34,1.45,.5,1)}
+@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes mo-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes hang-moi{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@keyframes hang-xoa{from{opacity:1;transform:none}to{opacity:0;transform:translateX(16px)}}
+.anim-card{animation:card-in .32s var(--ease) both}
+.anim-mo{animation:mo-in .22s var(--ease) both}
+.anim-moi{animation:hang-moi .28s var(--ease) both}
+.anim-xoa{animation:hang-xoa .24s var(--ease) both;pointer-events:none}
+/* thanh tiến độ */
+.hm-fill,.hero-bar>i{transition:width .6s var(--ease)}
+/* nhấn: lún nhẹ; chip / nút chọn: đổi màu mượt */
+.btn,.icon-btn,.hero-chip,.chip,.seg button,.tab{transition:transform .12s var(--ease),background-color .18s,color .18s,border-color .18s,box-shadow .18s}
+.btn:active,.icon-btn:active,.hero-chip:active,.chip:active{transform:scale(.96)}
+.tab:active{transform:scale(.94)}
+/* mục giải thích (details): nội dung trượt ra */
+details[open]>div,details[open]>.giai-thich-nd{animation:mo-in .22s var(--ease)}
+/* toast, hộp thoại: nảy nhẹ */
+@keyframes toast-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes modal-pop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.toast{animation:toast-in .3s var(--spring)}
+.modal-box{animation:modal-pop .26s var(--spring)}
+.modal-back{animation:modal-fade .2s ease-out}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important}
+}

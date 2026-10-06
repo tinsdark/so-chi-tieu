@@ -2010,6 +2010,17 @@ test('Thẻ phân màu theo loại + "Số dư theo ví" nằm ngay dưới th�
   });
 });
 
+test('Animation: motion.js được nạp, bọc đủ 5 hàm render, tôn trọng "giảm chuyển động"', function(){
+  var root = path.join(__dirname, '..');
+  var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  var m = fs.readFileSync(path.join(root, 'js', 'motion.js'), 'utf8');
+  var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  ok(html.indexOf('js/motion.js') > 0 && html.indexOf('js/motion.js') < html.indexOf('js/app.js'), 'motion.js phải nạp trước app.js');
+  ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderDanhMuc'].forEach(function(n){ ok(m.indexOf("'" + n + "'") >= 0, 'thiếu bọc ' + n); });
+  ok(m.indexOf('prefers-reduced-motion') >= 0 && css.indexOf('@media (prefers-reduced-motion:reduce)') >= 0, 'thiếu tắt animation khi giảm chuyển động');
+  ['anim-card', 'anim-mo', 'anim-moi', 'anim-xoa'].forEach(function(k){ ok(css.indexOf('.' + k + '{') >= 0, 'thiếu CSS ' + k); });
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
