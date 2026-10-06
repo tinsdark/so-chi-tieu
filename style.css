@@ -338,3 +338,10 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
   .search-row .fld{min-width:0}
   .search-row .fld:nth-child(1),.search-row .fld:nth-child(2),.search-row .fld:nth-child(5){grid-column:1/-1}
 }
+
+/* ---- Gợi ý cài app (iOS) + hướng dẫn ở tab Danh mục ---- */
+.ios-hint{position:relative;margin-top:16px;padding:10px 30px 10px 12px;border-radius:10px;background:var(--hover);font-size:12px;line-height:1.5;text-align:left;color:var(--text)}
+.ios-hint-x{position:absolute;top:4px;right:4px;background:none;border:none;color:var(--muted);font-size:14px;padding:4px 6px;cursor:pointer}
+.cai-app{margin:0 0 8px;font-size:13px}
+.cai-app ol{margin:4px 0 0;padding-left:20px}
+.cai-app li{margin:2px 0}
