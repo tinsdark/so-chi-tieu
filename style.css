@@ -502,3 +502,4 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .qa-seg,.qa-chip,.qa-more,.dt-chip,.hero-chip,.vi-chip,.st-count,.cat-tag,.hm-badge,.st-kind,.toast-undo{border-radius:6px}
 .qa-seg button{border-radius:0}
 .hm-bar,.hm-fill,.hero-bar,.hero-bar>i{border-radius:3px}
+.fab{border-radius:14px;box-shadow:0 3px 10px rgba(80,30,10,.28)}   /* nút + nổi: vuông bo góc */
