@@ -1774,6 +1774,96 @@ test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị
   eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(120000), 'xóa dòng xăng -> chỉ gỡ mẩu chung, còn mẩu của dòng đã sửa');
 });
 
+test('Ghi nhanh: có từ 2 ví thì ô tài khoản nằm TRƯỚC (bên trái) ô số tiền, cùng hàng; 1 ví thì không có ô tài khoản', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
+  loadData(d);
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var h = ctx.ghiNhanhHtml();
+  var iVi = h.indexOf('id="qa_wallet"'), iTien = h.indexOf('id="qa_amount"'), iHang = h.indexOf('class="qa-amtrow"');
+  ok(iVi > 0 && iTien > iVi, 'ô tài khoản đứng trước ô số tiền');
+  ok(iHang > 0 && iHang < iVi, 'cả hai nằm trong cùng hàng qa-amtrow');
+  ok(h.indexOf('Techcombank') >= 0 && h.indexOf('Tiền mặt') >= 0, 'liệt kê các tài khoản');
+  loadData(dataGhiNhanh());
+  ok(ctx.ghiNhanhHtml().indexOf('qa_wallet') < 0, '1 ví: không có ô tài khoản');
+});
+
+test('Ghi nhanh: chọn tài khoản được nhớ qua các lần vẽ lại và dùng khi ghi', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
+  loadData(d);
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  ctx.handleSoTayChange({ value:'w2', matches:function(s){ return s === '[data-act=qaWallet]'; } });
+  eq(ctx.state.qa.wallet, 'w2', 'đã nhớ ví chọn');
+  ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'vẽ lại vẫn chọn Tiền mặt');
+  voiDom({ qa_amount:{ value:'20.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  var it = ctx.state.data.journal['2026-10-10'].items[0];
+  eq(it.walletId, 'w2', 'ghi vào ví Tiền mặt');
+  eq(ctx.soDuTheoVi('w2', '2026-10-10'), 480000, 'số dư ví Tiền mặt giảm');
+  eq(ctx.soDuTheoVi('w1', '2026-10-10'), 500000, 'ví Techcombank không đổi');
+});
+
+/* ==================================================================== */
+group('Y. Tài khoản (ví) mặc định');
+
+function dataHaiVi(md){
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
+  if (md) d.settings.viMacDinh = md;
+  return d;
+}
+
+test('viMacDinhId / viDienSan: chưa tích chọn thì ví đầu + nhớ ví vừa chọn; đã tích chọn thì luôn là ví đó', function(){
+  loadData(dataHaiVi());
+  eq(ctx.viMacDinhId(), 'w1', 'chưa chọn: ví đầu tiên');
+  eq(ctx.viMacDinhDaChon(), '', 'chưa tích chọn');
+  ctx.state.viChon = 'w2';
+  eq(ctx.viDienSan(), 'w2', 'chưa tích chọn: nhớ ví chọn gần nhất');
+  loadData(dataHaiVi('w2'));
+  ctx.state.viChon = 'w1';
+  eq(ctx.viMacDinhId(), 'w2');
+  eq(ctx.viDienSan(), 'w2', 'đã tích chọn: bỏ qua ví vừa chọn');
+  ctx.state.viChon = '';
+});
+
+test('normalizeData: ví mặc định đã bị xóa / không có thật thì bỏ, quay về ví đầu', function(){
+  loadData(dataHaiVi('w9'));
+  eq(ctx.state.data.settings.viMacDinh, '', 'bỏ id lạ');
+  eq(ctx.viMacDinhId(), 'w1');
+});
+
+test('Danh mục: tích chọn ví mặc định lưu vào settings, không đổi dòng đã ghi; xóa ví mặc định thì bỏ cờ', function(){
+  setToday('2026-10-10');
+  var d = dataHaiVi();
+  d.journal['2026-10-02'] = { thu:{}, chi:{ an:10000 }, ghiChu:'', refs:[], items:[ { iid:'i1', kind:'chi', catId:'an', soTien:10000, ghiChu:'', walletId:'w1' } ] };
+  loadData(d);
+  var h = ctx.viCardHtml();
+  ok(/data-act="viMd" data-id="w1" checked/.test(h) && !/data-act="viMd" data-id="w2" checked/.test(h), 'ví đầu đang là mặc định');
+  ctx.handleDanhMucChange({ checked:true, matches:function(s){ return s === '[data-act=viMd]'; }, getAttribute:function(a){ return a === 'data-id' ? 'w2' : null; } });
+  eq(ctx.state.data.settings.viMacDinh, 'w2', 'đã lưu');
+  ok(/data-act="viMd" data-id="w2" checked/.test(ctx.viCardHtml()), 'giao diện đánh dấu Tiền mặt');
+  eq(ctx.state.data.journal['2026-10-02'].items[0].walletId, 'w1', 'dòng cũ không bị xếp lại ví');
+  eq(ctx.soDuTheoVi('w1', '2026-10-10'), 490000, 'số dư ví cũ không đổi');
+  // thêm dòng mới không chọn ví -> vào ví mặc định mới
+  var it = ctx.entryAddItem('2026-10-10', 'chi', 'an', 5000, '', undefined);
+  eq(it.walletId, 'w2', 'dòng mới vào ví mặc định');
+});
+
+test('Ghi nhanh: có ví mặc định thì lần nhập sau quay về ví đó dù lần trước chọn ví khác; chưa có thì nhớ ví đã chọn', function(){
+  setToday('2026-10-10');
+  loadData(dataHaiVi('w1'));
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  eq(ctx.state.data.journal['2026-10-10'].items[0].walletId, 'w2', 'lần này ghi vào Tiền mặt như đã chọn');
+  ok(ctx.ghiNhanhHtml().indexOf('<option value="w1" selected>') >= 0, 'lần sau quay về Techcombank (mặc định)');
+  loadData(dataHaiVi());
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'chưa tích mặc định: nhớ ví vừa chọn như trước');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

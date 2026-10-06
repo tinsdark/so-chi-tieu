@@ -359,11 +359,14 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .form-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .form-head h3{margin:0 0 12px}
 .qa{padding:14px}
-.qa-seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-bottom:10px}
-.qa-seg button{border:none;background:var(--card);color:var(--muted);padding:7px 20px;font-weight:700;font-size:13px}
+.qa-top{margin-bottom:10px}
+.qa-amtrow{display:flex;gap:10px;margin-bottom:10px}
+.qa-wallet{flex:0 1 44%;min-width:0;width:auto;border-radius:10px}
+.qa-seg{display:inline-flex;flex:0 0 auto;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.qa-seg button{border:none;background:var(--card);color:var(--muted);padding:8px 14px;font-weight:700;font-size:13px}
 .qa-seg button.chi.on{background:var(--chi-solid);color:#fff}
 .qa-seg button.thu.on{background:var(--thu-solid);color:#fff}
-.qa-amt{display:block;width:100%;font-size:26px;font-weight:700;padding:10px 12px;margin-bottom:10px;border-radius:10px}
+.qa-amt{display:block;flex:1 1 auto;min-width:0;width:auto;font-size:20px;font-weight:700;padding:8px 10px;border-radius:10px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
   padding:7px 13px;font-size:13px;line-height:1.2;display:inline-flex;align-items:center}
@@ -456,3 +459,10 @@ td.m-act{white-space:nowrap}
 .vn-sap>td:first-child::after{content:" ↓";color:var(--muted);font-weight:400}
 .vn-flash{animation:vn-flash 1.8s ease-out}
 @keyframes vn-flash{0%,45%{background:var(--row-bal);box-shadow:0 0 0 2px var(--primary)}100%{background:var(--card);box-shadow:0 0 0 0 transparent}}
+
+/* ---- Danh mục > Ví: nút chọn tài khoản mặc định ---- */
+.vi-md{display:flex;align-items:center;gap:6px;margin:0;padding:8px 2px;font-size:13px;color:var(--text);white-space:nowrap;cursor:pointer}
+.vi-md input{width:auto;margin:0}
+
+/* ô tích / nút chọn dùng màu chủ đạo thay vì xanh mặc định của trình duyệt */
+input[type=radio],input[type=checkbox]{accent-color:var(--primary)}
