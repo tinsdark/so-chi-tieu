@@ -94,16 +94,21 @@ function mpBuildScenario(){
     } else if (dc.loai === 'traSom'){
       var loan = (d.vayNo.vayNoPhaiTra || []).find(function(x){ return x.id === dc.loanId; });
       if (!loan) return;
-      // tính dư nợ TRÊN BẢN NHÁP (sau các điều chỉnh trước đó), rồi tắt khoản vay.
-      // tongTraNoThang() lọc theo loanIsActive() nên phải set trangThai,
-      // chỉ gắn cờ tatToan là nó vẫn tiếp tục dự trù các kỳ còn lại.
-      // số tiền tất toán: nhập ở điều chỉnh > số dự kiến của khoản vay > tổng còn phải trả theo lịch
-      // (tổng theo lịch gồm cả lãi các kỳ sau nên thường CAO hơn số thực trả)
-      var duNo = withData(d, function(){ return soTienConLaiPhaiTra(loan); });
+      // Các kỳ TRƯỚC tháng tất toán vẫn phải trả như thường; từ tháng tất toán trở đi không còn kỳ nào
+      // (loan.mpTatToanMk, xem tongTraNoThang) và thay bằng 1 khoản tất toán ở overlay.
+      // Không tắt khoản vay (trangThai/tatToan): làm thế là mất luôn các kỳ trước tháng tất toán.
+      // số tiền tất toán: nhập ở điều chỉnh > số dự kiến của khoản vay > phần còn phải trả theo lịch
+      // TỪ tháng tất toán trở đi (gồm cả lãi các kỳ sau nên thường CAO hơn số thực trả)
+      var duNoTuThang = withData(d, function(){
+        var sch = tinhLichTraNo(loan), s = 0;
+        sch.forEach(function(row, idx){
+          if (row.mk >= dc.mk && !kyDaDong(loan, idx)) s += conThieuKy(loan, idx, sch);
+        });
+        return s;
+      });
       var soTT = num(dc.soTienTatToan) > 0 ? num(dc.soTienTatToan)
-               : (num(loan.soTienTatToan) > 0 ? num(loan.soTienTatToan) : duNo);
-      loan.trangThai = 'da_tra_het';
-      loan.tatToan = { mk: dc.mk, soTien: soTT };
+               : (num(loan.soTienTatToan) > 0 ? num(loan.soTienTatToan) : duNoTuThang);
+      loan.mpTatToanMk = dc.mk;
       overlay.push({ loai:'traSom', kind:'chi', mk: dc.mk, soTien: soTT, bat:true });
     }
   });

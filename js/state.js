@@ -337,6 +337,18 @@ function catTen(kind, catId){
   return '(' + catId + ')';
 }
 
+// danh mục do tab Vay - Nợ sinh/dùng: xóa đi là tiền khoản vay mất chỗ hiển thị
+var CAT_HE_THONG = { thu: { nhanTienVay: 1, thuHoiChoVay: 1 }, chi: { choVay: 1, traNo: 1 } };
+// số NGÀY trong Sổ tay còn tiền ở danh mục này (>0 thì không được xóa danh mục)
+function catDangCoTien(kind, catId){
+  var n = 0;
+  Object.keys(state.data.journal).forEach(function(d){
+    var e = state.data.journal[d];
+    if (num((e[kind] || {})[catId]) > 0 || entryItems(e).some(function(it){ return it.kind === kind && it.catId === catId; })) n++;
+  });
+  return n;
+}
+
 // escape khi nhồi text người dùng vào innerHTML
 function esc(s){
   return String(s == null ? '' : s)

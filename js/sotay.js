@@ -104,7 +104,8 @@ function renderSoTay(){
   // id=formGiaoDich: mốc để nút FAB cuộn tới (data-act="fabAdd")
   html += '<div class="card" id="formGiaoDich"><h3>'+(state.editingDate? 'Sửa ngày '+editDate : 'Thêm / cập nhật giao dịch')+'</h3>';
   html += '<div class="form-row">';
-  html += '<div><label>Ngày</label><input type="date" id="f_date" value="'+editDate+'"></div>';
+  // đang sửa thì KHÓA ngày: đổi ngày ở đây từng ghi đè ngày đích và để nguyên ngày gốc (tiền nhân đôi/mất)
+  html += '<div><label>Ngày'+(state.editingDate ? ' <span style="color:var(--muted);font-weight:400">(không đổi được khi sửa)</span>' : '')+'</label><input type="date" id="f_date" value="'+editDate+'"'+(state.editingDate ? ' disabled' : '')+'></div>';
   // chọn ví chỉ cho thêm MỚI: sửa 1 ngày cũ không biết dòng nào của ví nào, nên ví từng dòng
   // chỉnh ở bảng chi tiết. Khoản vay/cho vay luôn đi theo ví của chính khoản đó.
   if ((state.data.wallets || []).length > 1 && !state.editingDate){
@@ -651,7 +652,7 @@ function handleSoTayAction(act, el){
     state.soTayMonth = y+'-'+pad2(m);
     renderSoTay();
   } else if (act === 'saveEntry'){
-    var date = document.getElementById('f_date').value || todayStr();
+    var date = state.editingDate || document.getElementById('f_date').value || todayStr();
     var ghiChu = document.getElementById('f_ghichu').value;
     var wasEditing = !!state.editingDate;
     var viSel = (document.getElementById('f_wallet') || {}).value || viMacDinhId();
@@ -686,6 +687,17 @@ function handleSoTayAction(act, el){
     }
     if (state.editingDate){
       var oldE = state.data.journal[date] || blankEntry();
+      // danh mục không còn trong form (đã bị xóa từ trước) mà ngày này vẫn có tiền: GIỮ NGUYÊN,
+      // nếu không repairEntryItems sẽ xóa phần tiền đó khỏi các dòng chi tiết
+      var coONhap = { thu: {}, chi: {} };
+      document.querySelectorAll('.f_thu').forEach(function(inp){ coONhap.thu[inp.getAttribute('data-cat')] = 1; });
+      document.querySelectorAll('.f_chi').forEach(function(inp){ coONhap.chi[inp.getAttribute('data-cat')] = 1; });
+      ['thu', 'chi'].forEach(function(kd){
+        var dst = (kd === 'thu') ? thu : chi;
+        Object.keys(oldE[kd] || {}).forEach(function(cid){
+          if (!coONhap[kd][cid] && num(oldE[kd][cid]) > 0) dst[cid] = num(oldE[kd][cid]);
+        });
+      });
       // GIỮ refs + items: ghi đè cả entry là làm mồ côi liên kết với khoản vay -> số dư/tiến độ lệch
       var editedE = { thu: thu, chi: chi, ghiChu: ghiChu, refs: oldE.refs || [], items: entryItems(oldE) };
       state.data.journal[date] = editedE;
@@ -787,6 +799,14 @@ function handleSoTayAction(act, el){
       }
     } else if (vnIdSel && !chi['traNo']){
       toast('Đã chọn khoản vay nhưng chưa nhập số tiền ở danh mục "Trả nợ" — không ghi nhận kỳ trả nào.', { loai:'warn' });
+    }
+    // chiều ngược lại: có nhập tiền mà không chọn khoản -> tiền vẫn vào Sổ tay nhưng khoản vay/cho vay
+    // không đổi gì (vẫn còn nợ / còn phải thu), nên nhắc để người dùng biết
+    if (!wasEditing && selCV && !cvIdSel && thu['thuHoiChoVay']){
+      toast('Đã ghi "Thu hồi cho vay" nhưng chưa chọn khoản cho vay — khoản đó vẫn tính là chưa thu.', { loai:'warn' });
+    }
+    if (!wasEditing && selVN && !vnIdSel && chi['traNo']){
+      toast('Đã ghi "Trả nợ" nhưng chưa chọn khoản vay — tiến độ trả nợ của khoản vay không đổi.', { loai:'warn' });
     }
     ketThuc();
   } else if (act === 'cancelEdit'){

@@ -460,6 +460,16 @@ function handleDanhMucAction(act, el){
     var arrC = state.data.categories[kind2] || [];
     var viTri = arrC.findIndex(function(x){ return x.id === cid; });
     if (viTri < 0) return true;
+    // (comment trên đúng với danh mục TRỐNG; danh mục đã có tiền thì xóa là làm tiền biến khỏi form sửa/Dòng tiền)
+    if (CAT_HE_THONG[kind2] && CAT_HE_THONG[kind2][cid]){
+      toast('"'+catTen(kind2, cid)+'" là danh mục của tab Vay - Nợ, không xóa được.', { loai:'warn' });
+      return true;
+    }
+    var nNgayCoTien = catDangCoTien(kind2, cid);
+    if (nNgayCoTien > 0){
+      toast('Danh mục "'+catTen(kind2, cid)+'" còn tiền ở '+nNgayCoTien+' ngày trong Sổ tay, không xóa được. Đổi tên nếu muốn dùng tên khác.', { loai:'warn' });
+      return true;
+    }
     var banSaoCat = arrC[viTri];
     var ten2 = catTen(kind2, cid);
     arrC.splice(viTri, 1);
@@ -481,10 +491,16 @@ function handleDanhMucAction(act, el){
   } else if (act === 'lockMonth'){
     var mk3 = document.getElementById('cfg_khoa').value;
     if (!mk3){ toast('Chọn tháng cần khóa sổ.', { loai:'warn' }); return true; }
-    var newBal = balanceAtEndOfMonth(mk3);
     var p3 = mk3.split('-'); var ny = parseInt(p3[0],10), nm = parseInt(p3[1],10) + 1;
     if (nm > 12){ nm = 1; ny++; }
     var newStart = ny + '-' + pad2(nm) + '-01';
+    // mốc chỉ được tiến lên: lùi mốc là tính lại các tháng đã khóa trên một số dư đầu kỳ của thời điểm sau -> số dư sai
+    var startHienTai = state.data.settings.ngayBatDau || '';
+    if (startHienTai && newStart <= startHienTai){
+      toast('Sổ đã khóa đến trước '+ngayVN(startHienTai)+'. Chọn tháng sau mốc này để khóa tiếp.', { loai:'warn' });
+      return true;
+    }
+    var newBal = balanceAtEndOfMonth(mk3);
     (async function(){
       if (!await xacNhan('Khóa sổ đến hết '+monthLabel(mk3)+'?',
             'Số dư đầu kỳ mới: '+fmt(newBal)+'\n'
