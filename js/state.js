@@ -407,7 +407,7 @@ function catDangCoTien(kind, catId){
 // đoạn giải thích dài gấp lại sau nút ⓘ: nhìn số liệu trước, đọc luật sau (CSS .giai-thich).
 // noiDung là HTML do code tự dựng, KHÔNG đưa text người dùng vào đây.
 function ghiChuGon(noiDung, nhan){
-  return '<details class="giai-thich"><summary>'+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
+  return '<details class="giai-thich"><summary>ⓘ '+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
 }
 
 /* ====================================================================

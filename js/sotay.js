@@ -124,7 +124,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
-    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi so với chỉ tiêu</span><span>'
+    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo chỉ tiêu</span><span>'
       + (tongDa > tongCap ? 'vượt ' + fmt(Math.round(tongDa - tongCap)) : 'còn ' + fmt(Math.round(tongCap - tongDa))) + '</span></div>'
       + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với chỉ tiêu tháng">'
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
@@ -137,7 +137,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt chỉ tiêu</button>';
-  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">Hôm nay không có khoản nào phải lo.</div>';
+  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
 }
 
@@ -395,7 +395,7 @@ function renderSoTay(){
       ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
         + '<div><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div></div>'
       : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
-        + '<div><button class="btn" data-act="fabAdd">Ghi khoản đầu tiên</button></div></div>';
+        + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
   } else {
     // class t-card: ở <=700px CSS đổi bảng này (và CHỈ bảng này) thành danh sách thẻ
     html += '<table class="t-card"><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Số dư</th><th>Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
