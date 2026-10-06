@@ -285,8 +285,8 @@ function apDungTheme(){
   }
   // Chart.js đọc màu chữ/lưới MỘT LẦN lúc vẽ -> phải set trước khi render lại
   if (window.Chart){
-    Chart.defaults.color = thuc === 'dark' ? '#9aa4b2' : '#6b7280';
-    Chart.defaults.borderColor = thuc === 'dark' ? '#2b3240' : '#e5e7eb';
+    Chart.defaults.color = thuc === 'dark' ? '#b5a59b' : '#6f5f55';       // = --muted của từng theme
+    Chart.defaults.borderColor = thuc === 'dark' ? '#3e2d28' : '#e6d9c6';   // = --border của từng theme
   }
 }
 function doiTheme(){
