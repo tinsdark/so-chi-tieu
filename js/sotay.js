@@ -96,12 +96,19 @@ function renderSoTay(){
     + '</div>';
 
   html += hanMucThangHtml(mk);
+  html += viSoDuCardHtml(mk);
 
   // Entry form
   // id=formGiaoDich: mốc để nút FAB cuộn tới (data-act="fabAdd")
   html += '<div class="card" id="formGiaoDich"><h3>'+(state.editingDate? 'Sửa ngày '+editDate : 'Thêm / cập nhật giao dịch')+'</h3>';
   html += '<div class="form-row">';
   html += '<div><label>Ngày</label><input type="date" id="f_date" value="'+editDate+'"></div>';
+  // chọn ví chỉ cho thêm MỚI: sửa 1 ngày cũ không biết dòng nào của ví nào, nên ví từng dòng
+  // chỉnh ở bảng chi tiết. Khoản vay/cho vay luôn đi theo ví của chính khoản đó.
+  if ((state.data.wallets || []).length > 1 && !state.editingDate){
+    html += '<div><label>Ví / nguồn tiền</label><select id="f_wallet">'
+      + viOptionsHtml(walletById(state.viChon) ? state.viChon : viMacDinhId()) + '</select></div>';
+  }
   html += '</div>';
   html += '<label style="margin-top:4px">Các khoản thu theo danh mục</label>';
   html += '<div class="form-row">';
@@ -293,7 +300,12 @@ function stItemEditRow(date, it){
   return '<tr class="st-it-edit">'
     + '<td colspan="2" style="text-align:left"><select id="st_it_cat">'
       + '<option value="">— chọn danh mục —</option>' + opt('thu') + opt('chi')
-      + '</select></td>'
+      + '</select>'
+      + ((state.data.wallets || []).length > 1
+          ? '<select id="st_it_wallet" style="margin-top:4px" aria-label="Ví / nguồn tiền">'
+            + viOptionsHtml(it ? viCuaItem(it) : (walletById(state.viChon) ? state.viChon : viMacDinhId())) + '</select>'
+          : '')
+      + '</td>'
     + '<td><input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" value="'+(it?veSo(num(it.soTien)):'')+'"></td>'
     + '<td style="text-align:left"><input type="text" id="st_it_note" placeholder="Nội dung..." value="'+(it?esc(it.ghiChu):'')+'"></td>'
     + '<td class="actions-col">'
@@ -317,7 +329,8 @@ function soTayDetailHtml(date){
       if (state.soTayEditIid === it.iid){ h += stItemEditRow(date, it); return; }
       h += '<tr>'
         + '<td style="text-align:left;width:46px"><span class="st-kind '+it.kind+'">'+(it.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+esc(catTen(it.kind, it.catId))+'</td>'
+        + '<td style="text-align:left">'+esc(catTen(it.kind, it.catId))
+          + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(it)))+'</span>' : '')+'</td>'
         + '<td style="color:var(--'+(it.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(it.soTien)))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+esc(it.ghiChu||'')+'</td>'
         + '<td class="actions-col">'
@@ -331,7 +344,8 @@ function soTayDetailHtml(date){
       if (!m) return;
       h += '<tr class="st-ref">'
         + '<td style="text-align:left"><span class="st-kind '+m.kind+'">'+(m.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+esc(catTen(m.kind, m.cat))+' <span class="st-lock">🔒 Vay-Nợ</span></td>'
+        + '<td style="text-align:left">'+esc(catTen(m.kind, m.cat))+' <span class="st-lock">🔒 Vay-Nợ</span>'
+          + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaRef(r)))+'</span>' : '')+'</td>'
         + '<td style="color:var(--'+(m.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(r.soTien)))+'</td>'
         + '<td style="text-align:left;white-space:normal">'+esc(REF_LABEL[r.loai]||r.loai)
           + (r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')
@@ -348,6 +362,53 @@ function soTayDetailHtml(date){
   }
   h += '</div></td></tr>';
   return h;
+}
+
+/* ====================================================================
+   SỐ DƯ THEO VÍ + chuyển tiền giữa ví (chỉ hiện khi có từ 2 ví trở lên).
+   Số dư tính tới hết tháng đang xem, cùng mốc với ô "Số dư cuối tháng".
+   Logic dữ liệu nằm ở state.js (soDuTheoVi, chuyenViThem, chuyenViXoa).
+   ==================================================================== */
+function viSoDuCardHtml(mk){
+  var ws = state.data.wallets || [];
+  if (ws.length < 2) return '';
+  var cuoi = mk + '-31';   // so sánh chuỗi ngày: '2026-10-31' >= mọi ngày trong tháng 10
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Số dư theo ví'
+    + '<button class="btn secondary sm" data-act="viChuyenMo">⇄ Chuyển tiền giữa ví</button></h3>'
+    + '<div class="vi-grid">';
+  ws.forEach(function(w){
+    var b = soDuTheoVi(w.id, cuoi);
+    h += '<div class="stat"><div class="lbl">'+esc(w.ten)+'</div><div class="val"'+(b < 0 ? ' style="color:var(--red)"' : '')+'>'+fmt(Math.round(b))+'</div></div>';
+  });
+  h += '</div>';
+  if (state.viFormOpen){
+    var tuMd = walletById(state.viChon) ? state.viChon : ws[0].id;
+    var denMd = (ws.find(function(w){ return w.id !== tuMd; }) || ws[1]).id;
+    h += '<div class="vi-form"><div class="form-row">'
+      + '<div><label>Từ ví</label><select id="vi_tu">'+viOptionsHtml(tuMd)+'</select></div>'
+      + '<div><label>Sang ví</label><select id="vi_den">'+viOptionsHtml(denMd)+'</select></div>'
+      + '<div><label>Số tiền</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vi_tien" placeholder="0"></div>'
+      + '<div><label>Ngày</label><input type="date" id="vi_ngay" value="'+todayStr()+'"></div>'
+      + '<div><label>Ghi chú</label><input type="text" id="vi_ghichu" placeholder="Rút tiền, nạp ví..."></div>'
+      + '</div><div style="display:flex;gap:8px;margin-bottom:6px">'
+      + '<button class="btn sm" data-act="viChuyenLuu">Chuyển</button>'
+      + '<button class="btn secondary sm" data-act="viChuyenHuy">Hủy</button></div>'
+      + '<div class="empty" style="padding:0;text-align:left">Chuyển tiền không phải thu hay chi: không vào tổng thu/chi, biểu đồ hay dự trù, và không đổi tổng số dư.</div></div>';
+  }
+  var ds = (state.data.chuyenVi || []).filter(function(t){ return monthKey(t.ngay) === mk; })
+    .sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
+  if (ds.length){
+    h += '<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th style="text-align:left">Ngày</th><th style="text-align:left">Chuyển</th><th>Số tiền</th><th style="text-align:left">Ghi chú</th><th class="actions-col"></th></tr></thead><tbody>';
+    ds.forEach(function(t){
+      h += '<tr><td style="text-align:left">'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</td>'
+        + '<td style="text-align:left">'+esc(viTen(t.tuVi))+' → '+esc(viTen(t.denVi))+'</td>'
+        + '<td>'+fmt(Math.round(num(t.soTien)))+'</td>'
+        + '<td style="text-align:left;white-space:normal">'+esc(t.ghiChu||'')+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">🗑</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  return h + '</div>';
 }
 
 /* ====================================================================
@@ -532,6 +593,8 @@ function handleSoTayAction(act, el){
     var date = document.getElementById('f_date').value || todayStr();
     var ghiChu = document.getElementById('f_ghichu').value;
     var wasEditing = !!state.editingDate;
+    var viSel = (document.getElementById('f_wallet') || {}).value || viMacDinhId();
+    if (!wasEditing && walletById(viSel)) state.viChon = viSel;
     var selCV = document.getElementById('sotay_selChoVay');
     var selVN = document.getElementById('sotay_selVayNo');
     var cvIdSel = (!wasEditing && selCV) ? selCV.value : '';
@@ -611,7 +674,7 @@ function handleSoTayAction(act, el){
           var src = (kind === 'thu') ? thu : chi;
           Object.keys(src).forEach(function(cid){
             if (daTag[kind+'|'+cid]) return;
-            eNew.items.push({ iid: newIid(), kind: kind, catId: cid, soTien: src[cid], ghiChu: ghiChu });
+            eNew.items.push({ iid: newIid(), kind: kind, catId: cid, soTien: src[cid], ghiChu: ghiChu, walletId: viSel });
           });
         });
         repairEntryItems(eNew);
@@ -737,6 +800,35 @@ function handleSoTayAction(act, el){
     state.soTayDetailDate = el.getAttribute('data-date');
     state.soTayEditIid = el.getAttribute('data-iid');
     renderSoTay();
+  } else if (act === 'viChuyenMo'){
+    state.viFormOpen = !state.viFormOpen;
+    renderSoTay();
+  } else if (act === 'viChuyenHuy'){
+    state.viFormOpen = false;
+    renderSoTay();
+  } else if (act === 'viChuyenLuu'){
+    var ctTu = (document.getElementById('vi_tu') || {}).value;
+    var ctDen = (document.getElementById('vi_den') || {}).value;
+    var ctTien = numNonNeg(docSo((document.getElementById('vi_tien') || {}).value));
+    var ctNgay = (document.getElementById('vi_ngay') || {}).value || todayStr();
+    var ctGhi = ((document.getElementById('vi_ghichu') || {}).value || '').trim();
+    if (ctTu === ctDen){ toast('Ví đi và ví đến phải khác nhau.', { loai:'warn' }); return true; }
+    if (ctTien <= 0){ toast('Số tiền chuyển phải lớn hơn 0.', { loai:'warn' }); return true; }
+    if (!chuyenViThem(ctNgay, ctTu, ctDen, ctTien, ctGhi)){ toast('Không tạo được lần chuyển này.', { loai:'err' }); return true; }
+    state.viFormOpen = false;
+    scheduleSave();
+    renderSoTay();
+    toast('Đã chuyển '+fmt(Math.round(ctTien))+' từ "'+viTen(ctTu)+'" sang "'+viTen(ctDen)+'".');
+  } else if (act === 'viChuyenXoa'){
+    var ctGo = chuyenViXoa(el.getAttribute('data-id'));
+    if (!ctGo) return true;
+    scheduleSave();
+    renderSoTay();
+    toast('Đã xóa lần chuyển tiền.', { hoanTac: function(){
+      state.data.chuyenVi.push(ctGo);
+      scheduleSave();
+      renderSoTay();
+    } });
   } else if (act === 'stCancelItem'){
     state.soTayEditIid = null;
     renderSoTay();
@@ -746,6 +838,7 @@ function handleSoTayAction(act, el){
     var kc = (document.getElementById('st_it_cat') || {}).value || '';
     var tienS = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
     var noteS = (document.getElementById('st_it_note') || {}).value || '';
+    var viS = (document.getElementById('st_it_wallet') || {}).value || '';
     if (!kc){ toast('Chưa chọn danh mục.', { loai:'warn' }); return true; }
     var kindS = kc.split('|')[0], catS = kc.split('|')[1];
     if (tienS <= 0){ toast('Số tiền phải lớn hơn 0.', { loai:'warn' }); return true; }
@@ -755,9 +848,9 @@ function handleSoTayAction(act, el){
       return true;
     }
     if (iidS){
-      if (!entryUpdateItem(dS, iidS, tienS, noteS, kindS, catS)){ toast('Không tìm thấy dòng cần sửa.', { loai:'err' }); return true; }
+      if (!entryUpdateItem(dS, iidS, tienS, noteS, kindS, catS, viS)){ toast('Không tìm thấy dòng cần sửa.', { loai:'err' }); return true; }
     } else {
-      if (!entryAddItem(dS, kindS, catS, tienS, noteS)){ toast('Không thêm được dòng này.', { loai:'err' }); return true; }
+      if (!entryAddItem(dS, kindS, catS, tienS, noteS, viS)){ toast('Không thêm được dòng này.', { loai:'err' }); return true; }
     }
     state.soTayEditIid = null;
     scheduleSave();

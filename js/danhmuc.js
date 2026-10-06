@@ -46,11 +46,11 @@ function renderDanhMuc(){
   html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
-    + '<div><label>Số dư</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="cfg_du" value="'+veSo(state.data.settings.soDuDauKy)+'" placeholder="0"></div>'
     + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
     + '</div>'
     + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
+  html += viCardHtml();
   html += '<div class="card"><h3>Khóa sổ</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
     + '<div class="form-row">'
@@ -104,6 +104,26 @@ function attachCatDragDrop(){
       renderDanhMuc();
     });
   });
+}
+
+/* ---- Ví / nguồn tiền: số dư đầu kỳ từng ví. Sửa là lưu ngay (không qua nút Lưu chung) ---- */
+function viCardHtml(){
+  var ws = state.data.wallets || [];
+  var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+  var h = '<div class="card"><h3>Ví / nguồn tiền</h3>'
+    + '<div class="empty" style="padding:0 0 10px">Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
+    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.</div>';
+  ws.forEach(function(w){
+    var dung = viDangDung(w.id);
+    h += '<div class="form-row vi-row" style="align-items:flex-end">'
+      + '<div><label>Tên ví</label><input type="text" data-act="viTen" data-id="'+esc(w.id)+'" value="'+esc(w.ten)+'"></div>'
+      + '<div><label>Số dư đầu kỳ</label><input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="viDu" data-id="'+esc(w.id)+'" value="'+veSo(w.soDuDauKy)+'" placeholder="0"></div>'
+      + '<div style="flex:0"><button class="icon-btn" data-act="viXoa" data-id="'+esc(w.id)+'" title="'+(dung ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được' : 'Xóa ví này')+'" aria-label="Xóa ví '+esc(w.ten)+'"'
+      + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>🗑</button></div></div>';
+  });
+  return h + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">'
+    + '<button class="btn secondary sm" data-act="viThem">+ Thêm ví</button>'
+    + '<span style="color:var(--muted);font-size:13px">Tổng số dư đầu kỳ: <b style="color:var(--text)">'+fmt(Math.round(tong))+'</b></span></div></div>';
 }
 
 /* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
@@ -188,6 +208,33 @@ function handleDanhMucAction(act, el){
         renderAll();
       }
     })();
+  } else if (act === 'viThem'){
+    (async function(){
+      var ten = await hoiChu('Thêm ví / nguồn tiền', 'Ví dụ: Tiền mặt, Vietcombank, Momo.', 'Tên ví');
+      if (!ten) return;
+      var trung = state.data.wallets.some(function(w){ return w.ten.trim().toLowerCase() === ten.trim().toLowerCase(); });
+      if (trung){ toast('Đã có ví trùng tên "'+ten+'".', { loai:'err' }); return; }
+      state.data.wallets.push({ id: 'w_' + slugify(ten) + '_' + Date.now().toString(36), ten: ten, soDuDauKy: 0 });
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã thêm ví "'+ten+'". Nhập số dư đầu kỳ của ví nếu có.');
+    })();
+  } else if (act === 'viXoa'){
+    var viX = walletById(el.getAttribute('data-id'));
+    if (!viX) return true;
+    var nDung = viDangDung(viX.id);
+    if (state.data.wallets.length < 2){ toast('Phải còn ít nhất 1 ví.', { loai:'warn' }); return true; }
+    if (nDung > 0){ toast('Ví "'+viX.ten+'" còn '+nDung+' giao dịch/khoản liên quan, không xóa được.', { loai:'warn' }); return true; }
+    (async function(){
+      if (!await xacNhan('Xóa ví "'+viX.ten+'"?',
+            'Số dư đầu kỳ '+fmt(Math.round(num(viX.soDuDauKy)))+' của ví này sẽ bị bỏ khỏi tổng số dư.',
+            { nguyHiem:true, chuOk:'Xóa ví' })) return;
+      state.data.wallets = state.data.wallets.filter(function(w){ return w.id !== viX.id; });
+      state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã xóa ví "'+viX.ten+'".');
+    })();
   } else if (act === 'addCat'){
     var kind = el.getAttribute('data-kind') || 'chi';
     // hoiChu trả về Promise -> bọc IIFE async. KHÔNG được làm handler thành async:
@@ -237,7 +284,6 @@ function handleDanhMucAction(act, el){
     } });
   } else if (act === 'saveSettings'){
     state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
-    state.data.settings.soDuDauKy = docSo(document.getElementById('cfg_du').value);
     var duTruVal = document.getElementById('cfg_duTru').value;
     if (duTruVal) state.data.settings.thangBatDauDuTru = duTruVal;
     scheduleSave();
@@ -256,6 +302,7 @@ function handleDanhMucAction(act, el){
             + 'Ngày bắt đầu mới: '+newStart+'\n\n'
             + 'Dữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư / Dòng tiền nữa.',
             { nguyHiem:true, chuOk:'Khóa sổ' })) return;
+      viChotSoDuDauKy(mk3 + '-31');     // chốt từng ví theo mốc CŨ, trước khi đổi ngayBatDau
       state.data.settings.ngayBatDau = newStart;
       state.data.settings.soDuDauKy = newBal;
       scheduleSave();
@@ -269,7 +316,28 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
-  if (el.matches('[data-act=catName]')){
+  if (el.matches('[data-act=viTen]')){
+    var wT = walletById(el.getAttribute('data-id'));
+    if (!wT) return true;
+    var tenMoi = el.value.trim();
+    var trungT = state.data.wallets.some(function(w){ return w.id !== wT.id && w.ten.trim().toLowerCase() === tenMoi.toLowerCase(); });
+    if (!tenMoi || trungT){
+      toast(!tenMoi ? 'Tên ví không được để trống.' : 'Đã có ví trùng tên "'+tenMoi+'".', { loai:'err' });
+      el.value = wT.ten;
+      return true;
+    }
+    wT.ten = tenMoi;
+    scheduleSave();
+    return true;
+  } else if (el.matches('[data-act=viDu]')){
+    var wD = walletById(el.getAttribute('data-id'));
+    if (!wD) return true;
+    wD.soDuDauKy = docSo(el.value);       // số dư đầu kỳ được phép âm (thẻ tín dụng, nợ), khác ô nhập thu/chi
+    state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+    scheduleSave();
+    renderDanhMuc();                      // cập nhật dòng "Tổng số dư đầu kỳ"
+    return true;
+  } else if (el.matches('[data-act=catName]')){
     var kindC = el.getAttribute('data-kind') || 'chi';
     var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (!c) return true;

@@ -206,7 +206,7 @@ async function driveSave(){
       var created = await createRes.json();
       state.driveFileId = created.id;
       state.driveModified = null;   // file vừa tạo: chưa có mốc để so
-    } else if (state.driveModified && !state.boQuaKiemTra){
+    } else if (state.driveModified){
       var remoteMt = await layModifiedTime();
       if (remoteMt && remoteMt !== state.driveModified){
         // máy khác đã ghi chen vào -> dừng, KHÔNG tự thử lại (thử lại cũng chỉ lại xung đột)
@@ -218,7 +218,6 @@ async function driveSave(){
         return;
       }
     }
-    state.boQuaKiemTra = false;
     var upRes = await driveFetch(UPLOAD_BASE + '/files/' + state.driveFileId + '?uploadType=media&fields=modifiedTime', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -350,7 +349,10 @@ async function giaiQuyetXungDot(){
     } else if (ma === 'ghiDe'){
       var tuDrive = await driveDocText(state.driveFileId);
       await saoLuuNgay('truoc-ghi-de', tuDrive);                    // giữ bản của máy kia
-      state.boQuaKiemTra = true;
+      // nhận mốc hiện tại của Drive làm mốc mới: ghi lần này là CHỦ ĐÍCH đè lên bản đó. Làm thế
+      // (thay vì cờ bỏ qua kiểm tra) để lần tự thử lại khi mất mạng không hỏi xung đột thêm lần nữa;
+      // còn nếu máy kia lại ghi chen sau đây thì lần ghi kế vẫn bị phát hiện đúng.
+      state.driveModified = await layModifiedTime();
       state.xungDot = false;
       state.errorMsg = null;
       await driveSave();

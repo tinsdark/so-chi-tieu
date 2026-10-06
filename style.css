@@ -267,3 +267,8 @@ tr.mp-am td{background:var(--chi-bg)}
 .hm-vuot{font-size:11px;color:var(--red);margin-top:3px}
 .hm-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
 .hm-badge.over{background:var(--chi-bg);color:var(--red)}
+
+/* ---- Ví / nguồn tiền ---- */
+.vi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.vi-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.vi-chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--hover);color:var(--muted);margin-left:4px;vertical-align:1px}

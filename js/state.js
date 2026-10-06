@@ -43,6 +43,8 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  viFormOpen: false,      // form chuyển tiền giữa ví đang mở
+  viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
   backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
   backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
@@ -210,13 +212,14 @@ function entryFindItem(entry, iid){
   return null;
 }
 
-function entryAddItem(date, kind, catId, soTien, ghiChu){
+function entryAddItem(date, kind, catId, soTien, ghiChu, walletId){
   var v = num(soTien);
   if (!date || !catId || (kind !== 'thu' && kind !== 'chi') || v <= 0) return null;
   var e = state.data.journal[date] || blankEntry();
   e.thu = e.thu || {}; e.chi = e.chi || {}; e.refs = e.refs || [];
   e.items = Array.isArray(e.items) ? e.items : [];
-  var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '' };
+  var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '',
+             walletId: walletById(walletId) ? walletId : viMacDinhId() };
   e.items.push(it);
   _bucketAdd(e, kind, catId, v);
   state.data.journal[date] = e;
@@ -226,7 +229,7 @@ function entryAddItem(date, kind, catId, soTien, ghiChu){
 
 // sửa 1 dòng: đổi được cả số tiền, nội dung, loại thu/chi và danh mục.
 // Trừ hết ở chỗ cũ rồi cộng vào chỗ mới -> không bao giờ cộng dồn sai.
-function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi){
+function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdMoi){
   var e = state.data.journal[date];
   if (!e) return false;
   var it = entryFindItem(e, iid);
@@ -238,6 +241,7 @@ function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi){
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   it.kind = kindM; it.catId = catM; it.soTien = v;
   if (ghiChu != null) it.ghiChu = ghiChu;
+  if (walletIdMoi && walletById(walletIdMoi)) it.walletId = walletIdMoi;
   _bucketAdd(e, kindM, catM, v);
   invalidateBalanceCache();
   return true;
@@ -288,7 +292,7 @@ function repairEntryItems(e){
     Object.keys(cats).forEach(function(catId){
       var lech = (num(bucket[catId]) - entryRefSum(e, kind, catId)) - itemsSum(e, kind, catId);
       if (lech > 0.004){
-        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: lech, ghiChu: '(chưa chi tiết)' });
+        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: lech, ghiChu: '(chưa chi tiết)', walletId: viMacDinhId() });
       } else if (lech < -0.004){
         var con = -lech;
         for (var i = e.items.length - 1; i >= 0 && con > 0.004; i--){
@@ -403,8 +407,136 @@ function normalizeData(d){
     if (c.daThu == null) c.daThu = 0;
     if (c.tatToan) c.trangThai = 'da_thu_du';
   });
+  // ví / nguồn tiền: dữ liệu cũ chỉ có 1 số dư đầu kỳ -> thành 1 ví mang đúng số đó (tổng không đổi)
+  if (!Array.isArray(d.wallets) || !d.wallets.length){
+    d.wallets = [{ id: 'w_chinh', ten: 'Tài khoản chính', soDuDauKy: num(d.settings.soDuDauKy) }];
+  }
+  d.wallets.forEach(function(w){
+    w.soDuDauKy = num(w.soDuDauKy);
+    if (!w.ten) w.ten = 'Ví';
+    if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  });
+  d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
+  // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
+  d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
+  // gắn walletId tường minh cho mọi dòng/khoản vay còn thiếu, để sau này đổi ví mặc định
+  // (hoặc thêm ví) không âm thầm xếp lại lịch sử sang ví khác
+  var viMd = d.wallets[0].id;
+  var viCoThat = function(id){ return !!id && d.wallets.some(function(w){ return w.id === id; }); };
+  Object.keys(d.journal).forEach(function(date){
+    (d.journal[date].items || []).forEach(function(it){ if (!viCoThat(it.walletId)) it.walletId = viMd; });
+  });
+  d.vayNo.vayNoPhaiTra.concat(d.vayNo.choVay).forEach(function(l){ if (!viCoThat(l.walletId)) l.walletId = viMd; });
   invalidateBalanceCache();
   return d;
+}
+
+/* ====================================================================
+   VÍ / NGUỒN TIỀN
+   - wallets[] = [{id, ten, soDuDauKy}]: số dư đầu kỳ từng ví, cộng lại = settings.soDuDauKy.
+   - Mỗi dòng nhập tay (items[]) mang walletId. Phần do khoản vay sinh ra (refs[])
+     đi theo ví của khoản vay (loan.walletId) — đổi ví khoản vay là đổi cho cả lịch sử.
+   - chuyenVi[] = [{id, ngay, tuVi, denVi, soTien, ghiChu}] nằm NGOÀI journal: chuyển
+     tiền không phải thu cũng không phải chi, để vào journal sẽ làm phồng tổng thu/chi,
+     biểu đồ và dự trù. Tổng số dư không đổi nên balanceAt() & mọi hàm tổng khỏi sửa.
+   - Số dư theo ví chỉ tính từ ngayBatDau (cùng mốc khóa sổ với số dư tổng).
+   ==================================================================== */
+function viMacDinhId(d){ d = d || state.data; return (d && d.wallets && d.wallets[0]) ? d.wallets[0].id : undefined; }
+function walletById(id, d){
+  d = d || state.data;
+  var a = (d && d.wallets) || [];
+  for (var i = 0; i < a.length; i++){ if (a[i].id === id) return a[i]; }
+  return null;
+}
+function viTen(id){ var w = walletById(id); return w ? w.ten : '(ví đã xóa)'; }
+// ví của 1 dòng nhập tay; walletId thiếu/không còn tồn tại -> ví mặc định (ví đầu tiên)
+function viCuaItem(it, d){
+  var w = (it && it.walletId) ? walletById(it.walletId, d) : null;
+  return w ? w.id : viMacDinhId(d);
+}
+// ví của 1 ref: ref.walletId > ví của khoản vay/cho vay > ví mặc định
+function viCuaRef(r, d){
+  d = d || state.data;
+  var loan = null;
+  if (r.loanId){
+    var vn = (d.vayNo && d.vayNo.vayNoPhaiTra) || [], cv = (d.vayNo && d.vayNo.choVay) || [];
+    loan = vn.find(function(l){ return l.id === r.loanId; }) || cv.find(function(l){ return l.id === r.loanId; }) || null;
+  }
+  var id = r.walletId || (loan && loan.walletId);
+  var w = id ? walletById(id, d) : null;
+  return w ? w.id : viMacDinhId(d);
+}
+// số dư 1 ví tính tới hết ngày dateStr
+function soDuTheoVi(walletId, dateStr, d){
+  d = d || state.data;
+  var w = walletById(walletId, d);
+  if (!w) return 0;
+  var start = d.settings.ngayBatDau || '';
+  var bal = num(w.soDuDauKy);
+  Object.keys(d.journal).forEach(function(date){
+    if ((start && date < start) || date > dateStr) return;
+    var e = d.journal[date];
+    entryItems(e).forEach(function(it){
+      if (viCuaItem(it, d) !== walletId) return;
+      bal += (it.kind === 'thu' ? 1 : -1) * num(it.soTien);
+    });
+    (e.refs || []).forEach(function(r){
+      var m = REF_MAP[r.loai];
+      if (!m || viCuaRef(r, d) !== walletId) return;
+      bal += (m.kind === 'thu' ? 1 : -1) * num(r.soTien);
+    });
+  });
+  (d.chuyenVi || []).forEach(function(t){
+    if ((start && t.ngay < start) || t.ngay > dateStr) return;
+    if (t.tuVi === walletId) bal -= num(t.soTien);
+    if (t.denVi === walletId) bal += num(t.soTien);
+  });
+  return bal;
+}
+// số chỗ đang tham chiếu tới ví: dòng nhập tay + khoản vay/cho vay + lần chuyển tiền.
+// > 0 thì không được xóa ví (xóa là làm mồ côi dữ liệu).
+function viDangDung(id, d){
+  d = d || state.data;
+  var n = 0;
+  Object.keys(d.journal).forEach(function(date){
+    entryItems(d.journal[date]).forEach(function(it){ if (it.walletId === id) n++; });
+  });
+  ((d.vayNo && d.vayNo.vayNoPhaiTra) || []).concat((d.vayNo && d.vayNo.choVay) || []).forEach(function(l){ if (l.walletId === id) n++; });
+  (d.chuyenVi || []).forEach(function(t){ if (t.tuVi === id || t.denVi === id) n++; });
+  return n;
+}
+// <option> chọn ví, dùng chung cho form Sổ tay / dòng chi tiết / khoản vay
+function viOptionsHtml(sel){
+  return (state.data.wallets || []).map(function(w){
+    return '<option value="'+esc(w.id)+'"'+(w.id === sel ? ' selected' : '')+'>'+esc(w.ten)+'</option>';
+  }).join('');
+}
+function chuyenViThem(ngay, tuVi, denVi, soTien, ghiChu){
+  var v = num(soTien);
+  if (!ngay || v <= 0 || tuVi === denVi || !walletById(tuVi) || !walletById(denVi)) return null;
+  var t = { id: 'ct_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            ngay: ngay, tuVi: tuVi, denVi: denVi, soTien: v, ghiChu: ghiChu || '' };
+  state.data.chuyenVi = state.data.chuyenVi || [];
+  state.data.chuyenVi.push(t);
+  return t;
+}
+function chuyenViXoa(id){
+  var a = state.data.chuyenVi || [];
+  for (var i = 0; i < a.length; i++){
+    if (a[i].id === id){ return a.splice(i, 1)[0]; }
+  }
+  return null;
+}
+// Khóa sổ: chốt số dư TỪNG ví tới hết dateStr làm số dư đầu kỳ mới. Tổng số dư thật
+// (balanceAt) là nguồn sự thật: nếu cộng các ví lệch tổng thì dồn phần lệch vào ví đầu
+// để tổng không đổi. PHẢI gọi TRƯỚC khi đổi settings.ngayBatDau (số dư tính theo mốc cũ).
+function viChotSoDuDauKy(dateStr){
+  var tong = balanceAt(dateStr);
+  var moi = state.data.wallets.map(function(w){ return soDuTheoVi(w.id, dateStr); });
+  var lech = tong - moi.reduce(function(s, x){ return s + x; }, 0);
+  if (Math.abs(lech) > 0.5) moi[0] += lech;
+  state.data.wallets.forEach(function(w, i){ w.soDuDauKy = moi[i]; });
+  state.data.settings.soDuDauKy = tong;
 }
 
 function thuTotal(entry){
@@ -518,6 +650,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
+            || state.viFormOpen
             || (state.mp && state.mp.formOpen));
 }
 

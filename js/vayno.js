@@ -311,6 +311,19 @@ function tongChiThangCard(mk){
   return s;
 }
 
+// ví của khoản vay/cho vay lấy từ ô chọn trong form. Form chỉ có ô này khi có >= 2 ví;
+// không có ô (1 ví) hoặc giá trị lạ -> giữ ví cũ của khoản đó, chưa có thì ví mặc định.
+function vnViTuForm(selId, cu){
+  var el = document.getElementById(selId);
+  var v = el ? el.value : '';
+  if (walletById(v)) return v;
+  return (cu && walletById(cu.walletId)) ? cu.walletId : viMacDinhId();
+}
+function vnViSelectHtml(selId, nhan, cu){
+  if ((state.data.wallets || []).length < 2) return '';
+  return '<div><label>'+nhan+'</label><select id="'+selId+'">'+viOptionsHtml((cu && cu.walletId) || viMacDinhId())+'</select></div>';
+}
+
 /* ---- render ---- */
 function choVayFormHtml(){
   var editing = state.vnFormId ? state.data.vayNo.choVay.find(function(x){ return x.id===state.vnFormId; }) : null;
@@ -320,6 +333,7 @@ function choVayFormHtml(){
     + '<div><label>Số tiền cho vay</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_cv_soTien" value="'+veSo(d.soTien)+'" placeholder="0"></div>'
     + '<div><label>Ngày cho vay</label><input type="date" id="vn_cv_ngay" value="'+(d.ngayChoVay||todayStr())+'"></div>'
     + '<div><label>Ngày dự kiến thu</label><input type="date" id="vn_cv_ngayThu" value="'+(d.ngayDuKienThu||'')+'"></div>'
+    + vnViSelectHtml('vn_cv_wallet', 'Ví cho vay / nhận lại tiền', editing)
     + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
     + '<button class="btn sm" data-act="vnSaveChoVay">Lưu</button>'
     + '<button class="btn secondary sm" data-act="vnCancelForm">Hủy</button></div>';
@@ -342,6 +356,7 @@ function vayNoFormHtml(){
     + '<div><label>Lãi suất %/năm</label><input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="Chỉ cần nếu có lãi suất" min="0"></div>'
     // số thực trả khi tất toán thường THẤP hơn tổng còn phải trả theo lịch (lãi các kỳ sau
     // không phải trả) -> nhập 1 lần ở đây, hộp thoại Tất toán + tab Mô phỏng lấy làm mặc định
+    + vnViSelectHtml('vn_vn_wallet', 'Ví nhận tiền vay / trả nợ', editing)
     + '<div><label>Số tiền tất toán dự kiến</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_tatToan" value="'+veSo(d.soTienTatToan)+'" placeholder="Bỏ trống = tự tính theo gốc còn lại"></div>'
     // "Số kỳ đã trả" CHỈ có khi thêm mới (khoản vay cũ đã trả được mấy kỳ trước khi nhập vào app).
     // Khi SỬA thì không được có ô này: sửa số kỳ ở đây sẽ ghi đè lịch sử trả nợ thực tế
@@ -634,7 +649,9 @@ function handleVayNoAction(act, el){
   } else if (act === 'vnSaveChoVay'){
     var tenCV = document.getElementById('vn_cv_ten').value.trim();
     if (!tenCV){ toast('Nhập tên khoản cho vay.', { loai:'warn' }); return true; }
+    var cvCu = state.vnFormId ? state.data.vayNo.choVay.find(function(x){ return x.id===state.vnFormId; }) : null;
     var objCV = {
+      walletId: vnViTuForm('vn_cv_wallet', cvCu),
       ten: tenCV,
       soTien: numNonNeg(docSo(document.getElementById('vn_cv_soTien').value)),
       ngayChoVay: document.getElementById('vn_cv_ngay').value || todayStr(),
@@ -688,6 +705,7 @@ function handleVayNoAction(act, el){
       soThangVay: numNonNeg(document.getElementById('vn_vn_soThang').value),
       ngayDaoHan: document.getElementById('vn_vn_daoHan').value || '',
       laiSuatNam: numNonNeg(document.getElementById('vn_vn_laiSuat').value),
+      walletId: vnViTuForm('vn_vn_wallet', state.vnFormId ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; }) : null),
       soTienTatToan: numNonNeg(docSo(document.getElementById('vn_vn_tatToan').value))
     };
     if (hinh === 'tra_1_lan' && !objVN.ngayDaoHan && !objVN.soThangVay){
