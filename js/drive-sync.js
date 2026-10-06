@@ -26,6 +26,7 @@ var _textDriveLanTai = null;   // nội dung thô của file Drive ở lần t�
    chỗ với bản dữ liệu lưu cho chế độ ngoại tuyến (nhạy cảm hơn nhiều). Đăng xuất là xóa cả hai.
    ==================================================================== */
 var TOKEN_KEY = 'chitieu_tok_v1';
+var DA_DN_KEY = 'chitieu_da_dn_v1';   // từng đăng nhập thành công trên máy này -> mở app thử xin token lại âm thầm
 var TOKEN_DE_HAN_S = 120;       // coi như hết hạn sớm 2 phút để không dính token chết giữa chừng
 function saveToken(resp){
   try{
@@ -55,10 +56,13 @@ function requestToken(interactive){
       if (resp && resp.error){ reject(resp); return; }
       accessToken = resp.access_token;
       saveToken(resp);
+      try{ localStorage.setItem(DA_DN_KEY, '1'); }catch(e){}
       resolve(accessToken);
     };
     tokenClient.error_callback = function(err){ reject(err); };
-    tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    // prompt '' (không ép 'consent'): Google tự hiện màn cấp quyền khi chưa cấp lần nào,
+    // còn lần sau chỉ chọn tài khoản / vào thẳng thay vì bắt đồng ý lại mỗi lần
+    tokenClient.requestAccessToken({ prompt: '' });
   });
 }
 
@@ -532,8 +536,27 @@ function startPolling(){
 }
 
 // mở app: còn token lưu sẵn thì vào thẳng, không qua màn đăng nhập. Trả true nếu đã vào.
+// Token lưu hết hạn nhưng máy này từng đăng nhập: thử xin token mới KHÔNG cần bấm gì.
+// Chạy được hay không tùy trình duyệt (iOS chạy app từ màn hình chính hay chặn popup không do bấm) —
+// thất bại/treo quá 8 giây thì thôi, rơi về màn đăng nhập như cũ.
+async function thuXinTokenAmTham(){
+  try{ if (localStorage.getItem(DA_DN_KEY) !== '1') return null; }catch(e){ return null; }
+  for (var i = 0; i < 25 && !(window.google && google.accounts && google.accounts.oauth2); i++){
+    await new Promise(function(r){ setTimeout(r, 200); });   // đợi thư viện Google nạp (script async)
+  }
+  if (!(window.google && google.accounts && google.accounts.oauth2)) return null;
+  if (!tokenClient) initTokenClient();
+  document.getElementById('authMsg').textContent = 'Đang gia hạn phiên đăng nhập…';
+  try{
+    return await Promise.race([
+      requestToken(false),
+      new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('het-gio')); }, 8000); })
+    ]);
+  }catch(e){ return null; }
+}
+
 async function tiepTucPhienDangNhap(){
-  var tok = readSavedToken();
+  var tok = readSavedToken() || await thuXinTokenAmTham();
   if (!tok) return false;
   accessToken = tok;
   document.getElementById('authMsg').textContent = 'Đang vào bằng phiên đăng nhập gần nhất…';
@@ -587,6 +610,7 @@ function signOut(){
   state.data = null;
   state.offline = false;
   clearSavedToken();
+  try{ localStorage.removeItem(DA_DN_KEY); }catch(e){}
   try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');
