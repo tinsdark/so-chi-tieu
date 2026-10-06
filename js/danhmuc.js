@@ -50,18 +50,19 @@ function renderDanhMuc(){
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
     + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
     + '</div>'
-    + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
+    + ghiChuGon('"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.', 'Tháng bắt đầu dự trù là gì?')
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += viCardHtml();
   html += dkCardHtml();
   html += mtCardHtml();
   html += '<div class="card"><h3>Khóa sổ</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
+    + ghiChuGon('Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.', 'Khóa sổ là gì?')
     + '<div class="form-row">'
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
     + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
   html += caiAppCardHtml();
   html += backupCardHtml();
+  html += taiKhoanCardHtml();
   root.innerHTML = html;
   attachCatDragDrop();
 }
@@ -93,7 +94,7 @@ function attachCatDragDrop(){
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       clearCatDropHint();
-      if (item.getAttribute('data-id') !== dragCat.id) item.style.boxShadow = 'inset 0 0 0 2px #4f46e5';
+      if (item.getAttribute('data-id') !== dragCat.id) item.style.boxShadow = 'inset 0 0 0 2px var(--primary)';
     });
     item.addEventListener('drop', function(e){
       if (!dragCat || dragCat.kind !== item.getAttribute('data-kind')) return;
@@ -116,8 +117,8 @@ function viCardHtml(){
   var ws = state.data.wallets || [];
   var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
   var h = '<div class="card"><h3>Ví / nguồn tiền</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
-    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.</div>';
+    + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
+    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.', 'Ví / nguồn tiền hoạt động thế nào?');
   ws.forEach(function(w){
     var dung = viDangDung(w.id);
     h += '<div class="form-row vi-row" style="align-items:flex-end">'
@@ -186,7 +187,7 @@ function dkCardHtml(){
   var ds = state.data.dinhKy || [];
   var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Giao dịch định kỳ'
     + '<button class="btn secondary sm" data-act="dkThem">+ Thêm</button></h3>'
-    + '<div class="empty" style="padding:0 0 10px;text-align:left">Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.</div>';
+    + ghiChuGon('Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.', 'Giao dịch định kỳ hoạt động thế nào?');
   if (state.dkForm){
     var ed = state.dkForm.id ? ds.find(function(k){ return k.id === state.dkForm.id; }) : null;
     var k0 = ed || { ten:'', kind:'chi', catId:'', soTien:'', ngay:'', walletId: viMacDinhId(), ghiChu:'' };
@@ -243,6 +244,13 @@ function caiAppCardHtml(){
   return h + '</div>';
 }
 
+/* ---- Tài khoản: Đăng xuất để ở đây (không ở thanh đầu trang, bấm nhầm là mất bản lưu ngoại tuyến) ---- */
+function taiKhoanCardHtml(){
+  return '<div class="card"><h3>Tài khoản</h3>'
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Đăng xuất khỏi Google trên máy này. Dữ liệu trên Google Drive vẫn còn nguyên; chỉ bản lưu để mở ngoại tuyến trên máy này bị xóa.</div>'
+    + '<button class="btn danger" data-act="dangXuat">Đăng xuất</button></div>';
+}
+
 /* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
 var BACKUP_NHAN = {
   'may-nay':         'phần chưa lưu của máy này, bị bỏ khi lấy bản Drive',
@@ -259,8 +267,8 @@ function backupTenDep(name){
 }
 function backupCardHtml(){
   var h = '<div class="card"><h3>Sao lưu dữ liệu</h3>'
-    + '<div class="empty" style="padding:0 0 10px">Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
-    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.</div>'
+    + ghiChuGon('Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
+    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?')
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
     + '<button class="btn sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? '⟳ Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
     + '<button class="btn secondary sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
@@ -324,6 +332,13 @@ function handleDanhMucAction(act, el){
         state.backupBusy = false;
         renderAll();
       }
+    })();
+  } else if (act === 'dangXuat'){
+    (async function(){
+      if (!await xacNhan('Đăng xuất khỏi Google?',
+            'Dữ liệu trên Google Drive vẫn còn. Bản lưu để mở ngoại tuyến trên máy này sẽ bị xóa; các thay đổi chưa kịp đồng bộ (nếu có) cũng nằm trong đó.' + (state.dirty ? '\n\n⚠ Đang có thay đổi CHƯA đồng bộ lên Drive.' : ''),
+            { nguyHiem:true, chuOk:'Đăng xuất' })) return;
+      signOut();
     })();
   } else if (act === 'catMauReset'){
     var cR = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });

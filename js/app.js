@@ -144,9 +144,24 @@ document.addEventListener('keydown', function(ev){
 var btnPT = document.getElementById('btnPhimTat');
 if (btnPT) btnPT.addEventListener('click', hienPhimTat);
 
+// Enter ở ô số tiền / ghi chú của thẻ Ghi nhanh = bấm Ghi
+document.addEventListener('keydown', function(ev){
+  if (ev.key !== 'Enter' || ev.isComposing || !ev.target || !ev.target.id) return;
+  if (ev.target.id === 'qa_amount' || ev.target.id === 'qa_note'){
+    ev.preventDefault();
+    handleAction('qaSave', null);
+  }
+});
+
+// xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
+(function(){
+  var mq = window.matchMedia && window.matchMedia('(max-width:700px)');
+  var khi = function(){ if (state.data && state.tab === 'dongtien') renderDongTien(); };
+  if (mq && mq.addEventListener) mq.addEventListener('change', khi);
+})();
+
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
-document.getElementById('btnSignOut').addEventListener('click', signOut);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){

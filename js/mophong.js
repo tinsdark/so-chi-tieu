@@ -333,7 +333,7 @@ function mpDrawChart(rowsGoc, rowsMoi){
       { label:'Hiện tại', data: rowsGoc.map(function(r){ return Math.round(r.bal); }),
         borderColor:'#9ca3af', borderDash:[5,4], fill:false, tension:.25 },
       { label:'Kịch bản', data: rowsMoi.map(function(r){ return Math.round(r.bal); }),
-        borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)', fill:true, tension:.25 }
+        borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.1)', fill:true, tension:.25 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ title:{display:true,text:'Số dư lũy kế: hiện tại vs kịch bản'}, legend:{display:true,position:'bottom'} },

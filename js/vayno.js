@@ -394,7 +394,7 @@ function vayNoScheduleHtml(loan){
   // kỳ ĐÃ ĐÓNG mới nhất mới được mở lại, để lịch sử không bị rỗ giữa
   var lastClosedIdx = -1;
   for (var i=0;i<sch.length;i++){ if (kyDaDong(loan, i)) lastClosedIdx = i; }
-  var html = '<div class="table-wrap" style="margin:8px 0"><table><thead><tr><th>Tháng</th><th>Ngày trả</th><th>Gốc</th><th>Lãi</th><th>Theo lịch</th><th>Thực trả</th><th>Dư nợ còn lại</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+  var html = '<div class="table-wrap" style="margin:8px 0"><table class="m-cards"><thead><tr><th>Tháng</th><th>Ngày trả</th><th>Gốc</th><th>Lãi</th><th>Theo lịch</th><th>Thực trả</th><th>Dư nợ còn lại</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
   sch.forEach(function(row, idx){
     var st = kyStatus(loan, idx, sch);
     var coTien = st.trangThai !== 'chua';
@@ -416,15 +416,15 @@ function vayNoScheduleHtml(loan){
           + ' <button class="btn sm secondary" data-act="vnHuyGhiNhanTra" data-id="'+loan.id+'" data-ky="'+idx+'" title="Xóa hết các lần trả của kỳ này, hoàn lại giao dịch ở Sổ tay">Hủy ghi nhận</button>';
     }
     html += '<tr'+(st.dong?' style="color:var(--muted)"':'')+'>'
-      + '<td>'+monthLabel(row.mk)+'</td>'
-      + '<td>'+ngayVN(row.ngayTra)+'</td>'
-      + '<td>'+fmt(Math.round(row.goc))+'</td>'
-      + '<td>'+fmt(Math.round(row.lai))+'</td>'
-      + '<td>'+fmt(Math.round(row.tongTra))+'</td>'
-      + '<td>'+(coTien ? fmt(Math.round(st.da)) : '—')+'</td>'
-      + '<td>'+fmt(Math.round(row.duNoConLai))+'</td>'
-      + '<td>'+badge+'</td>'
-      + '<td>'+btn+'</td>'
+      + '<td class="m-title">'+monthLabel(row.mk)+'</td>'
+      + '<td data-th="Ngày trả">'+ngayVN(row.ngayTra)+'</td>'
+      + '<td data-th="Gốc">'+fmt(Math.round(row.goc))+'</td>'
+      + '<td data-th="Lãi">'+fmt(Math.round(row.lai))+'</td>'
+      + '<td data-th="Theo lịch">'+fmt(Math.round(row.tongTra))+'</td>'
+      + '<td data-th="Thực trả">'+(coTien ? fmt(Math.round(st.da)) : '—')+'</td>'
+      + '<td data-th="Dư nợ còn lại">'+fmt(Math.round(row.duNoConLai))+'</td>'
+      + '<td data-th="Trạng thái">'+badge+'</td>'
+      + '<td class="m-act">'+btn+'</td>'
       + '</tr>';
   });
   html += '</tbody></table></div>';
@@ -445,15 +445,15 @@ function sapDenHanHtml(nNgay){
   var list = danhSachSapDenHan(nNgay);
   if (!list.length) return '';
   var html = '<div class="card"><h3>⏰ Sắp đến hạn / quá hạn (trong '+nNgay+' ngày tới)</h3>';
-  html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Khoản</th><th>Loại</th><th>Ngày</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>';
+  html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Khoản</th><th>Loại</th><th>Ngày</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>';
   list.forEach(function(x){
     var trang;
     if (x.soNgay < 0) trang = '<span style="color:var(--red);font-weight:600">Quá hạn '+(-x.soNgay)+' ngày</span>';
     else if (x.soNgay === 0) trang = '<span style="color:var(--red);font-weight:600">Hôm nay</span>';
     else if (x.soNgay <= 3) trang = '<span style="color:var(--amber);font-weight:600">Còn '+x.soNgay+' ngày</span>';
     else trang = '<span style="color:var(--gold)">Còn '+x.soNgay+' ngày</span>';
-    html += '<tr><td style="text-align:left">'+x.ten+'</td><td>'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
-      + '<td>'+ngayVN(x.ngay)+'</td><td>'+fmt(Math.round(x.soTien))+'</td><td>'+trang+'</td></tr>';
+    html += '<tr><td class="m-title" style="text-align:left">'+x.ten+'</td><td data-th="Loại">'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
+      + '<td data-th="Ngày">'+ngayVN(x.ngay)+'</td><td data-th="Số tiền">'+fmt(Math.round(x.soTien))+'</td><td data-th="Trạng thái">'+trang+'</td></tr>';
   });
   html += '</tbody></table></div></div>';
   return html;
@@ -469,13 +469,13 @@ function renderVayNo(){
 
   html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   if (state.vnFormKind === 'choVay') html += choVayFormHtml();
-  html += '<div class="empty" style="padding:0 0 10px">Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.</div>';
+  html += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút ✓ ở đây chỉ dùng để TẤT TOÁN phần không đòi được.', 'Ghi tiền thu về thế nào?');
   if (!choVay.length){
     html += '<div class="empty-box"><span class="ico">🤝</span>Chưa có khoản cho vay nào.'
       + (state.vnFormKind === 'choVay' ? '' : '<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div>')
       + '</div>';
   } else {
-    html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Số tiền</th><th>Đã thu</th><th>Còn lại</th><th>Dự kiến thu</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
+    html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Tên</th><th>Số tiền</th><th>Đã thu</th><th>Còn lại</th><th>Dự kiến thu</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
     choVay.forEach(function(c){
       var conLai = conLaiPhaiThu(c);
       var qh = soNgayQuaHan(c);
@@ -487,12 +487,12 @@ function renderVayNo(){
                 ? '<span style="color:var(--red);font-weight:600">Quá hạn '+qh+' ngày</span>'
                 : 'Đang chờ'));
       html += '<tr>'
-        + '<td style="text-align:left">'+c.ten+'</td>'
-        + '<td>'+fmt(c.soTien)+'</td>'
-        + '<td>'+fmt(c.daThu)+'</td>'
-        + '<td>'+fmt(conLai)+'</td>'
-        + '<td>'+(c.ngayDuKienThu||'')+'</td>'
-        + '<td>'+tt+'</td>'
+        + '<td class="m-title" style="text-align:left">'+c.ten+'</td>'
+        + '<td data-th="Số tiền">'+fmt(c.soTien)+'</td>'
+        + '<td data-th="Đã thu">'+fmt(c.daThu)+'</td>'
+        + '<td data-th="Còn lại">'+fmt(conLai)+'</td>'
+        + '<td data-th="Dự kiến thu">'+(c.ngayDuKienThu||'')+'</td>'
+        + '<td data-th="Trạng thái">'+tt+'</td>'
         + '<td class="actions-col">'
         + (c.tatToan
             ? '<button class="icon-btn" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy tất toán, mở lại khoản">↺</button>'
@@ -512,20 +512,20 @@ function renderVayNo(){
       + (state.vnFormKind === 'vayNoPhaiTra' ? '' : '<div><button class="btn" data-act="vnAddVayNo">+ Thêm khoản vay</button></div>')
       + '</div>';
   } else {
-    html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Loại vay</th><th>Hình thức</th><th>Đã trả</th><th>Dư nợ còn lại</th><th>Số tiền trả kỳ tới</th><th>Dự kiến hết nợ</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
+    html += '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Tên</th><th>Loại vay</th><th>Hình thức</th><th>Đã trả</th><th>Dư nợ còn lại</th><th>Số tiền trả kỳ tới</th><th>Dự kiến hết nợ</th><th>Trạng thái</th><th class="actions-col"></th></tr></thead><tbody>';
     vayNoPhaiTra.forEach(function(v){
       var duNo = soTienConLaiPhaiTra(v);
       var hetNoMk = thangDuKienHetNo(v);
       var tienDo = tienDoTraNo(v);
       html += '<tr>'
-        + '<td style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+v.ten+'</a></td>'
-        + '<td>'+LOAI_VAY_LABEL[v.loaiVay]+'</td>'
-        + '<td>'+HINH_THUC_LABEL[v.hinhThuc]+'</td>'
-        + '<td>'+tienDo.daTraKy+'/'+tienDo.tongKy+' kỳ</td>'
-        + '<td>'+fmt(duNo)+'</td>'
-        + '<td>'+(tienDo.kyTiepTheo ? fmt(Math.round(tienDo.kyTiepTheo.tongTra))+' — '+ngayVN(tienDo.kyTiepTheo.ngayTra) : '—')+'</td>'
-        + '<td>'+(hetNoMk?monthLabel(hetNoMk):'—')+'</td>'
-        + '<td>'+(v.tatToan ? 'Đã tất toán' : (v.trangThai==='da_tra_het'?'Đã trả hết':'Đang vay'))+'</td>'
+        + '<td class="m-title" style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+v.ten+'</a></td>'
+        + '<td data-th="Loại vay">'+LOAI_VAY_LABEL[v.loaiVay]+'</td>'
+        + '<td data-th="Hình thức">'+HINH_THUC_LABEL[v.hinhThuc]+'</td>'
+        + '<td data-th="Đã trả">'+tienDo.daTraKy+'/'+tienDo.tongKy+' kỳ</td>'
+        + '<td data-th="Dư nợ còn lại">'+fmt(duNo)+'</td>'
+        + '<td data-th="Trả kỳ tới">'+(tienDo.kyTiepTheo ? fmt(Math.round(tienDo.kyTiepTheo.tongTra))+' — '+ngayVN(tienDo.kyTiepTheo.ngayTra) : '—')+'</td>'
+        + '<td data-th="Dự kiến hết nợ">'+(hetNoMk?monthLabel(hetNoMk):'—')+'</td>'
+        + '<td data-th="Trạng thái">'+(v.tatToan ? 'Đã tất toán' : (v.trangThai==='da_tra_het'?'Đã trả hết':'Đang vay'))+'</td>'
         + '<td class="actions-col">'
         + (loanIsActive(v) ? '<button class="btn sm secondary" data-act="vnTatToan" data-id="'+v.id+'" title="Tất toán sớm toàn bộ khoản vay">Tất toán</button>' : '')
         + (v.tatToan ? '<button class="btn sm secondary" data-act="vnHuyTatToan" data-id="'+v.id+'" title="Hủy tất toán, hoàn lại giao dịch Sổ tay">Hủy tất toán</button>' : '')
@@ -533,7 +533,7 @@ function renderVayNo(){
         + '<button class="icon-btn" data-act="vnDelVayNo" data-id="'+v.id+'" title="Xóa khoản vay" aria-label="Xóa khoản vay '+esc(v.ten)+'">🗑</button>'
         + '</td></tr>';
       if (state.vnDetailId === v.id){
-        html += '<tr><td colspan="9">'+vayNoScheduleHtml(v)+'</td></tr>';
+        html += '<tr class="m-detail"><td colspan="9">'+vayNoScheduleHtml(v)+'</td></tr>';
       }
     });
     html += '</tbody></table></div>';
@@ -560,9 +560,9 @@ function renderVayNo(){
   // nhớ trạng thái vì mở/đóng chỉ sống trong 1 lần render.
   html += '<details class="giai-thich"><summary>ⓘ Số tháng tương lai tính thế nào?</summary>'
     + '<div>Tháng hiện tại/quá khứ dùng số thực tế từ Sổ tay; tháng tương lai dùng gợi ý: TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (tính từ "Tháng bắt đầu dự trù" ở tab Danh mục), chưa có tháng hoàn chỉnh nào thì dùng Chỉ tiêu/tháng. Riêng Trả nợ/Thu hồi cho vay lấy thẳng từ lịch vay (kỳ đã ghi nhận trả thì không cộng lại; khoản cho vay quá hạn dồn vào tháng hiện tại), và các danh mục có cờ "Cố định theo Chỉ tiêu": nếu tháng hiện tại chưa ghi Sổ tay thì vẫn hiện số biết trước.</div></details>';
-  html += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tháng</th><th>Thu</th><th>Chi</th><th>Số dư lũy kế</th></tr></thead><tbody>';
+  html += '<div class="table-wrap"><table class="t-compact"><thead><tr><th style="text-align:left">Tháng</th><th>Thu</th><th>Chi</th><th>Số dư lũy kế</th></tr></thead><tbody>';
   rowsData.forEach(function(r){
-    html += '<tr><td style="text-align:left">'+monthLabel(r.mk)+'</td><td style="color:var(--green)">'+fmt(Math.round(r.thu))+'</td><td style="color:var(--red)">'+fmt(Math.round(r.chi))+'</td><td>'+fmt(Math.round(r.bal))+'</td></tr>';
+    html += '<tr><td style="text-align:left">T'+parseInt(r.mk.slice(5,7),10)+'/'+r.mk.slice(0,4)+'</td><td style="color:var(--green)">'+fmt(Math.round(r.thu))+'</td><td style="color:var(--red)">'+fmt(Math.round(r.chi))+'</td><td>'+fmt(Math.round(r.bal))+'</td></tr>';
   });
   html += '</tbody></table></div>';
   html += '<div class="chart-box" style="margin-top:10px"><canvas id="chartTichLuy"></canvas></div>';
@@ -578,7 +578,7 @@ function drawTichLuyChart(rowsData){
   if (!ctx) return;
   chartTichLuy = new Chart(ctx, { type:'line',
     data:{ labels: rowsData.map(function(r){ return monthLabel(r.mk); }), datasets:[
-      { label:'Số dư lũy kế', data: rowsData.map(function(r){ return Math.round(r.bal); }), borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)', fill:true, tension:.25 }
+      { label:'Số dư lũy kế', data: rowsData.map(function(r){ return Math.round(r.bal); }), borderColor:'#c5071c', backgroundColor:'rgba(197,7,28,.1)', fill:true, tension:.25 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ title:{display:true,text:'Số dư lũy kế dự kiến'}, legend:{display:false} }, scales:{ y:{ ticks:{ callback:function(v){ return v>=1000?(v/1000)+'k':v; } } } } }
   });

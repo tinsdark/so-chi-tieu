@@ -39,6 +39,7 @@ var state = {
   tab: 'sotay',
   soTayMonth: null,   // "YYYY-MM"
   dongTienYear: null,
+  dtThang: null,          // tháng đang xem ở tab Dòng tiền trên điện thoại (mỗi lần 1 tháng)
   editingDate: null,
   soTaySearch: '',
   soTayFrom: '',
@@ -56,6 +57,10 @@ var state = {
   backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
+  fullFormOpen: false,    // form nhập đầy đủ ở Sổ tay đang mở (mặc định gấp lại, thẻ "Ghi nhanh" lo việc thường ngày)
+  // thẻ "Ghi nhanh" ở đầu Sổ tay. Bản nháp (amt/note/date) giữ ở đây chứ không chỉ trong ô nhập,
+  // để vẽ lại trang (poll Drive, đổi tab) không làm mất số vừa gõ.
+  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '' },
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
   // Thoát trang / đăng xuất / tải lại từ Drive là mất sạch (cố ý).
@@ -319,7 +324,7 @@ function repairEntryItems(e){
 // -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
 // màu danh mục: màu người dùng chọn (c.mau) hoặc màu mặc định theo vị trí trong danh sách,
 // để biểu đồ và chấm màu luôn nhất quán giữa các lần vẽ (trước đây màu theo thứ tự lọc, đổi mỗi lần)
-var CAT_PALETTE = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+var CAT_PALETTE = ['#2563eb','#16a34a','#d97706','#9333ea','#0891b2','#db2777','#ca8a04','#64748b'];
 function catMau(kind, catId){
   var arr = (state.data.categories[kind] || []);
   for (var i = 0; i < arr.length; i++){
@@ -347,6 +352,12 @@ function catDangCoTien(kind, catId){
     if (num((e[kind] || {})[catId]) > 0 || entryItems(e).some(function(it){ return it.kind === kind && it.catId === catId; })) n++;
   });
   return n;
+}
+
+// đoạn giải thích dài gấp lại sau nút ⓘ: nhìn số liệu trước, đọc luật sau (CSS .giai-thich).
+// noiDung là HTML do code tự dựng, KHÔNG đưa text người dùng vào đây.
+function ghiChuGon(noiDung, nhan){
+  return '<details class="giai-thich"><summary>ⓘ '+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
 }
 
 // escape khi nhồi text người dùng vào innerHTML
@@ -691,7 +702,8 @@ function chiTotal(entry){
 }
 
 /* ---------------- helpers chung ---------------- */
-function fmt(n){ return (Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
+// VND không có phần lẻ: làm tròn ở đây để số tổng (cộng từ nhiều khoản chia lẻ như lãi) không hiện ",303"
+function fmt(n){ return Math.round(Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 // giống num() nhưng chặn số âm -> về 0 (dùng cho các ô nhập tiền)
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }
@@ -784,7 +796,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen || state.dkForm || state.mtForm || state.imp
+            || state.viFormOpen || state.dkForm || state.mtForm || state.imp || state.fullFormOpen
             || (state.mp && state.mp.formOpen));
 }
 
