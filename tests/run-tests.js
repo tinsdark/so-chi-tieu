@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'nhap.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -726,6 +726,447 @@ test('entryIsEmpty', function(){
   eq(ctx.entryIsEmpty({ thu:{}, chi:{an:1}, ghiChu:'', refs:[] }), false, 'có tiền');
   eq(ctx.entryIsEmpty({ thu:{}, chi:{}, ghiChu:'ghi chú', refs:[] }), false, 'có ghi chú');
   eq(ctx.entryIsEmpty({ thu:{}, chi:{}, ghiChu:'', refs:[{loanId:'x',loai:'traNo',soTien:0}] }), false, 'có ref');
+});
+
+/* ==================================================================== */
+group('H. Hạn mức tháng + chuỗi số dư theo ngày (sotay.js)');
+
+function dataHanMuc(){
+  var d = baseData({
+    settings: { soDuDauKy: 1000000, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' },
+    categories: {
+      thu: [{id:'luong',ten:'Lương',chiTieu:0}],
+      chi: [{id:'an',ten:'Ăn',chiTieu:1000000},{id:'xang',ten:'Xăng',chiTieu:500000},
+            {id:'khac',ten:'Khác',chiTieu:0},{id:'choVay',ten:'Cho vay',chiTieu:900000,khongDuTru:true}]
+    }
+  });
+  d.journal['2026-10-02'] = { thu:{luong:5000000}, chi:{an:900000}, ghiChu:'', refs:[], items:[] };
+  d.journal['2026-10-05'] = { thu:{}, chi:{an:200000, xang:100000, choVay:700000}, ghiChu:'', refs:[], items:[] };
+  return d;
+}
+
+test('hanMucMuc: ngưỡng 80% / 100%', function(){
+  eq(ctx.hanMucMuc(0.79), 'ok'); eq(ctx.hanMucMuc(0.8), 'warn');
+  eq(ctx.hanMucMuc(1), 'warn', 'đúng 100% chưa vượt'); eq(ctx.hanMucMuc(1.01), 'over');
+});
+
+test('hanMucThangRows: chỉ danh mục có chỉ tiêu, bỏ khongDuTru, sắp % giảm dần', function(){
+  loadData(dataHanMuc());
+  var r = ctx.hanMucThangRows('2026-10');
+  eq(r.length, 2, 'Khác (chỉ tiêu 0) và Cho vay (khongDuTru) bị loại');
+  eq(r[0].id, 'an', 'Ăn 110% đứng đầu');
+  eq(r[0].da, 1100000, 'cộng dồn cả 2 ngày');
+  near(r[0].pct, 1.1, 0.0001, '% của Ăn');
+  eq(r[1].id, 'xang'); near(r[1].pct, 0.2, 0.0001, '% của Xăng');
+});
+
+test('hanMucThangRows: tháng không có phát sinh -> 0%', function(){
+  loadData(dataHanMuc());
+  var r = ctx.hanMucThangRows('2026-11');
+  eq(r.length, 2); eq(r[0].da, 0);
+});
+
+test('balanceSeries: số dư cuối ngày khớp balanceAt, tháng quá khứ đủ ngày', function(){
+  loadData(dataHanMuc());
+  setToday('2026-12-15');
+  var s = ctx.balanceSeries('2026-10');
+  eq(s.vals.length, 31, 'tháng 10 đủ 31 ngày khi đã qua');
+  eq(s.vals[0], 1000000, 'trước ngày 02 chưa có phát sinh');
+  eq(s.vals[1], 5100000, '02/10: +5tr -900k');
+  eq(s.vals[4], 4100000, '05/10: 5,1tr trừ 1tr (gồm cả khoản cho vay 700k)');
+  eq(s.vals[30], ctx.balanceAt('2026-10-31'));
+  setToday('2026-10-01');
+});
+
+test('balanceSeries: tháng đang diễn ra chỉ tới hôm nay; trước mốc khóa sổ thì rỗng', function(){
+  loadData(dataHanMuc());
+  setToday('2026-10-07');
+  eq(ctx.balanceSeries('2026-10').vals.length, 7);
+  eq(ctx.balanceSeries('2026-08').vals.length, 0, 'tháng 8 trước mốc khóa sổ 09/2026');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('W. Ví / nguồn tiền');
+
+function dataVi(){
+  var d = baseData({ settings: { soDuDauKy: 5000000, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.wallets = [ { id:'a', ten:'Tiền mặt', soDuDauKy: 3000000 }, { id:'b', ten:'Vietcombank', soDuDauKy: 2000000 } ];
+  d.journal['2026-10-02'] = { thu:{luong:10000000}, chi:{an:100000}, ghiChu:'', refs:[], items:[
+    { iid:'i1', kind:'thu', catId:'luong', soTien:10000000, walletId:'b' },
+    { iid:'i2', kind:'chi', catId:'an', soTien:100000, walletId:'a' } ] };
+  return d;
+}
+
+test('migration: dữ liệu cũ chỉ có soDuDauKy -> 1 ví mang đúng số đó, tổng không đổi, idempotent', function(){
+  var d = baseData({ settings: { soDuDauKy: 7500000, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.journal['2026-10-02'] = { thu:{}, chi:{an:50000}, ghiChu:'x', refs:[] };
+  loadData(d);
+  var st = ctx.state.data;
+  eq(st.wallets.length, 1); eq(st.wallets[0].soDuDauKy, 7500000);
+  eq(st.settings.soDuDauKy, 7500000);
+  eq(ctx.balanceAt('2026-10-31'), 7450000, 'số dư tổng giữ nguyên');
+  ok(st.journal['2026-10-02'].items.every(function(it){ return it.walletId === st.wallets[0].id; }), 'item được gắn ví');
+  var again = ctx.normalizeData(JSON.parse(JSON.stringify(st)));
+  eq(JSON.stringify(again.wallets), JSON.stringify(st.wallets), 'chạy lần 2 không đổi');
+});
+
+test('settings.soDuDauKy luôn = tổng số dư đầu kỳ các ví', function(){
+  loadData(dataVi());
+  eq(ctx.state.data.settings.soDuDauKy, 5000000);
+});
+
+test('soDuTheoVi: từng ví đúng, tổng các ví = balanceAt', function(){
+  var d = dataVi();
+  d.vayNo.vayNoPhaiTra.push({ id:'L1', ten:'Vay', walletId:'b', hinhThuc:'khong_lai', soTienGoc:1000000, soThangVay:2, ngayVay:'2026-10-01', traNo:[] });
+  d.journal['2026-10-03'] = { thu:{nhanTienVay:1000000}, chi:{}, ghiChu:'', refs:[{loanId:'L1',loai:'nhanTienVay',soTien:1000000,note:''}], items:[] };
+  loadData(d);
+  eq(ctx.soDuTheoVi('a','2026-10-31'), 2900000, 'ví a: 3tr - 100k');
+  eq(ctx.soDuTheoVi('b','2026-10-31'), 13000000, 'ví b: 2tr + 10tr + 1tr tiền vay (ví của khoản vay)');
+  eq(ctx.soDuTheoVi('a','2026-10-31') + ctx.soDuTheoVi('b','2026-10-31'), ctx.balanceAt('2026-10-31'), 'tổng ví = số dư tổng');
+  eq(ctx.soDuTheoVi('b','2026-10-02'), 12000000, 'tính tới đúng ngày, không lấy khoản vay ngày 03');
+});
+
+test('chuyển tiền giữa ví: đổi số dư từng ví, KHÔNG đổi tổng, KHÔNG đụng journal', function(){
+  loadData(dataVi());
+  var truoc = ctx.balanceAt('2026-10-31'), jTruoc = JSON.stringify(ctx.state.data.journal);
+  ok(ctx.chuyenViThem('2026-10-05','b','a',4000000,'rút tiền'), 'tạo được');
+  eq(ctx.soDuTheoVi('a','2026-10-31'), 6900000); eq(ctx.soDuTheoVi('b','2026-10-31'), 8000000);
+  eq(ctx.balanceAt('2026-10-31'), truoc, 'tổng không đổi');
+  eq(JSON.stringify(ctx.state.data.journal), jTruoc, 'journal không bị thêm gì');
+  eq(ctx.soDuTheoVi('a','2026-10-04'), 2900000, 'chưa tới ngày chuyển');
+  eq(ctx.chuyenViThem('2026-10-05','a','a',1,''), null, 'cùng ví');
+  eq(ctx.chuyenViThem('2026-10-05','a','zzz',1,''), null, 'ví không tồn tại');
+  eq(ctx.chuyenViThem('2026-10-05','a','b',0,''), null, 'số tiền 0');
+});
+
+test('chuyển tiền trước mốc khóa sổ không tính; xóa lần chuyển hoàn lại số dư', function(){
+  loadData(dataVi());
+  ctx.chuyenViThem('2026-09-15','b','a',1000000,'');
+  eq(ctx.soDuTheoVi('a','2026-10-31'), 2900000, 'trước ngayBatDau bị bỏ qua');
+  var t = ctx.chuyenViThem('2026-10-10','b','a',500000,'');
+  eq(ctx.soDuTheoVi('a','2026-10-31'), 3400000);
+  ok(ctx.chuyenViXoa(t.id), 'xóa được'); eq(ctx.soDuTheoVi('a','2026-10-31'), 2900000, 'hoàn lại');
+  eq(ctx.chuyenViXoa('khong-co'), null);
+});
+
+test('viDangDung: đếm dòng + khoản vay + lần chuyển; ví chưa dùng = 0', function(){
+  var d = dataVi();
+  d.wallets.push({ id:'c', ten:'Momo', soDuDauKy: 0 });
+  loadData(d);
+  eq(ctx.viDangDung('c'), 0, 'ví mới chưa dùng');
+  eq(ctx.viDangDung('a'), 1); eq(ctx.viDangDung('b'), 1);
+  ctx.chuyenViThem('2026-10-06','a','c',1000,'');
+  eq(ctx.viDangDung('c'), 1, 'có lần chuyển tham chiếu');
+});
+
+test('entryAddItem / entryUpdateItem mang walletId; walletId lạ -> ví mặc định', function(){
+  loadData(dataVi());
+  var it = ctx.entryAddItem('2026-10-04','chi','an',70000,'ăn','b');
+  eq(it.walletId, 'b'); eq(ctx.soDuTheoVi('b','2026-10-31'), 11930000);
+  var it2 = ctx.entryAddItem('2026-10-04','chi','an',1000,'x','khong-ton-tai');
+  eq(it2.walletId, 'a', 'rơi về ví đầu tiên');
+  ctx.entryUpdateItem('2026-10-04', it.iid, 70000, 'ăn', null, null, 'a');
+  eq(ctx.soDuTheoVi('b','2026-10-31'), 12000000, 'đổi ví: ví b được hoàn lại');
+  eq(ctx.soDuTheoVi('a','2026-10-31'), 2900000 - 70000 - 1000);
+  eq(ctx.soDuTheoVi('a','2026-10-31') + ctx.soDuTheoVi('b','2026-10-31'), ctx.balanceAt('2026-10-31'));
+});
+
+test('viChotSoDuDauKy: chốt từng ví, tổng giữ nguyên = số dư thật', function(){
+  var d = dataVi();
+  loadData(d);
+  ctx.chuyenViThem('2026-10-05','b','a',4000000,'');
+  var tong = ctx.balanceAt('2026-10-31');
+  ctx.viChotSoDuDauKy('2026-10-31');
+  var w = ctx.state.data.wallets;
+  eq(w[0].soDuDauKy, 6900000); eq(w[1].soDuDauKy, 8000000);
+  eq(ctx.state.data.settings.soDuDauKy, tong);
+  eq(w[0].soDuDauKy + w[1].soDuDauKy, tong);
+});
+
+/* ==================================================================== */
+group('K. Giao dịch định kỳ');
+
+function dataDinhKy(){
+  var d = baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.categories = { thu: [{id:'luong',ten:'Lương',chiTieu:0}], chi: [{id:'nha',ten:'Tiền nhà',chiTieu:0},{id:'net',ten:'Net',chiTieu:0}] };
+  d.dinhKy = [
+    { id:'k1', ten:'Lương', kind:'thu', catId:'luong', soTien:10000000, ngay:5 },
+    { id:'k2', ten:'Tiền nhà', kind:'chi', catId:'nha', soTien:3000000, ngay:31 },
+    { id:'k3', ten:'Net', kind:'chi', catId:'net', soTien:200000, ngay:10, bat:false }
+  ];
+  return d;
+}
+
+test('dinhKyDenHan: chưa tới ngày thì không nhắc; tới ngày thì nhắc; tắt thì không', function(){
+  loadData(dataDinhKy());
+  eq(ctx.dinhKyDenHan('2026-10-04').length, 0, 'chưa tới ngày 5');
+  var r = ctx.dinhKyDenHan('2026-10-05');
+  eq(r.length, 1); eq(r[0].dk.id, 'k1'); eq(r[0].han, '2026-10-05');
+  eq(ctx.dinhKyDenHan('2026-10-20').some(function(x){ return x.dk.id === 'k3'; }), false, 'k3 đang tắt');
+});
+
+test('dinhKyDenHan: ngày 31 co về cuối tháng ngắn', function(){
+  loadData(dataDinhKy());
+  eq(ctx.dinhKyDenHan('2026-11-29').some(function(x){ return x.dk.id === 'k2'; }), false, 'T11 có 30 ngày, chưa tới');
+  var r = ctx.dinhKyDenHan('2026-11-30').filter(function(x){ return x.dk.id === 'k2'; });
+  eq(r.length, 1); eq(r[0].han, '2026-11-30');
+});
+
+test('dinhKyGhi: tạo đúng dòng, mang dkId, cộng đúng tiền, hết nhắc sau khi ghi', function(){
+  loadData(dataDinhKy());
+  var dk = ctx.state.data.dinhKy[0];
+  var r = ctx.dinhKyGhi(dk, '2026-10', '2026-10-07');
+  eq(r.date, '2026-10-05');
+  var e = ctx.state.data.journal['2026-10-05'];
+  eq(e.thu.luong, 10000000); eq(ctx.entryItems(e)[0].dkId, 'k1');
+  ok(e.ghiChu.indexOf('Lương') === 0, 'ghi chú ngày có tên khoản');
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 0, 'đã ghi thì hết nhắc');
+  eq(ctx.dinhKyDaGhi(dk, '2026-11'), false, 'tháng sau thì chưa ghi');
+  eq(ctx.dinhKyDenHan('2026-11-06').filter(function(x){ return x.dk.id === 'k1'; }).length, 1, 'tháng sau nhắc lại');
+});
+
+test('dinhKyGhi: ngày đến hạn trước mốc khóa sổ thì ghi vào hôm nay', function(){
+  var d = dataDinhKy(); d.settings.ngayBatDau = '2026-10-10';
+  loadData(d);
+  var r = ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-12');
+  eq(r.date, '2026-10-12', 'không ghi vào 05/10 (đã khóa sổ)');
+});
+
+test('bỏ qua tháng: hết nhắc tháng đó nhưng tháng sau vẫn nhắc', function(){
+  loadData(dataDinhKy());
+  ctx.state.data.dinhKy[0].bo.push('2026-10');
+  eq(ctx.dinhKyDenHan('2026-10-20').filter(function(x){ return x.dk.id === 'k1'; }).length, 0);
+  eq(ctx.dinhKyDenHan('2026-11-20').filter(function(x){ return x.dk.id === 'k1'; }).length, 1);
+});
+
+test('dinhKyHoanTac: trả lại tiền, xóa ghi chú và xóa ngày nếu rỗng', function(){
+  loadData(dataDinhKy());
+  var r = ctx.dinhKyGhi(ctx.state.data.dinhKy[0], '2026-10', '2026-10-07');
+  ctx.dinhKyHoanTac(r);
+  eq(ctx.state.data.journal['2026-10-05'], undefined, 'ngày rỗng bị xóa');
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 1, 'lại nhắc');
+});
+
+test('dinhKy: ghi đè walletId + migrate giá trị lạ', function(){
+  var d = dataDinhKy(); d.dinhKy.push({ ten:'x', kind:'??', catId:'net', soTien:'5', ngay:99 });
+  loadData(d);
+  var k = ctx.state.data.dinhKy[3];
+  eq(k.kind, 'chi'); eq(k.ngay, 31, 'ngày bị kẹp về 1-31'); eq(k.soTien, 5); ok(k.id && Array.isArray(k.bo) && k.bat === true);
+});
+
+/* ==================================================================== */
+group('M. Mục tiêu tiết kiệm');
+
+function dataMucTieu(){
+  var d = baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.wallets = [ { id:'a', ten:'Chính', soDuDauKy: 1000000 }, { id:'q', ten:'Quỹ mua xe', soDuDauKy: 2000000 } ];
+  d.mucTieu = [
+    { id:'m1', ten:'Mua xe', soTien:10000000, hanChot:'2027-03', walletId:'q', daGom:0 },
+    { id:'m2', ten:'Du lịch', soTien:6000000, hanChot:'', walletId:'', daGom:1500000 }
+  ];
+  return d;
+}
+
+test('monthDiff', function(){
+  eq(ctx.monthDiff('2026-10','2026-10'), 0); eq(ctx.monthDiff('2026-10','2027-03'), 5);
+  eq(ctx.monthDiff('2026-12','2026-10'), -2, 'âm khi hạn đã qua');
+});
+
+test('gắn ví: số đã gom = số dư ví, tự tăng khi chuyển tiền vào ví', function(){
+  loadData(dataMucTieu());
+  var g = ctx.state.data.mucTieu[0];
+  var t = ctx.mucTieuTienDo(g, '2026-10-06');
+  eq(t.da, 2000000); eq(t.theoVi, true); near(t.pct, 0.2, 1e-9); eq(t.conThieu, 8000000);
+  ctx.chuyenViThem('2026-10-07','a','q',500000,'');
+  eq(ctx.mucTieuTienDo(g, '2026-10-31').da, 2500000, 'chuyển 500k vào ví quỹ');
+  eq(ctx.mucTieuTienDo(g, '2026-10-06').da, 2000000, 'tính tới đúng ngày');
+});
+
+test('cần gom mỗi tháng = còn thiếu / số tháng còn lại (tính cả tháng hạn chót)', function(){
+  loadData(dataMucTieu());
+  var t = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06');
+  eq(t.soThangCon, 6, 'T10/2026 -> T3/2027 gồm cả 2 đầu = 6 tháng');
+  near(t.canMoiThang, 8000000 / 6, 0.01);
+  var cuoi = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2027-03-02');
+  eq(cuoi.soThangCon, 1, 'tháng hạn chót: phải gom hết trong tháng này');
+});
+
+test('gom tay (không gắn ví) + không có hạn chót thì không tính cần/tháng', function(){
+  loadData(dataMucTieu());
+  var t = ctx.mucTieuTienDo(ctx.state.data.mucTieu[1], '2026-10-06');
+  eq(t.da, 1500000); eq(t.theoVi, false); eq(t.canMoiThang, null); eq(t.soThangCon, null); near(t.pct, 0.25, 1e-9);
+});
+
+test('đã đủ / quá hạn', function(){
+  var d = dataMucTieu(); d.mucTieu[1].daGom = 6000000; d.mucTieu[0].hanChot = '2026-08';
+  loadData(d);
+  var xong = ctx.mucTieuTienDo(ctx.state.data.mucTieu[1], '2026-10-06');
+  eq(xong.xong, true); eq(xong.conThieu, 0);
+  var qua = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06');
+  eq(qua.quaHan, true); eq(qua.canMoiThang, null);
+  d.mucTieu[0].soTien = 1000000; loadData(d);
+  eq(ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06').quaHan, false, 'đã đủ thì không tính là quá hạn');
+});
+
+test('số âm không làm tiến độ âm; walletId lạ bị gỡ khi normalize; mục tiêu không đổi số dư tổng', function(){
+  var d = dataMucTieu(); d.wallets[1].soDuDauKy = -500000; d.mucTieu[1].walletId = 'khong-co';
+  loadData(d);
+  eq(ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-06').da, 0, 'ví âm -> 0, không âm theo');
+  eq(ctx.state.data.mucTieu[1].walletId, '', 'ví không tồn tại bị gỡ');
+  eq(ctx.balanceAt('2026-10-31'), 500000, 'số dư tổng chỉ từ ví, không dính mục tiêu');
+});
+
+/* ==================================================================== */
+group('N. Nhập CSV / Excel (nhap.js)');
+
+test('nhapParseNgay: nhiều kiểu, ngày trước tháng, serial Excel, từ chối ngày ảo', function(){
+  eq(ctx.nhapParseNgay('2026-10-05'), '2026-10-05');
+  eq(ctx.nhapParseNgay('5/10/2026'), '2026-10-05', 'kiểu VN: ngày/tháng');
+  eq(ctx.nhapParseNgay('05-10-26'), '2026-10-05', 'năm 2 chữ số');
+  eq(ctx.nhapParseNgay('05.10.2026 14:30'), '2026-10-05', 'có giờ phía sau');
+  eq(ctx.nhapParseNgay(46300), '2026-10-05', 'số ngày của Excel');
+  eq(ctx.nhapParseNgay('31/02/2026'), '', 'ngày không tồn tại');
+  eq(ctx.nhapParseNgay('13/13/2026'), '', 'tháng 13');
+  eq(ctx.nhapParseNgay('abc'), ''); eq(ctx.nhapParseNgay(''), '');
+});
+
+test('nhapParseTien: định dạng VN/Mỹ, ký hiệu tiền, số âm, số lẻ bị bỏ', function(){
+  eq(ctx.nhapParseTien('1.500.000'), 1500000); eq(ctx.nhapParseTien('1,500,000'), 1500000);
+  eq(ctx.nhapParseTien('50.000đ'), 50000); eq(ctx.nhapParseTien('50.000 ₫'), 50000); eq(ctx.nhapParseTien('1500000 VND'), 1500000);
+  eq(ctx.nhapParseTien('-50.000'), -50000); eq(ctx.nhapParseTien('(50.000)'), -50000); eq(ctx.nhapParseTien('−20,000'), -20000);
+  eq(ctx.nhapParseTien('1.500,50'), 1500, 'phần lẻ 2 chữ số bị bỏ'); eq(ctx.nhapParseTien('1.500'), 1500, '3 chữ số = hàng nghìn');
+  eq(ctx.nhapParseTien(75000), 75000); eq(ctx.nhapParseTien(-75000), -75000);
+  ok(isNaN(ctx.nhapParseTien('')) && isNaN(ctx.nhapParseTien('abc')), 'rỗng/chữ -> NaN');
+});
+
+test('nhapParseLoai: có hiểu thu/chi, KHÔNG đoán Nợ/Có', function(){
+  eq(ctx.nhapParseLoai('Thu'), 'thu'); eq(ctx.nhapParseLoai('Thu nhập'), 'thu'); eq(ctx.nhapParseLoai('income'), 'thu');
+  eq(ctx.nhapParseLoai('Chi tiêu'), 'chi'); eq(ctx.nhapParseLoai('expense'), 'chi'); eq(ctx.nhapParseLoai('-'), 'chi');
+  eq(ctx.nhapParseLoai('Nợ'), ''); eq(ctx.nhapParseLoai('Có'), ''); eq(ctx.nhapParseLoai(''), '');
+});
+
+test('nhapParseCsv: ngoặc kép, dấu phẩy trong ô, ; và tab, BOM, xuống dòng trong ô', function(){
+  var a = ctx.nhapParseCsv('﻿Ngày,Số tiền,Nội dung\n5/10/2026,"50,000","Ăn ""trưa"", cơm"\n');
+  eq(a.length, 2); eq(a[0][0], 'Ngày'); eq(a[1][1], '50,000'); eq(a[1][2], 'Ăn "trưa", cơm');
+  var b = ctx.nhapParseCsv('Ngày;Số tiền\r\n5/10/2026;1.500.000\r\n6/10/2026;20.000');
+  eq(b.length, 3); eq(b[1][1], '1.500.000'); eq(b[2][0], '6/10/2026');
+  var c = ctx.nhapParseCsv('a\tb\n1\t"x\ny"\n'); eq(c[1][1], 'x\ny');
+});
+
+test('nhapCoHeader + nhapDoanCot: có tiêu đề theo tên, không tiêu đề theo nội dung', function(){
+  var r1 = ctx.nhapParseCsv('Ngày,Số tiền,Loại,Danh mục,Ghi chú\n5/10/2026,50000,Chi,Ăn,Cơm');
+  eq(ctx.nhapCoHeader(r1), true);
+  var m1 = ctx.nhapDoanCot(r1, true);
+  eq(m1.ngay, 0); eq(m1.tien, 1); eq(m1.loai, 2); eq(m1.cat, 3); eq(m1.note, 4);
+  var r2 = ctx.nhapParseCsv('5/10/2026,50000,Cơm trưa\n6/10/2026,20000,Cà phê');
+  eq(ctx.nhapCoHeader(r2), false);
+  var m2 = ctx.nhapDoanCot(r2, false);
+  eq(m2.ngay, 0); eq(m2.tien, 1); eq(m2.note, 2);
+});
+
+function impCoBan(csv, over){
+  var rows = ctx.nhapParseCsv(csv), hd = ctx.nhapCoHeader(rows);
+  var imp = { rows: rows, coHeader: hd, map: ctx.nhapDoanCot(rows, hd), soDuong: 'chi', catMacDinh: 'chi|an', catMap: {}, boTrung: true, viId: undefined };
+  if (over) Object.keys(over).forEach(function(k){ imp[k] = over[k]; });
+  return imp;
+}
+function dataNhap(){
+  var d = baseData({ settings: { soDuDauKy: 1000000, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.categories = { thu: [{id:'luong',ten:'Lương',chiTieu:0},{id:'nhanTienVay',ten:'Nhận tiền vay',chiTieu:0}],
+                   chi: [{id:'an',ten:'Ăn',chiTieu:0},{id:'xang',ten:'Xăng',chiTieu:0},{id:'choVay',ten:'Cho vay',chiTieu:0}] };
+  return d;
+}
+
+test('nhapPhanTich: ghép danh mục có sẵn theo tên (bỏ dấu/hoa thường), dòng lỗi, danh mục mới', function(){
+  loadData(dataNhap());
+  var kq = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền,Loại,Danh mục,Ghi chú\n5/10/2026,50000,Chi,an,Cơm\n6/10/2026,5000000,Thu,LƯƠNG,T10\nxx,100,Chi,Ăn,sai ngày\n7/10/2026,0,Chi,Ăn,tiền 0\n8/10/2026,30000,Chi,Cà phê,Cf'));
+  eq(kq.dong.length, 5);
+  eq(kq.dong[0].catId, 'an'); eq(kq.dong[0].kind, 'chi'); eq(kq.dong[0].soTien, 50000);
+  eq(kq.dong[1].catId, 'luong'); eq(kq.dong[1].kind, 'thu');
+  ok(kq.dong[2].loi.indexOf('Ngày') === 0, 'ngày hỏng'); ok(kq.dong[3].loi.indexOf('Số tiền') === 0, 'tiền 0');
+  eq(kq.dong[4].catMoi, 'Cà phê', 'danh mục lạ -> tạo mới');
+  eq(kq.nOk, 3); eq(kq.nLoi, 2); eq(kq.tongThu, 5000000); eq(kq.tongChi, 80000);
+});
+
+test('nhapPhanTich: số âm = chi; số dương theo soDuong; cột Loại thắng dấu số', function(){
+  loadData(dataNhap());
+  var kq = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền,Ghi chú\n5/10/2026,-50000,a\n6/10/2026,200000,b', { soDuong: 'thu', catMacDinh: 'thu|luong' }));
+  eq(kq.dong[0].kind, 'chi'); eq(kq.dong[0].soTien, 50000, 'số âm -> chi, lấy trị tuyệt đối');
+  eq(kq.dong[1].kind, 'thu');
+  var kq2 = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền,Loại\n5/10/2026,-50000,Thu', { catMacDinh: 'thu|luong' }));
+  eq(kq2.dong[0].kind, 'thu', 'cột Loại ghi Thu thì là thu dù số âm');
+});
+
+test('nhapPhanTich: không danh mục + không mặc định -> lỗi; danh mục Vay-Nợ không bị ghép tự động', function(){
+  loadData(dataNhap());
+  var kq = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền\n5/10/2026,50000', { catMacDinh: '' }));
+  ok(kq.dong[0].loi.indexOf('danh mục') >= 0, 'báo thiếu danh mục');
+  var kq2 = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền,Danh mục\n5/10/2026,50000,Cho vay'));
+  eq(kq2.dong[0].catId, '', 'không ghép vào "Cho vay" (chỉ ghi từ tab Vay-Nợ)'); eq(kq2.dong[0].catMoi, 'Cho vay');
+});
+
+test('nhập + nhập lại cùng file: không nhân đôi (trùng bị bỏ qua); số dư đúng', function(){
+  loadData(dataNhap());
+  var csv = 'Ngày,Số tiền,Loại,Danh mục,Ghi chú\n5/10/2026,50000,Chi,Ăn,Cơm\n5/10/2026,50000,Chi,Ăn,Cơm tối\n6/10/2026,5000000,Thu,Lương,T10';
+  var imp = impCoBan(csv);
+  var kq = ctx.nhapPhanTich(imp), r = ctx.nhapThucHien(imp, kq);
+  eq(r.da.length, 3, 'nhập 3 dòng'); eq(ctx.balanceAt('2026-10-31'), 1000000 - 100000 + 5000000);
+  var e = ctx.state.data.journal['2026-10-05'];
+  eq(e.chi.an, 100000); eq(ctx.entryItems(e).length, 2); ok(e.ghiChu.indexOf('Cơm') >= 0, 'ghi chú ngày có nội dung');
+  var kq2 = ctx.nhapPhanTich(imp);
+  eq(kq2.nTrung, 3, 'lần 2: cả 3 dòng trùng'); eq(kq2.nOk, 0);
+  ctx.nhapThucHien(imp, kq2);
+  eq(ctx.balanceAt('2026-10-31'), 5900000, 'nhập lần 2 không đổi số dư');
+});
+
+test('dòng giống nhau TRONG file không bị coi là trùng nhau (2 ly cà phê cùng giá)', function(){
+  loadData(dataNhap());
+  var kq = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền,Ghi chú\n5/10/2026,30000,Cf\n5/10/2026,30000,Cf'));
+  eq(kq.nOk, 2); eq(kq.nTrung, 0);
+});
+
+test('tạo danh mục mới khi nhập, dùng chung cho nhiều dòng; hoàn tác xóa dòng + danh mục mới + số dư về cũ', function(){
+  loadData(dataNhap());
+  var truoc = ctx.balanceAt('2026-10-31'), soCat = ctx.state.data.categories.chi.length;
+  var imp = impCoBan('Ngày,Số tiền,Danh mục\n5/10/2026,30000,Cà phê\n6/10/2026,35000,cà phê');
+  var kq = ctx.nhapPhanTich(imp), r = ctx.nhapThucHien(imp, kq);
+  eq(ctx.state.data.categories.chi.length, soCat + 1, 'chỉ tạo 1 danh mục cho 2 dòng cùng tên');
+  eq(r.moi.length, 1); eq(ctx.balanceAt('2026-10-31'), truoc - 65000);
+  ctx.nhapHoanTac(r);
+  eq(ctx.state.data.categories.chi.length, soCat, 'danh mục mới bị gỡ'); eq(ctx.balanceAt('2026-10-31'), truoc, 'số dư về cũ');
+  eq(Object.keys(ctx.state.data.journal).length, 0, 'ngày rỗng bị xóa');
+});
+
+test('nhập vào ví chọn; ngày trước mốc khóa sổ chỉ cảnh báo, không chặn', function(){
+  var d = dataNhap(); d.wallets = [{id:'a',ten:'A',soDuDauKy:600000},{id:'b',ten:'B',soDuDauKy:400000}];
+  loadData(d);
+  var imp = impCoBan('Ngày,Số tiền,Ghi chú\n5/10/2026,50000,x\n15/9/2026,10000,cũ', { viId: 'b' });
+  var kq = ctx.nhapPhanTich(imp);
+  ok(kq.dong[1].canhBao.indexOf('khóa sổ') >= 0, 'cảnh báo mốc khóa sổ'); eq(kq.nOk, 2);
+  ctx.nhapThucHien(imp, kq);
+  eq(ctx.soDuTheoVi('b', '2026-10-31'), 350000, 'ví B trừ 50k (dòng cũ trước mốc không tính)'); eq(ctx.soDuTheoVi('a', '2026-10-31'), 600000);
+});
+
+test('danh mục mặc định riêng cho thu và chi: file hỗn hợp không có cột danh mục', function(){
+  loadData(dataNhap());
+  var kq = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền\n5/10/2026,-50000\n6/10/2026,200000', { soDuong: 'thu', catMacDinh: '', catMD: { thu: 'thu|luong', chi: 'chi|an' } }));
+  eq(kq.nOk, 2, 'cả thu lẫn chi đều có danh mục'); eq(kq.dong[0].catId, 'an'); eq(kq.dong[1].catId, 'luong');
+  var thieu = ctx.nhapPhanTich(impCoBan('Ngày,Số tiền\n5/10/2026,-50000\n6/10/2026,200000', { soDuong: 'thu', catMacDinh: '', catMD: { thu: '', chi: 'chi|an' } }));
+  eq(thieu.nOk, 1); eq(thieu.nLoi, 1, 'thiếu mặc định cho thu -> chỉ dòng thu lỗi');
+});
+
+/* ==================================================================== */
+group('C. Màu danh mục');
+
+test('catMau: màu người dùng chọn thắng; mặc định theo vị trí và ổn định; mã màu hỏng bị gỡ', function(){
+  var d = baseData(); d.categories.chi = [{id:'a',ten:'A',mau:'#112233'},{id:'b',ten:'B'},{id:'c',ten:'C',mau:'đỏ'}];
+  loadData(d);
+  eq(ctx.catMau('chi','a'), '#112233', 'màu đã chọn');
+  eq(ctx.catMau('chi','b'), ctx.CAT_PALETTE[1], 'mặc định theo vị trí (index 1)');
+  eq(ctx.state.data.categories.chi[2].mau, '', 'mã màu không hợp lệ bị bỏ khi normalize');
+  eq(ctx.catMau('chi','c'), ctx.CAT_PALETTE[2]);
+  eq(ctx.catMau('chi','khong-co'), '#9ca3af', 'danh mục đã xóa -> xám');
 });
 
 /* ==================================================================== */

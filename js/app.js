@@ -22,7 +22,15 @@ function renderSyncStatus(){
   }
   var banner = document.getElementById('bannerZone');
   if (banner){
-    banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+    if (state.offline){
+      var tu = state.offlineTu ? new Date(state.offlineTu) : null;
+      banner.innerHTML = '<div class="banner">⚠ Đang ngoại tuyến'
+        + (tu ? ' — dữ liệu trên máy lúc ' + pad2(tu.getHours()) + ':' + pad2(tu.getMinutes()) + ' ' + tu.toLocaleDateString('vi-VN') : '')
+        + '. Thay đổi chỉ lưu trên máy, chưa lên Drive. '
+        + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đăng nhập để đồng bộ</button></div>';
+    } else {
+      banner.innerHTML = state.errorMsg ? '<div class="banner">⚠ ' + state.errorMsg + '</div>' : '';
+    }
   }
 }
 
@@ -75,18 +83,65 @@ document.addEventListener('click', function(ev){
     return;
   }
   var tabBtn = ev.target.closest('.tab');
-  if (tabBtn){
-    state.tab = tabBtn.getAttribute('data-tab');
-    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b===tabBtn); });
-    renderAll();
-  }
+  if (tabBtn) chuyenTab(tabBtn.getAttribute('data-tab'));
 });
 
+// chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
+function chuyenTab(tab){
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+  renderAll();
+}
+
+/* ---------------- phím tắt (desktop) ----------------
+   Không bắt phím khi: đang gõ trong ô nhập/chọn (isTypingNow), đang mở hộp thoại,
+   giữ Ctrl/Alt/Cmd (để không cướp phím tắt của trình duyệt), chưa đăng nhập. */
+var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'vayno', '4':'mophong', '5':'danhmuc' };
+function hienPhimTat(){
+  moHoiThoai({
+    tieuDe: 'Phím tắt',
+    noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
+      + '/ — tìm trong Sổ tay\n'
+      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Vay-Nợ · Mô phỏng · Danh mục\n'
+      + '? — mở bảng này\n'
+      + 'Esc — đóng hộp thoại\n\n'
+      + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',
+    nut: [ { ma:'ok', chu:'Đóng' } ]
+  });
+}
+document.addEventListener('keydown', function(ev){
+  if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || ev.defaultPrevented) return;
+  if (_modalDangMo || isTypingNow()) return;
+  var appEl = document.getElementById('app');
+  if (!appEl || appEl.style.display === 'none' || !state.data) return;
+  var k = ev.key;
+  if (PHIM_TAT_TAB[k]){
+    ev.preventDefault();
+    chuyenTab(PHIM_TAT_TAB[k]);
+    window.scrollTo(0, 0);
+  } else if (k === 'n' || k === 'N'){
+    ev.preventDefault();
+    handleAction('fabAdd', null);
+  } else if (k === '/'){
+    ev.preventDefault();
+    if (state.tab !== 'sotay') chuyenTab('sotay');
+    var oTim = document.querySelector('[data-act=soTaySearchInput]');
+    if (oTim){ oTim.scrollIntoView({ behavior:'smooth', block:'center' }); oTim.focus(); }
+  } else if (k === '?'){
+    ev.preventDefault();
+    hienPhimTat();
+  }
+});
+var btnPT = document.getElementById('btnPhimTat');
+if (btnPT) btnPT.addEventListener('click', hienPhimTat);
+
 document.getElementById('btnSignIn').addEventListener('click', signIn);
+document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
 document.getElementById('btnSignOut').addEventListener('click', signOut);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){
+  if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
   state.errorMsg = null;
   await driveLoad();
   renderAll();
@@ -95,6 +150,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
 document.addEventListener('change', function(ev){
   var el = ev.target;
   if (handleSoTayChange(el)) return;
+  if (handleNhapChange(el)) return;
   if (handleVayNoChange(el)) return;
   if (handleDanhMucChange(el)) return;
   if (handleMoPhongChange(el)) return;
@@ -102,7 +158,9 @@ document.addEventListener('change', function(ev){
 
 // dispatcher: thử lần lượt handler của từng tab, dừng ở handler đầu tiên xử lý được (trả về true)
 function handleAction(act, el){
+  if (act === 'dangNhapLai'){ signIn(); return; }
   if (handleSoTayAction(act, el)) return;
+  if (handleNhapAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
@@ -111,3 +169,10 @@ function handleAction(act, el){
 
 /* ---------------- init ---------------- */
 showGate('');
+
+// service worker (cần HTTPS hoặc localhost; mở bằng file:// thì bỏ qua) — xem sw.js
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(e){ console.error('[chitieu] Không đăng ký được service worker:', e); });
+  });
+}

@@ -43,6 +43,16 @@ var state = {
   soTaySearch: '',
   soTayFrom: '',
   soTayTo: '',
+  offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
+  offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
+  imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
+  mtForm: null,           // form mục tiêu tiết kiệm ở tab Danh mục (như dkForm)
+  dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
+  viFormOpen: false,      // form chuyển tiền giữa ví đang mở
+  viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
+  backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
+  backupBusy: false,
+  soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
@@ -207,13 +217,14 @@ function entryFindItem(entry, iid){
   return null;
 }
 
-function entryAddItem(date, kind, catId, soTien, ghiChu){
+function entryAddItem(date, kind, catId, soTien, ghiChu, walletId){
   var v = num(soTien);
   if (!date || !catId || (kind !== 'thu' && kind !== 'chi') || v <= 0) return null;
   var e = state.data.journal[date] || blankEntry();
   e.thu = e.thu || {}; e.chi = e.chi || {}; e.refs = e.refs || [];
   e.items = Array.isArray(e.items) ? e.items : [];
-  var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '' };
+  var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '',
+             walletId: walletById(walletId) ? walletId : viMacDinhId() };
   e.items.push(it);
   _bucketAdd(e, kind, catId, v);
   state.data.journal[date] = e;
@@ -223,7 +234,7 @@ function entryAddItem(date, kind, catId, soTien, ghiChu){
 
 // sửa 1 dòng: đổi được cả số tiền, nội dung, loại thu/chi và danh mục.
 // Trừ hết ở chỗ cũ rồi cộng vào chỗ mới -> không bao giờ cộng dồn sai.
-function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi){
+function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdMoi){
   var e = state.data.journal[date];
   if (!e) return false;
   var it = entryFindItem(e, iid);
@@ -235,6 +246,7 @@ function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi){
   _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   it.kind = kindM; it.catId = catM; it.soTien = v;
   if (ghiChu != null) it.ghiChu = ghiChu;
+  if (walletIdMoi && walletById(walletIdMoi)) it.walletId = walletIdMoi;
   _bucketAdd(e, kindM, catM, v);
   invalidateBalanceCache();
   return true;
@@ -285,7 +297,7 @@ function repairEntryItems(e){
     Object.keys(cats).forEach(function(catId){
       var lech = (num(bucket[catId]) - entryRefSum(e, kind, catId)) - itemsSum(e, kind, catId);
       if (lech > 0.004){
-        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: lech, ghiChu: '(chưa chi tiết)' });
+        e.items.push({ iid: newIid(), kind: kind, catId: catId, soTien: lech, ghiChu: '(chưa chi tiết)', walletId: viMacDinhId() });
       } else if (lech < -0.004){
         var con = -lech;
         for (var i = e.items.length - 1; i >= 0 && con > 0.004; i--){
@@ -303,6 +315,20 @@ function repairEntryItems(e){
 
 // tên danh mục để hiển thị. Danh mục đã bị xóa khỏi settings mà journal còn tiền
 // -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
+// màu danh mục: màu người dùng chọn (c.mau) hoặc màu mặc định theo vị trí trong danh sách,
+// để biểu đồ và chấm màu luôn nhất quán giữa các lần vẽ (trước đây màu theo thứ tự lọc, đổi mỗi lần)
+var CAT_PALETTE = ['#4f46e5','#16a34a','#d97706','#dc2626','#0891b2','#9333ea','#ca8a04','#db2777'];
+function catMau(kind, catId){
+  var arr = (state.data.categories[kind] || []);
+  for (var i = 0; i < arr.length; i++){
+    if (arr[i].id === catId) return /^#[0-9a-f]{6}$/i.test(arr[i].mau || '') ? arr[i].mau : CAT_PALETTE[i % CAT_PALETTE.length];
+  }
+  return '#9ca3af';
+}
+function catDot(kind, catId){
+  return '<span class="cat-dot" style="background:'+catMau(kind, catId)+'"></span>';
+}
+
 function catTen(kind, catId){
   var arr = (state.data.categories[kind] || []);
   for (var i=0;i<arr.length;i++){ if (arr[i].id === catId) return arr[i].ten; }
@@ -400,8 +426,237 @@ function normalizeData(d){
     if (c.daThu == null) c.daThu = 0;
     if (c.tatToan) c.trangThai = 'da_thu_du';
   });
+  // ví / nguồn tiền: dữ liệu cũ chỉ có 1 số dư đầu kỳ -> thành 1 ví mang đúng số đó (tổng không đổi)
+  if (!Array.isArray(d.wallets) || !d.wallets.length){
+    d.wallets = [{ id: 'w_chinh', ten: 'Tài khoản chính', soDuDauKy: num(d.settings.soDuDauKy) }];
+  }
+  d.wallets.forEach(function(w){
+    w.soDuDauKy = num(w.soDuDauKy);
+    if (!w.ten) w.ten = 'Ví';
+    if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  });
+  d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
+  // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
+  d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  ['thu', 'chi'].forEach(function(k){
+    d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
+  });
+  // mục tiêu tiết kiệm (xem khối MỤC TIÊU TIẾT KIỆM)
+  d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
+  d.mucTieu.forEach(function(g){
+    if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    g.soTien = num(g.soTien); g.daGom = num(g.daGom);
+    if (!g.hanChot || !/^\d{4}-\d{2}$/.test(g.hanChot)) g.hanChot = '';
+    if (g.walletId && !d.wallets.some(function(w){ return w.id === g.walletId; })) g.walletId = '';
+  });
+  d.dinhKy.forEach(function(k){
+    if (!k.id) k.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    if (k.bat == null) k.bat = true;
+    if (!Array.isArray(k.bo)) k.bo = [];
+    k.ngay = Math.max(1, Math.min(31, Math.round(num(k.ngay)) || 1));
+    k.soTien = num(k.soTien);
+    k.kind = (k.kind === 'thu') ? 'thu' : 'chi';
+  });
+  // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
+  d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
+  // gắn walletId tường minh cho mọi dòng/khoản vay còn thiếu, để sau này đổi ví mặc định
+  // (hoặc thêm ví) không âm thầm xếp lại lịch sử sang ví khác
+  var viMd = d.wallets[0].id;
+  var viCoThat = function(id){ return !!id && d.wallets.some(function(w){ return w.id === id; }); };
+  Object.keys(d.journal).forEach(function(date){
+    (d.journal[date].items || []).forEach(function(it){ if (!viCoThat(it.walletId)) it.walletId = viMd; });
+  });
+  d.vayNo.vayNoPhaiTra.concat(d.vayNo.choVay).forEach(function(l){ if (!viCoThat(l.walletId)) l.walletId = viMd; });
   invalidateBalanceCache();
   return d;
+}
+
+/* ====================================================================
+   VÍ / NGUỒN TIỀN
+   - wallets[] = [{id, ten, soDuDauKy}]: số dư đầu kỳ từng ví, cộng lại = settings.soDuDauKy.
+   - Mỗi dòng nhập tay (items[]) mang walletId. Phần do khoản vay sinh ra (refs[])
+     đi theo ví của khoản vay (loan.walletId) — đổi ví khoản vay là đổi cho cả lịch sử.
+   - chuyenVi[] = [{id, ngay, tuVi, denVi, soTien, ghiChu}] nằm NGOÀI journal: chuyển
+     tiền không phải thu cũng không phải chi, để vào journal sẽ làm phồng tổng thu/chi,
+     biểu đồ và dự trù. Tổng số dư không đổi nên balanceAt() & mọi hàm tổng khỏi sửa.
+   - Số dư theo ví chỉ tính từ ngayBatDau (cùng mốc khóa sổ với số dư tổng).
+   ==================================================================== */
+function viMacDinhId(d){ d = d || state.data; return (d && d.wallets && d.wallets[0]) ? d.wallets[0].id : undefined; }
+function walletById(id, d){
+  d = d || state.data;
+  var a = (d && d.wallets) || [];
+  for (var i = 0; i < a.length; i++){ if (a[i].id === id) return a[i]; }
+  return null;
+}
+function viTen(id){ var w = walletById(id); return w ? w.ten : '(ví đã xóa)'; }
+// ví của 1 dòng nhập tay; walletId thiếu/không còn tồn tại -> ví mặc định (ví đầu tiên)
+function viCuaItem(it, d){
+  var w = (it && it.walletId) ? walletById(it.walletId, d) : null;
+  return w ? w.id : viMacDinhId(d);
+}
+// ví của 1 ref: ref.walletId > ví của khoản vay/cho vay > ví mặc định
+function viCuaRef(r, d){
+  d = d || state.data;
+  var loan = null;
+  if (r.loanId){
+    var vn = (d.vayNo && d.vayNo.vayNoPhaiTra) || [], cv = (d.vayNo && d.vayNo.choVay) || [];
+    loan = vn.find(function(l){ return l.id === r.loanId; }) || cv.find(function(l){ return l.id === r.loanId; }) || null;
+  }
+  var id = r.walletId || (loan && loan.walletId);
+  var w = id ? walletById(id, d) : null;
+  return w ? w.id : viMacDinhId(d);
+}
+// số dư 1 ví tính tới hết ngày dateStr
+function soDuTheoVi(walletId, dateStr, d){
+  d = d || state.data;
+  var w = walletById(walletId, d);
+  if (!w) return 0;
+  var start = d.settings.ngayBatDau || '';
+  var bal = num(w.soDuDauKy);
+  Object.keys(d.journal).forEach(function(date){
+    if ((start && date < start) || date > dateStr) return;
+    var e = d.journal[date];
+    entryItems(e).forEach(function(it){
+      if (viCuaItem(it, d) !== walletId) return;
+      bal += (it.kind === 'thu' ? 1 : -1) * num(it.soTien);
+    });
+    (e.refs || []).forEach(function(r){
+      var m = REF_MAP[r.loai];
+      if (!m || viCuaRef(r, d) !== walletId) return;
+      bal += (m.kind === 'thu' ? 1 : -1) * num(r.soTien);
+    });
+  });
+  (d.chuyenVi || []).forEach(function(t){
+    if ((start && t.ngay < start) || t.ngay > dateStr) return;
+    if (t.tuVi === walletId) bal -= num(t.soTien);
+    if (t.denVi === walletId) bal += num(t.soTien);
+  });
+  return bal;
+}
+// số chỗ đang tham chiếu tới ví: dòng nhập tay + khoản vay/cho vay + lần chuyển tiền.
+// > 0 thì không được xóa ví (xóa là làm mồ côi dữ liệu).
+function viDangDung(id, d){
+  d = d || state.data;
+  var n = 0;
+  Object.keys(d.journal).forEach(function(date){
+    entryItems(d.journal[date]).forEach(function(it){ if (it.walletId === id) n++; });
+  });
+  ((d.vayNo && d.vayNo.vayNoPhaiTra) || []).concat((d.vayNo && d.vayNo.choVay) || []).forEach(function(l){ if (l.walletId === id) n++; });
+  (d.chuyenVi || []).forEach(function(t){ if (t.tuVi === id || t.denVi === id) n++; });
+  return n;
+}
+// <option> chọn ví, dùng chung cho form Sổ tay / dòng chi tiết / khoản vay
+function viOptionsHtml(sel){
+  return (state.data.wallets || []).map(function(w){
+    return '<option value="'+esc(w.id)+'"'+(w.id === sel ? ' selected' : '')+'>'+esc(w.ten)+'</option>';
+  }).join('');
+}
+function chuyenViThem(ngay, tuVi, denVi, soTien, ghiChu){
+  var v = num(soTien);
+  if (!ngay || v <= 0 || tuVi === denVi || !walletById(tuVi) || !walletById(denVi)) return null;
+  var t = { id: 'ct_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            ngay: ngay, tuVi: tuVi, denVi: denVi, soTien: v, ghiChu: ghiChu || '' };
+  state.data.chuyenVi = state.data.chuyenVi || [];
+  state.data.chuyenVi.push(t);
+  return t;
+}
+function chuyenViXoa(id){
+  var a = state.data.chuyenVi || [];
+  for (var i = 0; i < a.length; i++){
+    if (a[i].id === id){ return a.splice(i, 1)[0]; }
+  }
+  return null;
+}
+// Khóa sổ: chốt số dư TỪNG ví tới hết dateStr làm số dư đầu kỳ mới. Tổng số dư thật
+// (balanceAt) là nguồn sự thật: nếu cộng các ví lệch tổng thì dồn phần lệch vào ví đầu
+// để tổng không đổi. PHẢI gọi TRƯỚC khi đổi settings.ngayBatDau (số dư tính theo mốc cũ).
+function viChotSoDuDauKy(dateStr){
+  var tong = balanceAt(dateStr);
+  var moi = state.data.wallets.map(function(w){ return soDuTheoVi(w.id, dateStr); });
+  var lech = tong - moi.reduce(function(s, x){ return s + x; }, 0);
+  if (Math.abs(lech) > 0.5) moi[0] += lech;
+  state.data.wallets.forEach(function(w, i){ w.soDuDauKy = moi[i]; });
+  state.data.settings.soDuDauKy = tong;
+}
+
+/* ====================================================================
+   GIAO DỊCH ĐỊNH KỲ — lương, tiền nhà, tiền net...
+   dinhKy[] = [{id, ten, kind, catId, soTien, ngay(1-31), walletId, ghiChu, bat, bo[]}]
+   App KHÔNG tự sinh tiền: "tiền thật chỉ nhập ở Sổ tay". Chỉ NHẮC khi tới ngày mà
+   tháng đó chưa ghi, và điền hộ khi người dùng bấm "Ghi vào Sổ tay".
+   Dòng được ghi mang dkId (+ dkMk) -> biết chắc khoản nào của tháng nào đã ghi, không
+   đoán theo số tiền/danh mục. bo[] = các tháng đã chọn "Bỏ qua".
+   Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
+   Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
+   ==================================================================== */
+function dinhKyDaGhi(dk, mk){
+  var da = false;
+  Object.keys(state.data.journal).forEach(function(date){
+    if (da || monthKey(date) !== mk) return;
+    if (entryItems(state.data.journal[date]).some(function(it){ return it.dkId === dk.id; })) da = true;
+  });
+  return da;
+}
+// các khoản đã tới ngày trong tháng của homNay mà chưa ghi / chưa bỏ qua
+function dinhKyDenHan(homNay){
+  var mk = monthKey(homNay), out = [];
+  (state.data.dinhKy || []).forEach(function(dk){
+    if (!dk.bat || num(dk.soTien) <= 0) return;
+    var han = ngayTraCuaKy(mk, dk.ngay);
+    if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
+    out.push({ dk: dk, mk: mk, han: han });
+  });
+  out.sort(function(a, b){ return a.han < b.han ? -1 : (a.han > b.han ? 1 : 0); });
+  return out;
+}
+// ghi 1 khoản định kỳ vào Sổ tay. Ngày ghi = ngày đến hạn; nếu ngày đó đã nằm trước mốc
+// khóa sổ (không còn tính vào số dư) thì ghi vào hôm nay để tiền không biến mất khỏi số dư.
+// Trả về {date, iid, note} để hoàn tác được; null nếu không ghi được.
+function dinhKyGhi(dk, mk, homNay){
+  var han = ngayTraCuaKy(mk, dk.ngay);
+  var start = state.data.settings.ngayBatDau || '';
+  var date = (!start || han >= start) ? han : homNay;
+  var it = entryAddItem(date, dk.kind, dk.catId, dk.soTien, dk.ghiChu || dk.ten, dk.walletId);
+  if (!it) return null;
+  it.dkId = dk.id; it.dkMk = mk;
+  var e = state.data.journal[date];
+  var note = dk.ten + ' ' + fmt(Math.round(dk.soTien));
+  e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + note : note;
+  return { date: date, iid: it.iid, note: note };
+}
+function dinhKyHoanTac(r){
+  var e = state.data.journal[r.date];
+  if (!e) return;
+  journalRemoveNote(e, r.note);
+  entryDeleteItem(r.date, r.iid);   // xóa luôn ngày nếu rỗng
+}
+
+/* ====================================================================
+   MỤC TIÊU TIẾT KIỆM
+   mucTieu[] = [{id, ten, soTien (đích), hanChot ('YYYY-MM' hoặc ''), walletId ('' = gom tay), daGom}]
+   - Gắn ví: số đã gom = số dư HIỆN TẠI của ví đó (ví chuyên để dành, vd "Quỹ mua xe").
+     Cộng tiền vào ví bằng giao dịch/chuyển tiền bình thường là mục tiêu tự tăng, không nhập 2 lần.
+   - Không gắn ví: số đã gom do người dùng tự cộng tay (daGom).
+   Thuần hiển thị: mục tiêu KHÔNG phải tiền, không đổi số dư/dự trù/biểu đồ.
+   ==================================================================== */
+function monthDiff(mk1, mk2){
+  var a = mk1.split('-'), b = mk2.split('-');
+  return (parseInt(b[0], 10) - parseInt(a[0], 10)) * 12 + (parseInt(b[1], 10) - parseInt(a[1], 10));
+}
+function mucTieuTienDo(g, homNay){
+  var theoVi = !!(g.walletId && walletById(g.walletId));
+  var da = Math.max(0, theoVi ? soDuTheoVi(g.walletId, homNay) : num(g.daGom));
+  var dich = num(g.soTien);
+  var conThieu = Math.max(0, dich - da);
+  var xong = dich > 0 && da >= dich - 0.5;
+  var r = { da: da, dich: dich, conThieu: conThieu, pct: dich > 0 ? da / dich : 0, xong: xong,
+            theoVi: theoVi, quaHan: false, soThangCon: null, canMoiThang: null };
+  if (g.hanChot && !xong){
+    var diff = monthDiff(monthKey(homNay), g.hanChot);     // 0 = hạn chót ngay trong tháng này
+    if (diff < 0) r.quaHan = true;
+    else { r.soThangCon = diff + 1; r.canMoiThang = conThieu / (diff + 1); }
+  }
+  return r;
 }
 
 function thuTotal(entry){
@@ -515,6 +770,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
+            || state.viFormOpen || state.dkForm || state.mtForm || state.imp
             || (state.mp && state.mp.formOpen));
 }
 

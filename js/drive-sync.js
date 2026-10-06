@@ -11,9 +11,11 @@ var DRIVE_FILE_TITLE = 'chitieu-canhan-data.json';
 var API_BASE = 'https://www.googleapis.com/drive/v3';
 var UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 var LOCAL_DRAFT_KEY = 'chitieu_draft_v1';
+var SYNCED_KEY = 'chitieu_synced_v1';   // bản dữ liệu ĐÃ khớp Drive gần nhất, để mở ngoại tuyến
 
 var tokenClient = null;
 var accessToken = null;
+var _textDriveLanTai = null;   // nội dung thô của file Drive ở lần tải gần nhất (dùng làm bản sao lưu ngày)
 
 function initTokenClient(){
   tokenClient = google.accounts.oauth2.initTokenClient({
@@ -46,7 +48,8 @@ async function driveFetch(url, options, retried){
   return res;
 }
 
-async function findFileId(){
+// trả về {id, modifiedTime} của file dữ liệu (bản mới nhất nếu có nhiều bản trùng tên)
+async function findFile(){
   var q = encodeURIComponent("name='" + DRIVE_FILE_TITLE + "' and trashed=false");
   var url = API_BASE + '/files?q=' + q + '&fields=files(id,name,modifiedTime)&spaces=drive';
   var res = await driveFetch(url);
@@ -55,7 +58,31 @@ async function findFileId(){
   var files = json.files || [];
   if (!files.length) return null;
   files.sort(function(a,b){ return new Date(b.modifiedTime) - new Date(a.modifiedTime); });
-  return files[0].id;
+  return files[0];
+}
+async function findFileId(){
+  var f = await findFile();
+  return f ? f.id : null;
+}
+
+/* ====================================================================
+   CHỐNG GHI ĐÈ KHI DÙNG 2 MÁY
+   state.driveModified = modifiedTime của file Drive tại lúc tải về (hoặc lúc
+   mình vừa ghi xong). Trước mỗi lần ghi, hỏi lại modifiedTime hiện tại: khác
+   nghĩa là máy khác đã ghi chen vào -> KHÔNG ghi đè âm thầm, hỏi người dùng.
+   Cố ý lấy modifiedTime TRƯỚC khi tải nội dung: nếu file đổi giữa 2 request thì
+   mốc cũ hơn nội dung, cùng lắm báo xung đột thừa (an toàn), không bao giờ bỏ sót.
+   ==================================================================== */
+async function layModifiedTime(){
+  var res = await driveFetch(API_BASE + '/files/' + state.driveFileId + '?fields=modifiedTime');
+  if (!res.ok) throw new Error('meta-failed:' + res.status);
+  var j = await res.json();
+  return j.modifiedTime || null;
+}
+async function driveDocText(fileId){
+  var res = await driveFetch(API_BASE + '/files/' + fileId + '?alt=media');
+  if (!res.ok) throw new Error('download-failed:' + res.status);
+  return res.text();
 }
 
 async function driveLoad(){
@@ -63,23 +90,28 @@ async function driveLoad(){
   // trở thành lạc hậu. Xóa luôn thay vì để Đạt ngồi so số với một bản gốc không còn tồn tại.
   if (state.mp) mpXoaNhap();
   try{
-    var fileId = await findFileId();
-    if (!fileId){
+    var file = await findFile();
+    if (!file){
       state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
       state.driveFileId = null;
+      state.driveModified = null;
+      _textDriveLanTai = null;
       state.errorMsg = null;
       state.lastSync = new Date();
       state.loading = false;
-      return;
+      return true;
     }
-    var res = await driveFetch(API_BASE + '/files/' + fileId + '?alt=media');
-    if (!res.ok) throw new Error('download-failed:' + res.status);
-    var text = await res.text();
+    var text = await driveDocText(file.id);
     var parsed = JSON.parse(text);
     state.data = normalizeData(parsed);
-    state.driveFileId = fileId;
+    state.driveFileId = file.id;
+    state.driveModified = file.modifiedTime || null;   // mốc lấy từ lúc liệt kê, TRƯỚC khi tải nội dung
+    _textDriveLanTai = text;
     state.errorMsg = null;
     state.lastSync = new Date();
+    state.loading = false;
+    saveSyncedSnapshot();
+    return true;
   }catch(e){
     if (!state.data){
       state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
@@ -87,13 +119,57 @@ async function driveLoad(){
     } else {
       state.errorMsg = 'Làm mới thất bại, vẫn giữ dữ liệu hiện tại trên máy.';
     }
+    state.loading = false;
+    return false;
   }
-  state.loading = false;
 }
 
 /* ---- bản nháp cục bộ: chống mất dữ liệu nếu mất mạng/đóng tab trước khi Drive lưu xong ---- */
 function saveLocalDraft(){
-  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: Date.now() })); }catch(e){}
+  // baseModified = mốc Drive mà bản nháp này dựa trên: sau này khôi phục nháp mới biết Drive đã đổi chưa
+  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
+}
+function saveSyncedSnapshot(){
+  try{ localStorage.setItem(SYNCED_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
+}
+function readSyncedSnapshot(){
+  try{
+    var raw = localStorage.getItem(SYNCED_KEY);
+    var s = raw ? JSON.parse(raw) : null;
+    return (s && s.data && typeof s.data.journal === 'object') ? s : null;
+  }catch(e){ return null; }
+}
+function readLocalDraft(){
+  try{
+    var raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+    var dr = raw ? JSON.parse(raw) : null;
+    return (dr && dr.data && typeof dr.data.journal === 'object') ? dr : null;
+  }catch(e){ return null; }
+}
+
+/* ====================================================================
+   MỞ NGOẠI TUYẾN — không có mạng thì không đăng nhập Google được, nên không lấy được Drive.
+   Mở bằng bản dữ liệu đã lưu trên máy lần đồng bộ gần nhất (+ nháp nếu có thay đổi chưa lưu).
+   Sửa được: thay đổi vào nháp trên máy, KHÔNG gửi lên Drive. Khi có mạng, bấm "Đăng nhập để
+   đồng bộ": app tải bản Drive rồi hỏi khôi phục nháp (kèm cảnh báo nếu Drive đã đổi từ lúc đó).
+   ==================================================================== */
+function coTheMoNgoaiTuyen(){ return !!readSyncedSnapshot(); }
+function moNgoaiTuyen(){
+  var snap = readSyncedSnapshot();
+  if (!snap) return;
+  var dr = readLocalDraft();
+  var dungNhap = !!(dr && dr.savedAt >= snap.savedAt);    // nháp mới hơn bản đồng bộ = các sửa ngoại tuyến trước đó
+  state.data = normalizeData(JSON.parse(JSON.stringify(dungNhap ? dr.data : snap.data)));
+  state.driveModified = (dungNhap ? dr.baseModified : snap.baseModified) || null;
+  state.driveFileId = null;
+  state.dirty = dungNhap;
+  state.offline = true;
+  state.offlineTu = dungNhap ? dr.savedAt : snap.savedAt;
+  state.errorMsg = null;
+  state.loading = false;
+  accessToken = null;
+  showApp();
+  renderAll();
 }
 function clearLocalDraft(){
   try{ localStorage.removeItem(LOCAL_DRAFT_KEY); }catch(e){}
@@ -129,7 +205,11 @@ async function checkLocalDraft(){
   }
   if (!draft || !draft.data) return;
   var t = new Date(draft.savedAt);
-  var msg = 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
+  // nháp dựa trên 1 bản Drive cũ hơn bản đang có: khôi phục nháp sẽ đè mất thay đổi của máy khác
+  var driveDaDoi = !!(draft.baseModified && state.driveModified && draft.baseModified !== state.driveModified);
+  var msg = (driveDaDoi ? '⚠ File trên Drive đã được sửa SAU lúc nháp này được lưu (có thể từ máy khác). '
+      + 'Khôi phục nháp sẽ đè lên thay đổi đó — bản Drive hiện tại vẫn được sao lưu lại trước khi đè.\n\n' : '')
+    + 'Nháp cục bộ (lưu lúc ' + pad2(t.getHours())+':'+pad2(t.getMinutes())+' '+t.toLocaleDateString('vi-VN') + '):\n'
     + '  ' + describeData(draft.data) + '\n\n'
     + 'Dữ liệu hiện tại trên Drive:\n'
     + '  ' + describeData(state.data) + '\n\n'
@@ -139,6 +219,14 @@ async function checkLocalDraft(){
     chuHuy: 'Dùng dữ liệu Drive'
   });
   if (ok){
+    if (driveDaDoi && _textDriveLanTai){
+      try{ await saoLuuNgay('truoc-khoi-phuc-nhap', _textDriveLanTai); }
+      catch(e){
+        console.error('[chitieu] Không sao lưu được bản Drive trước khi khôi phục nháp:', e);
+        toast('Không sao lưu được bản Drive nên chưa khôi phục nháp (nháp vẫn được giữ). Thử lại sau.', { loai:'err' });
+        return;
+      }
+    }
     state.data = normalizeData(draft.data);
     scheduleSave();           // scheduleSave sẽ ghi lại nháp, clearLocalDraft chỉ chạy khi Drive lưu xong
     toast('Đã khôi phục bản nháp cục bộ, đang lưu lên Drive.');
@@ -159,6 +247,8 @@ function scheduleSave(){
 }
 
 async function driveSave(){
+  // ngoại tuyến (chưa đăng nhập): thay đổi đã nằm trong nháp trên máy, không có gì để gửi
+  if (!accessToken){ renderSyncStatus(); return; }
   if (state.saving) { saveTimer = setTimeout(driveSave, 1500); return; }
   state.saving = true;
   var seqAtStart = changeSeq;
@@ -174,19 +264,36 @@ async function driveSave(){
       if (!createRes.ok) throw new Error('create-failed:' + createRes.status);
       var created = await createRes.json();
       state.driveFileId = created.id;
+      state.driveModified = null;   // file vừa tạo: chưa có mốc để so
+    } else if (state.driveModified){
+      var remoteMt = await layModifiedTime();
+      if (remoteMt && remoteMt !== state.driveModified){
+        // máy khác đã ghi chen vào -> dừng, KHÔNG tự thử lại (thử lại cũng chỉ lại xung đột)
+        state.xungDot = true;
+        state.saving = false;
+        state.errorMsg = 'Dữ liệu trên Drive đã được thiết bị khác sửa — chưa lưu thay đổi của máy này.';
+        renderSyncStatus();
+        giaiQuyetXungDot();
+        return;
+      }
     }
-    var upRes = await driveFetch(UPLOAD_BASE + '/files/' + state.driveFileId + '?uploadType=media', {
+    var upRes = await driveFetch(UPLOAD_BASE + '/files/' + state.driveFileId + '?uploadType=media&fields=modifiedTime', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: text
     });
     if (!upRes.ok) throw new Error('save-failed:' + upRes.status);
+    var upJson = null;
+    try{ upJson = await upRes.json(); }catch(e){}
+    state.driveModified = (upJson && upJson.modifiedTime) ? upJson.modifiedTime : await layModifiedTime();
+    state.xungDot = false;
     state.errorMsg = null;
     state.lastSync = new Date();
     // CHỈ hạ cờ dirty + xóa nháp khi Drive đã nhận xong VÀ không có thay đổi mới chen vào giữa lúc upload
     if (changeSeq === seqAtStart){
       state.dirty = false;
       clearLocalDraft();
+      saveSyncedSnapshot();
     }
   }catch(e){
     // Giữ state.dirty = true: pollRefresh sẽ không nạp đè dữ liệu Drive lên thay đổi chưa lưu,
@@ -197,6 +304,129 @@ async function driveSave(){
   }
   state.saving = false;
   renderSyncStatus();
+}
+
+/* ====================================================================
+   SAO LƯU NHIỀU BẢN trên Drive (drive.file chỉ thấy file do chính app tạo,
+   nên bản sao lưu cũng phải do app tạo — không phụ thuộc revision của Drive).
+   - Mỗi ngày, lần đầu mở app: lưu nguyên văn bản vừa tải về (= trạng thái cuối
+     ngày hôm trước) thành chitieu-canhan-backup-YYYY-MM-DD.json.
+   - Trước mọi thao tác sẽ bỏ dữ liệu của 1 bên (gỡ xung đột, khôi phục) cũng
+     lưu bên bị bỏ thành 1 bản có nhãn.
+   - Chỉ giữ BACKUP_GIU bản mới nhất theo tên.
+   Liệt kê KHÔNG dùng "name contains": Drive chỉ khớp theo tiền tố của từng từ,
+   tên có dấu gạch ngang dễ trượt. drive.file vốn chỉ trả file của app nên lọc
+   tiền tố ở phía client là đủ.
+   ==================================================================== */
+var BACKUP_PREFIX = 'chitieu-canhan-backup-';
+var BACKUP_GIU = 10;
+
+async function driveTaoFile(ten, text){
+  var cr = await driveFetch(API_BASE + '/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: ten, mimeType: 'application/json' })
+  });
+  if (!cr.ok) throw new Error('create-failed:' + cr.status);
+  var f = await cr.json();
+  var up = await driveFetch(UPLOAD_BASE + '/files/' + f.id + '?uploadType=media', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: text
+  });
+  if (!up.ok){
+    // đừng để lại file rỗng trông như một bản sao lưu hợp lệ
+    try{ await driveFetch(API_BASE + '/files/' + f.id, { method: 'DELETE' }); }catch(e){}
+    throw new Error('backup-upload-failed:' + up.status);
+  }
+  return { id: f.id, name: ten };
+}
+
+async function driveListBackups(){
+  var q = encodeURIComponent("trashed=false and mimeType='application/json'");
+  var res = await driveFetch(API_BASE + '/files?q=' + q + '&fields=files(id,name,modifiedTime,size)&pageSize=200&spaces=drive');
+  if (!res.ok) throw new Error('list-failed:' + res.status);
+  var j = await res.json();
+  return (j.files || []).filter(function(f){ return f.name.indexOf(BACKUP_PREFIX) === 0; })
+    .sort(function(a, b){ return a.name < b.name ? 1 : (a.name > b.name ? -1 : 0); });   // mới nhất lên đầu
+}
+
+// xóa bản vượt quá BACKUP_GIU (danh sách đã sắp mới -> cũ)
+async function pruneBackups(ds){
+  for (var i = BACKUP_GIU; i < ds.length; i++){
+    try{ await driveFetch(API_BASE + '/files/' + ds[i].id, { method: 'DELETE' }); }catch(e){ console.error('[chitieu] Xóa bản sao lưu cũ lỗi:', e); }
+  }
+}
+
+function tenBackup(nhan){
+  if (!nhan) return BACKUP_PREFIX + todayStr() + '.json';
+  var t = new Date();
+  return BACKUP_PREFIX + todayStr() + '-' + nhan + '-' + pad2(t.getHours()) + pad2(t.getMinutes()) + pad2(t.getSeconds()) + '.json';
+}
+
+// lưu 1 bản có nhãn rồi dọn bản cũ. text = nội dung JSON thô cần giữ.
+async function saoLuuNgay(nhan, text){
+  await driveTaoFile(tenBackup(nhan), text);
+  await pruneBackups(await driveListBackups());
+}
+
+// mỗi ngày 1 bản, lần đầu mở app. Lỗi ở đây KHÔNG được làm hỏng việc đăng nhập.
+async function backupHangNgay(){
+  if (!state.driveFileId || !_textDriveLanTai) return;
+  try{
+    var ds = await driveListBackups();
+    var hnay = tenBackup('');
+    if (!ds.some(function(f){ return f.name === hnay; })){
+      await driveTaoFile(hnay, _textDriveLanTai);
+      ds = await driveListBackups();
+    }
+    await pruneBackups(ds);
+  }catch(e){
+    console.error('[chitieu] Sao lưu hằng ngày thất bại:', e);
+  }
+}
+
+/* ---- gỡ xung đột khi máy khác đã ghi chen vào ---- */
+var _dangHoiXungDot = false;
+async function giaiQuyetXungDot(){
+  if (_dangHoiXungDot) return;
+  _dangHoiXungDot = true;
+  try{
+    var ma = await chonMot('Dữ liệu trên Drive đã đổi từ thiết bị khác',
+      'Máy này có thay đổi chưa lưu, nhưng file trên Drive đã được thiết bị khác sửa sau lần bạn tải gần nhất.\n\n'
+      + 'Chọn bên nào thì bên còn lại vẫn được giữ thành 1 file sao lưu trên Drive (tab Danh mục → Sao lưu dữ liệu), không mất dữ liệu.',
+      [ { ma:'taiVe', chu:'Lấy bản trên Drive' }, { ma:'ghiDe', chu:'Ghi đè bằng bản máy này' } ]);
+    if (ma === 'taiVe'){
+      await saoLuuNgay('may-nay', JSON.stringify(state.data));      // giữ phần chưa lưu của máy này
+      var daTai = await driveLoad();
+      if (daTai){
+        if (saveTimer) clearTimeout(saveTimer);
+        state.dirty = false; state.xungDot = false;
+        clearLocalDraft();            // phần chưa lưu đã nằm an toàn trong file sao lưu
+        renderAll();
+        toast('Đã lấy bản mới từ Drive. Thay đổi của máy này nằm trong file sao lưu.');
+      }
+    } else if (ma === 'ghiDe'){
+      var tuDrive = await driveDocText(state.driveFileId);
+      await saoLuuNgay('truoc-ghi-de', tuDrive);                    // giữ bản của máy kia
+      // nhận mốc hiện tại của Drive làm mốc mới: ghi lần này là CHỦ ĐÍCH đè lên bản đó. Làm thế
+      // (thay vì cờ bỏ qua kiểm tra) để lần tự thử lại khi mất mạng không hỏi xung đột thêm lần nữa;
+      // còn nếu máy kia lại ghi chen sau đây thì lần ghi kế vẫn bị phát hiện đúng.
+      state.driveModified = await layModifiedTime();
+      state.xungDot = false;
+      state.errorMsg = null;
+      await driveSave();
+      renderAll();
+      toast('Đã ghi đè Drive bằng bản máy này. Bản cũ trên Drive nằm trong file sao lưu.');
+    } else {
+      renderSyncStatus();   // người dùng đóng hộp thoại: giữ nguyên trạng thái chưa lưu, sửa gì tiếp sẽ hỏi lại
+    }
+  }catch(e){
+    console.error('[chitieu] Gỡ xung đột thất bại:', e);
+    state.errorMsg = 'Xử lý xung đột với Drive thất bại (' + (e && e.message ? e.message : 'lỗi mạng') + '). Chưa mất gì, thử lưu lại sau.';
+    renderSyncStatus();
+  }
+  _dangHoiXungDot = false;
 }
 
 async function pollRefresh(){
@@ -225,6 +455,15 @@ function showGate(msg){
   document.getElementById('app').style.display = 'none';
   document.getElementById('authGate').style.display = 'flex';
   document.getElementById('authMsg').textContent = msg || '';
+  var bo = document.getElementById('btnOffline');
+  if (bo){
+    var snap = readSyncedSnapshot();
+    bo.style.display = snap ? '' : 'none';
+    if (snap){
+      var t = new Date(snap.savedAt);
+      bo.textContent = 'Mở ngoại tuyến (dữ liệu trên máy lúc ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ' ' + t.toLocaleDateString('vi-VN') + ')';
+    }
+  }
 }
 
 var polling = false;
@@ -245,8 +484,11 @@ async function signIn(){
   document.getElementById('authMsg').textContent = 'Đang đăng nhập…';
   try{
     await requestToken(true);
+    // từ ngoại tuyến đăng nhập lại: các sửa ngoại tuyến nằm trong nháp, checkLocalDraft sẽ hỏi khôi phục
+    state.offline = false; state.dirty = false;
     showApp();
     await driveLoad();
+    backupHangNgay();       // không await: sao lưu chậm không được làm chậm màn hình đầu tiên
     renderAll();            // vẽ ngay bằng dữ liệu Drive để không phải ngồi nhìn màn hình trắng
     await checkLocalDraft();
     renderAll();
@@ -262,6 +504,8 @@ function signOut(){
   }
   accessToken = null;
   state.data = null;
+  state.offline = false;
+  try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');
 }

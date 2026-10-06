@@ -41,9 +41,9 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
 button{cursor:pointer;font-family:inherit}
-#btnRefresh,#btnSignOut,#btnTheme{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
-#btnRefresh:hover,#btnSignOut:hover,#btnTheme:hover{background:var(--hover)}
-#btnTheme{padding:6px 10px;font-size:15px;line-height:1}
+#btnRefresh,#btnSignOut,#btnTheme,#btnPhimTat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
+#btnRefresh:hover,#btnSignOut:hover,#btnTheme:hover,#btnPhimTat:hover{background:var(--hover)}
+#btnTheme,#btnPhimTat{padding:6px 10px;font-size:15px;line-height:1}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);position:sticky;top:var(--header-h,52px);background:var(--bg);z-index:19}
 .tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tab.active{color:var(--primary-d);border-bottom-color:var(--primary)}
@@ -254,3 +254,41 @@ tr.mp-am td{background:var(--chi-bg)}
   table.t-card tbody tr.st-detail{margin-bottom:8px;border:1px solid var(--border);
     border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
 }
+
+/* ---- Hạn mức tháng (Sổ tay) ---- */
+.hm-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 18px}
+.hm-top{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:4px}
+.hm-ten{font-weight:600}
+.hm-so{color:var(--muted);white-space:nowrap}
+.hm-so.warn{color:var(--amber)} .hm-so.over{color:var(--red);font-weight:600}
+.hm-bar{height:8px;border-radius:99px;background:var(--hover);overflow:hidden}
+.hm-fill{height:100%;border-radius:99px;background:var(--green)}
+.hm-fill.warn{background:var(--amber)} .hm-fill.over{background:var(--red)}
+.hm-vuot{font-size:11px;color:var(--red);margin-top:3px}
+.hm-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.hm-badge.over{background:var(--chi-bg);color:var(--red)}
+
+/* ---- Ví / nguồn tiền ---- */
+.vi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.vi-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.vi-chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--hover);color:var(--muted);margin-left:4px;vertical-align:1px}
+
+/* ---- Giao dịch định kỳ đến hạn ---- */
+.dk-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border)}
+.dk-row:first-of-type{border-top:0}
+.dk-main{flex:1;min-width:160px}
+.dk-ten{font-weight:600}
+.dk-sub{font-size:12px;color:var(--muted)}
+.dk-tien{font-weight:600;white-space:nowrap}
+.dk-btn{display:flex;gap:6px}
+
+/* ---- Phím tắt: chỉ có nghĩa ở desktop ---- */
+@media (max-width:700px), (hover:none){ #btnPhimTat{display:none} }
+
+/* ---- Mục tiêu tiết kiệm: thanh tiến độ dùng màu chính, xanh khi đã đủ ---- */
+.hm-fill.mt{background:var(--primary)}
+.hm-fill.mt.done{background:var(--green)}
+
+/* ---- Màu danh mục ---- */
+.cat-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.cat-color{width:26px;height:26px;padding:0;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;flex:none}

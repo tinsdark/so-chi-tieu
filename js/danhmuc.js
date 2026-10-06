@@ -17,6 +17,8 @@ function categoryCardHtml(kind, title, cats){
            chỉ tiêu và các nút ▲▼🗑 xuống dòng 2. */
         + '<div style="display:flex;gap:4px;align-items:center">'
         + '<span class="cat-drag" draggable="true" title="Kéo để đổi thứ tự" style="cursor:grab;color:var(--muted);user-select:none;padding:0 2px">⠿</span>'
+        + '<input type="color" class="cat-color" data-act="catMau" data-kind="'+kind+'" data-id="'+c.id+'" value="'+catMau(kind, c.id)+'" title="Màu danh mục (dùng ở biểu đồ)" aria-label="Màu danh mục '+esc(c.ten)+'">'
+        + (c.mau ? '<button class="icon-btn" data-act="catMauReset" data-kind="'+kind+'" data-id="'+c.id+'" title="Về màu mặc định" aria-label="Về màu mặc định '+esc(c.ten)+'">↺</button>' : '')
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '</div>'
         + '<div style="display:flex;gap:4px;align-items:center">'
@@ -46,16 +48,19 @@ function renderDanhMuc(){
   html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
-    + '<div><label>Số dư</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="cfg_du" value="'+veSo(state.data.settings.soDuDauKy)+'" placeholder="0"></div>'
     + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
     + '</div>'
     + '<div class="empty" style="padding:0 0 10px">"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.</div>'
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
+  html += viCardHtml();
+  html += dkCardHtml();
+  html += mtCardHtml();
   html += '<div class="card"><h3>Khóa sổ</h3>'
     + '<div class="empty" style="padding:0 0 10px">Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.</div>'
     + '<div class="form-row">'
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
     + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
+  html += backupCardHtml();
   root.innerHTML = html;
   attachCatDragDrop();
 }
@@ -105,6 +110,153 @@ function attachCatDragDrop(){
   });
 }
 
+/* ---- Ví / nguồn tiền: số dư đầu kỳ từng ví. Sửa là lưu ngay (không qua nút Lưu chung) ---- */
+function viCardHtml(){
+  var ws = state.data.wallets || [];
+  var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+  var h = '<div class="card"><h3>Ví / nguồn tiền</h3>'
+    + '<div class="empty" style="padding:0 0 10px">Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
+    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.</div>';
+  ws.forEach(function(w){
+    var dung = viDangDung(w.id);
+    h += '<div class="form-row vi-row" style="align-items:flex-end">'
+      + '<div><label>Tên ví</label><input type="text" data-act="viTen" data-id="'+esc(w.id)+'" value="'+esc(w.ten)+'"></div>'
+      + '<div><label>Số dư đầu kỳ</label><input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="viDu" data-id="'+esc(w.id)+'" value="'+veSo(w.soDuDauKy)+'" placeholder="0"></div>'
+      + '<div style="flex:0"><button class="icon-btn" data-act="viXoa" data-id="'+esc(w.id)+'" title="'+(dung ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được' : 'Xóa ví này')+'" aria-label="Xóa ví '+esc(w.ten)+'"'
+      + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>🗑</button></div></div>';
+  });
+  return h + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">'
+    + '<button class="btn secondary sm" data-act="viThem">+ Thêm ví</button>'
+    + '<span style="color:var(--muted);font-size:13px">Tổng số dư đầu kỳ: <b style="color:var(--text)">'+fmt(Math.round(tong))+'</b></span></div></div>';
+}
+
+/* ---- Mục tiêu tiết kiệm: khai báo (tiến độ hiện ở Sổ tay, logic ở state.js) ---- */
+function mtCardHtml(){
+  var gs = state.data.mucTieu || [];
+  var coVi = (state.data.wallets || []).length > 1;
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Mục tiêu tiết kiệm'
+    + '<button class="btn secondary sm" data-act="mtThem">+ Thêm</button></h3>'
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt số tiền cần có và hạn chót, app tính còn thiếu và cần để dành bao nhiêu mỗi tháng.'
+    + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự lấy từ số dư ví đó; không gắn thì tự bấm "+ Gom thêm" ở Sổ tay.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví để dành.')
+    + ' Mục tiêu chỉ để theo dõi, không ghi thu/chi và không đổi số dư.</div>';
+  if (state.mtForm){
+    var ed = state.mtForm.id ? gs.find(function(g){ return g.id === state.mtForm.id; }) : null;
+    var g0 = ed || { ten:'', soTien:'', hanChot:'', walletId:'', daGom:'' };
+    h += '<div class="form-row">'
+      + '<div><label>Tên mục tiêu</label><input type="text" id="mt_ten" value="'+esc(g0.ten)+'" placeholder="Mua xe, Du lịch..."></div>'
+      + '<div><label>Số tiền cần có</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_tien" value="'+veSo(g0.soTien)+'" placeholder="0"></div>'
+      + '<div><label>Hạn chót (tùy chọn)</label><input type="month" id="mt_han" value="'+esc(g0.hanChot || '')+'"></div>'
+      + (coVi ? '<div><label>Gắn ví</label><select id="mt_vi"><option value="">Không gắn — tự gom tay</option>'+viOptionsHtml(g0.walletId)+'</select></div>' : '')
+      + '<div><label>Đã gom (khi gom tay)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_gom" value="'+veSo(g0.daGom)+'" placeholder="0"></div>'
+      + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
+      + '<button class="btn sm" data-act="mtLuu">'+(ed ? 'Cập nhật' : 'Lưu')+'</button>'
+      + '<button class="btn secondary sm" data-act="mtHuy">Hủy</button></div>';
+  }
+  if (!gs.length && !state.mtForm){
+    h += '<div class="empty">Chưa có mục tiêu nào.</div>';
+  } else if (gs.length){
+    h += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Tên</th><th>Cần có</th><th>Hạn chót</th><th style="text-align:left">Nguồn</th><th class="actions-col"></th></tr></thead><tbody>';
+    gs.forEach(function(g){
+      h += '<tr><td style="text-align:left">'+esc(g.ten)+'</td><td>'+fmt(Math.round(g.soTien))+'</td>'
+        + '<td>'+(g.hanChot ? g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4) : '—')+'</td>'
+        + '<td style="text-align:left">'+(g.walletId && walletById(g.walletId) ? 'Ví: '+esc(viTen(g.walletId)) : 'Gom tay: '+fmt(Math.round(num(g.daGom))))+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="mtSua" data-id="'+esc(g.id)+'" title="Sửa" aria-label="Sửa '+esc(g.ten)+'">✎</button>'
+        + '<button class="icon-btn" data-act="mtXoa" data-id="'+esc(g.id)+'" title="Xóa" aria-label="Xóa '+esc(g.ten)+'">🗑</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  return h + '</div>';
+}
+
+/* ---- Giao dịch định kỳ: khai báo mẫu (nhắc ở Sổ tay, logic ở state.js) ----
+   Loại các danh mục của Vay - Nợ: tiền vay/trả nợ đã có lịch riêng, khai ở đây là trùng. */
+var DK_CAT_LOAI = { nhanTienVay: 1, thuHoiChoVay: 1, choVay: 1, traNo: 1 };
+function dkCatOptions(sel){
+  function nhom(kind, nhan){
+    var o = (state.data.categories[kind] || []).filter(function(c){ return !DK_CAT_LOAI[c.id]; }).map(function(c){
+      var v = kind + '|' + c.id;
+      return '<option value="'+esc(v)+'"'+(v === sel ? ' selected' : '')+'>'+esc(c.ten)+'</option>';
+    }).join('');
+    return o ? '<optgroup label="'+nhan+'">'+o+'</optgroup>' : '';
+  }
+  return '<option value="">— chọn danh mục —</option>' + nhom('thu', 'Thu') + nhom('chi', 'Chi');
+}
+function dkCardHtml(){
+  var ds = state.data.dinhKy || [];
+  var h = '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Giao dịch định kỳ'
+    + '<button class="btn secondary sm" data-act="dkThem">+ Thêm</button></h3>'
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.</div>';
+  if (state.dkForm){
+    var ed = state.dkForm.id ? ds.find(function(k){ return k.id === state.dkForm.id; }) : null;
+    var k0 = ed || { ten:'', kind:'chi', catId:'', soTien:'', ngay:'', walletId: viMacDinhId(), ghiChu:'' };
+    h += '<div class="form-row">'
+      + '<div><label>Tên</label><input type="text" id="dk_ten" value="'+esc(k0.ten)+'" placeholder="Tiền nhà, Lương..."></div>'
+      + '<div><label>Danh mục</label><select id="dk_cat">'+dkCatOptions(k0.catId ? k0.kind+'|'+k0.catId : '')+'</select></div>'
+      + '<div><label>Số tiền</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="dk_tien" value="'+veSo(k0.soTien)+'" placeholder="0"></div>'
+      + '<div><label>Ngày trong tháng (1-31)</label><input type="number" id="dk_ngay" min="1" max="31" value="'+(k0.ngay || '')+'" placeholder="5"></div>'
+      + ((state.data.wallets || []).length > 1 ? '<div><label>Ví</label><select id="dk_vi">'+viOptionsHtml(k0.walletId)+'</select></div>' : '')
+      + '<div><label>Ghi chú (tùy chọn)</label><input type="text" id="dk_note" value="'+esc(k0.ghiChu || '')+'"></div>'
+      + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
+      + '<button class="btn sm" data-act="dkLuu">'+(ed ? 'Cập nhật' : 'Lưu')+'</button>'
+      + '<button class="btn secondary sm" data-act="dkHuy">Hủy</button></div>';
+  }
+  if (!ds.length && !state.dkForm){
+    h += '<div class="empty">Chưa có khoản định kỳ nào.</div>';
+  } else if (ds.length){
+    h += '<div class="table-wrap"><table><thead><tr><th>Bật</th><th style="text-align:left">Tên</th><th style="text-align:left">Danh mục</th><th>Số tiền</th><th>Ngày</th><th class="actions-col"></th></tr></thead><tbody>';
+    ds.forEach(function(k){
+      h += '<tr><td><input type="checkbox" data-act="dkBat" data-id="'+esc(k.id)+'"'+(k.bat ? ' checked' : '')+' aria-label="Bật nhắc '+esc(k.ten)+'"></td>'
+        + '<td style="text-align:left">'+esc(k.ten)+'</td>'
+        + '<td style="text-align:left">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+'</td>'
+        + '<td style="color:var(--'+(k.kind === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(k.soTien))+'</td>'
+        + '<td>ngày '+k.ngay+'</td>'
+        + '<td class="actions-col"><button class="icon-btn" data-act="dkSua" data-id="'+esc(k.id)+'" title="Sửa" aria-label="Sửa '+esc(k.ten)+'">✎</button>'
+        + '<button class="icon-btn" data-act="dkXoa" data-id="'+esc(k.id)+'" title="Xóa" aria-label="Xóa '+esc(k.ten)+'">🗑</button></td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  return h + '</div>';
+}
+
+/* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
+var BACKUP_NHAN = {
+  'may-nay':         'phần chưa lưu của máy này, bị bỏ khi lấy bản Drive',
+  'truoc-ghi-de':    'bản trên Drive trước khi bị ghi đè',
+  'truoc-khoi-phuc': 'bản dữ liệu trước khi khôi phục'
+};
+// 'chitieu-canhan-backup-2026-10-06-may-nay-143015.json' -> 'Ngày 06/10/2026 · ... (14:30:15)'
+function backupTenDep(name){
+  var m = /^chitieu-canhan-backup-(\d{4})-(\d{2})-(\d{2})(?:-(.+?)(?:-(\d{2})(\d{2})(\d{2}))?)?\.json$/.exec(name);
+  if (!m) return name;
+  var s = 'Ngày ' + m[3] + '/' + m[2] + '/' + m[1];
+  if (m[4]) s += ' · ' + (BACKUP_NHAN[m[4]] || m[4]) + (m[5] ? ' (' + m[5] + ':' + m[6] + ':' + m[7] + ')' : '');
+  return s;
+}
+function backupCardHtml(){
+  var h = '<div class="card"><h3>Sao lưu dữ liệu</h3>'
+    + '<div class="empty" style="padding:0 0 10px">Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
+    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    + '<button class="btn sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? '⟳ Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
+    + '<button class="btn secondary sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
+    + '</div>';
+  if (state.backupDs){
+    if (!state.backupDs.length){
+      h += '<div class="empty">Chưa có bản sao lưu nào.</div>';
+    } else {
+      h += '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Bản sao lưu</th><th>Dung lượng</th><th class="actions-col"></th></tr></thead><tbody>';
+      state.backupDs.forEach(function(f){
+        h += '<tr><td style="text-align:left;white-space:normal">'+esc(backupTenDep(f.name))+'</td>'
+          + '<td>'+(f.size ? Math.max(1, Math.round(num(f.size) / 1024)) + ' KB' : '—')+'</td>'
+          + '<td class="actions-col"><button class="btn sm secondary" data-act="bkKhoiPhuc" data-id="'+esc(f.id)+'" data-name="'+esc(f.name)+'"'
+          + (state.backupBusy?' disabled':'')+'>Khôi phục</button></td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+  }
+  return h + '</div>';
+}
+
 /* ---- Danh mục: helper validate trùng tên ---- */
 function catNameExists(kind, name, excludeId){
   var n = name.trim().toLowerCase();
@@ -113,7 +265,141 @@ function catNameExists(kind, name, excludeId){
 
 /* ---- Danh mục: handlers ---- */
 function handleDanhMucAction(act, el){
-  if (act === 'addCat'){
+  if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
+    // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
+    if (state.backupBusy) return true;
+    (async function(){
+      state.backupBusy = true; renderDanhMuc();
+      try{
+        if (act === 'bkTao'){
+          await saoLuuNgay('thu-cong', JSON.stringify(state.data));
+          toast('Đã sao lưu dữ liệu hiện tại lên Drive.');
+          state.backupDs = await driveListBackups();
+        } else if (act === 'bkXem'){
+          state.backupDs = await driveListBackups();
+        } else {
+          var bkId = el.getAttribute('data-id'), bkTen = el.getAttribute('data-name');
+          if (!await xacNhan('Khôi phục "'+backupTenDep(bkTen)+'"?',
+                'Toàn bộ dữ liệu hiện tại sẽ được thay bằng bản này. Dữ liệu hiện tại được sao lưu lại trước khi thay.',
+                { nguyHiem:true, chuOk:'Khôi phục' })) return;
+          var bkText = await driveDocText(bkId);
+          var bkData = JSON.parse(bkText);
+          if (!bkData || typeof bkData.journal !== 'object') throw new Error('bản sao lưu không đúng định dạng');
+          await saoLuuNgay('truoc-khoi-phuc', JSON.stringify(state.data));
+          if (state.mp) mpXoaNhap();
+          state.data = normalizeData(bkData);
+          scheduleSave();
+          state.backupDs = await driveListBackups();
+          toast('Đã khôi phục dữ liệu từ bản sao lưu.');
+        }
+      }catch(e){
+        console.error('[chitieu] Sao lưu/khôi phục lỗi:', e);
+        toast('Không thực hiện được: ' + (e && e.message ? e.message : 'lỗi mạng'), { loai:'err' });
+      }finally{
+        state.backupBusy = false;
+        renderAll();
+      }
+    })();
+  } else if (act === 'catMauReset'){
+    var cR = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });
+    if (cR){ cR.mau = ''; scheduleSave(); renderDanhMuc(); }
+  } else if (act === 'mtThem'){
+    state.mtForm = { id: '' }; renderDanhMuc();
+  } else if (act === 'mtSua'){
+    state.mtForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'mtHuy'){
+    state.mtForm = null; renderDanhMuc();
+  } else if (act === 'mtLuu'){
+    var mtTen = (document.getElementById('mt_ten') || {}).value.trim();
+    var mtTien = numNonNeg(docSo((document.getElementById('mt_tien') || {}).value));
+    var mtHan = (document.getElementById('mt_han') || {}).value || '';
+    var mtVi = (document.getElementById('mt_vi') || {}).value || '';
+    var mtGom = numNonNeg(docSo((document.getElementById('mt_gom') || {}).value));
+    if (!mtTen){ toast('Nhập tên mục tiêu.', { loai:'warn' }); return true; }
+    if (mtTien <= 0){ toast('Số tiền cần có phải lớn hơn 0.', { loai:'warn' }); return true; }
+    var mtObj = { ten: mtTen, soTien: mtTien, hanChot: mtHan, walletId: walletById(mtVi) ? mtVi : '', daGom: mtGom };
+    var mtCu = state.mtForm && state.mtForm.id ? state.data.mucTieu.find(function(g){ return g.id === state.mtForm.id; }) : null;
+    if (mtCu){ Object.assign(mtCu, mtObj); }
+    else { mtObj.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); state.data.mucTieu.push(mtObj); }
+    state.mtForm = null;
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã lưu mục tiêu "'+mtTen+'".');
+  } else if (act === 'mtXoa'){
+    var mtXi = state.data.mucTieu.findIndex(function(g){ return g.id === el.getAttribute('data-id'); });
+    if (mtXi < 0) return true;
+    var mtXg = state.data.mucTieu.splice(mtXi, 1)[0];
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã xóa mục tiêu "'+mtXg.ten+'".', { hoanTac: function(){
+      state.data.mucTieu.splice(Math.min(mtXi, state.data.mucTieu.length), 0, mtXg);
+      scheduleSave(); renderDanhMuc();
+    } });
+  } else if (act === 'dkThem'){
+    state.dkForm = { id: '' }; renderDanhMuc();
+    var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();
+  } else if (act === 'dkSua'){
+    state.dkForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'dkHuy'){
+    state.dkForm = null; renderDanhMuc();
+  } else if (act === 'dkLuu'){
+    var dkTen = (document.getElementById('dk_ten') || {}).value.trim();
+    var dkCat = ((document.getElementById('dk_cat') || {}).value || '').split('|');
+    var dkTien = numNonNeg(docSo((document.getElementById('dk_tien') || {}).value));
+    var dkNgay = Math.round(num((document.getElementById('dk_ngay') || {}).value));
+    if (!dkTen){ toast('Nhập tên khoản định kỳ.', { loai:'warn' }); return true; }
+    if (dkCat.length !== 2 || !dkCat[1]){ toast('Chọn danh mục.', { loai:'warn' }); return true; }
+    if (dkTien <= 0){ toast('Số tiền phải lớn hơn 0.', { loai:'warn' }); return true; }
+    if (dkNgay < 1 || dkNgay > 31){ toast('Ngày trong tháng phải từ 1 đến 31.', { loai:'warn' }); return true; }
+    var dkVi = (document.getElementById('dk_vi') || {}).value;
+    var dkObj = { ten: dkTen, kind: dkCat[0], catId: dkCat[1], soTien: dkTien, ngay: dkNgay,
+                  walletId: walletById(dkVi) ? dkVi : viMacDinhId(),
+                  ghiChu: (document.getElementById('dk_note') || {}).value.trim() };
+    var dkCu = state.dkForm && state.dkForm.id ? state.data.dinhKy.find(function(k){ return k.id === state.dkForm.id; }) : null;
+    if (dkCu){ Object.assign(dkCu, dkObj); }
+    else { dkObj.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); dkObj.bat = true; dkObj.bo = []; state.data.dinhKy.push(dkObj); }
+    state.dkForm = null;
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã lưu khoản định kỳ "'+dkTen+'".');
+  } else if (act === 'dkXoa'){
+    var dkXi = state.data.dinhKy.findIndex(function(k){ return k.id === el.getAttribute('data-id'); });
+    if (dkXi < 0) return true;
+    var dkXk = state.data.dinhKy.splice(dkXi, 1)[0];
+    scheduleSave();
+    renderDanhMuc();
+    toast('Đã xóa "'+dkXk.ten+'". Các giao dịch đã ghi từ khoản này ở Sổ tay vẫn giữ nguyên.', { hoanTac: function(){
+      state.data.dinhKy.splice(Math.min(dkXi, state.data.dinhKy.length), 0, dkXk);
+      scheduleSave(); renderDanhMuc();
+    } });
+  } else if (act === 'viThem'){
+    (async function(){
+      var ten = await hoiChu('Thêm ví / nguồn tiền', 'Ví dụ: Tiền mặt, Vietcombank, Momo.', 'Tên ví');
+      if (!ten) return;
+      var trung = state.data.wallets.some(function(w){ return w.ten.trim().toLowerCase() === ten.trim().toLowerCase(); });
+      if (trung){ toast('Đã có ví trùng tên "'+ten+'".', { loai:'err' }); return; }
+      state.data.wallets.push({ id: 'w_' + slugify(ten) + '_' + Date.now().toString(36), ten: ten, soDuDauKy: 0 });
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã thêm ví "'+ten+'". Nhập số dư đầu kỳ của ví nếu có.');
+    })();
+  } else if (act === 'viXoa'){
+    var viX = walletById(el.getAttribute('data-id'));
+    if (!viX) return true;
+    var nDung = viDangDung(viX.id);
+    if (state.data.wallets.length < 2){ toast('Phải còn ít nhất 1 ví.', { loai:'warn' }); return true; }
+    if (nDung > 0){ toast('Ví "'+viX.ten+'" còn '+nDung+' giao dịch/khoản liên quan, không xóa được.', { loai:'warn' }); return true; }
+    (async function(){
+      if (!await xacNhan('Xóa ví "'+viX.ten+'"?',
+            'Số dư đầu kỳ '+fmt(Math.round(num(viX.soDuDauKy)))+' của ví này sẽ bị bỏ khỏi tổng số dư.',
+            { nguyHiem:true, chuOk:'Xóa ví' })) return;
+      state.data.wallets = state.data.wallets.filter(function(w){ return w.id !== viX.id; });
+      state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+      scheduleSave();
+      renderDanhMuc();
+      toast('Đã xóa ví "'+viX.ten+'".');
+    })();
+  } else if (act === 'addCat'){
     var kind = el.getAttribute('data-kind') || 'chi';
     // hoiChu trả về Promise -> bọc IIFE async. KHÔNG được làm handler thành async:
     // dispatcher trong app.js đọc giá trị trả về đồng bộ, async luôn trả Promise (truthy)
@@ -162,7 +448,6 @@ function handleDanhMucAction(act, el){
     } });
   } else if (act === 'saveSettings'){
     state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
-    state.data.settings.soDuDauKy = docSo(document.getElementById('cfg_du').value);
     var duTruVal = document.getElementById('cfg_duTru').value;
     if (duTruVal) state.data.settings.thangBatDauDuTru = duTruVal;
     scheduleSave();
@@ -181,6 +466,7 @@ function handleDanhMucAction(act, el){
             + 'Ngày bắt đầu mới: '+newStart+'\n\n'
             + 'Dữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư / Dòng tiền nữa.',
             { nguyHiem:true, chuOk:'Khóa sổ' })) return;
+      viChotSoDuDauKy(mk3 + '-31');     // chốt từng ví theo mốc CŨ, trước khi đổi ngayBatDau
       state.data.settings.ngayBatDau = newStart;
       state.data.settings.soDuDauKy = newBal;
       scheduleSave();
@@ -194,7 +480,36 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
-  if (el.matches('[data-act=catName]')){
+  if (el.matches('[data-act=catMau]')){
+    var cM = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });
+    if (cM && /^#[0-9a-f]{6}$/i.test(el.value)){ cM.mau = el.value; scheduleSave(); renderDanhMuc(); }
+    return true;
+  } else if (el.matches('[data-act=dkBat]')){
+    var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
+    if (dkB){ dkB.bat = el.checked; scheduleSave(); }
+    return true;
+  } else if (el.matches('[data-act=viTen]')){
+    var wT = walletById(el.getAttribute('data-id'));
+    if (!wT) return true;
+    var tenMoi = el.value.trim();
+    var trungT = state.data.wallets.some(function(w){ return w.id !== wT.id && w.ten.trim().toLowerCase() === tenMoi.toLowerCase(); });
+    if (!tenMoi || trungT){
+      toast(!tenMoi ? 'Tên ví không được để trống.' : 'Đã có ví trùng tên "'+tenMoi+'".', { loai:'err' });
+      el.value = wT.ten;
+      return true;
+    }
+    wT.ten = tenMoi;
+    scheduleSave();
+    return true;
+  } else if (el.matches('[data-act=viDu]')){
+    var wD = walletById(el.getAttribute('data-id'));
+    if (!wD) return true;
+    wD.soDuDauKy = docSo(el.value);       // số dư đầu kỳ được phép âm (thẻ tín dụng, nợ), khác ô nhập thu/chi
+    state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
+    scheduleSave();
+    renderDanhMuc();                      // cập nhật dòng "Tổng số dư đầu kỳ"
+    return true;
+  } else if (el.matches('[data-act=catName]')){
     var kindC = el.getAttribute('data-kind') || 'chi';
     var c = state.data.categories[kindC].find(function(x){ return x.id===el.getAttribute('data-id'); });
     if (!c) return true;

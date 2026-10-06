@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sổ Chi Tiêu</title>
-<link rel="stylesheet" href="style.css?v=20261006">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sổ Chi Tiêu">
+<link rel="stylesheet" href="style.css?v=20261006h">
 </head>
 <body>
 
@@ -14,6 +21,7 @@
     <h2>Sổ Chi Tiêu</h2>
     <p>Đăng nhập Google để đồng bộ dữ liệu qua Google Drive.</p>
     <button id="btnSignIn" class="btn">Đăng nhập với Google</button>
+    <button id="btnOffline" class="btn secondary" style="display:none;margin-top:8px"></button>
     <div class="auth-msg" id="authMsg"></div>
   </div>
 </div>
@@ -22,6 +30,7 @@
   <header>
     <div class="brand">💰 Sổ Chi Tiêu</div>
     <div class="sync-status" id="syncStatus">Đang tải dữ liệu…</div>
+    <button id="btnPhimTat" aria-label="Phím tắt" title="Phím tắt (?)">⌨</button>
     <button id="btnTheme" aria-label="Đổi giao diện sáng/tối">◐</button>
     <button id="btnRefresh">⟳ Làm mới</button>
     <button id="btnSignOut">Đăng xuất</button>
@@ -44,15 +53,16 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=20261006"></script>
-<script src="js/ui.js?v=20261006"></script>
-<script src="js/drive-sync.js?v=20261006"></script>
-<script src="js/vayno.js?v=20261006"></script>
-<script src="js/sotay.js?v=20261006"></script>
-<script src="js/danhmuc.js?v=20261006"></script>
-<script src="js/dongtien.js?v=20261006"></script>
-<script src="js/mophong.js?v=20261006"></script>
-<script src="js/app.js?v=20261006"></script>
+<script src="js/state.js?v=20261006h"></script>
+<script src="js/ui.js?v=20261006h"></script>
+<script src="js/drive-sync.js?v=20261006h"></script>
+<script src="js/vayno.js?v=20261006h"></script>
+<script src="js/sotay.js?v=20261006h"></script>
+<script src="js/nhap.js?v=20261006h"></script>
+<script src="js/danhmuc.js?v=20261006h"></script>
+<script src="js/dongtien.js?v=20261006h"></script>
+<script src="js/mophong.js?v=20261006h"></script>
+<script src="js/app.js?v=20261006h"></script>
 
 </body>
 </html>
