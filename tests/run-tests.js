@@ -1523,7 +1523,7 @@ test('tongQuanHtml: không có việc gì thì báo gọn, không có chip', fun
   setToday('2026-10-10');
   loadData(baseData({ settings:{ soDuDauKy:1000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } }));
   var h = ctx.tongQuanHtml('2026-10', 0, 0, 1000000, 1000000, false);
-  ok(h.indexOf('hero-chip') < 0 && h.indexOf('phải lo') >= 0, 'không chip');
+  ok(h.indexOf('hero-chip') < 0 && h.indexOf('Không có khoản nào cần xử lý') >= 0, 'không chip');
   ok(h.indexOf('hero-bud') < 0, 'không có chỉ tiêu thì không hiện thanh');
   setToday('2026-10-01');
 });
