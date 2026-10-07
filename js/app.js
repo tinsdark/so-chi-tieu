@@ -117,7 +117,7 @@ function hienPhimTat(){
 }
 document.addEventListener('keydown', function(ev){
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || ev.defaultPrevented) return;
-  if (_modalDangMo || isTypingNow()) return;
+  if (_modalDangMo || _khoaDangMo || isTypingNow()) return;
   var appEl = document.getElementById('app');
   if (!appEl || appEl.style.display === 'none' || !state.data) return;
   var k = ev.key;

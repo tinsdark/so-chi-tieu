@@ -690,3 +690,9 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .qt-ds{display:flex;flex-direction:column;gap:6px}
 .qt-r{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);font-size:13px}
 .qt-tu{font-weight:600}.qt-mui{color:var(--muted)}.qt-cat{flex:1;min-width:0}
+/* màn khóa app (js/lock.js): trên cả hộp thoại (60), dưới toast (80) */
+.lock-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:70}
+.lock-gate .auth-card p{text-align:left}
+.lock-pin{width:100%;text-align:center;font-size:22px;letter-spacing:6px;padding:10px;margin-bottom:4px}
+.lock-quen{background:none;border:none;color:var(--muted);font-size:12px;margin-top:12px;text-decoration:underline}
+body.dang-khoa{overflow:hidden}

@@ -63,6 +63,7 @@ function renderDanhMuc(){
     + '</div><button class="btn sm" data-act="lockMonth">Chốt số dư </button></div>';
   html += caiAppCardHtml();
   html += backupCardHtml();
+  html += khoaCardHtml();
   html += taiKhoanCardHtml();
   root.innerHTML = html;
   attachCatDragDrop();
@@ -268,6 +269,30 @@ function caiAppCardHtml(){
 }
 
 /* ---- Tài khoản: Đăng xuất để ở đây (không ở thanh đầu trang, bấm nhầm là mất bản lưu ngoại tuyến) ---- */
+// khóa app: cấu hình riêng từng máy (localStorage), logic ở lock.js
+function khoaCardHtml(){
+  var c = khoaCauHinh();
+  var h = '<div class="card"><h3>Khóa app trên máy này</h3>';
+  if (!c){
+    return h + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt mã PIN để người khác cầm máy không xem được số tiền. '
+      + 'Mở bằng vân tay / Face ID nếu máy hỗ trợ. Chỉ áp dụng trên máy này.</div>'
+      + '<button class="btn sm" data-act="khoaDatPin">'+icon('lock')+' Đặt mã PIN</button></div>';
+  }
+  var phut = num(c.phut);
+  h += '<div class="form-row"><div><label>Khóa lại khi rời app quá</label><select data-act="khoaPhut">'
+    + [[0, 'Ngay khi rời app'], [1, '1 phút'], [5, '5 phút'], [15, '15 phút']].map(function(o){
+        return '<option value="'+o[0]+'"'+(phut === o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; }).join('')
+    + '</select></div></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+    + '<button class="btn sm" data-act="khoaNgay">'+icon('lock')+' Khóa ngay</button>'
+    + (khoaCoSinhTrac() ? (c.credId
+        ? '<button class="btn secondary sm" data-act="khoaTatSinhTrac">Tắt vân tay / Face ID</button>'
+        : '<button class="btn secondary sm" data-act="khoaBatSinhTrac">Bật vân tay / Face ID</button>') : '')
+    + '<button class="btn secondary sm" data-act="khoaDatPin">Đổi mã PIN</button>'
+    + '<button class="btn danger sm" data-act="khoaTat">Tắt khóa</button></div>'
+    + ghiChuGon('Đây là khóa màn hình: dữ liệu lưu trên máy (bản mở ngoại tuyến) không bị mã hóa. Quên mã PIN thì phải xóa dữ liệu trên máy này rồi đăng nhập Google lại — dữ liệu trên Drive không mất.', 'Lưu ý');
+  return h + '</div>';
+}
 function taiKhoanCardHtml(){
   return '<div class="card"><h3>Tài khoản</h3>'
     + '<div class="empty" style="padding:0 0 10px;text-align:left">Đăng xuất khỏi Google trên máy này. Dữ liệu trên Google Drive vẫn còn nguyên; chỉ bản lưu để mở ngoại tuyến trên máy này bị xóa.</div>'
@@ -398,6 +423,11 @@ function handleDanhMucAction(act, el){
       state.data.mucTieu.splice(Math.min(mtXi, state.data.mucTieu.length), 0, mtXg);
       scheduleSave(); renderDanhMuc();
     } });
+  } else if (act === 'khoaDatPin'){ khoaDatPin().then(function(){ renderDanhMuc(); });
+  } else if (act === 'khoaTat'){ khoaTat().then(function(){ renderDanhMuc(); });
+  } else if (act === 'khoaBatSinhTrac'){ khoaBatSinhTrac().then(function(){ renderDanhMuc(); });
+  } else if (act === 'khoaTatSinhTrac'){ khoaTatSinhTrac(); renderDanhMuc(); toast('Đã tắt mở khóa bằng vân tay / Face ID.');
+  } else if (act === 'khoaNgay'){ khoaHien();
   } else if (act === 'qtThem'){
     var qtTu = (document.getElementById('qt_tu') || {}).value || '';
     var qtCat = ((document.getElementById('qt_cat') || {}).value || '').split('|');
@@ -578,6 +608,7 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
+  if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
   if (el.matches('[data-act=catMau]')){
     var cM = state.data.categories[el.getAttribute('data-kind') || 'chi'].find(function(x){ return x.id === el.getAttribute('data-id'); });
     if (cM && /^#[0-9a-f]{6}$/i.test(el.value)){ cM.mau = el.value; scheduleSave(); renderDanhMuc(); }
