@@ -39,10 +39,12 @@ function renderSyncStatus(){
 
 function renderAll(){
   renderSyncStatus();
+  var tcBusy = document.getElementById('tabContent');
+  if (tcBusy) tcBusy.removeAttribute('aria-busy');
   if (state.tab === 'sotay') renderSoTay();
-  else if (state.tab === 'dongtien') renderDongTien();
+  else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else renderDongTien(); }
+  else if (state.tab === 'baocao') renderBaoCao();
   else if (state.tab === 'vayno') renderVayNo();
-  else if (state.tab === 'mophong') renderMoPhong();
   else renderDanhMuc();
   renderVayNoBadge();
   updateStickyOffsets();
@@ -93,22 +95,29 @@ document.addEventListener('click', function(ev){
 });
 
 // chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
+// Có View Transitions (Chrome, Safari 18+) thì nội dung trượt theo hướng tab (motionChuyenTab ở motion.js)
+var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc'];
 function chuyenTab(tab){
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
-  renderAll();
+  var cu = state.tab;
+  var lam = function(){
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    renderAll();
+  };
+  if (cu !== tab && typeof motionChuyenTab === 'function') motionChuyenTab(THU_TU_TAB.indexOf(tab) > THU_TU_TAB.indexOf(cu) ? 1 : -1, lam);
+  else lam();
 }
 
 /* ---------------- phím tắt (desktop) ----------------
    Không bắt phím khi: đang gõ trong ô nhập/chọn (isTypingNow), đang mở hộp thoại,
    giữ Ctrl/Alt/Cmd (để không cướp phím tắt của trình duyệt), chưa đăng nhập. */
-var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'vayno', '4':'mophong', '5':'danhmuc' };
+var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'danhmuc' };
 function hienPhimTat(){
   moHoiThoai({
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
       + '/ — tìm trong Sổ tay\n'
-      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Vay-Nợ · Mô phỏng · Danh mục\n'
+      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Danh mục\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
       + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',
@@ -117,7 +126,7 @@ function hienPhimTat(){
 }
 document.addEventListener('keydown', function(ev){
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || ev.defaultPrevented) return;
-  if (_modalDangMo || isTypingNow()) return;
+  if (_modalDangMo || _khoaDangMo || isTypingNow()) return;
   var appEl = document.getElementById('app');
   if (!appEl || appEl.style.display === 'none' || !state.data) return;
   var k = ev.key;
@@ -153,7 +162,7 @@ document.addEventListener('keydown', function(ev){
 // xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
 (function(){
   var mq = window.matchMedia && window.matchMedia('(max-width:700px)');
-  var khi = function(){ if (state.data && state.tab === 'dongtien') renderDongTien(); };
+  var khi = function(){ if (state.data && state.tab === 'dongtien' && !state.dtMoPhong) renderDongTien(); };
   if (mq && mq.addEventListener) mq.addEventListener('change', khi);
 })();
 

@@ -25,6 +25,9 @@ var MP_LOAI_LABEL = {
 function mpClone(o){ return JSON.parse(JSON.stringify(o)); }
 
 function mpDaNap(){ return !!(state.mp && state.mp.data); }
+// nháp đã có điều chỉnh người dùng tự thêm: tải lại từ Drive (poll ngầm) sẽ làm mất -> poll phải nhường.
+// Nháp vừa tự nạp mà chưa sửa gì thì cứ để poll chạy, lần vẽ sau tự nạp lại bản mới.
+function mpCoThayDoi(){ return mpDaNap() && (state.mp.dieuChinh || []).length > 0; }
 
 // CLONE dữ liệu thật sang nháp. Dùng JSON deep copy nên không còn chung
 // tham chiếu object nào với state.data -> sửa nháp không vọng về bản gốc.
@@ -82,6 +85,7 @@ function mpBuildScenario(){
         hinhThuc: dc.hinhThuc || 'khong_lai',
         soTienGoc: num(dc.soTien),
         laiSuatNam: num(dc.laiSuatNam),
+        soTienTraThang: num(dc.soTienTraThang),
         soThangVay: Math.max(1, num(dc.soThang) || 1),
         ngayVay: dc.mkTu + '-01',
         ngayTraHangThang: 1,
@@ -170,6 +174,7 @@ function mpFormHtml(){
            return '<option value="'+k+'"'+((dc&&dc.hinhThuc===k)?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('')
        + '</select></div>';
     h += '<div><label>Lãi suất / năm (%)</label><input type="number" id="mp_laiSuatNam" min="0" step="0.01" value="'+(dc?num(dc.laiSuatNam):'')+'"></div>';
+    h += '<div><label>Trả mỗi tháng (nếu trả cố định)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_traThang" value="'+(dc?veSo(dc.soTienTraThang):'')+'" placeholder="0"></div>';
     h += '<div><label>Số tháng vay</label><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):12)+'"></div>';
     h += '<div><label>Nhận tiền tháng</label><select id="mp_mk">'+mkOpts(dc?dc.mkTu:curMk)+'</select></div>';
   } else if (loai === 'traSom') {
@@ -221,6 +226,8 @@ function mpDcMoTa(dc){
 function renderMoPhong(){
   var root = document.getElementById('tabContent');
   var html = '';
+  // vào tab là ai cũng muốn có số liệu để thử: tự nạp bản sao dữ liệu thật, không bắt bấm "Nạp dữ liệu gốc"
+  if (!mpDaNap() && state.data) mpNapGoc();
 
   // Thẻ 1: nguồn dữ liệu nháp
   html += '<div class="card"><h3>Vùng nháp</h3>';
@@ -236,13 +243,13 @@ function renderMoPhong(){
          + '. Mọi con số dưới đây là <b>nháp</b> — không ghi vào dữ liệu thật, không lên Drive.</div>';
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
          + '<button class="btn secondary sm" data-act="mpNapGoc">'+icon('refresh')+' Nạp lại từ gốc</button>'
-         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Xóa nháp</button>'
+         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Làm lại từ đầu</button>'
          + '</div>';
   }
   html += '</div>';
 
   if (!mpDaNap()){
-    root.innerHTML = html;
+    root.innerHTML = dtCheDoHtml() + html;
     return;
   }
 
@@ -334,7 +341,7 @@ function renderMoPhong(){
     + '<div class="bd-key" style="margin-top:6px"><span class="l gray"></span> Hiện tại <span class="l chi"></span> Kịch bản</div>';
   html += '</div>';
 
-  root.innerHTML = html;
+  root.innerHTML = dtCheDoHtml() + html;
 }
 
 /* ---- actions ---- */
@@ -352,12 +359,12 @@ function handleMoPhongAction(act, el){
     })();
   } else if (act === 'mpXoaNhap'){
     (async function(){
-      if (!await xacNhan('Xóa bản nháp và toàn bộ điều chỉnh?',
+      if (!await xacNhan('Bỏ toàn bộ điều chỉnh, làm lại từ dữ liệu gốc?',
             'Dữ liệu thật không bị ảnh hưởng — vùng nháp chỉ nằm trong bộ nhớ.',
-            { nguyHiem:true, chuOk:'Xóa nháp' })) return;
+            { nguyHiem:true, chuOk:'Làm lại' })) return;
       mpXoaNhap();
       renderMoPhong();
-      toast('Đã xóa bản nháp.');
+      toast('Đã bỏ các điều chỉnh, nháp lấy lại từ dữ liệu gốc.');
     })();
   } else if (act === 'mpAddDc'){
     state.mp.formOpen = true;
@@ -393,6 +400,7 @@ function handleMoPhongAction(act, el){
       dc.soTien = numNonNeg(docSo(g('mp_soTien')));
       dc.hinhThuc = g('mp_hinhThuc') || 'khong_lai';
       dc.laiSuatNam = numNonNeg(g('mp_laiSuatNam'));
+      dc.soTienTraThang = numNonNeg(docSo(g('mp_traThang')));
       dc.soThang = Math.max(1, num(g('mp_soThang')) || 1);
       dc.mkTu = g('mp_mk');
       dc.loaiVay = 'ngan_hang';

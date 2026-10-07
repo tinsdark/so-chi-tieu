@@ -6,9 +6,10 @@
 :root{
   color-scheme: light dark;
   /* Bảng màu lấy từ logo (đỏ + vàng): nền KEM VÀNG (như giấy hoa văn Tết), thẻ kem nhạt, viền vàng nâu nhạt,
-     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 13:1, chữ phụ >= 5,6:1, số xanh/đỏ >= 4,5:1). */
+     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 13:1, chữ phụ >= 5,6:1, số xanh/đỏ >= 4,5:1).
+     Đỏ chủ đạo là ĐỎ GẠCH dịu (#b5473a, chữ trắng 5,3:1); đỏ tươi --red chỉ dành cho tín hiệu (số chi, vượt mức, lỗi). */
   --bg:#f8eccb; --card:#fff9e6; --border:#e6d3a0; --text:#2b2012; --muted:#6b5a3e;
-  --primary:#c5071c; --primary-d:#9d0516; --green:#14753a; --red:#c62828; --amber:#a85208; --gold:#7d5a06;
+  --primary:#b5473a; --primary-d:#8f3328; --green:#14753a; --red:#c62828; --amber:#a85208; --gold:#7d5a06;
   --thu-bg:#eef3d6; --chi-bg:#fbe6d6; --shadow:0 1px 2px rgba(110,80,20,.08), 0 2px 8px rgba(110,80,20,.08);
   /* màu phụ, trước đây viết cứng trong rule */
   --input-bg:#fffdf3;      /* nền ô nhập + nền th sticky */
@@ -19,14 +20,14 @@
   --danger-br:#eab29c;     /* viền nút nguy hiểm */
   --warn-bg:#ffefb8; --warn-br:#e6c566; --warn-tx:#70440a;  /* banner cảnh báo */
   --mask:rgba(50,32,10,.45);   /* nền mờ sau hộp thoại */
-  --hero-a:#a80518; --hero-b:#c5071c; --hero-c:#d63a2c;   /* thẻ tổng quan (đỏ theo logo) */
-  --chi-solid:#c62828; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
+  --hero-a:#9c4236; --hero-b:#ad4e3e; --hero-c:#b85a46;   /* thẻ tổng quan: đỏ gạch dịu (đỏ tươi logo quá gắt khi phủ cả khối) */
+  --chi-solid:#b03f30; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
 [data-theme="dark"]{
   color-scheme: dark;
   /* tối NÂU ẤM rõ (cà phê / gỗ), không còn đen: cùng hệ với nền kem vàng ở theme sáng */
   --bg:#2a1c14; --card:#37261b; --border:#54402e; --text:#f6ead9; --muted:#c9b49c;
-  --primary:#cc3045; --primary-d:#ffa3ae; --green:#6fd99a; --red:#ff8a80; --amber:#f6bb4a; --gold:#e8bd4f;
+  --primary:#c4604f; --primary-d:#f2a493; --green:#6fd99a; --red:#ff8a80; --amber:#f6bb4a; --gold:#e8bd4f;
   --thu-bg:#21301d; --chi-bg:#43221b; --shadow:0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
   --input-bg:#2f2017;
   --hover:#46321f;
@@ -36,8 +37,8 @@
   --danger-br:#7a3c32;
   --warn-bg:#40331a; --warn-br:#7a6120; --warn-tx:#f6d57a;
   --mask:rgba(10,5,0,.65);
-  --hero-a:#5e0a15; --hero-b:#7d0e1c; --hero-c:#92231c;
-  --chi-solid:#c53030; --thu-solid:#1a7a42;
+  --hero-a:#5a2219; --hero-b:#6e2b20; --hero-c:#7e3726;
+  --chi-solid:#a8432f; --thu-solid:#1a7a42;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
@@ -363,6 +364,9 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .qa-seg button.thu.on{background:var(--thu-solid);color:#fff}
 .qa-amt{display:block;min-width:0;width:100%;font-size:18px;font-weight:700;padding:8px 10px;border-radius:10px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.qa-keys{display:flex;justify-content:flex-end;gap:6px;margin:-4px 0 10px}
+.qa-keys button{min-width:48px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:600;touch-action:manipulation}
+.qa-keys button:active{background:var(--hover)}
 .qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
   padding:7px 13px;font-size:13px;line-height:1.2;display:inline-flex;align-items:center}
 .qa-chip.on,.qa-more.on{border-color:var(--primary);background:var(--row-bal);color:var(--primary-d);font-weight:700}
@@ -498,16 +502,16 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 :root{
   --k-act:#d98a00;--k-act-bg:#fff0c4; --k-bud:#3f8f4f;--k-bud-bg:#ecf4dc;
   --k-goal:#3d7ea6;--k-goal-bg:#e6f0f3; --k-wal:#b8860b;--k-wal-bg:#fffdf2;
-  --k-in:#c5071c;--k-in-bg:#ffffff; --k-debt:#c62828;--k-debt-bg:#fbe9e0;
+  --k-in:#b5473a;--k-in-bg:#ffffff; --k-debt:#c62828;--k-debt-bg:#fbe9e0;
   --k-asset:#3f8f4f;--k-asset-bg:#ecf4dc;
-  --vc0:#c5071c;--vc1:#3d7ea6;--vc2:#3f8f4f;--vc3:#d98a00;--vc4:#7b5ea7;
+  --vc0:#b5473a;--vc1:#3d7ea6;--vc2:#3f8f4f;--vc3:#d98a00;--vc4:#7b5ea7;
 }
 [data-theme="dark"]{
   --k-act:#f0a92b;--k-act-bg:#3d3015; --k-bud:#5fd38d;--k-bud-bg:#22301f;
   --k-goal:#6bb4dc;--k-goal-bg:#1f2f38; --k-wal:#e8bd4f;--k-wal-bg:#3a2a1a;
-  --k-in:#e0556a;--k-in-bg:var(--card); --k-debt:#ff8a80;--k-debt-bg:#43221b;
+  --k-in:#d9735f;--k-in-bg:var(--card); --k-debt:#ff8a80;--k-debt-bg:#43221b;
   --k-asset:#5fd38d;--k-asset-bg:#22301f;
-  --vc0:#e0556a;--vc1:#6bb4dc;--vc2:#5fd38d;--vc3:#f0a92b;--vc4:#b79ae0;
+  --vc0:#d9735f;--vc1:#6bb4dc;--vc2:#5fd38d;--vc3:#f0a92b;--vc4:#b79ae0;
 }
 .k-act{--k:var(--k-act);--kbg:var(--k-act-bg)} .k-bud{--k:var(--k-bud);--kbg:var(--k-bud-bg)}
 .k-goal{--k:var(--k-goal);--kbg:var(--k-goal-bg)} .k-wal{--k:var(--k-wal);--kbg:var(--k-wal-bg)}
@@ -557,11 +561,11 @@ details[open]>div,details[open]>.giai-thich-nd{animation:mo-in .22s var(--ease)}
    LỚP 7 — biểu đồ tự vẽ (js/bieudo.js). Màu lấy từ biến --bd-* nên đổi sáng/tối tự động.
    ==================================================================== */
 :root{
-  --bd-chi:#c5071c;--bd-thu:#3f8f4f;--bd-blue:#3d7ea6;--bd-amb:#d98a00;--bd-gray:#9b8a76;
+  --bd-chi:#bf4f3c;--bd-thu:#3f8f4f;--bd-blue:#3d7ea6;--bd-amb:#d98a00;--bd-gray:#9b8a76;
   --bd-grid:rgba(80,30,10,.09);--bd-tipbg:#2b1a12;--bd-tipfg:#fff;
 }
 [data-theme="dark"]{
-  --bd-chi:#e0556a;--bd-thu:#5fd38d;--bd-blue:#6bb4dc;--bd-amb:#f0a92b;--bd-gray:#8a7466;
+  --bd-chi:#e07a64;--bd-thu:#5fd38d;--bd-blue:#6bb4dc;--bd-amb:#f0a92b;--bd-gray:#8a7466;
   --bd-grid:rgba(255,255,255,.08);--bd-tipbg:#f3e6d8;--bd-tipfg:#2a1c14;
 }
 .bd-box{margin:2px 0 0}
@@ -657,3 +661,83 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .bd-hb-r .bar>i{display:block;height:100%;border-radius:99px;transition:width .6s var(--ease)}
 .bd-hb-r .vs{font-size:11px;color:var(--muted);margin-top:3px}
 .bd-hb-r .vs .up{color:var(--bd-chi);font-weight:600}.bd-hb-r .vs .dn{color:var(--bd-thu);font-weight:600}
+
+/* ====================================================================
+   LỚP 8 — bố cục 5 tab (10/2026): Sổ tay gọn, tab Báo cáo, Dòng tiền có chế độ Mô phỏng.
+   ==================================================================== */
+/* số dư từng ví nằm luôn trong thẻ tổng quan (trước đây là 1 thẻ riêng) */
+.hero-vi{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 12px;font-size:12px}
+.hero-vi>span{display:flex;flex-direction:column;line-height:1.25}
+.hero-vi small{opacity:.82;font-size:11px}
+.hero-vi b{font-variant-numeric:tabular-nums;font-size:14px}
+.hero-vi b.am{color:#ffd0c4}
+.hero-vi .hero-chip{margin-left:auto}
+/* lối vào ít dùng ở cuối thẻ Ghi nhanh */
+.qa-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px}
+.qa-links button{background:none;border:none;padding:6px 2px;color:var(--muted);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.qa-links button:hover{color:var(--primary-d)}
+/* chọn chế độ ở đầu tab Dòng tiền */
+.dt-mode{display:flex;gap:4px;padding:4px;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.dt-mode button{flex:1;border:none;background:none;padding:8px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.dt-mode button.on{background:var(--primary);color:#fff}
+/* thẻ Tài sản ròng (tab Báo cáo) */
+.tsr-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--green)}
+.tsr-val.am{color:var(--red)}
+.tsr-ct{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin-top:4px}
+.tsr-ct b{color:var(--text);font-variant-numeric:tabular-nums}
+.tsr-ct b.thu{color:var(--green)} .tsr-ct b.chi{color:var(--red)}
+/* quy tắc tự phân loại (tab Danh mục) */
+.qt-ds{display:flex;flex-direction:column;gap:6px}
+.qt-r{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);font-size:13px}
+.qt-tu{font-weight:600}.qt-mui{color:var(--muted)}.qt-cat{flex:1;min-width:0}
+/* màn khóa app (js/lock.js): trên cả hộp thoại (60), dưới toast (80) */
+.lock-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:70}
+.lock-gate .auth-card p{text-align:left}
+.lock-pin{width:100%;text-align:center;font-size:22px;letter-spacing:6px;padding:10px;margin-bottom:4px}
+.lock-quen{background:none;border:none;color:var(--muted);font-size:12px;margin-top:12px;text-decoration:underline}
+body.dang-khoa{overflow:hidden}
+/* màn rộng: 2 cột cho Sổ tay và Báo cáo. Dưới 1024px .cot2 chỉ là khối thường (1 cột như cũ). */
+@media (min-width:1024px){
+  #app{max-width:1280px}
+  .cot2{display:grid;grid-template-columns:minmax(380px,5fr) 7fr;gap:16px;align-items:start}
+  /* biểu đồ SVG vẽ theo khung 350px rồi giãn theo bề ngang: cột rộng thì chữ to quá -> giới hạn chiều cao */
+  .cot2 .bd-box svg{max-height:240px}
+  .cot2>div>.card:last-child{margin-bottom:0}
+}
+
+/* ====================================================================
+   LỚP 9 — chuyển cảnh & cử chỉ (js/motion.js, phần cuối)
+   ==================================================================== */
+/* đổi tab: chỉ vùng nội dung trượt, header + thanh tab đứng yên */
+header{view-transition-name:dau-trang}
+.tabs{view-transition-name:thanh-tab}
+#tabContent{view-transition-name:noi-dung}
+@keyframes vt-ra-trai{to{opacity:0;transform:translateX(-36px)}}
+@keyframes vt-vao-phai{from{opacity:0;transform:translateX(36px)}}
+@keyframes vt-ra-phai{to{opacity:0;transform:translateX(36px)}}
+@keyframes vt-vao-trai{from{opacity:0;transform:translateX(-36px)}}
+::view-transition-old(noi-dung),::view-transition-new(noi-dung){animation-duration:.24s;animation-timing-function:var(--ease)}
+[data-huong="toi"]::view-transition-old(noi-dung){animation-name:vt-ra-trai}
+[data-huong="toi"]::view-transition-new(noi-dung){animation-name:vt-vao-phai}
+[data-huong="lui"]::view-transition-old(noi-dung){animation-name:vt-ra-phai}
+[data-huong="lui"]::view-transition-new(noi-dung){animation-name:vt-vao-trai}
+/* vuốt 1 ngày ở Sổ tay: nền báo trước hành động */
+tr.st-row{transition:transform .2s var(--ease)}
+tr.st-row.vuot-xoa{box-shadow:inset -6px 0 0 var(--red)}
+tr.st-row.vuot-sua{box-shadow:inset 6px 0 0 var(--green)}
+/* kéo xuống để làm mới */
+.keo-lam-moi{position:fixed;top:0;left:50%;transform:translate(-50%,0);z-index:30;background:var(--card);border:1px solid var(--border);
+  box-shadow:var(--shadow);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .15s}
+.keo-lam-moi.hien{opacity:1}
+.keo-lam-moi.du{color:var(--primary-d);border-color:var(--primary)}
+/* ghi xong: nút chớp dấu ✓ */
+@keyframes da-ghi{0%{transform:scale(1)}35%{transform:scale(.97)}100%{transform:scale(1)}}
+.qa-save.da-ghi{animation:da-ghi .5s var(--spring);background:var(--thu-solid)!important;color:transparent!important;position:relative}
+.qa-save.da-ghi::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800}
+/* khung xương lúc đang tải (index.html) */
+.skel{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;position:relative;overflow:hidden}
+.skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:skel 1.2s infinite}
+[data-theme="dark"] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+@keyframes skel{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){ .skel::after{display:none} }
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

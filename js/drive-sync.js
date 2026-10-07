@@ -477,9 +477,9 @@ async function giaiQuyetXungDot(){
 
 async function pollRefresh(){
   if (!accessToken || state.dirty || state.saving || isTypingNow() || isFormOpen()) return;
-  // đang có bản nháp mô phỏng: driveLoad() sẽ xóa nháp, mà poll chạy ngầm 35s/lần
+  // nháp mô phỏng đã có điều chỉnh: driveLoad() sẽ xóa nháp, mà poll chạy ngầm 35s/lần
   // -> đang ngồi thử số thì nháp bốc hơi không rõ lý do. Chỉ xóa khi Đạt tự bấm "Làm mới".
-  if (typeof mpDaNap === 'function' && mpDaNap()) return;
+  if (typeof mpCoThayDoi === 'function' && mpCoThayDoi()) return;
   await driveLoad();
   renderAll();
 }

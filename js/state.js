@@ -420,6 +420,7 @@ var ICON_PATHS = {
   'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
   'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
   'sliders': "<path d=\"M4 7h9\"/><path d=\"M17 7h3\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><path d=\"M4 17h3\"/><path d=\"M11 17h9\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
+  'pie': "<path d=\"M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z\"/><path d=\"M15 3.9A8.5 8.5 0 0 1 20.1 9H15z\"/>",
   'list': "<path d=\"M9 6h11\"/><path d=\"M9 12h11\"/><path d=\"M9 18h11\"/><path d=\"M4.5 6h.01\"/><path d=\"M4.5 12h.01\"/><path d=\"M4.5 18h.01\"/>",
   'refresh': "<path d=\"M20 12a8 8 0 1 1-2.3-5.7\"/><path d=\"M20 4v5h-5\"/>",
   'sun': "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4\"/>",
@@ -553,6 +554,9 @@ function normalizeData(d){
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
   // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  // quy tắc tự phân loại (từ khóa trong ghi chú -> danh mục) và cách ghép cột đã lưu cho từng kiểu file sao kê (nhap.js)
+  d.settings.quyTac = Array.isArray(d.settings.quyTac) ? d.settings.quyTac : [];
+  d.settings.mauNhap = (d.settings.mauNhap && typeof d.settings.mauNhap === 'object') ? d.settings.mauNhap : {};
   ['thu', 'chi'].forEach(function(k){
     d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
   });

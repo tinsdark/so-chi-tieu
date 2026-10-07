@@ -16,6 +16,35 @@ function nhapBoDau(s){
   return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 }
 
+/* ---- QUY TẮC TỰ PHÂN LOẠI: settings.quyTac = [{ id, tuKhoa, kind, catId }] ----
+   Ghi chú chứa từ khóa (không phân biệt hoa thường / dấu) -> danh mục đó. Quy tắc đứng trước thắng.
+   Dùng ở Nhập file (dòng không có cột danh mục) và Ghi nhanh (gõ ghi chú tự chọn danh mục). */
+function nhapQuyTac(kind, text){
+  var t = nhapBoDau(text);
+  if (!t) return '';
+  var ds = (state.data.settings && state.data.settings.quyTac) || [];
+  for (var i = 0; i < ds.length; i++){
+    var q = ds[i], k = nhapBoDau(q.tuKhoa);
+    if (!k || q.kind !== kind || t.indexOf(k) < 0) continue;
+    if ((state.data.categories[kind] || []).some(function(c){ return c.id === q.catId; })) return q.catId;
+  }
+  return '';
+}
+// "chữ ký" của 1 file sao kê = dòng tiêu đề đã bỏ dấu. Cùng ngân hàng/ví xuất ra thì giống nhau -> dùng lại cách ghép cột.
+function nhapChuKy(rows, coHeader){
+  if (!coHeader || !rows.length) return '';
+  return rows[0].map(function(c){ return nhapBoDau(c); }).join('|');
+}
+var NHAP_MAU_GIU = 10;
+function nhapLuuMau(imp){
+  var ck = nhapChuKy(imp.rows, imp.coHeader);
+  if (!ck) return;
+  var m = state.data.settings.mauNhap;
+  m[ck] = { map: JSON.parse(JSON.stringify(imp.map)), soDuong: imp.soDuong, catMD: JSON.parse(JSON.stringify(imp.catMD || {})), viId: imp.viId, luc: Date.now() };
+  var keys = Object.keys(m).sort(function(a, b){ return (m[b].luc || 0) - (m[a].luc || 0); });
+  keys.slice(NHAP_MAU_GIU).forEach(function(k){ delete m[k]; });
+}
+
 // -> 'YYYY-MM-DD' hoặc ''. Kiểu Việt Nam: ngày/tháng/năm (không đoán kiểu Mỹ). Số = số ngày của Excel.
 function nhapParseNgay(v){
   if (v == null || v === '') return '';
@@ -170,13 +199,15 @@ function nhapPhanTich(imp){
         else if (chon === '+'){ x.catMoi = tenCat; }
         else { var c = catDaTim(x.kind, tenCat); if (c) x.catId = c.id; else x.catMoi = tenCat; }
         out.catCanChon[key] = { kind: x.kind, ten: tenCat, chon: x.catId ? x.kind + '|' + x.catId : '+' };
+      } else if (nhapQuyTac(x.kind, x.note)){
+        x.catId = nhapQuyTac(x.kind, x.note);
       } else if (macDinh.length === 2 && macDinh[0] === x.kind && macDinh[1]){
         x.catId = macDinh[1];
       } else {
         x.loi = 'Không có danh mục (chọn "Danh mục mặc định" cho khoản ' + (x.kind === 'thu' ? 'thu' : 'chi') + ')';
       }
       if (!x.loi){
-        if (start && x.ngay < start) x.canhBao = 'trước mốc khóa sổ ' + start + ' (không tính vào số dư)';
+        if (start && x.ngay < start) x.canhBao = 'trước mốc chốt số dư ' + start + ' (không tính vào số dư)';
         if (imp.boTrung && daCo[x.ngay + '|' + x.kind + '|' + Math.round(x.soTien) + '|' + nhapBoDau(x.note)]){ x.trung = true; }
       }
     }
@@ -277,6 +308,8 @@ function nhapCardHtml(){
   var kq = nhapPhanTich(imp);
   var nCot = imp.rows.reduce(function(m, r){ return Math.max(m, r.length); }, 0);
   var h = '<div class="card"><h3>Nhập từ file: '+esc(imp.ten)+'</h3>';
+  if (imp.dungMau) h += '<div class="empty" style="padding:0 0 10px;text-align:left">'+icon('check')+' File cùng kiểu với lần nhập trước: đã dùng lại cách ghép cột, danh mục mặc định và ví của lần đó. Kiểm tra lại bên dưới nếu cần.</div>';
+  if ((state.data.settings.quyTac || []).length) h += '<div class="empty" style="padding:0 0 10px;text-align:left">Dòng không có danh mục sẽ được xếp theo <b>quy tắc tự phân loại</b> (tab Danh mục) trước khi dùng danh mục mặc định.</div>';
   h += '<label style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><input type="checkbox" data-act="impHeader"'+(imp.coHeader ? ' checked' : '')+'> Dòng đầu là tiêu đề cột</label>';
   h += '<div class="form-row">'
     + '<div><label>Cột Ngày *</label><select data-act="impMap" data-f="ngay">'+nhapOptCot(imp, nCot, imp.map.ngay)+'</select></div>'
@@ -363,6 +396,7 @@ function handleNhapAction(act, el){
     var kq = nhapPhanTich(imp);
     if (!kq.nOk){ toast('Không có dòng nào hợp lệ để nhập.', { loai:'warn' }); return true; }
     var r = nhapThucHien(imp, kq);
+    nhapLuuMau(imp);
     state.imp = null;
     scheduleSave();
     renderSoTay();
@@ -390,6 +424,14 @@ function handleNhapChange(el){
       state.imp = { buoc: 'xem', ten: f.name, rows: rows, coHeader: coHeader, map: map,
         soDuong: nhapSoDuongTuDong(rows, coHeader, map), catMD: { thu: '', chi: '' }, catMap: {},
         viId: viDienSan(), boTrung: true };
+      // file cùng kiểu (cùng dòng tiêu đề) đã từng nhập: dùng lại cách ghép cột / danh mục mặc định / ví của lần trước
+      var mau = state.data.settings.mauNhap[nhapChuKy(rows, coHeader)];
+      if (mau){
+        state.imp.map = JSON.parse(JSON.stringify(mau.map)); state.imp.soDuong = mau.soDuong || state.imp.soDuong;
+        state.imp.catMD = JSON.parse(JSON.stringify(mau.catMD || { thu: '', chi: '' }));
+        if (walletById(mau.viId)) state.imp.viId = mau.viId;
+        state.imp.dungMau = true;
+      }
       renderSoTay();
     }).catch(function(e){
       console.error('[chitieu] Đọc file nhập lỗi:', e);

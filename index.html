@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sổ Chi Tiêu</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c5071c">
+<meta name="theme-color" content="#b5473a">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Chi Tiêu">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="style.css?v=434df3af">
+<link rel="stylesheet" href="style.css?v=70b5b0e3">
 </head>
 <body>
 
@@ -46,28 +46,30 @@
   <nav class="tabs">
     <button class="tab active" data-tab="sotay"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5z"/><path d="M5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3"/><path d="M9 7h6"/></svg></span>Sổ tay</button>
     <button class="tab" data-tab="dongtien"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 17l5.5-6 4 4L21 6"/><path d="M15 6h6v6"/></svg></span>Dòng tiền</button>
+    <button class="tab" data-tab="baocao"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.9A8.5 8.5 0 0 1 20.1 9H15z"/></svg></span>Báo cáo</button>
     <button class="tab" data-tab="vayno"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v16"/><path d="M6.5 20h11"/><path d="M5 7h14"/><path d="M5 7l-2.5 6a3 3 0 0 0 5 0z"/><path d="M19 7l-2.5 6a3 3 0 0 0 5 0z"/></svg></span>Vay - Nợ<span class="tab-badge" id="vnBadge" style="display:none"></span></button>
-    <button class="tab" data-tab="mophong"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/></svg></span>Mô phỏng</button>
     <button class="tab" data-tab="danhmuc"><span class="tab-ico" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4.5 6h.01"/><path d="M4.5 12h.01"/><path d="M4.5 18h.01"/></svg></span>Danh mục</button>
   </nav>
-  <main id="tabContent"><div class="empty">Đang tải…</div></main>
+  <main id="tabContent" aria-busy="true"><div class="skel" style="height:44px;width:220px"></div><div class="skel" style="height:190px"></div><div class="skel" style="height:240px"></div><div class="skel" style="height:320px"></div><span class="sr-only">Đang tải…</span></main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- SheetJS bản chính thức (0.18.5 trên npm/jsdelivr có lỗ hổng khi đọc file: CVE-2023-30533, CVE-2024-22363) -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=434df3af"></script>
-<script src="js/ui.js?v=434df3af"></script>
-<script src="js/drive-sync.js?v=434df3af"></script>
-<script src="js/vayno.js?v=434df3af"></script>
-<script src="js/sotay.js?v=434df3af"></script>
-<script src="js/bieudo.js?v=434df3af"></script>
-<script src="js/nhap.js?v=434df3af"></script>
-<script src="js/danhmuc.js?v=434df3af"></script>
-<script src="js/dongtien.js?v=434df3af"></script>
-<script src="js/mophong.js?v=434df3af"></script>
-<script src="js/motion.js?v=434df3af"></script>
-<script src="js/app.js?v=434df3af"></script>
+<script src="js/state.js?v=70b5b0e3"></script>
+<script src="js/ui.js?v=70b5b0e3"></script>
+<script src="js/lock.js?v=70b5b0e3"></script>
+<script src="js/drive-sync.js?v=70b5b0e3"></script>
+<script src="js/vayno.js?v=70b5b0e3"></script>
+<script src="js/sotay.js?v=70b5b0e3"></script>
+<script src="js/bieudo.js?v=70b5b0e3"></script>
+<script src="js/nhap.js?v=70b5b0e3"></script>
+<script src="js/danhmuc.js?v=70b5b0e3"></script>
+<script src="js/dongtien.js?v=70b5b0e3"></script>
+<script src="js/mophong.js?v=70b5b0e3"></script>
+<script src="js/motion.js?v=70b5b0e3"></script>
+<script src="js/app.js?v=70b5b0e3"></script>
 
 </body>
 </html>
