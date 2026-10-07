@@ -25,6 +25,9 @@ var MP_LOAI_LABEL = {
 function mpClone(o){ return JSON.parse(JSON.stringify(o)); }
 
 function mpDaNap(){ return !!(state.mp && state.mp.data); }
+// nháp đã có điều chỉnh người dùng tự thêm: tải lại từ Drive (poll ngầm) sẽ làm mất -> poll phải nhường.
+// Nháp vừa tự nạp mà chưa sửa gì thì cứ để poll chạy, lần vẽ sau tự nạp lại bản mới.
+function mpCoThayDoi(){ return mpDaNap() && (state.mp.dieuChinh || []).length > 0; }
 
 // CLONE dữ liệu thật sang nháp. Dùng JSON deep copy nên không còn chung
 // tham chiếu object nào với state.data -> sửa nháp không vọng về bản gốc.
@@ -223,6 +226,8 @@ function mpDcMoTa(dc){
 function renderMoPhong(){
   var root = document.getElementById('tabContent');
   var html = '';
+  // vào tab là ai cũng muốn có số liệu để thử: tự nạp bản sao dữ liệu thật, không bắt bấm "Nạp dữ liệu gốc"
+  if (!mpDaNap() && state.data) mpNapGoc();
 
   // Thẻ 1: nguồn dữ liệu nháp
   html += '<div class="card"><h3>Vùng nháp</h3>';
@@ -238,7 +243,7 @@ function renderMoPhong(){
          + '. Mọi con số dưới đây là <b>nháp</b> — không ghi vào dữ liệu thật, không lên Drive.</div>';
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
          + '<button class="btn secondary sm" data-act="mpNapGoc">'+icon('refresh')+' Nạp lại từ gốc</button>'
-         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Xóa nháp</button>'
+         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Làm lại từ đầu</button>'
          + '</div>';
   }
   html += '</div>';
@@ -354,12 +359,12 @@ function handleMoPhongAction(act, el){
     })();
   } else if (act === 'mpXoaNhap'){
     (async function(){
-      if (!await xacNhan('Xóa bản nháp và toàn bộ điều chỉnh?',
+      if (!await xacNhan('Bỏ toàn bộ điều chỉnh, làm lại từ dữ liệu gốc?',
             'Dữ liệu thật không bị ảnh hưởng — vùng nháp chỉ nằm trong bộ nhớ.',
-            { nguyHiem:true, chuOk:'Xóa nháp' })) return;
+            { nguyHiem:true, chuOk:'Làm lại' })) return;
       mpXoaNhap();
       renderMoPhong();
-      toast('Đã xóa bản nháp.');
+      toast('Đã bỏ các điều chỉnh, nháp lấy lại từ dữ liệu gốc.');
     })();
   } else if (act === 'mpAddDc'){
     state.mp.formOpen = true;

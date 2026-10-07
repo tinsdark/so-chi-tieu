@@ -2128,6 +2128,15 @@ test('Ước tính chi hết tháng: 1 khoản lớn không bị nhân lên cả
   setToday('2026-10-01');
 });
 
+test('Mô phỏng: poll Drive chỉ nhường khi nháp đã có điều chỉnh (nháp tự nạp chưa sửa thì không chặn)', function(){
+  loadData(baseData());
+  ctx.mpXoaNhap(); eq(ctx.mpCoThayDoi(), false, 'chưa nạp');
+  ctx.mpNapGoc(); eq(ctx.mpCoThayDoi(), false, 'vừa tự nạp, chưa sửa');
+  ctx.state.mp.dieuChinh.push({ loai:'motLan', kind:'chi', mk:'2026-11', soTien:100 });
+  eq(ctx.mpCoThayDoi(), true, 'có điều chỉnh');
+  ctx.mpXoaNhap();
+});
+
 test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ đổi state, không ghi dữ liệu', function(){
   loadData(baseData()); ctx.state.soTayMonth = '2026-10';
   var kt = JSON.stringify(ctx.state.data);
