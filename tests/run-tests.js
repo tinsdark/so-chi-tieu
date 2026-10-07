@@ -2394,6 +2394,21 @@ test('Form đầy đủ vào ngày ĐÃ CÓ dòng: thêm đúng phần mới, ph
 });
 
 /* ==================================================================== */
+group('IMG. Ảnh nền được tham chiếu trong CSS phải tồn tại');
+test('mọi url(img/...) trong style.css trỏ tới file có thật (nền họa tiết, ảnh đầu màn đăng nhập)', function(){
+  var root = path.join(__dirname, '..');
+  var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  var dung = {}, re = /url\(\s*['"]?(img\/[^)'"\s]+)['"]?\s*\)/g, m;
+  while ((m = re.exec(css))) dung[m[1]] = 1;
+  var ds = Object.keys(dung);
+  ok(ds.length >= 3, 'phải có ít nhất 3 ảnh nền (nen-sang, nen-toi, dau-man), thấy ' + ds.length);
+  ds.forEach(function(f){
+    ok(fs.existsSync(path.join(root, f)), 'thiếu file ' + f);
+    ok(fs.statSync(path.join(root, f)).size < 200 * 1024, f + ' nặng quá 200KB (nền không nên nặng)');
+  });
+});
+
+/* ==================================================================== */
 group('UI. Ô tiền thông minh (ui.js)');
 var uiCtx = (function(){
   var c = { console: console, Math: Math, Date: Date, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String,
