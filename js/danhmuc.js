@@ -274,11 +274,12 @@ function khoaCardHtml(){
   var c = khoaCauHinh();
   var h = '<div class="card"><h3>Khóa app trên máy này</h3>';
   if (!c){
-    return h + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt mã PIN để người khác cầm máy không xem được số tiền. '
-      + 'Mở bằng vân tay / Face ID nếu máy hỗ trợ. Chỉ áp dụng trên máy này.</div>'
+    return h + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt mã PIN 6 số để người khác cầm máy không xem được số tiền. '
+      + 'Mở khóa là tự quét Face ID / vân tay nếu máy hỗ trợ và đã bật. Chỉ áp dụng trên máy này.</div>'
       + '<button class="btn sm" data-act="khoaDatPin">'+icon('lock')+' Đặt mã PIN</button></div>';
   }
   var phut = num(c.phut);
+  if (c.len && c.len !== KHOA_DO_DAI) h += '<div class="empty" style="padding:0 0 10px;text-align:left">Mã PIN hiện tại dài '+c.len+' số (đặt từ bản cũ). Nên bấm "Đổi mã PIN" để chuyển sang đúng 6 số.</div>';
   h += '<div class="form-row"><div><label>Khóa lại khi rời app quá</label><select data-act="khoaPhut">'
     + [[0, 'Ngay khi rời app'], [1, '1 phút'], [5, '5 phút'], [15, '15 phút']].map(function(o){
         return '<option value="'+o[0]+'"'+(phut === o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; }).join('')
