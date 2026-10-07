@@ -6,9 +6,10 @@
 :root{
   color-scheme: light dark;
   /* Bảng màu lấy từ logo (đỏ + vàng): nền KEM VÀNG (như giấy hoa văn Tết), thẻ kem nhạt, viền vàng nâu nhạt,
-     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 13:1, chữ phụ >= 5,6:1, số xanh/đỏ >= 4,5:1). */
+     chữ nâu đậm. Độ tương phản chữ/nền đã kiểm theo WCAG (chữ chính >= 13:1, chữ phụ >= 5,6:1, số xanh/đỏ >= 4,5:1).
+     Đỏ chủ đạo là ĐỎ GẠCH dịu (#b5473a, chữ trắng 5,3:1); đỏ tươi --red chỉ dành cho tín hiệu (số chi, vượt mức, lỗi). */
   --bg:#f8eccb; --card:#fff9e6; --border:#e6d3a0; --text:#2b2012; --muted:#6b5a3e;
-  --primary:#c5071c; --primary-d:#9d0516; --green:#14753a; --red:#c62828; --amber:#a85208; --gold:#7d5a06;
+  --primary:#b5473a; --primary-d:#8f3328; --green:#14753a; --red:#c62828; --amber:#a85208; --gold:#7d5a06;
   --thu-bg:#eef3d6; --chi-bg:#fbe6d6; --shadow:0 1px 2px rgba(110,80,20,.08), 0 2px 8px rgba(110,80,20,.08);
   /* màu phụ, trước đây viết cứng trong rule */
   --input-bg:#fffdf3;      /* nền ô nhập + nền th sticky */
@@ -19,14 +20,14 @@
   --danger-br:#eab29c;     /* viền nút nguy hiểm */
   --warn-bg:#ffefb8; --warn-br:#e6c566; --warn-tx:#70440a;  /* banner cảnh báo */
   --mask:rgba(50,32,10,.45);   /* nền mờ sau hộp thoại */
-  --hero-a:#a80518; --hero-b:#c5071c; --hero-c:#d63a2c;   /* thẻ tổng quan (đỏ theo logo) */
-  --chi-solid:#c62828; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
+  --hero-a:#9c4236; --hero-b:#ad4e3e; --hero-c:#b85a46;   /* thẻ tổng quan: đỏ gạch dịu (đỏ tươi logo quá gắt khi phủ cả khối) */
+  --chi-solid:#b03f30; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
 [data-theme="dark"]{
   color-scheme: dark;
   /* tối NÂU ẤM rõ (cà phê / gỗ), không còn đen: cùng hệ với nền kem vàng ở theme sáng */
   --bg:#2a1c14; --card:#37261b; --border:#54402e; --text:#f6ead9; --muted:#c9b49c;
-  --primary:#cc3045; --primary-d:#ffa3ae; --green:#6fd99a; --red:#ff8a80; --amber:#f6bb4a; --gold:#e8bd4f;
+  --primary:#c4604f; --primary-d:#f2a493; --green:#6fd99a; --red:#ff8a80; --amber:#f6bb4a; --gold:#e8bd4f;
   --thu-bg:#21301d; --chi-bg:#43221b; --shadow:0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
   --input-bg:#2f2017;
   --hover:#46321f;
@@ -36,8 +37,8 @@
   --danger-br:#7a3c32;
   --warn-bg:#40331a; --warn-br:#7a6120; --warn-tx:#f6d57a;
   --mask:rgba(10,5,0,.65);
-  --hero-a:#5e0a15; --hero-b:#7d0e1c; --hero-c:#92231c;
-  --chi-solid:#c53030; --thu-solid:#1a7a42;
+  --hero-a:#5a2219; --hero-b:#6e2b20; --hero-c:#7e3726;
+  --chi-solid:#a8432f; --thu-solid:#1a7a42;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
@@ -498,16 +499,16 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 :root{
   --k-act:#d98a00;--k-act-bg:#fff0c4; --k-bud:#3f8f4f;--k-bud-bg:#ecf4dc;
   --k-goal:#3d7ea6;--k-goal-bg:#e6f0f3; --k-wal:#b8860b;--k-wal-bg:#fffdf2;
-  --k-in:#c5071c;--k-in-bg:#ffffff; --k-debt:#c62828;--k-debt-bg:#fbe9e0;
+  --k-in:#b5473a;--k-in-bg:#ffffff; --k-debt:#c62828;--k-debt-bg:#fbe9e0;
   --k-asset:#3f8f4f;--k-asset-bg:#ecf4dc;
-  --vc0:#c5071c;--vc1:#3d7ea6;--vc2:#3f8f4f;--vc3:#d98a00;--vc4:#7b5ea7;
+  --vc0:#b5473a;--vc1:#3d7ea6;--vc2:#3f8f4f;--vc3:#d98a00;--vc4:#7b5ea7;
 }
 [data-theme="dark"]{
   --k-act:#f0a92b;--k-act-bg:#3d3015; --k-bud:#5fd38d;--k-bud-bg:#22301f;
   --k-goal:#6bb4dc;--k-goal-bg:#1f2f38; --k-wal:#e8bd4f;--k-wal-bg:#3a2a1a;
-  --k-in:#e0556a;--k-in-bg:var(--card); --k-debt:#ff8a80;--k-debt-bg:#43221b;
+  --k-in:#d9735f;--k-in-bg:var(--card); --k-debt:#ff8a80;--k-debt-bg:#43221b;
   --k-asset:#5fd38d;--k-asset-bg:#22301f;
-  --vc0:#e0556a;--vc1:#6bb4dc;--vc2:#5fd38d;--vc3:#f0a92b;--vc4:#b79ae0;
+  --vc0:#d9735f;--vc1:#6bb4dc;--vc2:#5fd38d;--vc3:#f0a92b;--vc4:#b79ae0;
 }
 .k-act{--k:var(--k-act);--kbg:var(--k-act-bg)} .k-bud{--k:var(--k-bud);--kbg:var(--k-bud-bg)}
 .k-goal{--k:var(--k-goal);--kbg:var(--k-goal-bg)} .k-wal{--k:var(--k-wal);--kbg:var(--k-wal-bg)}
@@ -557,11 +558,11 @@ details[open]>div,details[open]>.giai-thich-nd{animation:mo-in .22s var(--ease)}
    LỚP 7 — biểu đồ tự vẽ (js/bieudo.js). Màu lấy từ biến --bd-* nên đổi sáng/tối tự động.
    ==================================================================== */
 :root{
-  --bd-chi:#c5071c;--bd-thu:#3f8f4f;--bd-blue:#3d7ea6;--bd-amb:#d98a00;--bd-gray:#9b8a76;
+  --bd-chi:#bf4f3c;--bd-thu:#3f8f4f;--bd-blue:#3d7ea6;--bd-amb:#d98a00;--bd-gray:#9b8a76;
   --bd-grid:rgba(80,30,10,.09);--bd-tipbg:#2b1a12;--bd-tipfg:#fff;
 }
 [data-theme="dark"]{
-  --bd-chi:#e0556a;--bd-thu:#5fd38d;--bd-blue:#6bb4dc;--bd-amb:#f0a92b;--bd-gray:#8a7466;
+  --bd-chi:#e07a64;--bd-thu:#5fd38d;--bd-blue:#6bb4dc;--bd-amb:#f0a92b;--bd-gray:#8a7466;
   --bd-grid:rgba(255,255,255,.08);--bd-tipbg:#f3e6d8;--bd-tipfg:#2a1c14;
 }
 .bd-box{margin:2px 0 0}
