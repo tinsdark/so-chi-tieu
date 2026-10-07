@@ -98,6 +98,21 @@ test('tra_1_lan: đúng 1 kỳ, rơi vào tháng đáo hạn, không lãi', func
   eq(sch[0].duNoConLai, 0, 'dư nợ sau kỳ cuối');
 });
 
+test('tra_co_dinh: vay 10tr trả 1tr/tháng × 12 kỳ -> gốc 833.333/kỳ, lãi chia đều, tổng lãi 2tr', function(){
+  var sch = ctx.tinhLichTraNo({ hinhThuc:'tra_co_dinh', soTienGoc:10000000, soTienTraThang:1000000, soThangVay:12, ngayVay:'2026-10-05' });
+  eq(sch.length, 12);
+  sch.forEach(function(r){ near(r.tongTra, 1000000, 0.01, 'mỗi kỳ trả đúng số cố định'); });
+  var g = 0, l = 0; sch.forEach(function(r){ g += r.goc; l += r.lai; });
+  near(g, 10000000, 0.5, 'tổng gốc'); near(l, 2000000, 0.5, 'tổng lãi = tổng trả − gốc');
+  near(sch[11].duNoConLai, 0, 0.5, 'kỳ cuối hết nợ');
+  eq(sch[0].mk, '2026-11'); eq(sch[0].ngayTra, '2026-11-05');
+});
+
+test('tra_co_dinh: tổng trả < gốc (nhập sai) không sinh lãi âm', function(){
+  var sch = ctx.tinhLichTraNo({ hinhThuc:'tra_co_dinh', soTienGoc:12000000, soTienTraThang:500000, soThangVay:12, ngayVay:'2026-10-05' });
+  sch.forEach(function(r){ eq(r.lai, 0); near(r.goc, 1000000, 0.01); });
+});
+
 test('tra_1_lan: không có ngày đáo hạn thì tính theo số tháng vay', function(){
   var sch = ctx.tinhLichTraNo({ hinhThuc:'tra_1_lan', soTienGoc:10000000, ngayVay:'2026-10-05', soThangVay:6 });
   eq(sch[0].mk, '2027-04', 'ngày vay T10 + 6 tháng');
@@ -1284,7 +1299,7 @@ test('Khoản vay mới khai "đã trả N kỳ": tiến độ đúng NGAY, khô
   loadData(baseData());
   ctx.state.vnFormId = null;
   var f = { vn_vn_ten:'Vay A', vn_vn_hinh:'khong_lai', vn_vn_ngay:'2026-06-10', vn_vn_ngayTra:'10', vn_vn_loai:'ban_be',
-            vn_vn_soTien:'6000000', vn_vn_soThang:'6', vn_vn_daoHan:'', vn_vn_laiSuat:'', vn_vn_tatToan:'', vn_vn_daTraKy:'2' };
+            vn_vn_soTien:'6000000', vn_vn_soThang:'6', vn_vn_daoHan:'', vn_vn_laiSuat:'', vn_vn_traThang:'', vn_vn_tatToan:'', vn_vn_daTraKy:'2' };
   Object.keys(f).forEach(function(k){ f[k] = { value: f[k] }; });
   voiDom(f, null, function(){ ctx.handleVayNoAction('vnSaveVayNo', {}); });
   var l = ctx.state.data.vayNo.vayNoPhaiTra[0];

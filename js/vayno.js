@@ -7,7 +7,7 @@
    ==================================================================== */
 
 var LOAI_VAY_LABEL = { ngan_hang:'Ngân hàng', vi:'Ví', ban_be:'Bạn bè', nguoi_than:'Người thân' };
-var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất' };
+var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng' };
 
 function monthKeyAdd(mk, n){
   var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + n;
@@ -39,6 +39,18 @@ function tinhLichTraNo(loan){
     return sch;
   }
   var n = Math.max(1, num(loan.soThangVay));
+  // trả cố định/tháng (trả góp điện máy, vay qua app, vay người quen): chỉ biết gốc, số tiền trả mỗi tháng
+  // và số kỳ, không biết lãi suất. Phần chênh (tổng trả − gốc) coi là lãi, chia đều mỗi kỳ; gốc mỗi kỳ = gốc/n.
+  // Tổng trả < gốc (nhập sai) thì không có lãi âm: coi như không lãi, chia đều gốc.
+  if (loan.hinhThuc === 'tra_co_dinh'){
+    var tra = num(loan.soTienTraThang), gocKy = goc0 / n, laiKy = Math.max(0, tra - gocKy), duNoCD = goc0;
+    for (var c=1;c<=n;c++){
+      duNoCD -= gocKy;
+      var mkC = monthKeyAdd(startMk,c);
+      sch.push({ mk: mkC, ngayTra: ngayTraCuaKy(mkC, ngayTrongThang), goc: gocKy, lai: laiKy, tongTra: gocKy + laiKy, duNoConLai: Math.max(0,duNoCD) });
+    }
+    return sch;
+  }
   if (loan.hinhThuc === 'khong_lai'){
     var gocThang = goc0 / n, duNo = goc0;
     for (var i=1;i<=n;i++){
@@ -411,6 +423,7 @@ function vayNoFormHtml(){
     + '<div><label>Kỳ hạn (số tháng)</label><input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="Bỏ trống nếu trả 1 lần" min="0"></div>'
     + '<div><label>Ngày đáo hạn (nếu trả 1 lần)</label><input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'"></div>'
     + '<div><label>Lãi suất %/năm</label><input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="Chỉ cần nếu có lãi suất" min="0"></div>'
+    + '<div><label>Số tiền trả mỗi tháng</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_traThang" value="'+veSo(d.soTienTraThang)+'" placeholder="Chỉ cho hình thức Trả cố định/tháng"></div>'
     // số thực trả khi tất toán thường THẤP hơn tổng còn phải trả theo lịch (lãi các kỳ sau
     // không phải trả) -> nhập 1 lần ở đây, hộp thoại Tất toán + tab Mô phỏng lấy làm mặc định
     + vnViSelectHtml('vn_vn_wallet', 'Ví nhận tiền vay / trả nợ', editing)
@@ -762,6 +775,7 @@ function handleVayNoAction(act, el){
       soThangVay: numNonNeg(document.getElementById('vn_vn_soThang').value),
       ngayDaoHan: document.getElementById('vn_vn_daoHan').value || '',
       laiSuatNam: numNonNeg(document.getElementById('vn_vn_laiSuat').value),
+      soTienTraThang: numNonNeg(docSo(document.getElementById('vn_vn_traThang').value)),
       walletId: vnViTuForm('vn_vn_wallet', state.vnFormId ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; }) : null),
       soTienTatToan: numNonNeg(docSo(document.getElementById('vn_vn_tatToan').value))
     };
@@ -770,6 +784,13 @@ function handleVayNoAction(act, el){
     }
     if (hinh !== 'tra_1_lan' && !objVN.soThangVay){
       toast('Nhập kỳ hạn (số tháng) trả.', { loai:'warn' }); return true;
+    }
+    if (hinh === 'tra_co_dinh'){
+      if (!objVN.soTienTraThang){ toast('Nhập số tiền trả mỗi tháng.', { loai:'warn' }); return true; }
+      if (objVN.soTienTraThang * objVN.soThangVay < objVN.soTienGoc - 0.5){
+        toast('Trả ' + fmt(objVN.soTienTraThang) + ' × ' + objVN.soThangVay + ' tháng = ' + fmt(objVN.soTienTraThang * objVN.soThangVay)
+          + ', ít hơn số tiền vay ' + fmt(objVN.soTienGoc) + '. Kiểm tra lại số tiền hoặc số tháng.', { loai:'warn' }); return true;
+      }
     }
     var vnTarget = state.vnFormId
       ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; })

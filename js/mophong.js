@@ -82,6 +82,7 @@ function mpBuildScenario(){
         hinhThuc: dc.hinhThuc || 'khong_lai',
         soTienGoc: num(dc.soTien),
         laiSuatNam: num(dc.laiSuatNam),
+        soTienTraThang: num(dc.soTienTraThang),
         soThangVay: Math.max(1, num(dc.soThang) || 1),
         ngayVay: dc.mkTu + '-01',
         ngayTraHangThang: 1,
@@ -170,6 +171,7 @@ function mpFormHtml(){
            return '<option value="'+k+'"'+((dc&&dc.hinhThuc===k)?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('')
        + '</select></div>';
     h += '<div><label>Lãi suất / năm (%)</label><input type="number" id="mp_laiSuatNam" min="0" step="0.01" value="'+(dc?num(dc.laiSuatNam):'')+'"></div>';
+    h += '<div><label>Trả mỗi tháng (nếu trả cố định)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_traThang" value="'+(dc?veSo(dc.soTienTraThang):'')+'" placeholder="0"></div>';
     h += '<div><label>Số tháng vay</label><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):12)+'"></div>';
     h += '<div><label>Nhận tiền tháng</label><select id="mp_mk">'+mkOpts(dc?dc.mkTu:curMk)+'</select></div>';
   } else if (loai === 'traSom') {
@@ -393,6 +395,7 @@ function handleMoPhongAction(act, el){
       dc.soTien = numNonNeg(docSo(g('mp_soTien')));
       dc.hinhThuc = g('mp_hinhThuc') || 'khong_lai';
       dc.laiSuatNam = numNonNeg(g('mp_laiSuatNam'));
+      dc.soTienTraThang = numNonNeg(docSo(g('mp_traThang')));
       dc.soThang = Math.max(1, num(g('mp_soThang')) || 1);
       dc.mkTu = g('mp_mk');
       dc.loaiVay = 'ngan_hang';
