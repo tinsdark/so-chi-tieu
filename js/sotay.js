@@ -806,23 +806,17 @@ function handleSoTayAction(act, el){
       var editedE = { thu: thu, chi: chi, ghiChu: ghiChu, refs: oldE.refs || [], items: entryItems(oldE) };
       state.data.journal[date] = editedE;
       // form chỉ sửa được TỔNG theo danh mục, không biết dòng nào thay đổi
-      // -> để repair co/giãn các dòng chi tiết cho khớp tổng mới
+      // -> để repair co/giãn các dòng chi tiết cho khớp tổng mới, rồi tính lại thu/chi từ items + refs
       repairEntryItems(editedE);
+      entryTinhLai(editedE);
     } else if (state.data.journal[date]){
+      // thêm vào ngày đã có: CHỈ thêm ghi chú; tiền vào thu/chi khi ketThuc() tạo dòng items / gắn refs
       var existing = state.data.journal[date];
-      existing.thu = (existing.thu && typeof existing.thu === 'object') ? existing.thu : {};
-      Object.keys(thu).forEach(function(cid){
-        existing.thu[cid] = num(existing.thu[cid]) + thu[cid];
-      });
-      existing.chi = existing.chi || {};
-      Object.keys(chi).forEach(function(cid){
-        existing.chi[cid] = num(existing.chi[cid]) + chi[cid];
-      });
       existing.refs = existing.refs || [];
       existing.items = Array.isArray(existing.items) ? existing.items : [];
       if (ghiChuLuu) existing.ghiChu = existing.ghiChu ? (existing.ghiChu + '; ' + ghiChuLuu) : ghiChuLuu;
     } else {
-      state.data.journal[date] = { thu: thu, chi: chi, ghiChu: ghiChuLuu, refs: [], items: [] };
+      state.data.journal[date] = { thu: {}, chi: {}, ghiChu: ghiChuLuu, refs: [], items: [] };
     }
     // danh mục được gắn vào khoản vay/cho vay bên dưới (journalTagRef): số tiền đó
     // chuyển sang tầng refs nên KHÔNG được sinh dòng items, nếu không sẽ đếm 2 lần.
@@ -857,7 +851,7 @@ function handleSoTayAction(act, el){
             eNew.items.push(itNew);
           });
         });
-        repairEntryItems(eNew);
+        entryTinhLai(eNew);      // tiền = các dòng vừa tạo + refs đã gắn (không còn cộng thẳng vào thu/chi)
       }
       state.editingDate = null;
       state.soTayEditIid = null;
