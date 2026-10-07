@@ -509,10 +509,17 @@ function iosNenGoiYCai(){
   if (!laIos() || dangChayNhuApp()) return false;
   try{ return localStorage.getItem('chitieu_ios_hint') !== '1'; }catch(e){ return true; }
 }
+// dòng thông báo ở màn đăng nhập: "Đang ..." là trạng thái (màu trung tính), còn lại là lỗi (màu đỏ)
+function gateMsg(t){
+  var el = document.getElementById('authMsg');
+  if (!el) return;
+  el.textContent = t || '';
+  el.classList.toggle('dang', /^Đang/.test(t || ''));
+}
 function showGate(msg){
   document.getElementById('app').style.display = 'none';
   document.getElementById('authGate').style.display = 'flex';
-  document.getElementById('authMsg').textContent = msg || '';
+  gateMsg(msg);
   var gy = document.getElementById('iosHint');
   if (gy) gy.style.display = iosNenGoiYCai() ? '' : 'none';
   var bo = document.getElementById('btnOffline');
@@ -521,7 +528,7 @@ function showGate(msg){
     bo.style.display = snap ? '' : 'none';
     if (snap){
       var t = new Date(snap.savedAt);
-      bo.textContent = 'Mở ngoại tuyến (dữ liệu trên máy lúc ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ' ' + t.toLocaleDateString('vi-VN') + ')';
+      bo.innerHTML = '<b>Mở ngoại tuyến</b><small>Dữ liệu trên máy lúc ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ' ' + t.toLocaleDateString('vi-VN') + '</small>';
     }
   }
 }
@@ -546,7 +553,7 @@ async function thuXinTokenAmTham(){
   }
   if (!(window.google && google.accounts && google.accounts.oauth2)) return null;
   if (!tokenClient) initTokenClient();
-  document.getElementById('authMsg').textContent = 'Đang gia hạn phiên đăng nhập…';
+  gateMsg('Đang gia hạn phiên đăng nhập…');
   try{
     return await Promise.race([
       requestToken(false),
@@ -559,7 +566,7 @@ async function tiepTucPhienDangNhap(){
   var tok = readSavedToken() || await thuXinTokenAmTham();
   if (!tok) return false;
   accessToken = tok;
-  document.getElementById('authMsg').textContent = 'Đang vào bằng phiên đăng nhập gần nhất…';
+  gateMsg('Đang vào bằng phiên đăng nhập gần nhất…');
   var ok = false;
   try{ ok = await driveLoad(); }catch(e){ ok = false; }
   if (!ok){
@@ -581,11 +588,11 @@ async function tiepTucPhienDangNhap(){
 
 async function signIn(){
   if (!window.google || !google.accounts || !google.accounts.oauth2){
-    document.getElementById('authMsg').textContent = 'Đang tải Google Sign-In… thử lại sau 1-2 giây.';
+    gateMsg('Đang tải Google Sign-In… thử lại sau 1-2 giây.');
     return;
   }
   if (!tokenClient) initTokenClient();
-  document.getElementById('authMsg').textContent = 'Đang đăng nhập…';
+  gateMsg('Đang đăng nhập…');
   try{
     await requestToken(true);
     // từ ngoại tuyến đăng nhập lại: các sửa ngoại tuyến nằm trong nháp, checkLocalDraft sẽ hỏi khôi phục
