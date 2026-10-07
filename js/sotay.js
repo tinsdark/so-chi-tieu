@@ -292,6 +292,8 @@ function renderSoTay(){
 
   var html = '';
   html += thangNavHtml(mk);
+  // màn rộng (>=1024px, CSS .cot2): cột trái = tổng quan + ghi nhanh + việc cần làm, cột phải = form + danh sách
+  html += '<div class="cot2"><div class="cot-trai">';
   html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock);
   if (beforeLock){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc chốt số dư ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
@@ -406,6 +408,7 @@ function renderSoTay(){
   html += '</div></div>';
   var formHtml = html;
   html = htmlTruocForm;
+  html += '</div><div class="cot-phai">';
   if (formMo) html += formHtml;
 
   // Table + tìm kiếm/lọc
@@ -485,6 +488,7 @@ function renderSoTay(){
 
   // Biểu đồ: js/bieudo.js (SVG tự vẽ, 3 tab)
 
+  html += '</div></div>';
   root.innerHTML = html;
 }
 

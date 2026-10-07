@@ -62,8 +62,8 @@ function _moThanh(root){
 
 function _moCard(root){
   var i = 0;
-  Array.prototype.forEach.call(root.children, function(c){
-    if (!c.classList || !(c.classList.contains('card') || c.classList.contains('month-nav'))) return;
+  // thẻ nằm thẳng trong #tabContent hoặc trong 2 cột của bố cục màn rộng (.cot2)
+  Array.prototype.forEach.call(root.querySelectorAll(':scope > .card, :scope > .month-nav, :scope > .cot2 > div > .card'), function(c){
     c.style.animationDelay = Math.min(i++, 6) * 35 + 'ms';
     c.classList.add('anim-card');
     c.addEventListener('animationend', function f(){ c.classList.remove('anim-card'); c.style.animationDelay = ''; c.removeEventListener('animationend', f); });
