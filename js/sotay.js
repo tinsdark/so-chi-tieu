@@ -977,9 +977,13 @@ function handleSoTayAction(act, el){
   } else if (act === 'qaHoanTac'){
     if (state.qa.last){ var banH = state.qa.last.ban; qaHoanTacLanGhi(banH); toast('Đã hoàn tác.'); }
   } else if (act === 'goBaoCao'){
+    var toBC = el.getAttribute('data-to') || '';
     chuyenTab('baocao');
-    var dichBC = document.getElementById(el.getAttribute('data-to') || '');
-    if (dichBC && dichBC.scrollIntoView) dichBC.scrollIntoView({ behavior:'smooth', block:'start' });
+    // đổi tab có chuyển cảnh thì tab mới vẽ sau 1 nhịp -> đợi rồi mới cuộn tới thẻ
+    setTimeout(function(){
+      var dichBC = document.getElementById(toBC);
+      if (dichBC && dichBC.scrollIntoView) dichBC.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 320);
   } else if (act === 'tqCuon'){
     var dich = document.getElementById(el.getAttribute('data-to') || '');
     if (dich && dich.scrollIntoView) dich.scrollIntoView({ behavior:'smooth', block:'start' });
