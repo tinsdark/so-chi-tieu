@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chính sách quyền riêng tư — Sổ Chi Tiêu</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{color-scheme:light dark;--bg:#f8eccb;--card:#fffaf0;--tx:#2b1d17;--muted:#6b5a50;--pri:#b5473a;--br:#e6d6b0}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1613;--card:#26201c;--tx:#f1e8dc;--muted:#b3a496;--pri:#e08a7c;--br:#3a312b}}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px 56px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:16px;padding:20px 20px 8px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:24px 0 6px;color:var(--pri)}
+p,li{margin:6px 0}ul{padding-left:20px}.m{color:var(--muted);font-size:14px}
+code{overflow-wrap:anywhere;font-size:14px}a{color:var(--pri)}.back{display:inline-block;margin-bottom:14px;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="./">← Về Sổ Chi Tiêu</a>
+<div class="card">
+<h1>Chính sách quyền riêng tư</h1>
+<p class="m">Ứng dụng: Sổ Chi Tiêu · Cập nhật lần cuối: 07/10/2026</p>
+
+<h2>Tóm tắt</h2>
+<p>Sổ Chi Tiêu là ứng dụng web chạy hoàn toàn trên thiết bị của bạn. Ứng dụng <b>không có máy chủ riêng</b>. Dữ liệu chi tiêu của bạn nằm trong Google Drive của chính bạn và trên thiết bị bạn đang dùng. Người phát triển ứng dụng không thể xem dữ liệu đó.</p>
+
+<h2>Ứng dụng truy cập thông tin gì</h2>
+<p>Khi bạn đăng nhập bằng Google, ứng dụng xin đúng một quyền: <code>https://www.googleapis.com/auth/drive.file</code> (chỉ truy cập các tệp do chính ứng dụng tạo ra hoặc bạn chủ động mở bằng ứng dụng).</p>
+<ul>
+<li>Ứng dụng <b>không</b> đọc được các tệp khác trong Drive của bạn.</li>
+<li>Ứng dụng tạo và cập nhật một tệp dữ liệu tên <code>chitieu-canhan-data.json</code> trong Drive của bạn, chứa sổ thu chi, khoản vay, danh mục, ví và cài đặt bạn nhập.</li>
+<li>Ứng dụng không yêu cầu và không lưu tên, email, ảnh hay danh bạ của bạn.</li>
+</ul>
+
+<h2>Dữ liệu lưu trên thiết bị</h2>
+<ul>
+<li>Bản sao dữ liệu để dùng khi mất mạng, bản nháp chưa đồng bộ, và mã truy cập tạm của Google (hết hạn sau khoảng 1 giờ) được lưu trong bộ nhớ trình duyệt (localStorage) của thiết bị.</li>
+<li>Nếu bạn bật khóa ứng dụng: chỉ lưu dấu băm của mã PIN (PBKDF2-SHA256, kèm salt ngẫu nhiên), không lưu PIN gốc. Sinh trắc học (Face ID, vân tay) do hệ điều hành xử lý, ứng dụng không nhận được dữ liệu sinh trắc.</li>
+<li>Đăng xuất hoặc xóa dữ liệu trình duyệt sẽ xóa các thông tin này khỏi thiết bị. Dữ liệu trong Drive không bị xóa.</li>
+</ul>
+
+<h2>Chia sẻ dữ liệu</h2>
+<p>Ứng dụng không bán, không chia sẻ và không gửi dữ liệu của bạn cho bên thứ ba. Ứng dụng không có quảng cáo, không có công cụ phân tích hay theo dõi hành vi.</p>
+<p>Ứng dụng tải hai thư viện từ bên ngoài khi mở: Google Identity Services (<code>accounts.google.com</code>, để đăng nhập) và SheetJS (<code>cdn.sheetjs.com</code>, để nhập/xuất tệp Excel). Các máy chủ này có thể nhận địa chỉ IP của bạn theo cách mọi trang web thông thường vẫn làm, nhưng không nhận dữ liệu chi tiêu.</p>
+
+<h2>Việc sử dụng dữ liệu người dùng Google</h2>
+<p>Việc sử dụng và chuyển giao thông tin nhận được từ các API của Google sẽ tuân thủ <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Chính sách dữ liệu người dùng của Google API Services</a>, bao gồm các yêu cầu về Sử dụng hạn chế (Limited Use). Dữ liệu từ Drive chỉ được dùng để hiển thị và đồng bộ sổ chi tiêu cho chính bạn.</p>
+
+<h2>Quyền của bạn</h2>
+<ul>
+<li><b>Xem / xuất / xóa dữ liệu:</b> mở Google Drive của bạn, tìm tệp <code>chitieu-canhan-data.json</code> để tải về hoặc xóa.</li>
+<li><b>Thu hồi quyền truy cập:</b> vào <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>, chọn Sổ Chi Tiêu rồi "Xóa quyền truy cập".</li>
+</ul>
+
+<h2>Trẻ em</h2>
+<p>Ứng dụng không nhắm tới trẻ em dưới 13 tuổi.</p>
+
+<h2>Thay đổi chính sách</h2>
+<p>Nếu chính sách thay đổi, ngày cập nhật ở đầu trang sẽ được sửa.</p>
+
+<h2>Liên hệ</h2>
+<p>Mọi câu hỏi về quyền riêng tư: <a href="mailto:pizover@gmail.com">pizover@gmail.com</a></p>
+</div>
+</main>
+</body>
+</html>
