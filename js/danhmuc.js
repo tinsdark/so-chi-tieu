@@ -54,6 +54,7 @@ function renderDanhMuc(){
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += viCardHtml();
   html += dkCardHtml();
+  html += qtCardHtml();
   html += mtCardHtml();
   html += '<div class="card"><h3>Chốt số dư</h3>'
     + ghiChuGon('Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.', 'Chốt số dư là gì?')
@@ -221,6 +222,27 @@ function dkCardHtml(){
   return h + '</div>';
 }
 
+/* ---- Quy tắc tự phân loại (logic: nhapQuyTac ở nhap.js) ---- */
+function qtCardHtml(){
+  var ds = state.data.settings.quyTac || [];
+  var h = '<div class="card"><h3>Quy tắc tự phân loại</h3>'
+    + ghiChuGon('Ghi chú có chứa từ khóa (không phân biệt hoa thường, có dấu hay không) thì tự chọn danh mục: khi gõ ghi chú ở <b>Ghi nhanh</b> và khi <b>Nhập từ file</b> (dòng không có cột danh mục). Quy tắc đứng trên được ưu tiên.', 'Dùng thế nào?')
+    + '<div class="form-row">'
+    + '<div><label>Từ khóa trong ghi chú</label><input type="text" id="qt_tu" placeholder="VD: grab, shopee, điện"></div>'
+    + '<div><label>Danh mục</label><select id="qt_cat">'+dkCatOptions('')+'</select></div>'
+    + '</div><button class="btn sm" data-act="qtThem" style="margin-bottom:10px">+ Thêm quy tắc</button>';
+  if (!ds.length){
+    h += '<div class="empty">Chưa có quy tắc nào.</div>';
+  } else {
+    h += '<div class="qt-ds">' + ds.map(function(q){
+      return '<div class="qt-r"><span class="qt-tu">"'+esc(q.tuKhoa)+'"</span><span class="qt-mui">→</span>'
+        + '<span class="qt-cat">'+catDot(q.kind, q.catId)+(q.kind === 'thu' ? 'Thu · ' : 'Chi · ')+esc(catTen(q.kind, q.catId))+'</span>'
+        + '<button class="icon-btn" data-act="qtXoa" data-id="'+esc(q.id)+'" title="Xóa quy tắc" aria-label="Xóa quy tắc '+esc(q.tuKhoa)+'">'+icon('trash')+'</button></div>';
+    }).join('') + '</div>';
+  }
+  return h + '</div>';
+}
+
 /* ---- Cài lên màn hình chính (PWA): hướng dẫn theo thiết bị ---- */
 function caiAppCardHtml(){
   var h = '<div class="card"><h3>Cài lên điện thoại / máy tính</h3>';
@@ -376,6 +398,24 @@ function handleDanhMucAction(act, el){
       state.data.mucTieu.splice(Math.min(mtXi, state.data.mucTieu.length), 0, mtXg);
       scheduleSave(); renderDanhMuc();
     } });
+  } else if (act === 'qtThem'){
+    var qtTu = (document.getElementById('qt_tu') || {}).value || '';
+    var qtCat = ((document.getElementById('qt_cat') || {}).value || '').split('|');
+    qtTu = qtTu.trim();
+    if (!qtTu || qtCat.length !== 2){ toast('Nhập từ khóa và chọn danh mục.', { loai:'warn' }); return true; }
+    var dsQt = state.data.settings.quyTac;
+    if (dsQt.some(function(q){ return nhapBoDau(q.tuKhoa) === nhapBoDau(qtTu) && q.kind === qtCat[0]; })){
+      toast('Đã có quy tắc cho từ khóa "'+qtTu+'".', { loai:'warn' }); return true;
+    }
+    dsQt.push({ id: 'qt_' + Date.now().toString(36), tuKhoa: qtTu, kind: qtCat[0], catId: qtCat[1] });
+    scheduleSave(); renderDanhMuc();
+    toast('Đã thêm quy tắc "'+qtTu+'" → '+catTen(qtCat[0], qtCat[1])+'.');
+  } else if (act === 'qtXoa'){
+    var dsX = state.data.settings.quyTac, iX = dsX.findIndex(function(q){ return q.id === el.getAttribute('data-id'); });
+    if (iX < 0) return true;
+    var qX = dsX.splice(iX, 1)[0];
+    scheduleSave(); renderDanhMuc();
+    toast('Đã xóa quy tắc "'+qX.tuKhoa+'".', { hoanTac: function(){ dsX.splice(iX, 0, qX); scheduleSave(); renderDanhMuc(); } });
   } else if (act === 'dkThem'){
     state.dkForm = { id: '' }; renderDanhMuc();
     var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();

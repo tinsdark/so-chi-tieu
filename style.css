@@ -686,3 +686,7 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .tsr-ct{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin-top:4px}
 .tsr-ct b{color:var(--text);font-variant-numeric:tabular-nums}
 .tsr-ct b.thu{color:var(--green)} .tsr-ct b.chi{color:var(--red)}
+/* quy tắc tự phân loại (tab Danh mục) */
+.qt-ds{display:flex;flex-direction:column;gap:6px}
+.qt-r{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);font-size:13px}
+.qt-tu{font-weight:600}.qt-mui{color:var(--muted)}.qt-cat{flex:1;min-width:0}

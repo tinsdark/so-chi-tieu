@@ -554,6 +554,9 @@ function normalizeData(d){
   d.chuyenVi = Array.isArray(d.chuyenVi) ? d.chuyenVi : [];
   // giao dịch định kỳ: chỉ là MẪU để nhắc, không phải tiền thật (xem khối GIAO DỊCH ĐỊNH KỲ)
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
+  // quy tắc tự phân loại (từ khóa trong ghi chú -> danh mục) và cách ghép cột đã lưu cho từng kiểu file sao kê (nhap.js)
+  d.settings.quyTac = Array.isArray(d.settings.quyTac) ? d.settings.quyTac : [];
+  d.settings.mauNhap = (d.settings.mauNhap && typeof d.settings.mauNhap === 'object') ? d.settings.mauNhap : {};
   ['thu', 'chi'].forEach(function(k){
     d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
   });
