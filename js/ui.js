@@ -218,11 +218,49 @@ function chonMot(tieuDe, noiDung, cacLuaChon){
    và mọi chỗ GHI giá trị vào ô .money phải bọc veSo().
    ==================================================================== */
 
+// ô tiền có PHÉP TÍNH hoặc đơn vị viết tắt: "45.000+30.000", "120k", "1,5tr", "2tr-300k", "50k*3".
+// Có dấu phép tính nằm SAU một chữ số (dấu - đứng đầu là số âm, không phải phép trừ) hoặc có k/tr.
+var _BT_RE = /[0-9]\s*[-+*\/×÷]|[0-9]\s*(k|tr|nghìn|ngàn|triệu)\b/i;
+function laBieuThucTien(s){ return _BT_RE.test(String(s == null ? '' : s)); }
+// tính biểu thức tiền, KHÔNG dùng eval: tách số (bỏ dấu chấm nghìn, dấu phẩy là thập phân: 1,5tr) + đơn vị + toán tử,
+// nhân/chia trước, cộng/trừ sau. Sai cú pháp -> null.
+function tinhBieuThucTien(s){
+  var str = String(s).toLowerCase().replace(/×/g, '*').replace(/÷/g, '/').replace(/\s+/g, '');
+  var re = /^([-+*\/]?)([0-9][0-9.]*(?:,[0-9]+)?)(k|nghìn|ngàn|tr|triệu)?/;
+  var toks = [], dau = true;
+  while (str.length){
+    var m = re.exec(str);
+    if (!m) return null;
+    var op = m[1] || (dau ? '+' : null);
+    if (!op || (dau && (op === '*' || op === '/'))) return null;
+    var n = Number(m[2].replace(/\./g, '').replace(',', '.'));
+    if (m[3] === 'k' || m[3] === 'nghìn' || m[3] === 'ngàn') n *= 1000;
+    else if (m[3]) n *= 1000000;
+    toks.push({ op: op, n: n });
+    str = str.slice(m[0].length); dau = false;
+  }
+  if (!toks.length) return null;
+  var cong = [], i;
+  for (i = 0; i < toks.length; i++){
+    var t = toks[i];
+    if (t.op === '*' || t.op === '/'){
+      var truoc = cong[cong.length - 1];
+      if (t.op === '/' && t.n === 0) return null;
+      truoc.n = t.op === '*' ? truoc.n * t.n : truoc.n / t.n;
+    } else cong.push({ dau: t.op === '-' ? -1 : 1, n: t.n });
+  }
+  var kq = 0;
+  cong.forEach(function(c){ kq += c.dau * c.n; });
+  return Math.round(kq);
+}
+
 // "1.800.000" / "-1.800.000" / 1800000 -> số. Bóc hết ký tự không phải chữ số.
+// Có phép tính / k / tr thì tính ra số (xem tinhBieuThucTien).
 function docSo(v){
   if (v == null) return 0;
   if (typeof v === 'number') return v;
   var s = String(v);
+  if (laBieuThucTien(s)){ var bt = tinhBieuThucTien(s); if (bt != null) return bt; }
   var am = /^\s*-/.test(s);
   var d = s.replace(/[^0-9]/g, '');
   if (!d) return 0;
@@ -243,10 +281,16 @@ function dinhDangOTien(el){
   var truoc = el.value;
   var caret = el.selectionStart == null ? truoc.length : el.selectionStart;
   var soChuSoTruoc = (truoc.slice(0, caret).match(/[0-9]/g) || []).length;
-  var am = /^\s*-/.test(truoc);
-  var d = truoc.replace(/[^0-9]/g, '').replace(/^0+(?=[0-9])/, '');
-  var sau = d ? Number(d).toLocaleString('vi-VN') : '';
-  if (am) sau = '-' + sau;
+  var sau;
+  if (laBieuThucTien(truoc) || /[-+*\/×÷]\s*$/.test(truoc.replace(/^\s*-/, ''))){
+    // đang gõ phép tính: chỉ chấm nghìn từng số, giữ nguyên toán tử / k / tr (tính ra số khi rời ô)
+    sau = truoc.replace(/[0-9][0-9.]*/g, function(m){ return Number(m.replace(/\./g, '')).toLocaleString('vi-VN'); });
+  } else {
+    var am = /^\s*-/.test(truoc);
+    var d = truoc.replace(/[^0-9]/g, '').replace(/^0+(?=[0-9])/, '');
+    sau = d ? Number(d).toLocaleString('vi-VN') : '';
+    if (am) sau = '-' + sau;
+  }
   if (sau === truoc) return;
   el.value = sau;
   var i = 0, dem = 0;
@@ -257,6 +301,29 @@ function dinhDangOTien(el){
 document.addEventListener('input', function(ev){
   var el = ev.target;
   if (el && el.classList && el.classList.contains('money')) dinhDangOTien(el);
+});
+// rời ô tiền đang có phép tính -> thay bằng kết quả (nơi đọc ô vẫn qua docSo nên bấm Lưu ngay cũng đúng)
+document.addEventListener('focusout', function(ev){
+  var el = ev.target;
+  if (!el || !el.classList || !el.classList.contains('money') || !laBieuThucTien(el.value)) return;
+  var kq = tinhBieuThucTien(el.value);
+  if (kq == null) return;
+  el.value = veSo(kq);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+});
+// phím nhanh dưới ô tiền (000, +, −): pointerdown + preventDefault để ô KHÔNG mất focus -> bàn phím điện thoại không sập
+document.addEventListener('pointerdown', function(ev){
+  var b = ev.target.closest && ev.target.closest('[data-chen]');
+  if (!b) return;
+  ev.preventDefault();
+  var el = document.getElementById(b.getAttribute('data-for'));
+  if (!el) return;
+  var v = el.value, a = el.selectionStart == null ? v.length : el.selectionStart, z = el.selectionEnd == null ? v.length : el.selectionEnd;
+  var chen = b.getAttribute('data-chen');
+  el.value = v.slice(0, a) + chen + v.slice(z);
+  try { el.setSelectionRange(a + chen.length, a + chen.length); } catch(e){}
+  if (document.activeElement !== el) el.focus();
+  el.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
 /* ---------------- chế độ tối ----------------

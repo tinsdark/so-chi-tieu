@@ -50,6 +50,21 @@ function qaTopCats(kind, n){
   var con = cats.filter(function(c){ return !dem[c.id]; });
   return theoDem.concat(con).slice(0, n);
 }
+// gợi ý ghi chú cho ô Ghi chú của Ghi nhanh: các ghi chú hay dùng nhất của danh mục này trong 180 ngày gần nhất
+function qaGoiYGhiChu(kind, catId, n){
+  var p = todayStr().split('-'), t = new Date(+p[0], +p[1] - 1, +p[2] - 180);
+  var tu = t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+  var dem = {};
+  Object.keys(state.data.journal).forEach(function(d){
+    if (d < tu) return;
+    entryItems(state.data.journal[d]).forEach(function(it){
+      var g = (it.ghiChu || '').trim();
+      if (it.kind !== kind || it.catId !== catId || !g || g === '(chưa chi tiết)') return;
+      dem[g] = (dem[g] || 0) + 1;
+    });
+  });
+  return Object.keys(dem).sort(function(a, b){ return dem[b] - dem[a] || (a < b ? -1 : 1); }).slice(0, n || 8);
+}
 // danh mục đang chọn của 1 loại: lần chọn gần nhất (nếu còn tồn tại và dùng được), không thì cái dùng nhiều nhất
 function qaCatChon(kind){
   var ok = qaCats(kind).some(function(c){ return c.id === state.qa.cat[kind]; });
@@ -77,7 +92,13 @@ function ghiNhanhHtml(){
         ? '<select id="qa_wallet" class="qa-wallet" data-act="qaWallet" aria-label="Tài khoản / ví">'
           + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()) + '</select>'
         : '')
-    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền" value="'+esc(state.qa.amt)+'"></div>';
+    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'"></div>'
+    // phím nhanh: điện thoại bàn phím số không có + / 000
+    + '<div class="qa-keys" aria-label="Phím nhanh cho ô số tiền">'
+    +   '<button type="button" data-chen="000" data-for="qa_amount">000</button>'
+    +   '<button type="button" data-chen="+" data-for="qa_amount" aria-label="Cộng">+</button>'
+    +   '<button type="button" data-chen="-" data-for="qa_amount" aria-label="Trừ">−</button>'
+    + '</div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
   } else {
@@ -93,7 +114,8 @@ function ghiNhanhHtml(){
       + '</div>';
   }
   h += '<div class="qa-row">'
-    + '<input type="text" id="qa_note" placeholder="Ghi chú" aria-label="Ghi chú" value="'+esc(state.qa.note)+'">'
+    + '<input type="text" id="qa_note" placeholder="Ghi chú" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
+    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
     + '<input type="date" id="qa_date" class="qa-date'+(ngay !== homNay ? ' lech' : '')+'" aria-label="Ngày" data-act="qaDate" value="'+esc(ngay)+'">'
     + '</div>';
   h += '<button type="button" class="btn qa-save '+kind+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>Ghi khoản '+(kind === 'thu' ? 'thu' : 'chi')+'</button>'

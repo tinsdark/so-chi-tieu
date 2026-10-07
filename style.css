@@ -364,6 +364,9 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .qa-seg button.thu.on{background:var(--thu-solid);color:#fff}
 .qa-amt{display:block;min-width:0;width:100%;font-size:18px;font-weight:700;padding:8px 10px;border-radius:10px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.qa-keys{display:flex;justify-content:flex-end;gap:6px;margin:-4px 0 10px}
+.qa-keys button{min-width:48px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:600;touch-action:manipulation}
+.qa-keys button:active{background:var(--hover)}
 .qa-chip,.qa-more{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
   padding:7px 13px;font-size:13px;line-height:1.2;display:inline-flex;align-items:center}
 .qa-chip.on,.qa-more.on{border-color:var(--primary);background:var(--row-bal);color:var(--primary-d);font-weight:700}

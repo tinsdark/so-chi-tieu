@@ -2161,6 +2161,48 @@ test('Chart.js đã gỡ: không còn nạp thư viện, không còn <canvas> bi
 });
 
 /* ==================================================================== */
+group('UI. Ô tiền thông minh (ui.js)');
+var uiCtx = (function(){
+  var c = { console: console, Math: Math, Date: Date, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String,
+    parseFloat: parseFloat, parseInt: parseInt, isNaN: isNaN, setTimeout: function(){ return 0; }, clearTimeout: function(){},
+    document: { addEventListener: function(){}, getElementById: function(){ return null; }, documentElement: { setAttribute: function(){} } },
+    window: {}, localStorage: { getItem: function(){ return null; }, setItem: function(){} }, icon: function(){ return ''; }, esc: function(x){ return x; } };
+  c.globalThis = c; vm.createContext(c);
+  vm.runInContext(fs.readFileSync(path.join(JS_DIR, 'ui.js'), 'utf8'), c, { filename: 'ui.js' });
+  return c;
+})();
+
+test('docSo: phép tính, k / tr, số thường và số âm', function(){
+  var d = uiCtx.docSo;
+  eq(d('45.000+30.000'), 75000); eq(d('120k'), 120000); eq(d('1,5tr'), 1500000); eq(d('2tr-300k'), 1700000);
+  eq(d('50k*3'), 150000); eq(d('50k×3'), 150000); eq(d('100.000/4'), 25000); eq(d('10+5*2'), 20, 'nhân trước cộng sau');
+  eq(d('1.800.000'), 1800000); eq(d('-50.000'), -50000, 'dấu trừ đầu là số âm'); eq(d(''), 0); eq(d(1234), 1234);
+  eq(d('45.000+'), 45000, 'đang gõ dở (dấu + cuối) không ra số rác');
+});
+
+test('tinhBieuThucTien: sai cú pháp / chia 0 trả null', function(){
+  eq(uiCtx.tinhBieuThucTien('abc'), null); eq(uiCtx.tinhBieuThucTien('5/0'), null); eq(uiCtx.tinhBieuThucTien('*5'), null);
+});
+
+test('dinhDangOTien: đang gõ phép tính thì giữ toán tử, chấm nghìn từng số', function(){
+  var el = { value: '45000+3000', selectionStart: 10, selectionEnd: 10, setSelectionRange: function(){} };
+  uiCtx.dinhDangOTien(el); eq(el.value, '45.000+3.000');
+  el.value = '45000+'; el.selectionStart = 6; uiCtx.dinhDangOTien(el); eq(el.value, '45.000+');
+  el.value = '1500000'; el.selectionStart = 7; uiCtx.dinhDangOTien(el); eq(el.value, '1.500.000');
+});
+
+test('qaGoiYGhiChu: ghi chú hay dùng nhất của danh mục, bỏ "(chưa chi tiết)"', function(){
+  loadData(baseData({ journal: {
+    '2026-09-20': { thu:{}, chi:{ an: 150000 }, ghiChu:'', items:[
+      { iid:'a', kind:'chi', catId:'an', soTien:50000, ghiChu:'Phở' }, { iid:'b', kind:'chi', catId:'an', soTien:50000, ghiChu:'Cơm' },
+      { iid:'c', kind:'chi', catId:'an', soTien:50000, ghiChu:'Phở' } ] },
+    '2026-09-21': { thu:{}, chi:{ an: 30000 }, ghiChu:'', items:[ { iid:'d', kind:'chi', catId:'an', soTien:30000, ghiChu:'(chưa chi tiết)' } ] } } }));
+  setToday('2026-10-01');
+  var g = ctx.qaGoiYGhiChu('chi', 'an');
+  eq(g.join('|'), 'Phở|Cơm');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
