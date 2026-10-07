@@ -2160,6 +2160,29 @@ test('Chart.js đã gỡ: không còn nạp thư viện, không còn <canvas> bi
   });
 });
 
+test('stDelItem: xóa ngay không hỏi, Hoàn tác trả lại đúng dòng; ngày bị sửa thêm thì không hoàn tác', function(){
+  setToday('2026-10-10');
+  var d = baseData();
+  d.journal['2026-10-05'] = { thu:{}, chi:{ an:80000 }, ghiChu:'Phở 50.000 ₫; Cơm 30.000 ₫', refs:[], items:[
+    { iid:'p', kind:'chi', catId:'an', soTien:50000, ghiChu:'Phở', gc:'Phở 50.000 ₫' }, { iid:'c', kind:'chi', catId:'an', soTien:30000, ghiChu:'Cơm', gc:'Cơm 30.000 ₫' } ] };
+  loadData(d);
+  var goc = JSON.stringify(ctx.state.data.journal['2026-10-05']);
+  var t0 = ctx.toast, undo = null, hoi = 0, x0 = ctx.xacNhan;
+  ctx.toast = function(m, o){ if (o && o.hoanTac) undo = o.hoanTac; };
+  ctx.xacNhan = function(){ hoi++; return Promise.resolve(true); };
+  try{
+    ctx.handleSoTayAction('stDelItem', elAct({ 'data-date':'2026-10-05', 'data-iid':'p' }));
+    eq(hoi, 0, 'không mở hộp thoại'); eq(entryChi('2026-10-05', 'an'), 30000, 'đã trừ ngay');
+    ok(undo, 'có nút Hoàn tác'); undo();
+    eq(JSON.stringify(ctx.state.data.journal['2026-10-05']), goc, 'hoàn tác về đúng như cũ');
+    // xóa rồi sửa thêm ngày đó -> hoàn tác bị từ chối
+    ctx.handleSoTayAction('stDelItem', elAct({ 'data-date':'2026-10-05', 'data-iid':'p' }));
+    ctx.entryAddItem('2026-10-05', 'chi', 'an', 10000, 'Trà đá');
+    undo();
+    eq(entryChi('2026-10-05', 'an'), 40000, 'không trả bản cũ đè lên phần vừa thêm');
+  } finally { ctx.toast = t0; ctx.xacNhan = x0; }
+});
+
 /* ==================================================================== */
 group('UI. Ô tiền thông minh (ui.js)');
 var uiCtx = (function(){

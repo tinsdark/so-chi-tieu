@@ -1119,17 +1119,28 @@ function handleSoTayAction(act, el){
     var eD = state.data.journal[dD];
     var itD = eD ? entryFindItem(eD, iidD) : null;
     if (!itD) return true;
-    (async function(){
-      if (!await xacNhan('Xóa dòng "'+(itD.ghiChu||catTen(itD.kind, itD.catId))+'" · '+fmt(Math.round(num(itD.soTien)))+'?',
-            'Tổng '+(itD.kind==='thu'?'thu':'chi')+' của ngày sẽ giảm đúng số này.',
-            { nguyHiem:true, chuOk:'Xóa' })) return;
-      entryDeleteItem(dD, iidD);
-      if (!state.data.journal[dD]) state.soTayDetailDate = null;
-      state.soTayEditIid = null;
+    /* Xóa NGAY + Hoàn tác trong toast (giống xóa cả ngày không có ref): 1 dòng nhập tay không dính khoản vay,
+       hoàn tác = trả lại nguyên object ngày trước khi xóa. Chỉ hoàn tác khi ngày đó KHÔNG bị sửa gì thêm
+       sau lần xóa (so với bản ngay sau khi xóa) — sửa rồi mà trả bản cũ là mất phần sửa. */
+    var truocXoa = JSON.parse(JSON.stringify(eD));
+    var nhanItD = '"'+(itD.ghiChu||catTen(itD.kind, itD.catId))+'" · '+fmt(Math.round(num(itD.soTien)));
+    entryDeleteItem(dD, iidD);
+    var sauXoa = JSON.stringify(state.data.journal[dD] || null);
+    if (!state.data.journal[dD]) state.soTayDetailDate = null;
+    state.soTayEditIid = null;
+    scheduleSave();
+    renderSoTay();
+    toast('Đã xóa dòng '+nhanItD+'.', { giay:6, hoanTac:function(){
+      if (JSON.stringify(state.data.journal[dD] || null) !== sauXoa){
+        toast('Ngày này đã được sửa thêm sau khi xóa nên không hoàn tác được.', { loai:'warn' });
+        return;
+      }
+      state.data.journal[dD] = truocXoa;
+      invalidateBalanceCache();
       scheduleSave();
       renderSoTay();
-      toast('Đã xóa dòng chi tiết.');
-    })();
+      toast('Đã hoàn tác.');
+    } });
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';
     document.querySelectorAll('.tab').forEach(function(t){
