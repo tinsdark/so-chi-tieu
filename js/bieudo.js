@@ -549,6 +549,33 @@ function handleBieuDoAction(act, el){
   return false;
 }
 
+// thẻ Tài sản ròng: số cuối tháng đang xem + đường tối đa 12 tháng (không vẽ tháng trước mốc chốt số dư)
+function taiSanRongCardHtml(mk){
+  var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
+  if (startLock && mk < startLock) return '';
+  var th = _thuHoiTheoKhoan(), cur = taiSanRongThang(mk, th);
+  var h = '<div class="card" id="cardTaiSanRong"><h3>Tài sản ròng cuối '+monthLabel(mk).toLowerCase()+'</h3>'
+    + '<div class="tsr-val'+(cur.rong < 0 ? ' am' : '')+'">'+bdTien(cur.rong)+'</div>'
+    + '<div class="tsr-ct"><span>Tiền các ví <b>'+bdTien(cur.tien)+'</b></span>'
+    + (cur.phaiThu > 0 ? '<span>+ Cho vay chưa thu <b class="thu">'+bdTien(cur.phaiThu)+'</b></span>' : '')
+    + (cur.no > 0 ? '<span>− Nợ gốc còn lại <b class="chi">'+bdTien(cur.no)+'</b></span>' : '')
+    + '</div>';
+  var ml = [], mv = [], m = mk;
+  for (var i = 0; i < 12; i++){
+    if (startLock && m < startLock) break;
+    ml.unshift('T' + parseInt(m.slice(5), 10) + (m.slice(0, 4) !== mk.slice(0, 4) ? '/' + m.slice(2, 4) : ''));
+    mv.unshift(taiSanRongThang(m, th).rong);
+    m = bdThangTruoc(m);
+  }
+  if (mv.length >= 2){
+    h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Tài sản ròng', vals: mv, cls: 'thu', fill: true }],
+      tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Tài sản ròng cuối tháng' }) + '</div>';
+  }
+  h += ghiChuGon('Tài sản ròng = tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). '
+    + 'Khoản đã tất toán không còn tính từ ngày tất toán.', 'Tính thế nào?');
+  return h + '</div>';
+}
+
 /* ====================================================================
    TAB BÁO CÁO — gom các thẻ "xem lại" ra khỏi Sổ tay (Sổ tay chỉ còn việc hằng ngày):
    hạn mức tháng, mục tiêu tiết kiệm, biểu đồ. Dùng chung tháng đang xem với Sổ tay (state.soTayMonth).
@@ -563,6 +590,7 @@ function renderBaoCao(){
   html += hm || '<div class="card k-bud"><h3>Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
     + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
   html += mucTieuCardHtml();
+  html += taiSanRongCardHtml(mk);
   html += bieuDoCardHtml(mk);
   root.innerHTML = html;
 }

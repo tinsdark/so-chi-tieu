@@ -255,6 +255,50 @@ function tongThuHoiThang(mk){
   return s;
 }
 
+/* ====================================================================
+   TÀI SẢN RÒNG tại 1 ngày (tab Báo cáo) = tiền trong các ví + cho vay chưa thu − nợ GỐC còn lại.
+   Tính lại theo NGÀY (không dùng số hiện tại) để vẽ được lịch sử từng tháng:
+   - cho vay: số cho vay − các lần thu hồi (ref thuHoiChoVay ở Sổ tay) tới ngày đó; đã tất toán trước ngày đó = 0
+   - vay: gốc − phần GỐC của các lần trả (traNo[].ngay) tới ngày đó, tách gốc theo tỉ lệ goc/tongTra của kỳ;
+     tất toán trước ngày đó = 0. Lãi tương lai không tính (chưa phải nợ).
+   ==================================================================== */
+function _thuHoiTheoKhoan(){
+  var m = {};
+  Object.keys(state.data.journal).forEach(function(d){
+    (state.data.journal[d].refs || []).forEach(function(r){
+      if (r.loai !== 'thuHoiChoVay') return;
+      (m[r.loanId] = m[r.loanId] || []).push({ ngay: d, soTien: num(r.soTien) });
+    });
+  });
+  return m;
+}
+function phaiThuTaiNgay(loan, d, thuHoi){
+  if (!loan.ngayChoVay || loan.ngayChoVay > d) return 0;
+  if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
+  var da = 0;
+  ((thuHoi || _thuHoiTheoKhoan())[loan.id] || []).forEach(function(x){ if (x.ngay <= d) da += x.soTien; });
+  return Math.max(0, num(loan.soTien) - da);
+}
+function noGocTaiNgay(loan, d){
+  if (!loan.ngayVay || loan.ngayVay > d) return 0;
+  if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
+  var sch = tinhLichTraNo(loan), tra = 0;
+  (loan.traNo || []).forEach(function(r){
+    var k = sch[num(r.ky)];
+    if (!k || !r.ngay || r.ngay > d || !(num(k.tongTra) > 0)) return;
+    tra += num(r.soTien) * num(k.goc) / num(k.tongTra);
+  });
+  return Math.max(0, num(loan.soTienGoc) - tra);
+}
+// tài sản ròng tại cuối tháng mk
+function taiSanRongThang(mk, thuHoi){
+  var d = mk + '-31', th = thuHoi || _thuHoiTheoKhoan(), phaiThu = 0, no = 0;
+  (state.data.vayNo.choVay || []).forEach(function(l){ phaiThu += phaiThuTaiNgay(l, d, th); });
+  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(l){ no += noGocTaiNgay(l, d); });
+  var tien = balanceAtEndOfMonth(mk);
+  return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
+}
+
 /* ---- dòng tiền tích lũy tương lai (thẻ dưới cùng của tab Vay-Nợ) ---- */
 function actualCatMonthAll(kind, mk){
   var s = 0;

@@ -680,3 +680,9 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .dt-mode{display:flex;gap:4px;padding:4px;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px}
 .dt-mode button{flex:1;border:none;background:none;padding:8px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:5px}
 .dt-mode button.on{background:var(--primary);color:#fff}
+/* thẻ Tài sản ròng (tab Báo cáo) */
+.tsr-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--green)}
+.tsr-val.am{color:var(--red)}
+.tsr-ct{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin-top:4px}
+.tsr-ct b{color:var(--text);font-variant-numeric:tabular-nums}
+.tsr-ct b.thu{color:var(--green)} .tsr-ct b.chi{color:var(--red)}

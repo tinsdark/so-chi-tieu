@@ -2183,6 +2183,25 @@ test('stDelItem: xóa ngay không hỏi, Hoàn tác trả lại đúng dòng; ng
   } finally { ctx.toast = t0; ctx.xacNhan = x0; }
 });
 
+test('Tài sản ròng: tiền ví + cho vay chưa thu − nợ gốc, tính lại đúng theo từng tháng', function(){
+  setToday('2026-12-15');
+  var d = baseData({ settings: { soDuDauKy: 10000000, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } });
+  d.categories.thu.push({ id:'thuHoiChoVay', ten:'Thu hồi', chiTieu:0 });
+  d.journal['2026-11-20'] = { thu:{ thuHoiChoVay: 1000000 }, chi:{}, ghiChu:'', refs:[{ loanId:'cv', loai:'thuHoiChoVay', soTien:1000000 }], items:[] };
+  d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:1000000, ngayChoVay:'2026-10-05' }],
+    vayNoPhaiTra: [{ id:'vn', ten:'B', soTienGoc:6000000, ngayVay:'2026-10-10', soThangVay:6, hinhThuc:'khong_lai', ngayTraHangThang:10,
+      traNo:[{ rid:'r1', ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-11-10', dongKy:true }] }] };
+  loadData(d);
+  var t10 = ctx.taiSanRongThang('2026-10'), t11 = ctx.taiSanRongThang('2026-11');
+  eq(t10.phaiThu, 3000000, 'T10 chưa thu đồng nào'); eq(t11.phaiThu, 2000000, 'T11 đã thu 1tr');
+  near(t10.no, 6000000, 0.5, 'T10 nợ nguyên gốc'); near(t11.no, 5000000, 0.5, 'T11 đã trả 1 kỳ gốc 1tr');
+  eq(t11.rong, t11.tien + 2000000 - t11.no);
+  ctx.state.data.vayNo.vayNoPhaiTra[0].tatToan = { soTien: 5000000, ngay: '2026-12-01' };
+  eq(ctx.taiSanRongThang('2026-12').no, 0, 'tất toán rồi thì hết nợ');
+  near(ctx.taiSanRongThang('2026-11').no, 5000000, 0.5, 'tháng trước tất toán vẫn còn nợ');
+  setToday('2026-10-01');
+});
+
 /* ==================================================================== */
 group('UI. Ô tiền thông minh (ui.js)');
 var uiCtx = (function(){
