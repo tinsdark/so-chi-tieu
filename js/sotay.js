@@ -964,6 +964,7 @@ function handleSoTayAction(act, el){
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     scheduleSave();
     renderSoTay();
+    if (typeof motionDaGhi === 'function') motionDaGhi();     // nút Ghi chớp dấu tích + rung nhẹ
     var chotQ = state.qa.last;
     setTimeout(function(){
       if (state.qa.last === chotQ){

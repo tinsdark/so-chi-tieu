@@ -704,3 +704,40 @@ body.dang-khoa{overflow:hidden}
   .cot2 .bd-box svg{max-height:240px}
   .cot2>div>.card:last-child{margin-bottom:0}
 }
+
+/* ====================================================================
+   LỚP 9 — chuyển cảnh & cử chỉ (js/motion.js, phần cuối)
+   ==================================================================== */
+/* đổi tab: chỉ vùng nội dung trượt, header + thanh tab đứng yên */
+header{view-transition-name:dau-trang}
+.tabs{view-transition-name:thanh-tab}
+#tabContent{view-transition-name:noi-dung}
+@keyframes vt-ra-trai{to{opacity:0;transform:translateX(-36px)}}
+@keyframes vt-vao-phai{from{opacity:0;transform:translateX(36px)}}
+@keyframes vt-ra-phai{to{opacity:0;transform:translateX(36px)}}
+@keyframes vt-vao-trai{from{opacity:0;transform:translateX(-36px)}}
+::view-transition-old(noi-dung),::view-transition-new(noi-dung){animation-duration:.24s;animation-timing-function:var(--ease)}
+[data-huong="toi"]::view-transition-old(noi-dung){animation-name:vt-ra-trai}
+[data-huong="toi"]::view-transition-new(noi-dung){animation-name:vt-vao-phai}
+[data-huong="lui"]::view-transition-old(noi-dung){animation-name:vt-ra-phai}
+[data-huong="lui"]::view-transition-new(noi-dung){animation-name:vt-vao-trai}
+/* vuốt 1 ngày ở Sổ tay: nền báo trước hành động */
+tr.st-row{transition:transform .2s var(--ease)}
+tr.st-row.vuot-xoa{box-shadow:inset -6px 0 0 var(--red)}
+tr.st-row.vuot-sua{box-shadow:inset 6px 0 0 var(--green)}
+/* kéo xuống để làm mới */
+.keo-lam-moi{position:fixed;top:0;left:50%;transform:translate(-50%,0);z-index:30;background:var(--card);border:1px solid var(--border);
+  box-shadow:var(--shadow);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .15s}
+.keo-lam-moi.hien{opacity:1}
+.keo-lam-moi.du{color:var(--primary-d);border-color:var(--primary)}
+/* ghi xong: nút chớp dấu ✓ */
+@keyframes da-ghi{0%{transform:scale(1)}35%{transform:scale(.97)}100%{transform:scale(1)}}
+.qa-save.da-ghi{animation:da-ghi .5s var(--spring);background:var(--thu-solid)!important;color:transparent!important;position:relative}
+.qa-save.da-ghi::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800}
+/* khung xương lúc đang tải (index.html) */
+.skel{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;position:relative;overflow:hidden}
+.skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:skel 1.2s infinite}
+[data-theme="dark"] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+@keyframes skel{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){ .skel::after{display:none} }
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

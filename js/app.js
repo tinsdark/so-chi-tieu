@@ -39,6 +39,8 @@ function renderSyncStatus(){
 
 function renderAll(){
   renderSyncStatus();
+  var tcBusy = document.getElementById('tabContent');
+  if (tcBusy) tcBusy.removeAttribute('aria-busy');
   if (state.tab === 'sotay') renderSoTay();
   else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else renderDongTien(); }
   else if (state.tab === 'baocao') renderBaoCao();
@@ -93,10 +95,17 @@ document.addEventListener('click', function(ev){
 });
 
 // chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
+// Có View Transitions (Chrome, Safari 18+) thì nội dung trượt theo hướng tab (motionChuyenTab ở motion.js)
+var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc'];
 function chuyenTab(tab){
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
-  renderAll();
+  var cu = state.tab;
+  var lam = function(){
+    state.tab = tab;
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    renderAll();
+  };
+  if (cu !== tab && typeof motionChuyenTab === 'function') motionChuyenTab(THU_TU_TAB.indexOf(tab) > THU_TU_TAB.indexOf(cu) ? 1 : -1, lam);
+  else lam();
 }
 
 /* ---------------- phím tắt (desktop) ----------------

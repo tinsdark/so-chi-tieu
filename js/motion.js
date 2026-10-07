@@ -147,3 +147,104 @@ function motionBoc(ten){
 if (typeof window !== 'undefined' && window.document){
   ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderBaoCao', 'renderDanhMuc'].forEach(motionBoc);
 }
+
+/* ====================================================================
+   CHUYỂN CẢNH & CỬ CHỈ (10/2026)
+   - đổi tab: View Transitions API, nội dung trượt sang trái/phải theo thứ tự tab; header + thanh tab đứng yên.
+     Trình duyệt chưa có API -> đổi tab như cũ (thẻ hiện lần lượt).
+   - Sổ tay trên điện thoại: vuốt 1 ngày sang TRÁI = xóa ngày (có Hoàn tác / hỏi như nút thùng rác),
+     vuốt sang PHẢI = sửa ngày. Chỉ nhận khi vuốt ngang rõ ràng (không cướp thao tác cuộn dọc).
+   - kéo xuống ở đầu trang = Làm mới (app mở từ màn hình chính không có kéo-làm-mới của trình duyệt).
+   - ghi xong ở Ghi nhanh: nút chớp dấu tích + rung nhẹ (Android; iPhone không cho web rung).
+   Tất cả tắt khi "Giảm chuyển động" (trừ vuốt / kéo làm mới: đó là thao tác, không phải trang trí).
+   ==================================================================== */
+var _moVT = false;      // đang trong 1 view transition: bỏ hiệu ứng thẻ hiện lần lượt (đã có trượt cả trang)
+function motionChuyenTab(huong, lam){
+  if (_moGiam() || !document.startViewTransition){ lam(); return; }
+  document.documentElement.setAttribute('data-huong', huong > 0 ? 'toi' : 'lui');
+  _moVT = true;
+  var vt;
+  try { vt = document.startViewTransition(function(){ lam(); window.scrollTo(0, 0); }); }
+  catch (e){ _moVT = false; lam(); return; }
+  vt.finished.finally(function(){ _moVT = false; document.documentElement.removeAttribute('data-huong'); });
+}
+(function(){
+  var _cardGoc = _moCard;
+  _moCard = function(root){ if (!_moVT) _cardGoc(root); };
+})();
+
+function motionDaGhi(){
+  var b = document.querySelector('#ghiNhanh .qa-save');
+  if (navigator.vibrate){ try { navigator.vibrate(12); } catch (e){} }
+  if (!b || _moGiam()) return;
+  b.classList.add('da-ghi');
+  setTimeout(function(){ b.classList.remove('da-ghi'); }, 700);
+}
+
+/* ---- vuốt ngang 1 ngày ở Sổ tay (chỉ màn hình cảm ứng) ---- */
+(function(){
+  if (typeof window === 'undefined' || !window.document || !document.addEventListener) return;
+  var bd = null;
+  document.addEventListener('touchstart', function(ev){
+    if (ev.touches.length !== 1 || state.tab !== 'sotay') return;
+    var row = ev.target.closest && ev.target.closest('tr.st-row');
+    if (!row || ev.target.closest('button, a, input, select')) { bd = null; return; }
+    bd = { row: row, x: ev.touches[0].clientX, y: ev.touches[0].clientY, dx: 0, ngang: null };
+  }, { passive: true });
+  document.addEventListener('touchmove', function(ev){
+    if (!bd) return;
+    var dx = ev.touches[0].clientX - bd.x, dy = ev.touches[0].clientY - bd.y;
+    if (bd.ngang === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) bd.ngang = Math.abs(dx) > Math.abs(dy) * 1.5;
+    if (!bd.ngang) return;
+    bd.dx = dx;
+    bd.row.style.transition = 'none';
+    bd.row.style.transform = 'translateX(' + dx + 'px)';
+    bd.row.classList.toggle('vuot-xoa', dx < -40);
+    bd.row.classList.toggle('vuot-sua', dx > 40);
+  }, { passive: true });
+  document.addEventListener('touchend', function(){
+    if (!bd) return;
+    var r = bd.row, dx = bd.dx, nguong = Math.min(120, r.offsetWidth * 0.3);
+    r.style.transition = ''; r.style.transform = '';
+    r.classList.remove('vuot-xoa', 'vuot-sua');
+    bd = null;
+    if (Math.abs(dx) < nguong) return;
+    var nut = r.querySelector(dx < 0 ? '[data-act=delDay]' : '[data-act=editDay]');
+    if (nut) nut.click();
+  });
+  document.addEventListener('touchcancel', function(){ if (bd){ bd.row.style.transform = ''; bd.row.classList.remove('vuot-xoa', 'vuot-sua'); bd = null; } });
+})();
+
+/* ---- kéo xuống ở đầu trang để làm mới ---- */
+(function(){
+  if (typeof window === 'undefined' || !window.document || !document.addEventListener) return;
+  var keo = null, NGUONG = 80;
+  function chiBao(){
+    var el = document.getElementById('keoLamMoi');
+    if (!el){ el = document.createElement('div'); el.id = 'keoLamMoi'; el.className = 'keo-lam-moi'; document.body.appendChild(el); }
+    return el;
+  }
+  document.addEventListener('touchstart', function(ev){
+    var app = document.getElementById('app');
+    if (ev.touches.length !== 1 || window.scrollY > 0 || !app || app.style.display === 'none' || _modalDangMo || _khoaDangMoAn()) { keo = null; return; }
+    keo = { y: ev.touches[0].clientY, x: ev.touches[0].clientX, d: 0 };
+  }, { passive: true });
+  document.addEventListener('touchmove', function(ev){
+    if (!keo) return;
+    var d = ev.touches[0].clientY - keo.y;
+    if (d <= 0 || window.scrollY > 0 || Math.abs(ev.touches[0].clientX - keo.x) > d){ keo.d = 0; chiBao().classList.remove('hien', 'du'); return; }
+    keo.d = d;
+    var el = chiBao();
+    el.classList.add('hien'); el.classList.toggle('du', d >= NGUONG);
+    el.textContent = d >= NGUONG ? 'Thả để làm mới' : 'Kéo xuống để làm mới';
+    el.style.transform = 'translate(-50%,' + Math.min(d, NGUONG + 20) * 0.6 + 'px)';
+  }, { passive: true });
+  document.addEventListener('touchend', function(){
+    if (!keo) return;
+    var du = keo.d >= NGUONG; keo = null;
+    var el = document.getElementById('keoLamMoi');
+    if (el){ el.classList.remove('hien', 'du'); el.style.transform = ''; }
+    if (du){ var b = document.getElementById('btnRefresh'); if (b) b.click(); }
+  });
+  function _khoaDangMoAn(){ return typeof _khoaDangMo !== 'undefined' && _khoaDangMo; }
+})();
