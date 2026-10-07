@@ -527,13 +527,14 @@ test('refs của khoản vay khác không bị xóa lây', function(){
   eq(ctx.state.data.journal['2026-10-03'].refs.length, 1, 'còn 1 ref');
 });
 
-test('journalTagRef chỉ gắn ref, KHÔNG cộng thêm tiền', function(){
+test('journalTagRef: gắn ref thì tiền vào thu/chi qua refs (không cần dòng items, không đếm 2 lần)', function(){
   var d = baseData();
-  d.journal = { '2026-11-05': { thu:{}, chi:{traNo:980000}, ghiChu:'tự nhập', refs:[] } };
+  d.journal = { '2026-11-05': { thu:{}, chi:{}, ghiChu:'tự nhập', refs:[], items:[] } };
   loadData(d);
   ctx.journalTagRef('2026-11-05', 'vn1', 'traNo', 980000, { ky: 0 });
-  eq(ctx.state.data.journal['2026-11-05'].chi.traNo, 980000, 'tiền không được cộng thêm');
-  eq(ctx.state.data.journal['2026-11-05'].refs.length, 1, 'đã gắn ref');
+  var e = ctx.state.data.journal['2026-11-05'];
+  eq(e.chi.traNo, 980000, 'tiền = phần ref'); eq(e.refs.length, 1, 'đã gắn ref'); eq(e.items.length, 0, 'không sinh dòng items');
+  eq(ctx.journalKiemTra().length, 0, 'khớp nguồn gốc');
 });
 
 test('entryRefSum tách được phần tiền bị khóa bởi khoản vay', function(){
@@ -2224,6 +2225,172 @@ test('Nhập file: lưu cách ghép cột theo dòng tiêu đề, giữ tối đ
   eq(ctx.nhapChuKy(imp.rows, false), '', 'không có tiêu đề thì không lưu mẫu');
   for (var i = 0; i < 12; i++) ctx.nhapLuuMau({ rows: [['c' + i]], coHeader: true, map: {}, soDuong:'chi', catMD:{} });
   eq(Object.keys(ctx.state.data.settings.mauNhap).length, 10);
+});
+
+/* ==================================================================== */
+group('D. Tiền của ngày = items + refs (entryTinhLai) — lưới hồi quy cho việc đổi nguồn sự thật');
+
+// dữ liệu kiểu CŨ (chỉ có số tổng, thiếu items, lệch 2 chiều...) phải nạp ra ĐÚNG số tổng đã lưu: không đổi số dư của ai
+test('Nạp dữ liệu cũ: số tổng theo danh mục giữ nguyên (cả khi thiếu items, items lệch, thu dạng số đơn, ref một phần)', function(){
+  var d = baseData();
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }, { id:'traNo', ten:'Trả nợ', chiTieu:0 }];
+  d.journal = {
+    '2026-10-01': { thu:{ luong: 1000 }, chi:{ an: 500 }, ghiChu:'', refs:[] },
+    '2026-10-02': { thu: 700, chi:{}, ghiChu:'', refs:[] },
+    '2026-10-03': { thu:{}, chi:{ traNo: 1500000 }, ghiChu:'', refs:[{ loanId:'v', loai:'traNo', soTien:1000000, note:'', ky:0 }] },
+    '2026-10-04': { thu:{}, chi:{ an: 300 }, ghiChu:'', refs:[], items:[{ iid:'a', kind:'chi', catId:'an', soTien:100, ghiChu:'x' }] },
+    '2026-10-05': { thu:{}, chi:{ an: 100 }, ghiChu:'', refs:[], items:[{ iid:'b', kind:'chi', catId:'an', soTien:300, ghiChu:'y' }] },
+    '2026-10-06': { thu:{ daXoa: 50 }, chi:{}, ghiChu:'', refs:[] },
+    '2026-10-07': { thu:{}, chi:{ traNo: 833333.3333 }, ghiChu:'', refs:[{ loanId:'v', loai:'traNo', soTien:833333.3333, note:'', ky:1 }], items:[] }
+  };
+  var truoc = {};
+  Object.keys(d.journal).forEach(function(k){
+    var e = d.journal[k], t = (typeof e.thu === 'number') ? { _khac: e.thu } : e.thu;
+    truoc[k] = { thu: JSON.parse(JSON.stringify(t)), chi: JSON.parse(JSON.stringify(e.chi)) };
+  });
+  loadData(d);
+  Object.keys(truoc).forEach(function(k){
+    var e = ctx.state.data.journal[k];
+    ['thu', 'chi'].forEach(function(kind){
+      Object.keys(truoc[k][kind]).forEach(function(c){ near(ctx.num(e[kind][c]), truoc[k][kind][c], 0.001, k + ' ' + kind + ' ' + c); });
+      Object.keys(e[kind]).forEach(function(c){ ok(truoc[k][kind][c] != null, 'xuất hiện danh mục lạ ' + k + ' ' + kind + ' ' + c); });
+    });
+  });
+  eq(ctx.journalKiemTra().length, 0, 'sau khi nạp: thu/chi khớp items + refs');
+  eq(vm.runInContext('_soNgayLechLucNap', ctx), 2, 'đếm đúng 2 ngày lệch (có items nhưng số tổng khác: 10-04 và 10-05); file cũ chưa có items không bị tính');
+  // nạp lần 2 từ chính kết quả (đóng gói JSON như lúc lưu / tải Drive) phải y hệt
+  var json1 = JSON.stringify(ctx.state.data.journal);
+  loadData(JSON.parse(JSON.stringify(ctx.state.data)));
+  eq(JSON.stringify(ctx.state.data.journal), json1, 'nạp lại không đổi gì (idempotent)');
+  // thu/chi vẫn được LƯU trong file (bản app cũ chỉ đọc thu/chi vẫn chạy)
+  ok(JSON.parse(json1)['2026-10-01'].chi.an === 500, 'số tổng vẫn nằm trong file');
+});
+
+// sổ cái độc lập với code: ghi lại ý định của từng thao tác rồi so với thu/chi của từng ngày
+function tinhFuzz(seed){
+  var a = seed >>> 0;
+  var rnd = function(){ a = (a + 0x6D2B79F5) >>> 0; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  var pick = function(arr){ return arr[Math.floor(rnd() * arr.length)]; };
+  var DATES = ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05'];
+  var CATS = { thu: ['luong'], chi: ['an', 'xang'] };
+  var SYS = [ ['traNo', 'chi'], ['choVay', 'chi'], ['nhanTienVay', 'thu'], ['thuHoiChoVay', 'thu'] ];
+  var d = baseData();
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'TH', chiTieu:0 }, { id:'nhanTienVay', ten:'NV', chiTieu:0 }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }, { id:'xang', ten:'Xăng', chiTieu:0 }, { id:'traNo', ten:'TN', chiTieu:0 }, { id:'choVay', ten:'CV', chiTieu:0 }];
+  loadData(d); setToday('2026-10-05');
+  var so = ctx.state.data, ledger = {}, log = [], nLoan = 0;
+  var L = function(date, kind, cat, v){ ledger[date] = ledger[date] || { thu:{}, chi:{} }; ledger[date][kind][cat] = (ledger[date][kind][cat] || 0) + v; };
+  var allItems = function(){ var r = []; Object.keys(so.journal).forEach(function(dt){ ctx.entryItems(so.journal[dt]).forEach(function(it){ r.push({ date: dt, it: it }); }); }); return r; };
+  var kiem = function(buoc){
+    var lech = ctx.journalKiemTra();
+    if (lech.length) throw new Error('seed ' + seed + ' bước ' + buoc + ' [' + log.join(' | ') + '] thu/chi lệch items+refs: ' + JSON.stringify(lech[0]));
+    Object.keys(ledger).concat(Object.keys(so.journal)).forEach(function(dt){
+      ['thu', 'chi'].forEach(function(kind){
+        var cats = {};
+        Object.keys((ledger[dt] || { thu:{}, chi:{} })[kind]).forEach(function(c){ cats[c] = 1; });
+        Object.keys(((so.journal[dt] || {})[kind]) || {}).forEach(function(c){ cats[c] = 1; });
+        Object.keys(cats).forEach(function(c){
+          var mong = ((ledger[dt] || { thu:{}, chi:{} })[kind][c] || 0), co = ctx.num(((so.journal[dt] || {})[kind] || {})[c]);
+          if (Math.abs(co - mong) > 0.001) throw new Error('seed ' + seed + ' bước ' + buoc + ' [' + log.join(' | ') + '] ' + dt + ' ' + kind + ' ' + c + ': có ' + co + ', sổ cái ' + mong);
+        });
+      });
+    });
+  };
+  var voiForm = function(date, nhap, sua){
+    var lists = { '.f_thu': [], '.f_chi': [] };
+    ['thu', 'chi'].forEach(function(kind){
+      so.categories[kind].forEach(function(c){
+        var lock = sua ? ctx.entryRefSum(so.journal[date] || {}, kind, c.id) : 0;
+        lists['.f_' + kind].push(oNhap(c.id, String(nhap[kind + '|' + c.id] || ''), lock));
+      });
+    });
+    voiDom({ f_date:{ value: date }, f_ghichu:{ value: 'ghi chú' } }, lists, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  };
+  for (var step = 0; step < 40; step++){
+    var op = pick(['add', 'add', 'add', 'upd', 'del', 'ref', 'ref', 'rmref', 'upsert', 'form', 'formEdit', 'delDay']);
+    var date = pick(DATES);
+    if (op === 'add'){
+      var kind = pick(['thu', 'chi']), cat = pick(CATS[kind]), v = Math.round(rnd() * 500000) / (rnd() < 0.2 ? 2 : 1) + 1;
+      ctx.entryAddItem(date, kind, cat, v, rnd() < 0.7 ? 'n' + step : ''); L(date, kind, cat, v); log.push('add ' + date + ' ' + kind + cat + ' ' + v);
+    } else if (op === 'upd'){
+      var xs = allItems(); if (!xs.length) continue;
+      var x = pick(xs), k2 = pick(['thu', 'chi']), c2 = pick(CATS[k2]), v2 = Math.round(rnd() * 400000) + 1;
+      L(x.date, x.it.kind, x.it.catId, -ctx.num(x.it.soTien)); L(x.date, k2, c2, v2);
+      ctx.entryUpdateItem(x.date, x.it.iid, v2, 'sửa', k2, c2); log.push('upd ' + x.date + ' -> ' + k2 + c2 + ' ' + v2);
+    } else if (op === 'del'){
+      var ys = allItems(); if (!ys.length) continue;
+      var y = pick(ys); L(y.date, y.it.kind, y.it.catId, -ctx.num(y.it.soTien));
+      ctx.entryDeleteItem(y.date, y.it.iid); log.push('del ' + y.date);
+    } else if (op === 'ref'){
+      var sy = pick(SYS), vr = Math.round(rnd() * 900000) + 1000 + (rnd() < 0.3 ? 0.3333 : 0), loan = 'L' + (nLoan++ % 3);
+      ctx.journalAddRef(date, loan, sy[0], vr, 'ref ' + step, { ky: step }); L(date, sy[1], sy[0], vr); log.push('ref ' + date + ' ' + loan + sy[0] + ' ' + vr);
+    } else if (op === 'rmref'){
+      var loan2 = 'L' + Math.floor(rnd() * 3);
+      var gone = ctx.journalRemoveRefs(loan2, null, null);
+      gone.forEach(function(g){ var m = ctx.REF_MAP[g.loai]; L(g.date, m.kind, m.cat, -g.soTien); }); log.push('rmref ' + loan2 + ' x' + gone.length);
+    } else if (op === 'upsert'){
+      var sy2 = pick([['choVay', 'chi'], ['nhanTienVay', 'thu']]), loan3 = 'U' + Math.floor(rnd() * 2), vu = Math.round(rnd() * 800000) + 1;
+      Object.keys(so.journal).forEach(function(dt){ (so.journal[dt].refs || []).forEach(function(r){ if (r.loanId === loan3 && r.loai === sy2[0]) L(dt, sy2[1], sy2[0], -ctx.num(r.soTien)); }); });
+      ctx.journalUpsertRef(date, loan3, sy2[0], vu, 'up'); L(date, sy2[1], sy2[0], vu); log.push('upsert ' + date + ' ' + loan3 + sy2[0] + ' ' + vu);
+    } else if (op === 'form'){
+      ctx.state.editingDate = null;
+      var nh = {}, any = false;
+      ['luong'].forEach(function(c){ if (rnd() < 0.5){ nh['thu|' + c] = Math.round(rnd() * 900000) + 1; } });
+      ['an', 'xang', 'traNo'].forEach(function(c){ if (rnd() < 0.5){ nh['chi|' + c] = Math.round(rnd() * 900000) + 1; } });
+      Object.keys(nh).forEach(function(k){ var pr = k.split('|'); L(date, pr[0], pr[1], nh[k]); any = true; });
+      voiForm(date, nh, false); log.push('form ' + date + ' ' + JSON.stringify(nh));
+    } else if (op === 'formEdit'){
+      if (!so.journal[date]) continue;
+      ctx.state.editingDate = date;
+      var nh2 = {};
+      ['thu|luong', 'chi|an', 'chi|xang', 'chi|traNo'].forEach(function(k){ if (rnd() < 0.6) nh2[k] = Math.round(rnd() * 900000) + 1; });
+      // sửa ngày: số mới của từng ô (+ phần khóa của refs) THAY cho tổng cũ của danh mục đó
+      ['thu', 'chi'].forEach(function(kind){
+        so.categories[kind].forEach(function(c){
+          var ref = ctx.entryRefSum(so.journal[date], kind, c.id), moi = ctx.num(nh2[kind + '|' + c.id]) + ref;
+          var cu = ((ledger[date] || { thu:{}, chi:{} })[kind][c.id] || 0);
+          L(date, kind, c.id, moi - cu);
+        });
+      });
+      voiForm(date, nh2, true); ctx.state.editingDate = null; log.push('formEdit ' + date + ' ' + JSON.stringify(nh2));
+    } else if (op === 'delDay'){
+      var e = so.journal[date];
+      if (!e || (e.refs || []).length) continue;
+      ctx.handleSoTayAction('delDay', elAct({ 'data-date': date })); delete ledger[date]; log.push('delDay ' + date);
+    }
+    kiem(step + ':' + op);
+  }
+  setToday('2026-10-01');
+}
+test('Fuzz 150 chuỗi × 40 thao tác (thêm/sửa/xóa dòng, gắn/gỡ ref, form đầy đủ, sửa ngày, xóa ngày): thu/chi luôn = items + refs = sổ cái', function(){
+  var t0 = ctx.toast, x0 = ctx.xacNhan;
+  ctx.toast = function(){};
+  try{
+    for (var seed = 1; seed <= 150; seed++) tinhFuzz(seed);
+  } finally { ctx.toast = t0; ctx.xacNhan = x0; ctx.state.editingDate = null; }
+});
+
+test('Form đầy đủ vào ngày ĐÃ CÓ dòng: thêm đúng phần mới, phần cũ giữ nguyên; thu hồi gắn khoản cho vay đi vào refs (không thành dòng items)', function(){
+  var d = baseData();
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'Thu hồi', chiTieu:0 }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }];
+  d.vayNo = { choVay: [{ id:'cv1', ten:'A', soTien:1000000, daThu:0, ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-12-01' }], vayNoPhaiTra: [] };
+  loadData(d); setToday('2026-10-10');
+  ctx.entryAddItem('2026-10-08', 'chi', 'an', 100000, 'Cơm');
+  ctx.state.editingDate = null;
+  var t0 = ctx.toast; ctx.toast = function(){};
+  try{
+    voiDom({ f_date:{ value:'2026-10-08' }, f_ghichu:{ value:'thu nợ' }, sotay_selChoVay:{ value:'cv1' } },
+      { '.f_thu': [ oNhap('luong', ''), oNhap('thuHoiChoVay', '300000') ], '.f_chi': [ oNhap('an', '50000') ] },
+      function(){ ctx.handleSoTayAction('saveEntry', {}); });
+  } finally { ctx.toast = t0; }
+  var e = ctx.state.data.journal['2026-10-08'];
+  eq(ctx.num(e.chi.an), 150000, 'Ăn = 100k cũ + 50k mới'); eq(ctx.num(e.thu.thuHoiChoVay), 300000, 'thu hồi = ref 300k');
+  eq(e.refs.length, 1, 'có 1 ref'); eq(ctx.entryItems(e).filter(function(it){ return it.catId === 'thuHoiChoVay'; }).length, 0, 'thu hồi KHÔNG thành dòng items');
+  eq(ctx.entryItems(e).filter(function(it){ return it.catId === 'an'; }).length, 2, 'Ăn có 2 dòng');
+  eq(ctx.journalKiemTra().length, 0);
+  eq(ctx.state.data.vayNo.choVay[0].daThu, 300000, 'khoản cho vay ghi nhận đã thu');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */

@@ -128,22 +128,22 @@ function entryIsEmpty(entry){
   return !hasThu && !hasChi && !(entry.ghiChu || '').trim() && !(entry.refs || []).length;
 }
 
-// ghi 1 giao dịch do khoản vay sinh ra: cộng tiền vào danh mục + thêm ghi chú + gắn ref
+// ghi 1 giao dịch do khoản vay sinh ra: gắn ref (tiền vào danh mục do entryTinhLai) + thêm ghi chú
 function journalAddRef(date, loanId, loai, soTien, note, extra){
   var m = REF_MAP[loai];
   if (!m || num(soTien) <= 0) return;
   var e = state.data.journal[date] || blankEntry();
-  e.thu = e.thu || {}; e.chi = e.chi || {}; e.refs = e.refs || [];
-  e[m.kind][m.cat] = num(e[m.kind][m.cat]) + num(soTien);
+  e.refs = e.refs || [];
   if (note) e.ghiChu = e.ghiChu ? (e.ghiChu + '; ' + note) : note;
   var ref = { loanId: loanId, loai: loai, soTien: num(soTien), note: note || '' };
   if (extra) Object.keys(extra).forEach(function(k){ ref[k] = extra[k]; });
   e.refs.push(ref);
+  entryTinhLai(e);
   state.data.journal[date] = e;
 }
 
-// chỉ GẮN ref vào số tiền người dùng đã tự nhập ở Sổ tay (không cộng thêm tiền,
-// không thêm ghi chú) — dùng cho form nhập nhanh có chọn khoản vay/cho vay
+// GẮN ref vào số tiền người dùng vừa nhập ở form Sổ tay (không thêm ghi chú) — dùng cho form có chọn
+// khoản vay/cho vay. Số tiền đó thuộc tầng refs nên nơi gọi KHÔNG được tạo dòng items cho nó (đếm 2 lần).
 function journalTagRef(date, loanId, loai, soTien, extra){
   var m = REF_MAP[loai];
   if (!m || num(soTien) <= 0) return;
@@ -153,9 +153,10 @@ function journalTagRef(date, loanId, loai, soTien, extra){
   var ref = { loanId: loanId, loai: loai, soTien: num(soTien), note: '' };
   if (extra) Object.keys(extra).forEach(function(k){ ref[k] = extra[k]; });
   e.refs.push(ref);
+  entryTinhLai(e);
 }
 
-// xóa các ref khớp điều kiện + TRỪ lại số tiền tương ứng khỏi journal.
+// xóa các ref khớp điều kiện (tiền tương ứng tự mất khỏi thu/chi qua entryTinhLai).
 // loai/ky để null nếu muốn xóa tất cả. Trả về danh sách đã xóa để báo cho người dùng.
 function journalRemoveRefs(loanId, loai, ky){
   var removed = [];
@@ -169,13 +170,11 @@ function journalRemoveRefs(loanId, loai, ky){
         && (ky == null || num(r.ky) === num(ky));
       var m = REF_MAP[r.loai];
       if (!match || !m){ keep.push(r); return; }
-      var bucket = e[m.kind] || {};
-      bucket[m.cat] = num(bucket[m.cat]) - num(r.soTien);
-      if (bucket[m.cat] <= 0.004) delete bucket[m.cat];
       journalRemoveNote(e, r.note);
       removed.push({ date: date, loai: r.loai, soTien: num(r.soTien), ky: r.ky });
     });
     e.refs = keep;
+    entryTinhLai(e);
     if (entryIsEmpty(e)) delete state.data.journal[date];
   });
   invalidateBalanceCache();
@@ -204,20 +203,24 @@ function entryRefSum(entry, kind, cat){
 }
 
 /* ====================================================================
-   TẦNG CHI TIẾT GIAO DỊCH (items)
+   TẦNG CHI TIẾT GIAO DỊCH (items) — NGUỒN SỰ THẬT CỦA TIỀN TRONG NGÀY
    entry.items[] = { iid, kind:'thu'|'chi', catId, soTien, ghiChu }
-   CHỈ chứa các giao dịch NHẬP TAY. Phần tiền do khoản vay sinh ra vẫn
-   nằm ở entry.refs[] như cũ và CỐ Ý không đưa vào items.
+   CHỈ chứa các giao dịch NHẬP TAY. Phần tiền do khoản vay sinh ra nằm ở
+   entry.refs[] và CỐ Ý không đưa vào items.
 
-   entry.thu / entry.chi VẪN LÀ NGUỒN SỰ THẬT cho mọi phép tính
-   (thuTotal, chiTotal, balanceCache, actualCatInMonth, dòng tiền, biểu đồ,
-   xuất Excel). items chỉ là tầng chi tiết song song, có ràng buộc:
+   Tiền của 1 ngày chỉ có 2 nguồn gốc: items (nhập tay) + refs (khoản vay).
+   entry.thu / entry.chi là số TỔNG THEO DANH MỤC được TÍNH LẠI từ 2 nguồn đó bằng
+   entryTinhLai(): cách đọc nhanh cho mọi phép tính (thuTotal, chiTotal, balanceCache,
+   dòng tiền, biểu đồ, xuất Excel) và để các bản app cũ (chỉ đọc thu/chi) vẫn đọc được file.
 
-     itemsSum(e, kind, cat) === num(e[kind][cat]) - entryRefSum(e, kind, cat)
+     e[kind][cat] === itemsSum(e, kind, cat) + entryRefSum(e, kind, cat)
 
-   => Thêm/sửa/xóa 1 item BẮT BUỘC đi qua entryAddItem/entryUpdateItem/
-      entryDeleteItem để 2 bên không lệch. repairEntryItems() là lưới an
-      toàn: chạy mỗi lần load, quy mọi sai số về 1 dòng "(chưa chi tiết)".
+   => KHÔNG ghi thẳng vào e.thu / e.chi. Mọi thay đổi tiền đi qua entryAddItem /
+      entryUpdateItem / entryDeleteItem (items) hoặc journalAddRef / journalTagRef /
+      journalRemoveRefs (refs); các hàm đó tự gọi entryTinhLai. Nhờ vậy hết cảnh "2 nơi lệch nhau".
+   Lúc NẠP file: migrateEntryItems + repairEntryItems coi số tổng đã lưu là đúng (không đổi số dư
+   của người dùng) và đưa phần lệch vào dòng "(chưa chi tiết)", rồi entryTinhLai chốt lại.
+   journalKiemTra() liệt kê ngày nào thu/chi lệch nguồn gốc (dùng trong test).
    ==================================================================== */
 var _iidSeq = 0;
 function newIid(){ return 'i' + (_iidSeq++).toString(36) + '_' + Date.now().toString(36); }
@@ -232,12 +235,42 @@ function itemsSum(entry, kind, catId){
   return s;
 }
 
-// cộng delta vào entry[kind][catId], tự xóa key khi về 0 (ngưỡng giống journalRemoveRefs)
-function _bucketAdd(entry, kind, catId, delta){
-  entry[kind] = entry[kind] || {};
-  var v = num(entry[kind][catId]) + num(delta);
-  if (v <= 0.004) delete entry[kind][catId];
-  else entry[kind][catId] = v;
+// Tính lại e.thu / e.chi từ nguồn gốc (items + refs). Danh mục về 0 thì bỏ key.
+// Là NƠI DUY NHẤT sinh ra số trong e.thu / e.chi sau khi đã nạp (xem khối chú thích phía trên).
+function entryTinhLai(e){
+  var out = { thu: {}, chi: {} };
+  function cong(kind, cat, v){ if (v) out[kind][cat] = (out[kind][cat] || 0) + v; }
+  entryItems(e).forEach(function(it){
+    if (it.kind === 'thu' || it.kind === 'chi') cong(it.kind, it.catId, num(it.soTien));
+  });
+  (e.refs || []).forEach(function(r){
+    var m = REF_MAP[r.loai];
+    if (m) cong(m.kind, m.cat, num(r.soTien));
+  });
+  ['thu', 'chi'].forEach(function(k){
+    Object.keys(out[k]).forEach(function(c){ if (out[k][c] <= 0.004) delete out[k][c]; });
+  });
+  e.thu = out.thu; e.chi = out.chi;
+  return e;
+}
+var _soNgayLechLucNap = 0;   // số ngày file lệch số lúc nạp lần gần nhất (chỉ để chẩn đoán / test)
+// các chỗ thu/chi của ngày lệch so với nguồn gốc (items + refs): [{ date, kind, catId, daLuu, tinhLai }]
+function journalKiemTra(journal){
+  var ds = [];
+  var j = journal || state.data.journal;
+  Object.keys(j).forEach(function(date){
+    var e = j[date], t = entryTinhLai({ items: e.items, refs: e.refs });
+    ['thu', 'chi'].forEach(function(kind){
+      var cats = {};
+      Object.keys(e[kind] || {}).forEach(function(c){ cats[c] = 1; });
+      Object.keys(t[kind]).forEach(function(c){ cats[c] = 1; });
+      Object.keys(cats).forEach(function(c){
+        var a = num((e[kind] || {})[c]), b = num(t[kind][c]);
+        if (Math.abs(a - b) > 0.01) ds.push({ date: date, kind: kind, catId: c, daLuu: a, tinhLai: b });
+      });
+    });
+  });
+  return ds;
 }
 
 function entryFindItem(entry, iid){
@@ -255,7 +288,7 @@ function entryAddItem(date, kind, catId, soTien, ghiChu, walletId){
   var it = { iid: newIid(), kind: kind, catId: catId, soTien: v, ghiChu: ghiChu || '',
              walletId: walletById(walletId) ? walletId : viMacDinhId() };
   e.items.push(it);
-  _bucketAdd(e, kind, catId, v);
+  entryTinhLai(e);
   state.data.journal[date] = e;
   invalidateBalanceCache();
   return it;
@@ -298,12 +331,11 @@ function entryUpdateItem(date, iid, soTien, ghiChu, kindMoi, catIdMoi, walletIdM
   var kindM = (kindMoi === 'thu' || kindMoi === 'chi') ? kindMoi : it.kind;
   var catM  = catIdMoi || it.catId;
   var segCu = itemGhiChuNgay(it);
-  _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   it.kind = kindM; it.catId = catM; it.soTien = v;
   if (ghiChu != null) it.ghiChu = ghiChu;
   entryDoiGhiChuCuaItem(e, it, segCu, it.ghiChu ? it.ghiChu + ' ' + fmt(Math.round(v)) : '');
   if (walletIdMoi && walletById(walletIdMoi)) it.walletId = walletIdMoi;
-  _bucketAdd(e, kindM, catM, v);
+  entryTinhLai(e);
   invalidateBalanceCache();
   return true;
 }
@@ -316,8 +348,8 @@ function entryDeleteItem(date, iid){
   if (idx < 0) return false;
   var it = e.items[idx];
   entryGoGhiChuCuaItem(e, it);
-  _bucketAdd(e, it.kind, it.catId, -num(it.soTien));
   e.items.splice(idx, 1);
+  entryTinhLai(e);
   if (entryIsEmpty(e)) delete state.data.journal[date];
   invalidateBalanceCache();
   return true;
@@ -341,8 +373,9 @@ function migrateEntryItems(e){
   return true;
 }
 
-// lưới an toàn cho ràng buộc tổng. Thiếu -> thêm dòng "(chưa chi tiết)";
-// thừa -> trừ dần từ dòng mới nhất. Không bao giờ sửa thu/chi (nguồn sự thật).
+// chữa lệch giữa số tổng đã LƯU trong file và items + refs, CHỈ dùng lúc nạp file / sau khi form đầy đủ
+// sửa tổng theo danh mục. Thiếu -> thêm dòng "(chưa chi tiết)"; thừa -> trừ dần từ dòng mới nhất.
+// Coi số tổng đã lưu là đúng để không đổi số dư của người dùng; xong thì gọi entryTinhLai để chốt.
 function repairEntryItems(e){
   e.items = Array.isArray(e.items) ? e.items : [];
   ['thu','chi'].forEach(function(kind){
@@ -420,6 +453,8 @@ var ICON_PATHS = {
   'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
   'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
   'sliders': "<path d=\"M4 7h9\"/><path d=\"M17 7h3\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><path d=\"M4 17h3\"/><path d=\"M11 17h9\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
+  'backspace': "<path d=\"M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z\"/><path d=\"M13 9.5l5 5\"/><path d=\"M18 9.5l-5 5\"/>",
+  'fingerprint': "<path d=\"M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4\"/><path d=\"M14 13.12c0 2.38 0 6.38-1 8.88\"/><path d=\"M17.29 21.02c.12-.6.43-2.3.5-3.02\"/><path d=\"M2 12a10 10 0 0 1 18-6\"/><path d=\"M2 16h.01\"/><path d=\"M21.8 16c.2-2 .131-5.354 0-6\"/><path d=\"M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2\"/><path d=\"M8.65 22c.21-.66.45-1.32.57-2\"/><path d=\"M9 6.8a6 6 0 0 1 9 5.2v2\"/>",
   'pie': "<path d=\"M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z\"/><path d=\"M15 3.9A8.5 8.5 0 0 1 20.1 9H15z\"/>",
   'list': "<path d=\"M9 6h11\"/><path d=\"M9 12h11\"/><path d=\"M9 18h11\"/><path d=\"M4.5 6h.01\"/><path d=\"M4.5 12h.01\"/><path d=\"M4.5 18h.01\"/>",
   'refresh': "<path d=\"M20 12a8 8 0 1 1-2.3-5.7\"/><path d=\"M20 4v5h-5\"/>",
@@ -489,6 +524,7 @@ function normalizeData(d){
     d.settings.thangBatDauDuTru = (nb.slice(8,10) === '01') ? monthKey(nb) : monthKeyAdd(monthKey(nb), 1);
   }
   // migrate dữ liệu cũ: thu là số đơn -> chuyển thành object theo danh mục (giữ nguyên tổng)
+  var soNgayLech = 0;
   Object.keys(d.journal).forEach(function(date){
     var e = d.journal[date];
     if (!e.thu || typeof e.thu !== 'object'){
@@ -499,11 +535,19 @@ function normalizeData(d){
     e.refs = e.refs || [];
     // sinh items[] cho dữ liệu cũ. PHẢI chạy SAU bước scalar->object ở trên
     // vì migrateEntryItems đọc Object.keys(e.thu).
+    // file ĐÃ có items mà số tổng không khớp items + refs = bản app cũ ghi lệch hoặc file sửa tay (khác với file cũ
+    // chưa có items: lệch hiển nhiên và được migrate bình thường) -> đếm để báo, không chữa âm thầm.
+    var daCoItems = Array.isArray(e.items);
+    if (daCoItems && journalKiemTra((function(o){ o[date] = e; return o; })({})).length) soNgayLech++;
     migrateEntryItems(e);
     // tự chữa lệch invariant (file sửa tay, bản cũ ghi thiếu item...) -> hiện
     // thành dòng "(chưa chi tiết)" thay vì làm số liệu sai âm thầm.
     repairEntryItems(e);
+    // chốt: thu/chi = items + refs (sau repair thì khớp số đã lưu, không đổi số dư)
+    entryTinhLai(e);
   });
+  _soNgayLechLucNap = soNgayLech;
+  if (soNgayLech) console.warn('[chitieu] ' + soNgayLech + ' ngày trong file có số tổng thu/chi không khớp các dòng chi tiết + khoản vay; đã chữa theo số tổng đã lưu (phần chênh nằm ở dòng "(chưa chi tiết)").');
   // migrate khoản vay: daTraGoc (1 số tổng) -> traNo[] (từng kỳ, có số tiền thực trả).
   // Suy ra các kỳ đã trả ĐỦ từ daTraGoc cũ; các kỳ này không sinh giao dịch Sổ tay
   // (chúng đã xảy ra trước khi có ref) nên gắn cờ truocKhiDungApp để khỏi hiểu nhầm.

@@ -23,6 +23,7 @@
   --hero-a:#9c4236; --hero-b:#ad4e3e; --hero-c:#b85a46;   /* thẻ tổng quan: đỏ gạch dịu (đỏ tươi logo quá gắt khi phủ cả khối) */
   --chi-solid:#b03f30; --thu-solid:#14753a;   /* nền nút/đoạn chọn Chi / Thu: chữ trắng phải đọc được ở cả 2 theme */
 }
+[data-theme="light"]{color-scheme: light}   /* thiếu dòng này thì ô nhập chưa tô màu bị iPhone chế độ tối vẽ đen dù app đang giao diện sáng */
 [data-theme="dark"]{
   color-scheme: dark;
   /* tối NÂU ẤM rõ (cà phê / gỗ), không còn đen: cùng hệ với nền kem vàng ở theme sáng */
@@ -70,8 +71,8 @@ button{cursor:pointer;font-family:inherit}
 .month-nav .lbl{font-weight:700;font-size:15px;min-width:110px;text-align:center}
 .month-nav select{font-weight:700;font-size:15px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:var(--input-bg);color:var(--text);text-align:center;text-align-last:center}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
-input[type=number],input[type=date],input[type=month],input[type=text],select{padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--input-bg);color:var(--text)}
-input[type=number],input[type=date],input[type=month],input[type=text]{width:100%}
+input[type=number],input[type=date],input[type=month],input[type=text],input[type=password],select{padding:7px 9px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--input-bg);color:var(--text)}
+input[type=number],input[type=date],input[type=month],input[type=text],input[type=password]{width:100%}
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
 .cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:10px}
@@ -111,13 +112,6 @@ tr.balance-row td{font-weight:700;background:var(--row-bal);color:var(--primary-
 .sticky-col{position:sticky;left:0;background:var(--card);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.05)}
 tr.total-row .sticky-col{background:var(--row-total)}
 tr.balance-row .sticky-col{background:var(--row-bal)}
-.auth-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 26px;box-shadow:var(--shadow);max-width:320px;width:100%;text-align:center}
-.auth-card .auth-logo{font-size:36px;margin-bottom:6px}
-.auth-card h2{margin:0 0 8px;font-size:18px}
-.auth-card p{color:var(--muted);font-size:13px;margin:0 0 18px}
-.auth-card .btn{width:100%}
-.auth-msg{margin-top:12px;font-size:12px;color:var(--red);min-height:16px}
 .search-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
 .search-row .fld{flex:1;min-width:140px}
 .search-row .fld label{margin-bottom:3px}
@@ -149,7 +143,7 @@ tr.mp-am td{background:var(--chi-bg)}
 
 /* ====================================================================
    toast — thông báo góc dưới, không chặn thao tác (thay alert)
-   z-index phải CAO HƠN .auth-gate (50) và .modal-back (60), vì toast có
+   z-index phải CAO HƠN .gate (50) và .modal-back (60), vì toast có
    thể bật ra ngay sau khi hộp thoại đóng.
    ==================================================================== */
 .toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:80;
@@ -338,8 +332,6 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 }
 
 /* ---- Gợi ý cài app (iOS) + hướng dẫn ở tab Danh mục ---- */
-.ios-hint{position:relative;margin-top:16px;padding:10px 30px 10px 12px;border-radius:10px;background:var(--hover);font-size:12px;line-height:1.5;text-align:left;color:var(--text)}
-.ios-hint-x{position:absolute;top:4px;right:4px;background:none;border:none;color:var(--muted);font-size:14px;padding:4px 6px;cursor:pointer}
 .cai-app{margin:0 0 8px;font-size:13px}
 .cai-app ol{margin:4px 0 0;padding-left:20px}
 .cai-app li{margin:2px 0}
@@ -382,7 +374,7 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 
 /* iOS Safari tự phóng to trang khi chạm vào ô nhập có chữ < 16px, và không thu lại -> phải ép 16px trên điện thoại */
 @media (max-width:700px){
-  input[type=number],input[type=date],input[type=month],input[type=text],select,textarea{font-size:16px}
+  input[type=number],input[type=date],input[type=month],input[type=text],input[type=password],select,textarea{font-size:16px}
   .qa-chip,.qa-more{font-size:14px}
 }
 
@@ -411,8 +403,6 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 /* ---- Thương hiệu: logo thay emoji ---- */
 .brand{display:flex;align-items:center;gap:8px}
 .brand-logo{border-radius:7px;display:block}
-.auth-card .auth-logo{margin-bottom:10px}
-.auth-card .auth-logo img{border-radius:18px;display:block;margin:0 auto;box-shadow:var(--shadow)}
 
 /* ====================================================================
    Bảng -> thẻ trên điện thoại (Vay-Nợ, phân tích Dòng tiền). Bảng 5-9 cột tràn ngang, cột bị cắt giữa số.
@@ -690,12 +680,6 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .qt-ds{display:flex;flex-direction:column;gap:6px}
 .qt-r{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);font-size:13px}
 .qt-tu{font-weight:600}.qt-mui{color:var(--muted)}.qt-cat{flex:1;min-width:0}
-/* màn khóa app (js/lock.js): trên cả hộp thoại (60), dưới toast (80) */
-.lock-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:70}
-.lock-gate .auth-card p{text-align:left}
-.lock-pin{width:100%;text-align:center;font-size:22px;letter-spacing:6px;padding:10px;margin-bottom:4px}
-.lock-quen{background:none;border:none;color:var(--muted);font-size:12px;margin-top:12px;text-decoration:underline}
-body.dang-khoa{overflow:hidden}
 /* màn rộng: 2 cột cho Sổ tay và Báo cáo. Dưới 1024px .cot2 chỉ là khối thường (1 cột như cũ). */
 @media (min-width:1024px){
   #app{max-width:1280px}
@@ -741,3 +725,75 @@ tr.st-row.vuot-sua{box-shadow:inset 6px 0 0 var(--green)}
 @keyframes skel{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){ .skel::after{display:none} }
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ====================================================================
+   LỚP 10 — màn đăng nhập Google (index.html) và màn khóa PIN (js/lock.js) dùng CHUNG bố cục:
+   dải thương hiệu đỏ gạch + logo ở trên, phần thao tác ở dưới. Màn rộng thì thành 1 thẻ nổi ở giữa.
+   ==================================================================== */
+.gate{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;justify-content:center}
+.lock-gate{z-index:70}
+body.dang-khoa{overflow:hidden}
+.gate-wrap{width:100%;max-width:440px;margin:auto;min-height:100%;display:flex;flex-direction:column;background:var(--bg)}
+.gate-hero{position:relative;overflow:hidden;color:#fff;text-align:center;
+  padding:calc(env(safe-area-inset-top,0px) + 40px) 24px 52px;
+  background:linear-gradient(160deg,var(--hero-a) 0%,var(--hero-b) 55%,var(--hero-c) 100%);border-radius:0 0 40px 40px;
+  box-shadow:0 2px 0 #e0b13a}
+.gate-hero::before,.gate-hero::after{content:'';position:absolute;border-radius:50%;pointer-events:none}
+.gate-hero::before{width:260px;height:260px;right:-90px;top:-110px;background:radial-gradient(circle,rgba(255,214,102,.28),transparent 68%)}
+.gate-hero::after{width:200px;height:200px;left:-80px;bottom:-110px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%)}
+.gate-hero.nho{padding-top:calc(env(safe-area-inset-top,0px) + 28px);padding-bottom:34px}
+.gate-logo{position:relative;display:inline-block;margin-bottom:14px}
+.gate-logo img{display:block;width:92px;height:92px;border-radius:24px;box-shadow:0 0 0 3px rgba(255,255,255,.55),0 10px 24px rgba(40,10,4,.35)}
+.gate-hero.nho .gate-logo img{width:64px;height:64px;border-radius:18px;box-shadow:0 0 0 2px rgba(255,255,255,.55),0 6px 16px rgba(40,10,4,.3)}
+.gate-hero.nho .gate-logo{margin-bottom:10px}
+.gate-ten{position:relative;margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px}
+.gate-hero.nho .gate-ten{font-size:20px}
+.gate-sub{position:relative;margin:6px 0 0;font-size:13.5px;opacity:.9}
+.gate-body{flex:1;display:flex;flex-direction:column;padding:26px 24px calc(env(safe-area-inset-bottom,0px) + 22px)}
+.gate-body h2{margin:0 0 4px;font-size:20px}
+.gate-body>p{margin:0 0 18px;color:var(--muted);font-size:14px}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 16px;border-radius:14px;border:1px solid #dadce0;
+  background:#fff;color:#3c4043;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(60,20,10,.14);transition:transform .12s var(--ease),box-shadow .18s}
+.btn-google:hover{box-shadow:0 3px 10px rgba(60,20,10,.18)}
+.btn-google:active{transform:scale(.98)}
+.btn-google svg{width:20px;height:20px;flex:0 0 auto}
+.btn-offline{display:block;width:100%;margin-top:10px;padding:11px 16px;border-radius:14px;border:1px dashed var(--border);background:none;color:var(--text);text-align:center}
+.btn-offline b{display:block;font-size:14px}
+.btn-offline small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.btn-offline:hover{background:var(--hover)}
+.gate-msg{min-height:18px;margin:12px 0 0;text-align:center;font-size:13px;color:var(--red)}
+.gate-msg.dang{color:var(--muted)}
+.gate-ds{list-style:none;margin:auto 0 0;padding:20px 0 0;display:grid;gap:10px}
+.gate-ds li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.gate-ds .ic{flex:0 0 auto;width:30px;height:30px;padding:6px;border-radius:10px;background:var(--hover);color:var(--primary-d)}
+.ios-hint{position:relative;margin-top:16px;padding:12px 38px 12px 14px;border-radius:12px;background:var(--warn-bg);border:1px solid var(--warn-br);color:var(--warn-tx);font-size:12.5px;line-height:1.45;text-align:left}
+.ios-hint-x{position:absolute;top:6px;right:6px;border:none;background:none;color:inherit;padding:4px}
+@media (min-width:600px) and (min-height:680px){
+  .gate{padding:28px;background:linear-gradient(160deg,var(--bg),var(--hover))}
+  .gate-wrap{min-height:0;border-radius:32px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(60,20,10,.22)}
+}
+/* màn khóa: chấm PIN + bàn phím số tự vẽ (không dùng ô nhập) */
+.lock-body{align-items:center;padding-top:22px}
+.pin-dots{display:flex;gap:14px;justify-content:center;min-height:20px;margin:4px 0 2px}
+.pin-dots i{width:15px;height:15px;border-radius:50%;border:2px solid var(--primary);background:transparent;transition:background .12s,transform .12s}
+.pin-dots i.on{background:var(--primary);transform:scale(1.08)}
+.pin-dots.sai i{border-color:var(--red);background:var(--red)}
+.pin-dots.sai{animation:pin-lac .42s}
+@keyframes pin-lac{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.lock-body .gate-msg{margin:8px 0 6px}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 18px;width:100%;max-width:300px;margin:6px 0 4px}
+.pin-pad button{width:clamp(54px,9.2vh,70px);height:clamp(54px,9.2vh,70px);border-radius:50%;justify-self:center;
+  border:1px solid var(--border);background:var(--card);color:var(--text);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  transition:transform .1s var(--ease),background-color .12s;box-shadow:var(--shadow)}
+.pin-pad button:active{transform:scale(.92);background:var(--hover)}
+.pin-pad button.phu{background:none;border-color:transparent;box-shadow:none;color:var(--primary-d)}
+.pin-pad button.phu .ic{width:26px;height:26px}
+.pin-pad .trong{visibility:hidden}
+.lock-mo{margin-top:8px;width:100%;max-width:300px}
+.lock-quen{margin-top:auto;padding:14px 10px 0;background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline}
+.lock-quen-ct{width:100%}
+.lock-quen-ct p{text-align:left;margin:0 0 12px;color:var(--muted);font-size:14px}
+.lock-quen-ct .btn{width:100%;margin-top:8px}
+@media (max-height:640px){ .gate-hero.nho{padding-bottom:22px} .gate-hero.nho .gate-logo{display:none} .pin-pad{gap:8px 18px} }
+@media (prefers-reduced-motion:reduce){ .pin-dots.sai{animation:none} }
