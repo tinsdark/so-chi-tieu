@@ -176,7 +176,7 @@ function nhapPhanTich(imp){
         x.loi = 'Không có danh mục (chọn "Danh mục mặc định" cho khoản ' + (x.kind === 'thu' ? 'thu' : 'chi') + ')';
       }
       if (!x.loi){
-        if (start && x.ngay < start) x.canhBao = 'trước mốc khóa sổ ' + start + ' (không tính vào số dư)';
+        if (start && x.ngay < start) x.canhBao = 'trước mốc chốt số dư ' + start + ' (không tính vào số dư)';
         if (imp.boTrung && daCo[x.ngay + '|' + x.kind + '|' + Math.round(x.soTien) + '|' + nhapBoDau(x.note)]){ x.trung = true; }
       }
     }

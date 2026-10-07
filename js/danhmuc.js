@@ -22,15 +22,15 @@ function categoryCardHtml(kind, title, cats){
         + '<input type="text" data-act="catName" data-kind="'+kind+'" data-id="'+c.id+'" value="'+(c.ten||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0">'
         + '</div>'
         + '<div style="display:flex;gap:4px;align-items:center">'
-        + '<input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+veSo(c.chiTieu)+'" placeholder="Chỉ tiêu/tháng" style="flex:1;min-width:0" title="Chỉ tiêu/tháng">'
+        + '<input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="catBase" data-kind="'+kind+'" data-id="'+c.id+'" value="'+veSo(c.chiTieu)+'" placeholder="Hạn mức/tháng" style="flex:1;min-width:0" title="Hạn mức/tháng">'
         + '<button class="icon-btn" data-act="catUp" data-kind="'+kind+'" data-id="'+c.id+'" title="Lên trên" aria-label="Lên trên"'+(idx===0?' disabled style="opacity:.3"':'')+'>'+icon('arrow-up')+'</button>'
         + '<button class="icon-btn" data-act="catDown" data-kind="'+kind+'" data-id="'+c.id+'" title="Xuống dưới" aria-label="Xuống dưới"'+(idx===cats.length-1?' disabled style="opacity:.3"':'')+'>'+icon('arrow-down')+'</button>'
         + '<button class="icon-btn" data-act="delCat" data-kind="'+kind+'" data-id="'+c.id+'" title="Xóa danh mục" aria-label="Xóa danh mục '+esc(c.ten)+'">'+icon('trash')+'</button>'
         + '</div>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán/dự trù số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
-        + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không dự trù</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Luôn dùng đúng số Chỉ tiêu/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương/chỉ tiêu vừa thay đổi)">'
-        + '<input type="checkbox" data-act="catFixedTarget" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.coDinhChiTieu?' checked':'')+'> Cố định theo Chỉ tiêu</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Không đoán số liệu cho tháng tương lai (dùng cho khoản không đều đặn, không thể dự đoán)">'
+        + '<input type="checkbox" data-act="catNoForecast" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.khongDuTru?' checked':'')+'> Không tính dự kiến</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap" title="Luôn dùng đúng số Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương/hạn mức vừa thay đổi)">'
+        + '<input type="checkbox" data-act="catFixedTarget" data-kind="'+kind+'" data-id="'+c.id+'"'+(c.coDinhChiTieu?' checked':'')+'> Cố định theo Hạn mức</label>'
         + '</div>';
     });
     html += '</div>';
@@ -48,18 +48,18 @@ function renderDanhMuc(){
   html += '<div class="card"><h3>Số dư đầu kỳ</h3>'
     + '<div class="form-row">'
     + '<div><label>Ngày bắt đầu</label><input type="date" id="cfg_ngay" value="'+(state.data.settings.ngayBatDau||'')+'"></div>'
-    + '<div><label>Tháng bắt đầu dự trù</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
+    + '<div><label>Tháng bắt đầu tính dự kiến</label><input type="month" id="cfg_duTru" value="'+(state.data.settings.thangBatDauDuTru||'')+'"></div>'
     + '</div>'
-    + ghiChuGon('"Tháng bắt đầu dự trù" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị khóa sổ làm đổi.', 'Tháng bắt đầu dự trù là gì?')
+    + ghiChuGon('"Tháng bắt đầu tính dự kiến" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị chốt số dư làm đổi.', 'Tháng bắt đầu tính dự kiến là gì?')
     + '<button class="btn sm" data-act="saveSettings">Lưu</button></div>';
   html += viCardHtml();
   html += dkCardHtml();
   html += mtCardHtml();
-  html += '<div class="card"><h3>Khóa sổ</h3>'
-    + ghiChuGon('Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.', 'Khóa sổ là gì?')
+  html += '<div class="card"><h3>Chốt số dư</h3>'
+    + ghiChuGon('Chốt số dư đến hết tháng chọn bên dưới, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.', 'Chốt số dư là gì?')
     + '<div class="form-row">'
     + '<div><label>Khóa đến hết tháng</label><input type="month" id="cfg_khoa" value="'+monthKey(todayStr())+'"></div>'
-    + '</div><button class="btn sm" data-act="lockMonth">Khóa sổ </button></div>';
+    + '</div><button class="btn sm" data-act="lockMonth">Chốt số dư </button></div>';
   html += caiAppCardHtml();
   html += backupCardHtml();
   html += taiKhoanCardHtml();
@@ -507,7 +507,7 @@ function handleDanhMucAction(act, el){
     toast('Đã lưu thiết lập.');
   } else if (act === 'lockMonth'){
     var mk3 = document.getElementById('cfg_khoa').value;
-    if (!mk3){ toast('Chọn tháng cần khóa sổ.', { loai:'warn' }); return true; }
+    if (!mk3){ toast('Chọn tháng cần chốt số dư.', { loai:'warn' }); return true; }
     var p3 = mk3.split('-'); var ny = parseInt(p3[0],10), nm = parseInt(p3[1],10) + 1;
     if (nm > 12){ nm = 1; ny++; }
     var newStart = ny + '-' + pad2(nm) + '-01';
@@ -519,17 +519,17 @@ function handleDanhMucAction(act, el){
     }
     var newBal = balanceAtEndOfMonth(mk3);
     (async function(){
-      if (!await xacNhan('Khóa sổ đến hết '+monthLabel(mk3)+'?',
+      if (!await xacNhan('Chốt số dư đến hết '+monthLabel(mk3)+'?',
             'Số dư đầu kỳ mới: '+fmt(newBal)+'\n'
             + 'Ngày bắt đầu mới: '+newStart+'\n\n'
             + 'Dữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư / Dòng tiền nữa.',
-            { nguyHiem:true, chuOk:'Khóa sổ' })) return;
+            { nguyHiem:true, chuOk:'Chốt số dư' })) return;
       viChotSoDuDauKy(mk3 + '-31');     // chốt từng ví theo mốc CŨ, trước khi đổi ngayBatDau
       state.data.settings.ngayBatDau = newStart;
       state.data.settings.soDuDauKy = newBal;
       scheduleSave();
       renderDanhMuc();
-      toast('Đã khóa sổ đến hết '+monthLabel(mk3)+'.');
+      toast('Đã chốt số dư đến hết '+monthLabel(mk3)+'.');
     })();
   } else {
     return false;

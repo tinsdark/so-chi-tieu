@@ -123,9 +123,9 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
-    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo chỉ tiêu</span><span>'
+    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo hạn mức</span><span>'
       + (tongDa > tongCap ? 'vượt ' + fmt(Math.round(tongDa - tongCap)) : 'còn ' + fmt(Math.round(tongCap - tongDa))) + '</span></div>'
-      + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với chỉ tiêu tháng">'
+      + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với hạn mức tháng">'
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
@@ -135,7 +135,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var chips = '';
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
-  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt chỉ tiêu</button>';
+  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
 }
@@ -234,7 +234,7 @@ function renderSoTay(){
     + '</div>';
   html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock);
   if (beforeLock){
-    html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc khóa sổ ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
+    html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc chốt số dư ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
   }
 
   html += viSoDuCardHtml(mk);
@@ -601,7 +601,7 @@ function viSoDuCardHtml(mk){
       + '</div><div style="display:flex;gap:8px;margin-bottom:6px">'
       + '<button class="btn sm" data-act="viChuyenLuu">Chuyển</button>'
       + '<button class="btn secondary sm" data-act="viChuyenHuy">Hủy</button></div>'
-      + '<div class="empty" style="padding:0;text-align:left">Chuyển tiền không phải thu hay chi: không vào tổng thu/chi, biểu đồ hay dự trù, và không đổi tổng số dư.</div></div>';
+      + '<div class="empty" style="padding:0;text-align:left">Chuyển tiền không phải thu hay chi: không vào tổng thu/chi, biểu đồ hay dự kiến, và không đổi tổng số dư.</div></div>';
   }
   var ds = (state.data.chuyenVi || []).filter(function(t){ return monthKey(t.ngay) === mk; })
     .sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
@@ -900,7 +900,7 @@ function handleSoTayAction(act, el){
     var truocMoc = !!(startQ && ngayQ < startQ);
     var tinQ = 'Đã ghi ' + (kQ === 'thu' ? 'thu' : 'chi') + ' ' + catTen(kQ, catQ) + ' ' + fmt(Math.round(tienQ))
       + ' (' + ngayQ.slice(8,10) + '/' + ngayQ.slice(5,7) + ')'
-      + (truocMoc ? ' — trước mốc khóa sổ ' + ngayVN(startQ) + ', không tính vào số dư.' : '.');
+      + (truocMoc ? ' — trước mốc chốt số dư ' + ngayVN(startQ) + ', không tính vào số dư.' : '.');
     state.qa.last = { text: tinQ, ban: banGhi };
     banGhi.moc = state.qa.last;
     // hạ bàn phím: bàn phím che toast ở đáy màn hình, và ô số tiền sắp được xóa trắng để nhập khoản sau

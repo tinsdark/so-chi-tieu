@@ -409,7 +409,7 @@ function bdTongQuanHtml(mk){
       t: 'Ước tính chi hết tháng <b>≈ ' + bdTien(du) + '</b>',
       s: 'Đã chi ' + bdTien(ut.daChi) + ' + dự kiến thêm ' + bdTien(ut.them)
         + (ut.bietTruoc > 0 ? ' (gồm ' + bdTien(ut.bietTruoc) + ' định kỳ/trả nợ chưa ghi)' : '')
-        + (cap > 0 ? ' · chỉ tiêu ' + bdTien(cap) : '') });
+        + (cap > 0 ? ' · hạn mức ' + bdTien(cap) : '') });
   }
   if (dong.length){
     h += '<div class="card k-act bd-ins"><h3>Phân tích '+monthLabel(mk).toLowerCase()+'</h3>'

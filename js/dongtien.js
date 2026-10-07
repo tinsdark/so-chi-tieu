@@ -51,7 +51,7 @@ function chenhHtml(kind, diff){
   return '<span class="chenh '+cls+'">'+fmt(Math.round(diff))+'</span><span class="chenh-nhan '+cls+'">'+nhan+'</span>';
 }
 function chuThichMauHtml(dau){
-  return '<div class="chenh-chuthich">'+dau+'<span class="tot">Xanh</span> = tốt (thu hơn / chi ít hơn chỉ tiêu) · <span class="xau">Đỏ</span> = cần chú ý (thu thiếu / chi vượt chỉ tiêu).</div>';
+  return '<div class="chenh-chuthich">'+dau+'<span class="tot">Xanh</span> = tốt (thu đạt / chi ít hơn hạn mức) · <span class="xau">Đỏ</span> = cần chú ý (thu chưa đạt / chi vượt hạn mức).</div>';
 }
 
 function renderDongTien(){
@@ -71,7 +71,7 @@ function renderDongTien(){
       + '<button data-act="prevYear" class="icon-btn" title="Năm trước" aria-label="Năm trước">‹</button>'
       + '<div class="lbl">'+year+'</div>'
       + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
-      + '</div><div class="card"><div class="empty">Năm '+year+' không có tháng nào từ mốc khóa sổ ('+startMk+'). Bấm › để xem năm khác.</div></div>';
+      + '</div><div class="card"><div class="empty">Năm '+year+' không có tháng nào từ mốc chốt số dư ('+startMk+'). Bấm › để xem năm khác.</div></div>';
     return;
   }
 
@@ -163,7 +163,7 @@ function renderDongTien(){
     + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
     + '</div>' + chipThang;
 
-  html += '<div class="card">' + chuThichMauHtml('Màu số liệu từng tháng so với chỉ tiêu (hiện cạnh tên danh mục): ')
+  html += '<div class="card">' + chuThichMauHtml('Màu số liệu từng tháng so với hạn mức (hiện cạnh tên danh mục): ')
     + '<div class="table-wrap table-wrap-year"><table><thead><tr><th class="sticky-col" style="min-width:170px">Khoản mục</th>';
   vm.forEach(function(mk){ html += '<th class="dt-input th-month">Tháng '+parseInt(mk.slice(5,7),10)+(mk>currentMk?' *':'')+'</th>'; });
   html += '</tr></thead><tbody>';
@@ -176,7 +176,7 @@ function renderDongTien(){
     }
     cats.forEach(function(c){
       var base = baseVal(g.kind, c.id);
-      var tagHtml = base>0 ? ' <span class="cat-tag" title="Chỉ tiêu/tháng">'+fmt(base)+'</span>' : '';
+      var tagHtml = base>0 ? ' <span class="cat-tag" title="Hạn mức/tháng">'+fmt(base)+'</span>' : '';
       html += '<tr><td class="sticky-col"><span class="cat-label">'+esc(c.ten)+tagHtml+'</span></td>';
       vm.forEach(function(mk){
         var future = mk > currentMk;
@@ -225,14 +225,14 @@ function renderDongTien(){
   var fcM = forecastEligibleMonths();
   html += ghiChuGon('* Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
     + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
-    + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng Chỉ tiêu/tháng ở tab Danh mục')
-    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Chỉ tiêu" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. "Lũy kế số dư" từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý (*) cho tháng chưa tới tính thế nào?');
+    + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng Hạn mức/tháng ở tab Danh mục')
+    + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. "Lũy kế số dư" từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý (*) cho tháng chưa tới tính thế nào?');
 
   // ---- Phân tích dòng tiền ----
   html += '<div class="card"><h3>Phân tích dòng tiền</h3>'
-    + ghiChuGon('Chỉ tiêu lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng chỉ tiêu Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo chỉ tiêu. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.', 'Bảng này tính thế nào?')
-    + chuThichMauHtml('Chênh lệch = TB thực tế − Chỉ tiêu. ')
-    + '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Danh mục</th><th>Chỉ tiêu/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
+    + ghiChuGon('Hạn mức lấy từ tab Danh mục — riêng "Trả nợ"/"Thu hồi cho vay" lấy số phải trả/thu tháng hiện tại theo lịch vay ở tab Vay - Nợ (không dùng hạn mức Danh mục). TB thực tế tính trên các tháng có phát sinh trong năm '+year+'. Gợi ý tháng tới = TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (từ '+monthLabel(state.data.settings.thangBatDauDuTru || startMk)+' trở đi, tháng không phát sinh tính là 0); chưa có tháng hoàn chỉnh nào thì lấy theo hạn mức. Riêng "Trả nợ"/"Thu hồi cho vay" lấy từ lịch trả ở tab Vay - Nợ.', 'Bảng này tính thế nào?')
+    + chuThichMauHtml('Chênh lệch = TB thực tế − Hạn mức. ')
+    + '<div class="table-wrap"><table class="m-cards"><thead><tr><th style="text-align:left">Danh mục</th><th>Hạn mức/tháng</th><th>TB thực tế/tháng</th><th>Chênh lệch</th><th>Gợi ý tháng tới</th></tr></thead><tbody>';
   DONGTIEN_GROUPS.forEach(function(g){
     var kind = g.kind;
     // tiêu đề nhóm + dòng tổng để tách hẳn khối thu với khối chi (trước đây 2 nhóm
@@ -257,7 +257,7 @@ function renderDongTien(){
       tBase += (base>0?base:0); tTb += (tbA||0); tGoi += (goiY||0);
       html += '<tr>'
         + '<td class="m-title" style="text-align:left;padding-left:18px">'+esc(c.ten)+'</td>'
-        + '<td data-th="Chỉ tiêu/tháng">'+(base>0?fmt(base):'—')+'</td>'
+        + '<td data-th="Hạn mức/tháng">'+(base>0?fmt(base):'—')+'</td>'
         + '<td data-th="TB thực tế/tháng">'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
         + '<td data-th="Chênh lệch">'+chenhHtml(kind, diff)+'</td>'
         + '<td data-th="Gợi ý tháng tới">'+(goiY!=null?fmt(Math.round(goiY)):'—')+'</td>'
@@ -266,7 +266,7 @@ function renderDongTien(){
     var tDiff = tTb - tBase;
     html += '<tr class="total-row">'
       + '<td class="m-title" style="text-align:left">Tổng '+g.title.toLowerCase()+'</td>'
-      + '<td data-th="Chỉ tiêu/tháng">'+fmt(Math.round(tBase))+'</td>'
+      + '<td data-th="Hạn mức/tháng">'+fmt(Math.round(tBase))+'</td>'
       + '<td data-th="TB thực tế/tháng">'+fmt(Math.round(tTb))+'</td>'
       + '<td data-th="Chênh lệch">'+chenhHtml(kind, tDiff)+'</td>'
       + '<td data-th="Gợi ý tháng tới">'+fmt(Math.round(tGoi))+'</td>'

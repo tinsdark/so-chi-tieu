@@ -1158,7 +1158,7 @@ test('nhập vào ví chọn; ngày trước mốc khóa sổ chỉ cảnh báo,
   loadData(d);
   var imp = impCoBan('Ngày,Số tiền,Ghi chú\n5/10/2026,50000,x\n15/9/2026,10000,cũ', { viId: 'b' });
   var kq = ctx.nhapPhanTich(imp);
-  ok(kq.dong[1].canhBao.indexOf('khóa sổ') >= 0, 'cảnh báo mốc khóa sổ'); eq(kq.nOk, 2);
+  ok(kq.dong[1].canhBao.indexOf('chốt số dư') >= 0, 'cảnh báo mốc khóa sổ'); eq(kq.nOk, 2);
   ctx.nhapThucHien(imp, kq);
   eq(ctx.soDuTheoVi('b', '2026-10-31'), 350000, 'ví B trừ 50k (dòng cũ trước mốc không tính)'); eq(ctx.soDuTheoVi('a', '2026-10-31'), 600000);
 });
@@ -1495,7 +1495,7 @@ test('qaSave: không có số tiền thì không ghi; ghi thu vào danh mục th
   thongBao.length = 0;
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
   voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-09-01' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
-  ok(thongBao.some(function(m){ return m.indexOf('trước mốc khóa sổ') >= 0; }), 'cảnh báo mốc: ' + thongBao.join('|'));
+  ok(thongBao.some(function(m){ return m.indexOf('trước mốc chốt số dư') >= 0; }), 'cảnh báo mốc: ' + thongBao.join('|'));
   eq(ctx.state.qa.date, '2026-09-01', 'giữ ngày đã chọn để ghi tiếp cùng ngày');
 });
 
@@ -1528,7 +1528,7 @@ test('tongQuanHtml: số dư, thu/chi, còn lại theo chỉ tiêu, chip việc 
   ok(h.indexOf('còn ' + ctx.fmt(500000)) >= 0, 'đã chi 700k / chỉ tiêu 1,2tr -> còn 500k: ' + h);
   ok(h.indexOf('1 khoản định kỳ đến hạn') >= 0, 'chip định kỳ');
   ok(h.indexOf('1 khoản vay/nợ sắp đến hạn') >= 0, 'chip vay nợ');
-  ok(h.indexOf('1 danh mục vượt chỉ tiêu') >= 0, 'Xăng 300k > 200k');
+  ok(h.indexOf('1 danh mục vượt hạn mức') >= 0, 'Xăng 300k > 200k');
   var h2 = ctx.tongQuanHtml('2026-09', 0, 0, 0, 0, true);
   ok(h2.indexOf('Số dư cuối tháng') >= 0 && h2.indexOf('>—<') >= 0, 'tháng khác/trước mốc: nhãn "cuối tháng", số dư "—"');
   setToday('2026-10-01');
