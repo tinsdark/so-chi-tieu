@@ -806,3 +806,26 @@ body.dang-khoa{overflow:hidden}
 .lock-quen-ct .btn{width:100%;margin-top:8px}
 @media (max-height:640px){ .gate-hero.nho{padding-bottom:22px} .gate-hero.nho .gate-logo{display:none} .pin-pad{gap:8px 18px} }
 @media (prefers-reduced-motion:reduce){ .pin-dots.sai{animation:none} }
+
+/* ====================================================================
+   LỚP 11 — nền họa tiết toàn app + ảnh đầu màn đăng nhập/khóa (thư mục img/)
+   nen-sang.webp / nen-toi.webp: lớp NÉT trong suốt, lặp liền mạch, đặt LÊN màu --bg (không phải ảnh có nền riêng)
+   nên màu nền của app vẫn do biến --bg quyết định. Các thẻ (.card) đặc nên họa tiết chỉ hiện ở khe giữa thẻ,
+   hai bên màn rộng, màn trống và 2 màn đăng nhập/khóa.
+   dau-man.webp: ảnh minh họa đầu màn, đáy đã ép đúng màu --bg sáng (#f8eccb) để liền với phần dưới.
+   ==================================================================== */
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:url(img/nen-sang.webp) 0 0/360px 360px repeat}
+[data-theme="dark"] body::before{background-image:url(img/nen-toi.webp)}
+.gate-wrap{background:url(img/nen-sang.webp) 0 0/360px 360px repeat,var(--bg)}
+:root:not([data-theme="dark"]) .gate-wrap{background:url(img/dau-man.webp) center top/100% auto no-repeat,url(img/nen-sang.webp) 0 0/360px 360px repeat,var(--bg)}
+[data-theme="dark"] .gate-wrap{background:url(img/nen-toi.webp) 0 0/360px 360px repeat,var(--bg)}
+/* giao diện sáng: dải đầu là ảnh -> bỏ gradient/viền của dải cũ, chữ trắng có bóng để đọc rõ trên nền đỏ */
+:root:not([data-theme="dark"]) .gate-hero{background:none;box-shadow:none;border-radius:0}
+:root:not([data-theme="dark"]) .gate-hero::before,:root:not([data-theme="dark"]) .gate-hero::after{display:none}
+:root:not([data-theme="dark"]) .gate-ten,:root:not([data-theme="dark"]) .gate-sub{text-shadow:0 1px 3px rgba(90,24,14,.55),0 0 14px rgba(90,24,14,.45)}
+/* giao diện sáng: tagline nằm dưới vùng ảnh (nền kem) để chữ nâu đọc rõ, không đè lên con cá; dải đầu bớt khoảng đệm đáy */
+:root:not([data-theme="dark"]) .gate-hero:not(.nho){padding-bottom:20px}
+:root:not([data-theme="dark"]) .gate-hero:not(.nho) .gate-sub{margin-top:84px;color:var(--muted);text-shadow:none;opacity:1}
+/* màn khóa (sáng): chấm PIN và bàn phím bắt đầu dưới vùng ảnh, không nằm trên đoạn chuyển màu đỏ -> kem */
+@media (min-height:641px){ :root:not([data-theme="dark"]) .lock-body{padding-top:76px} }
