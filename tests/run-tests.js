@@ -429,6 +429,12 @@ function journalFixture(){
   };
 }
 
+test('tài khoản mới: số dư đầu kỳ mặc định = 0, bắt đầu từ hôm nay', function(){
+  var d = JSON.parse(JSON.stringify(ctx.DEFAULT_DATA));
+  eq(d.settings.soDuDauKy, 0, 'số dư đầu kỳ mặc định');
+  eq(/^\d{4}-\d{2}-\d{2}$/.test(d.settings.ngayBatDau), true, 'ngày bắt đầu mặc định là ngày hợp lệ');
+});
+
 test('balanceAt khớp cách tính thô ở mọi mốc ngày', function(){
   var d = baseData();
   d.settings.soDuDauKy = 957000;
