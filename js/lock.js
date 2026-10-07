@@ -53,7 +53,10 @@ async function khoaDungPin(pin){
   if (!c) return true;
   return (await khoaBam(pin, c.salt, c.vong)) === c.hash;
 }
-function khoaPinHopLe(v){ return /^[0-9]{4,12}$/.test(String(v || '')) ? null : 'Mã PIN gồm 4–12 chữ số.'; }
+var KHOA_DO_DAI = 6;      // mã PIN CỐ ĐỊNH 6 chữ số: gõ đủ 6 số là app tự kiểm tra (đúng thì mở, sai thì báo ngay)
+function khoaPinHopLe(v){ return /^[0-9]{6}$/.test(String(v || '')) ? null : 'Mã PIN gồm đúng 6 chữ số.'; }
+// độ dài PIN của cấu hình: 6; riêng cấu hình cũ đã học được độ dài khác (đặt từ bản cho phép 4–12 số) thì giữ độ dài đó để không khóa mất người dùng
+function khoaDoDai(c){ return (c && c.len) ? c.len : KHOA_DO_DAI; }
 function khoaCoSinhTrac(){
   return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
 }
@@ -64,6 +67,7 @@ function khoaCoSinhTrac(){
 var _khoaNhap = '';           // các chữ số đã bấm
 var _khoaQuen = false;        // đang ở màn "Quên mã PIN"
 var _khoaBan = false;         // đang kiểm tra PIN (chặn bấm chồng)
+var _khoaDangQuet = false;    // đang chờ Face ID / vân tay (chặn gọi chồng)
 
 function khoaHien(){
   if (!khoaCauHinh()) return;
@@ -80,6 +84,14 @@ function khoaHien(){
   }
   _khoaVe(g);
   document.body.classList.add('dang-khoa');
+  khoaTuQuet();
+}
+// mở màn khóa là QUÉT LUÔN (Face ID trên iPhone có Face ID, vân tay trên máy dùng vân tay: trình duyệt tự chọn theo máy).
+// iOS có thể từ chối quét khi chưa chạm vào trang: khi đó màn khóa báo nhẹ và nút sinh trắc ở bàn phím vẫn bấm quét lại được.
+function khoaTuQuet(){
+  var c = khoaCauHinh();
+  if (!c || !c.credId || !khoaCoSinhTrac() || _khoaQuen) return;
+  setTimeout(function(){ if (_khoaDangMo && !_khoaQuen && !_khoaNhap) khoaThuSinhTrac(true); }, 300);
 }
 function _khoaHero(phu){
   return '<div class="gate-hero nho"><div class="gate-logo"><img src="icons/icon-192.png" alt="" width="64" height="64"></div>'
@@ -111,7 +123,8 @@ function _khoaVe(g){
     +     so(0)
     +     '<button type="button" class="phu" id="lockXoaSo" aria-label="Xóa số vừa nhập">' + icon('backspace') + '</button>'
     +   '</div>'
-    +   '<button class="btn lock-mo" id="lockMo"' + (c && c.len ? ' hidden' : '') + '>Mở khóa</button>'
+    // nút Mở khóa CHỈ cho cấu hình cũ chưa học được độ dài PIN (lần mở thành công đầu tiên sẽ ghi nhớ rồi nút biến mất)
+    +   (c && c.len ? '' : '<button class="btn lock-mo" id="lockMo">Mở khóa</button>')
     +   '<button class="lock-quen" id="lockQuen" type="button">Quên mã PIN?</button>'
     + '</div></div>';
   g.querySelectorAll('[data-so]').forEach(function(b){
@@ -120,16 +133,17 @@ function _khoaVe(g){
     b.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); khoaBamSo(b.getAttribute('data-so')); } });
   });
   g.querySelector('#lockXoaSo').addEventListener('click', khoaLuiSo);
-  g.querySelector('#lockMo').addEventListener('click', khoaThuPin);
+  var mo = g.querySelector('#lockMo');
+  if (mo) mo.addEventListener('click', khoaThuPin);
   var st = g.querySelector('#lockSinhTrac');
-  if (st) st.addEventListener('click', khoaThuSinhTrac);
+  if (st) st.addEventListener('click', function(){ var m = document.getElementById('lockMsg'); if (m) m.textContent = ''; khoaThuSinhTrac(false); });
   g.querySelector('#lockQuen').addEventListener('click', function(){ _khoaQuen = true; _khoaVe(g); });
   _khoaVeChamPin();
 }
 function _khoaVeChamPin(sai){
   var el = document.getElementById('pinDots'), c = khoaCauHinh();
   if (!el) return;
-  var tong = (c && c.len) ? c.len : Math.max(6, _khoaNhap.length);   // chưa biết độ dài PIN thì hiện tối thiểu 6 chấm
+  var tong = khoaDoDai(c);
   var h = '';
   for (var i = 0; i < tong; i++) h += '<i' + (i < _khoaNhap.length ? ' class="on"' : '') + '></i>';
   el.innerHTML = h;
@@ -139,12 +153,12 @@ function _khoaVeChamPin(sai){
 }
 function khoaBamSo(n){
   if (!_khoaDangMo || _khoaQuen || _khoaBan) return;
-  var c = khoaCauHinh(), toiDa = (c && c.len) ? c.len : 12;
+  var c = khoaCauHinh(), toiDa = khoaDoDai(c);
   if (_khoaNhap.length >= toiDa) return;
   _khoaNhap += String(n);
   var m = document.getElementById('lockMsg'); if (m) m.textContent = '';
   _khoaVeChamPin();
-  if (c && c.len && _khoaNhap.length === c.len) khoaThuPin();    // biết độ dài PIN thì tự mở, không cần bấm nút
+  if (_khoaNhap.length === toiDa) khoaThuPin();    // đủ số thì tự kiểm tra: đúng thì mở, sai thì báo ngay
 }
 function khoaLuiSo(){
   if (!_khoaDangMo || _khoaQuen || _khoaBan) return;
@@ -183,12 +197,13 @@ async function khoaThuPin(){
   if (navigator.vibrate){ try { navigator.vibrate([30, 40, 30]); } catch (e){} }
   _khoaVeChamPin(true);
   if (_khoaSai >= 5){ _khoaChoDen = Date.now() + 30000; _khoaSai = 0; if (msg) msg.textContent = 'Sai 5 lần, đợi 30 giây rồi thử lại.'; }
-  else if (msg) msg.textContent = 'Mã PIN không đúng.';
+  else if (msg) msg.textContent = 'Mã PIN không chính xác.';
   setTimeout(function(){ _khoaNhap = ''; _khoaVeChamPin(); }, 450);   // để chấm đỏ kịp rung rồi mới xóa
 }
-async function khoaThuSinhTrac(){
-  var c = khoaCauHinh(), msg = document.getElementById('lockMsg');
-  if (!c || !c.credId) return;
+async function khoaThuSinhTrac(tuDong){
+  var c = khoaCauHinh();
+  if (!c || !c.credId || _khoaDangQuet || !khoaCoSinhTrac()) return;
+  _khoaDangQuet = true;
   try{
     await navigator.credentials.get({ publicKey: {
       challenge: _ngauNhien(32),
@@ -196,8 +211,13 @@ async function khoaThuSinhTrac(){
       userVerification: 'required', timeout: 60000 } });
     khoaDong();
   }catch(e){
-    if (msg) msg.textContent = 'Không xác thực được bằng vân tay / Face ID. Nhập mã PIN.';
-  }
+    // màn khóa có thể đã đóng / vẽ lại trong lúc chờ; đang gõ PIN dở thì không chen vào
+    var msg = document.getElementById('lockMsg');
+    if (msg && !_khoaNhap && !msg.textContent){
+      msg.textContent = tuDong ? 'Chưa quét được. Chạm biểu tượng ở bàn phím để quét lại, hoặc nhập mã PIN.'
+                               : 'Không xác thực được bằng vân tay / Face ID. Nhập mã PIN.';
+    }
+  }finally{ _khoaDangQuet = false; }
 }
 function khoaXoaHet(){
   try{
@@ -221,7 +241,7 @@ async function khoaDatPin(){
     if (pinCu == null) return false;
     if (!(await khoaDungPin(pinCu))){ toast('Mã PIN hiện tại không đúng.', { loai: 'err' }); return false; }
   }
-  var p1 = await _hoiPin(cu ? 'Mã PIN mới' : 'Đặt mã PIN khóa app', 'Từ 4 đến 12 chữ số. Chỉ áp dụng trên máy này.');
+  var p1 = await _hoiPin(cu ? 'Mã PIN mới' : 'Đặt mã PIN khóa app', 'Đúng 6 chữ số. Chỉ áp dụng trên máy này.');
   if (p1 == null) return false;
   var p2 = await _hoiPin('Nhập lại mã PIN', '');
   if (p2 == null) return false;

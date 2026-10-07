@@ -181,7 +181,38 @@ function motionDaGhi(){
   setTimeout(function(){ b.classList.remove('da-ghi'); }, 700);
 }
 
-/* ---- vuốt ngang 1 ngày ở Sổ tay (chỉ màn hình cảm ứng) ---- */
+/* ---- vuốt ngang 1 ngày ở Sổ tay (chỉ màn hình cảm ứng) ----
+   Vuốt SANG TRÁI = Xóa ngày, vuốt SANG PHẢI = Sửa ngày. Để người mới biết vuốt sẽ ra gì: vừa vuốt, phía sau dòng hiện
+   nền màu + biểu tượng + chữ ("Xóa" đỏ / "Sửa" xanh); vuốt đủ xa thì đổi thành "Thả để xóa / Thả để sửa".
+   Thả tay ở vị trí đủ xa thì HỎI XÁC NHẬN rồi mới làm (nhầm tay cũng không mất gì). Chưa đủ xa thì dòng bật về chỗ cũ. */
+function vuotNenTao(row){
+  var tbody = row.parentNode;
+  var nen = document.createElement('div');
+  nen.className = 'vuot-nen';
+  nen.setAttribute('aria-hidden', 'true');
+  nen.style.top = row.offsetTop + 'px';
+  nen.style.height = row.offsetHeight + 'px';
+  nen.innerHTML = '<span class="vn-sua">' + icon('pencil') + '<b>Sửa</b></span><span class="vn-xoa"><b>Xóa</b>' + icon('trash') + '</span>';
+  tbody.classList.add('dang-vuot');
+  tbody.appendChild(nen);
+  row.classList.add('dang-vuot-dong');
+  return nen;
+}
+function vuotNenBo(bd){
+  if (bd.nen && bd.nen.parentNode) bd.nen.parentNode.removeChild(bd.nen);
+  if (bd.row.parentNode) bd.row.parentNode.classList.remove('dang-vuot');
+  bd.row.classList.remove('dang-vuot-dong');
+  bd.row.style.transition = ''; bd.row.style.transform = '';
+}
+// nội dung hộp thoại xác nhận cho thao tác vuốt
+function vuotHoi(loai, date){
+  var e = state.data.journal[date];
+  if (!e) return Promise.resolve(false);
+  var nhan = ngayVN(date), nKhoan = entryItems(e).length + (e.refs || []).length;
+  var tomTat = 'Ngày này có ' + nKhoan + ' khoản' + (thuTotal(e) ? ', thu ' + fmt(Math.round(thuTotal(e))) : '') + (chiTotal(e) ? ', chi ' + fmt(Math.round(chiTotal(e))) : '') + '.';
+  if (loai === 'sua') return xacNhan('Sửa ngày ' + nhan + '?', tomTat + '\nMở form để sửa số tiền của ngày này.', { chuOk: 'Sửa' });
+  return xacNhan('Xóa ngày ' + nhan + '?', tomTat + '\nSau khi xóa vẫn có nút Hoàn tác trong vài giây.', { nguyHiem: true, chuOk: 'Xóa' });
+}
 (function(){
   if (typeof window === 'undefined' || !window.document || !document.addEventListener) return;
   var bd = null;
@@ -189,30 +220,46 @@ function motionDaGhi(){
     if (ev.touches.length !== 1 || state.tab !== 'sotay') return;
     var row = ev.target.closest && ev.target.closest('tr.st-row');
     if (!row || ev.target.closest('button, a, input, select')) { bd = null; return; }
-    bd = { row: row, x: ev.touches[0].clientX, y: ev.touches[0].clientY, dx: 0, ngang: null };
+    bd = { row: row, x: ev.touches[0].clientX, y: ev.touches[0].clientY, dx: 0, ngang: null, nen: null, qua: false,
+           nguong: Math.min(110, row.offsetWidth * 0.3) };
   }, { passive: true });
   document.addEventListener('touchmove', function(ev){
     if (!bd) return;
     var dx = ev.touches[0].clientX - bd.x, dy = ev.touches[0].clientY - bd.y;
     if (bd.ngang === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) bd.ngang = Math.abs(dx) > Math.abs(dy) * 1.5;
     if (!bd.ngang) return;
+    if (!bd.nen) bd.nen = vuotNenTao(bd.row);
     bd.dx = dx;
     bd.row.style.transition = 'none';
     bd.row.style.transform = 'translateX(' + dx + 'px)';
-    bd.row.classList.toggle('vuot-xoa', dx < -40);
-    bd.row.classList.toggle('vuot-sua', dx > 40);
+    var qua = Math.abs(dx) >= bd.nguong;
+    bd.nen.className = 'vuot-nen ' + (dx < 0 ? 'xoa' : 'sua') + (qua ? ' du' : '');
+    bd.nen.style.setProperty('--tien', Math.min(1, Math.abs(dx) / bd.nguong));
+    bd.nen.querySelector(dx < 0 ? '.vn-xoa b' : '.vn-sua b').textContent = qua ? (dx < 0 ? 'Thả để xóa' : 'Thả để sửa') : (dx < 0 ? 'Xóa' : 'Sửa');
+    if (qua && !bd.qua && navigator.vibrate){ try { navigator.vibrate(8); } catch (e){} }   // rung nhẹ khi vừa đủ xa (Android)
+    bd.qua = qua;
   }, { passive: true });
-  document.addEventListener('touchend', function(){
+  function xong(huy){
     if (!bd) return;
-    var r = bd.row, dx = bd.dx, nguong = Math.min(120, r.offsetWidth * 0.3);
-    r.style.transition = ''; r.style.transform = '';
-    r.classList.remove('vuot-xoa', 'vuot-sua');
-    bd = null;
-    if (Math.abs(dx) < nguong) return;
-    var nut = r.querySelector(dx < 0 ? '[data-act=delDay]' : '[data-act=editDay]');
-    if (nut) nut.click();
-  });
-  document.addEventListener('touchcancel', function(){ if (bd){ bd.row.style.transform = ''; bd.row.classList.remove('vuot-xoa', 'vuot-sua'); bd = null; } });
+    var b = bd, dx = b.dx; bd = null;
+    vuotNenBo(b);
+    if (huy || Math.abs(dx) < b.nguong) return;
+    var loai = dx < 0 ? 'xoa' : 'sua';
+    var nut = b.row.querySelector(dx < 0 ? '[data-act=delDay]' : '[data-act=editDay]');
+    var date = nut && nut.getAttribute('data-date');
+    if (!date) return;
+    var chay = function(){
+      // vẽ lại có thể đã thay dòng trong lúc hộp thoại mở: tìm lại nút theo ngày
+      var n2 = document.querySelector((loai === 'xoa' ? '[data-act=delDay]' : '[data-act=editDay]') + '[data-date="' + date + '"]');
+      if (n2) n2.click();
+    };
+    // ngày có khoản vay: nút Xóa tự hỏi bằng hộp thoại riêng, có liệt kê hậu quả ở Vay - Nợ -> không hỏi 2 lần
+    var coRef = loai === 'xoa' && state.data.journal[date] && (state.data.journal[date].refs || []).length;
+    if (coRef){ chay(); return; }
+    vuotHoi(loai, date).then(function(ok){ if (ok) chay(); });
+  }
+  document.addEventListener('touchend', function(){ xong(false); });
+  document.addEventListener('touchcancel', function(){ xong(true); });
 })();
 
 /* ---- kéo xuống ở đầu trang để làm mới ---- */

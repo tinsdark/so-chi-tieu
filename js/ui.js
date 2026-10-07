@@ -96,7 +96,7 @@ function moHoiThoai(cf){
       h += '<label for="modal_inp">'+esc(cf.oNhap.nhan||'')+'</label>'
          + '<input id="modal_inp" type="'+(laTien ? 'text' : (cf.oNhap.kieu === 'pin' ? 'password' : (cf.oNhap.kieu||'text')))+'"'
          + (laTien ? ' class="money" inputmode="numeric" autocomplete="off"' : '')
-         + (cf.oNhap.kieu === 'pin' ? ' inputmode="numeric" autocomplete="off" maxlength="12"' : '')
+         + (cf.oNhap.kieu === 'pin' ? ' inputmode="numeric" autocomplete="off" maxlength="6"' : '')
          + (cf.oNhap.kieu === 'number' ? ' min="0"' : '')
          + ' value="'+esc(cf.oNhap.macDinh == null ? '' : (laTien ? veSo(cf.oNhap.macDinh) : cf.oNhap.macDinh))+'">'
          + '<div class="modal-err" id="modal_err"></div>';

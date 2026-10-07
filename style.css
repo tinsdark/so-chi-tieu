@@ -707,8 +707,17 @@ header{view-transition-name:dau-trang}
 [data-huong="lui"]::view-transition-new(noi-dung){animation-name:vt-vao-trai}
 /* vuốt 1 ngày ở Sổ tay: nền báo trước hành động */
 tr.st-row{transition:transform .2s var(--ease)}
-tr.st-row.vuot-xoa{box-shadow:inset -6px 0 0 var(--red)}
-tr.st-row.vuot-sua{box-shadow:inset 6px 0 0 var(--green)}
+/* nền hiện phía sau dòng khi vuốt: trái = Xóa (đỏ), phải = Sửa (xanh) */
+table.t-card tbody.dang-vuot{position:relative}
+table.t-card tbody tr.st-row.dang-vuot-dong{position:relative;z-index:1}
+.vuot-nen{position:absolute;left:0;right:0;z-index:0;border-radius:10px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;color:#fff;pointer-events:none;background:transparent}
+.vuot-nen.xoa{background:var(--chi-solid)} .vuot-nen.sua{background:var(--thu-solid)}
+.vuot-nen span{display:none;align-items:center;gap:8px;font-size:14px;font-weight:700;opacity:calc(.35 + .65 * var(--tien,0))}
+.vuot-nen.xoa .vn-xoa,.vuot-nen.sua .vn-sua{display:flex}
+.vuot-nen .vn-xoa{margin-left:auto}   /* chỉ 1 phần tử hiện: dính mép phải để nằm đúng vùng vừa lộ ra */
+.vuot-nen .ic{width:26px;height:26px;transition:transform .15s var(--spring)}
+.vuot-nen.du .ic{transform:scale(1.25)}
 /* kéo xuống để làm mới */
 .keo-lam-moi{position:fixed;top:0;left:50%;transform:translate(-50%,0);z-index:30;background:var(--card);border:1px solid var(--border);
   box-shadow:var(--shadow);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .15s}
