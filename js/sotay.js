@@ -172,6 +172,7 @@ function soTayMonthList(){
 
 // xuất toàn bộ Sổ tay ra file Excel (dùng để backup thủ công)
 function exportExcel(){
+  if (typeof XLSX === 'undefined'){ toast('Chưa tải được thư viện Excel (cần mạng lần đầu). Thử lại khi có mạng.', { loai:'err' }); return; }
   var thuCats = state.data.categories.thu;
   var chiCats = state.data.categories.chi;
   var dates = sortedJournalDates();
@@ -271,7 +272,7 @@ function renderSoTay(){
     var vt = num((editEntry.thu||{})[c.id]) - lockThu;
     if (vt <= 0) vt = '';
     var roThu = !!VN_ONLY_THU[c.id] && !vt;
-    html += '<div><label>'+c.ten
+    html += '<div><label>'+esc(c.ten)
       + (lockThu > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockThu))+' khóa từ Vay-Nợ)</span>' : '')
       + '</label><input type="text" inputmode="numeric" autocomplete="off" class="money f_thu" data-cat="'+c.id+'" data-lock="'+lockThu+'" value="'+veSo(vt)+'" placeholder="0"'
       + (roThu ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
@@ -287,7 +288,7 @@ function renderSoTay(){
       if (pendingCV.length){
         html += '<select id="sotay_selChoVay" data-act="soTayChonChoVay" style="margin-top:4px;width:100%;font-size:12px">'
           + '<option value="">— chọn khoản cho vay (tùy chọn) —</option>'
-          + pendingCV.map(function(l){ return '<option value="'+l.id+'">'+l.ten+' (còn '+fmt(conLaiPhaiThu(l))+')</option>'; }).join('')
+          + pendingCV.map(function(l){ return '<option value="'+l.id+'">'+esc(l.ten)+' (còn '+fmt(conLaiPhaiThu(l))+')</option>'; }).join('')
           + '</select>';
       }
     }
@@ -304,7 +305,7 @@ function renderSoTay(){
     var v = num((editEntry.chi||{})[c.id]) - lockChi;
     if (v <= 0) v = '';
     var roChi = !!VN_ONLY_CHI[c.id] && !v;
-    html += '<div><label>'+c.ten
+    html += '<div><label>'+esc(c.ten)
       + (lockChi > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockChi))+' khóa từ Vay-Nợ)</span>' : '')
       + '</label><input type="text" inputmode="numeric" autocomplete="off" class="money f_chi" data-cat="'+c.id+'" data-lock="'+lockChi+'" value="'+veSo(v)+'" placeholder="0"'
       + (roChi ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
@@ -327,7 +328,7 @@ function renderSoTay(){
           + activeVN.map(function(l){
               var td = tienDoTraNo(l);
               var thieu = conThieuKy(l, td.kyTiepIdx, td.sch);
-              return '<option value="'+l.id+'">'+l.ten+' ('+td.daTraKy+'/'+td.tongKy+' kỳ, kỳ '+(td.kyTiepIdx+1)+' còn '+fmt(Math.round(thieu))+')</option>';
+              return '<option value="'+l.id+'">'+esc(l.ten)+' ('+td.daTraKy+'/'+td.tongKy+' kỳ, kỳ '+(td.kyTiepIdx+1)+' còn '+fmt(Math.round(thieu))+')</option>';
             }).join('')
           + '</select>';
       }

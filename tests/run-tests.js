@@ -2064,7 +2064,8 @@ test('bieuDoCardHtml: 3 tab vẽ được với dữ liệu thật; tháng trố
   ctx.state.bdTab = 'tq';
   var tq = ctx.bieuDoCardHtml('2026-10');
   ok(tq.indexOf('id="bieuDoCard"') > 0 && tq.indexOf('Phân tích') > 0 && tq.indexOf('bd-cal') > 0, 'tab Tổng quan');
-  ok(tq.indexOf('so với tháng 9') > 0, 'có câu so sánh với tháng trước');
+  // tháng 9 chỉ có giao dịch ngày 10 -> cùng kỳ 1–6/9 trống: không so (trước đây so với cả tháng 9 ra "giảm" sai)
+  ok(tq.indexOf('so với tháng 9') < 0 && tq.indexOf('chi nhiều nhất') > 0, 'cùng kỳ trống thì không so với cả tháng trước');
   ctx.state.bdTab = 'dm'; ctx.state.bdMode = 'vong';
   ok(ctx.bieuDoCardHtml('2026-10').indexOf('bd-donut') > 0, 'donut');
   ctx.state.bdMode = 'thanh';
@@ -2073,6 +2074,43 @@ test('bieuDoCardHtml: 3 tab vẽ được với dữ liệu thật; tháng trố
   ok(ctx.bieuDoCardHtml('2026-10').indexOf('bd-lc') > 0, 'tab Xu hướng');
   ['tq', 'dm', 'xh'].forEach(function(t){ ctx.state.bdTab = t; ok(ctx.bieuDoCardHtml('2026-03').indexOf('bieuDoCard') > 0, 'tháng không dữ liệu (' + t + ')'); });
   ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; ctx.state.bdCat = null; setToday('2026-10-01');
+});
+
+test('Phân tích tháng: tháng đang chạy so CÙNG KỲ, tháng đã qua so cả tháng', function(){
+  // nhịp chi đều 100k/ngày cả tháng 9 và 7 ngày đầu tháng 10 -> không được báo "giảm 77%"
+  var j = {};
+  for (var dd = 1; dd <= 30; dd++) j['2026-09-' + (dd < 10 ? '0' + dd : dd)] = { thu: {}, chi: { an: 100000 }, ghiChu: '' };
+  for (var d2 = 1; d2 <= 7; d2++) j['2026-10-0' + d2] = { thu: {}, chi: { an: 100000 }, ghiChu: '' };
+  loadData(baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' }, journal: j }));
+  setToday('2026-10-07');
+  var p = ctx.bdThangSoSanh('2026-10');
+  eq(p.tongChi, 700000, 'chỉ cộng 1–7/9'); eq(p.nhan, '1–7/9');
+  ctx.state.bdTab = 'tq';
+  var h = ctx.bieuDoCardHtml('2026-10');
+  ok(h.indexOf('không đổi') > 0 && h.indexOf('so với 1–7/9') > 0, 'nhịp như nhau -> "không đổi so với 1–7/9"');
+  ok(h.indexOf('giảm') < 0, 'không còn báo giảm sai');
+  // xem lại tháng đã qua: so với cả tháng trước
+  setToday('2026-11-15');
+  var p2 = ctx.bdThangSoSanh('2026-10');
+  eq(p2.nhan, 'tháng 9'); eq(p2.tongChi, 3000000);
+  // ngày 31/3 so với tháng 2: hết tháng 2 rồi -> cả tháng 2, nhãn "tháng 2"
+  setToday('2027-03-31'); eq(ctx.bdThangSoSanh('2027-03').nhan, 'tháng 2');
+  setToday('2026-10-01');
+});
+
+test('Ước tính chi hết tháng: 1 khoản lớn không bị nhân lên cả tháng; cộng định kỳ chưa ghi', function(){
+  var j = {};
+  for (var dd = 1; dd <= 10; dd++) j['2026-10-' + (dd < 10 ? '0' + dd : dd)] = { thu: {}, chi: { an: 100000 }, ghiChu: '' };
+  j['2026-10-03'].chi.an = 3100000;      // 1 lần mua lớn
+  loadData(baseData({ journal: j, dinhKy: [{ id: 'dk1', ten: 'Tiền nhà', kind: 'chi', catId: 'an', soTien: 2000000, ngay: 25, bat: true }] }));
+  setToday('2026-10-10');
+  var u = ctx.bdUocTinhChiThang('2026-10', 10);
+  eq(u.daChi, 4000000, 'đã chi');
+  near(u.bietTruoc, 2000000, 1, 'định kỳ chưa ghi');
+  // ngày thường: 9 ngày 100k + ngày lớn bị chặn ở 3×100k = 1,2tr / 10 ngày = 120k/ngày × 21 ngày còn lại
+  near(u.them, 120000 * 21 + 2000000, 1, 'dự kiến thêm');
+  ok(u.tong < 4000000 / 10 * 31 + 2000000, 'thấp hơn cách ngoại suy cũ');
+  setToday('2026-10-01');
 });
 
 test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ đổi state, không ghi dữ liệu', function(){

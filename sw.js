@@ -6,13 +6,13 @@
    Chiến lược chọn để KHÔNG BAO GIỜ kẹt bản cũ (bẫy kinh điển của service worker):
    - file của chính app: MẠNG TRƯỚC. Có mạng là luôn lấy bản mới nhất rồi ghi đè cache.
      Cache chỉ được dùng khi mất mạng, hoặc mạng treo quá MANG_CHO_MS mà đã có cache.
-   - thư viện CDN (SheetJS): CACHE TRƯỚC, vì URL đã gắn phiên bản cố định.
+   - thư viện CDN (SheetJS, cdn.sheetjs.com): CACHE TRƯỚC, vì URL đã gắn phiên bản cố định.
    - mọi thứ khác (đăng nhập Google, Drive API): KHÔNG can thiệp.
    Đổi file này (ví dụ tăng VERSION) thì trình duyệt tự cài bản mới, xóa cache cũ.
    ==================================================================== */
-var VERSION = 'v2';
+var VERSION = 'v3';
 var CACHE = 'sochitieu-' + VERSION;
-var CDN_HOSTS = ['cdn.jsdelivr.net'];
+var CDN_HOSTS = ['cdn.sheetjs.com'];
 var MANG_CHO_MS = 6000;
 
 self.addEventListener('install', function(){ self.skipWaiting(); });

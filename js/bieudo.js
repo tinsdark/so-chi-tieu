@@ -246,9 +246,9 @@ function bdHBars(items, tong, opt){
     if (opt.phanTram) sub += Math.round(it.v / tong * 100) + '% tổng chi';
     if (opt.soSanh && it.truoc != null && it.truoc > 0){
       var d = Math.round((it.v - it.truoc) / it.truoc * 100);
-      sub += (sub ? ' · ' : '') + '<span class="'+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? '↑ +' : (d < 0 ? '↓ ' : '= '))+d+'%</span> so với tháng trước';
+      sub += (sub ? ' · ' : '') + '<span class="'+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? '↑ +' : (d < 0 ? '↓ ' : '= '))+d+'%</span> so với ' + (opt.nhanTruoc || 'tháng trước');
     } else if (opt.soSanh && it.truoc === 0){
-      sub += (sub ? ' · ' : '') + '<span class="up">mới</span> so với tháng trước';
+      sub += (sub ? ' · ' : '') + '<span class="up">mới</span> so với ' + (opt.nhanTruoc || 'tháng trước');
     }
     h += '<div class="bd-hb-r'+(opt.pick && opt.sel === i ? ' sel' : '')+'"'+(opt.pick ? ' data-act="bdPick" data-i="'+i+'"' : '')+'>'
       + '<div class="top"><span><i style="background:'+it.mau+'"></i>'+esc(it.ten)+'</span><b>'+fmt(Math.round(it.v))+'</b></div>'
@@ -290,10 +290,12 @@ function bdThangTruoc(mk){
   if (m < 1){ m = 12; y--; }
   return y + '-' + pad2(m);
 }
-// gom số liệu 1 tháng: tổng thu/chi, theo ngày, theo danh mục
-function bdThang(mk){
+// gom số liệu 1 tháng: tổng thu/chi, theo ngày, theo danh mục.
+// denNgay (tùy chọn): chỉ cộng tới hết ngày đó — dùng để so CÙNG KỲ với tháng đang chạy dở.
+function bdThang(mk, denNgay){
   var soNgay = daysInMonth(mk), chi = [], thu = [], theoCat = {}, theoCatThu = {}, topCatNgay = [], coDl = false;
-  for (var d = 1; d <= soNgay; d++){
+  var het = denNgay ? Math.min(soNgay, denNgay) : soNgay;
+  for (var d = 1; d <= het; d++){
     var e = state.data.journal[mk + '-' + pad2(d)], c = 0, t = 0, best = null, bv = 0;
     if (e){
       coDl = true;
@@ -332,8 +334,44 @@ function bdXepCat(kind, theo, truocTheo, gop){
 function bdPhanTram(a, b){ return b > 0 ? Math.round((a - b) / b * 100) : null; }
 function bdTien(v){ return fmt(Math.round(v)); }
 
+// tháng trước để so sánh. Tháng đang chạy dở: chỉ lấy CÙNG KỲ (ngày 1 -> cùng ngày của hôm nay),
+// so với cả tháng trước thì đầu tháng nào cũng ra "chi giảm 75%" dù nhịp chi không đổi.
+// Trả thêm nhan ("tháng 9" / "1–7/9") và nhanNgan ("T9" / "1–7/9") để ghi đúng đang so với cái gì.
+function bdThangSoSanh(mk){
+  var prevMk = bdThangTruoc(mk), hom = todayStr();
+  var den = mk === monthKey(hom) ? parseInt(hom.slice(8, 10), 10) : 0;
+  var cungKy = den > 0 && den < daysInMonth(prevMk);
+  var prev = bdThang(prevMk, cungKy ? den : 0), th = parseInt(prevMk.slice(5), 10);
+  prev.nhan = cungKy ? '1–' + den + '/' + th : 'tháng ' + th;
+  prev.nhanNgan = cungKy ? prev.nhan : 'T' + th;
+  return prev;
+}
+
+// ước tính chi hết tháng đang chạy: đã chi + nhịp chi ngày thường × số ngày còn lại + các khoản biết trước chưa ghi.
+// "Ngày thường": mỗi ngày bị chặn trần ở 3 lần trung vị các ngày có chi — 1 lần mua lớn không bị nhân lên cả tháng.
+// Trả nợ / Cho vay không tính vào nhịp (đi theo lịch vay, phần còn lại của tháng lấy từ lịch qua bietTruocChuaGhi).
+function bdUocTinhChiThang(mk, denNgay){
+  var soNgay = daysInMonth(mk), daChi = 0, ngay = [];
+  for (var d = 1; d <= denNgay; d++){
+    var e = state.data.journal[mk + '-' + pad2(d)], v = 0;
+    if (e){
+      daChi += chiTotal(e);
+      Object.keys(e.chi || {}).forEach(function(k){ if (!CAT_HE_THONG.chi[k]) v += num(e.chi[k]); });
+    }
+    ngay.push(v);
+  }
+  var coChi = ngay.filter(function(v){ return v > 0; }).sort(function(a, b){ return a - b; });
+  var trungVi = coChi.length ? (coChi.length % 2 ? coChi[(coChi.length - 1) / 2] : (coChi[coChi.length / 2 - 1] + coChi[coChi.length / 2]) / 2) : 0;
+  var tran = trungVi * 3, tong = 0;
+  ngay.forEach(function(v){ tong += Math.min(v, tran); });
+  var nhip = denNgay > 0 ? tong / denNgay : 0;
+  var bietTruoc = dinhKyChuaGhiThang(mk, 'chi') + bietTruocChuaGhi('chi', 'traNo', mk);
+  var them = nhip * (soNgay - denNgay) + bietTruoc;
+  return { tong: daChi + them, daChi: daChi, them: them, bietTruoc: bietTruoc };
+}
+
 function bdTongQuanHtml(mk){
-  var cur = bdThang(mk), prev = bdThang(bdThangTruoc(mk));
+  var cur = bdThang(mk), prev = bdThangSoSanh(mk);
   var hom = todayStr(), laNay = mk === monthKey(hom), tuongLai = mk > monthKey(hom);
   var denNgay = tuongLai ? 0 : (laNay ? parseInt(hom.slice(8, 10), 10) : cur.soNgay);
   var h = '';
@@ -345,7 +383,7 @@ function bdTongQuanHtml(mk){
   var pc = bdPhanTram(cur.tongChi, prev.tongChi);
   if (pc != null && prev.coDl){
     dong.push({ ic: pc > 0 ? 'up' : 'dn', ky: pc > 0 ? '↑' : '↓',
-      t: 'Chi <b>' + (pc > 0 ? 'tăng ' : (pc < 0 ? 'giảm ' : 'không đổi ')) + (pc === 0 ? '' : Math.abs(pc) + '%') + '</b> so với tháng ' + parseInt(prev.mk.slice(5), 10),
+      t: 'Chi <b>' + (pc > 0 ? 'tăng ' : (pc < 0 ? 'giảm ' : 'không đổi ')) + (pc === 0 ? '' : Math.abs(pc) + '%') + '</b> so với ' + prev.nhan,
       s: bdTien(cur.tongChi) + ' so với ' + bdTien(prev.tongChi) });
   }
   var cats = bdXepCat('chi', cur.theoCat, prev.theoCat, 0);
@@ -365,11 +403,13 @@ function bdTongQuanHtml(mk){
       s: 'Cao nhất: ' + bdTien(maxV) + (cur.topCatNgay[maxD - 1] ? ' (' + esc(catTen('chi', cur.topCatNgay[maxD - 1])) + ')' : '') });
   }
   if (laNay && denNgay >= 3 && cur.tongChi > 0){
-    var du = cur.tongChi / denNgay * cur.soNgay, cap = 0;
+    var ut = bdUocTinhChiThang(mk, denNgay), du = ut.tong, cap = 0;
     hanMucThangRows(mk).forEach(function(r){ cap += r.cap; });
     dong.push({ ic: cap > 0 && du > cap ? 'up' : 'dn', ky: cap > 0 && du > cap ? '!' : icon('check'),
       t: 'Ước tính chi hết tháng <b>≈ ' + bdTien(du) + '</b>',
-      s: 'Theo nhịp chi hiện tại' + (cap > 0 ? ' · chỉ tiêu ' + bdTien(cap) : '') });
+      s: 'Đã chi ' + bdTien(ut.daChi) + ' + dự kiến thêm ' + bdTien(ut.them)
+        + (ut.bietTruoc > 0 ? ' (gồm ' + bdTien(ut.bietTruoc) + ' định kỳ/trả nợ chưa ghi)' : '')
+        + (cap > 0 ? ' · chỉ tiêu ' + bdTien(cap) : '') });
   }
   if (dong.length){
     h += '<div class="card k-act bd-ins"><h3>Phân tích '+monthLabel(mk).toLowerCase()+'</h3>'
@@ -378,7 +418,7 @@ function bdTongQuanHtml(mk){
   }
   // --- 2 ô thu / chi ---
   var pt = prev.coDl ? bdPhanTram(cur.tongThu, prev.tongThu) : null;
-  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? '↑ ' : (p < 0 ? '↓ ' : '= '))+Math.abs(p)+'% so với T'+parseInt(prev.mk.slice(5), 10)+'</em>'; };
+  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? '↑ ' : (p < 0 ? '↓ ' : '= '))+Math.abs(p)+'% so với '+prev.nhanNgan+'</em>'; };
   h += '<div class="bd-kpi"><div><small>Tổng thu</small><b class="thu">'+bdTien(cur.tongThu)+'</b>'+so(pt, 'thu')+'</div>'
     + '<div><small>Tổng chi</small><b class="chi">'+bdTien(cur.tongChi)+'</b>'+so(prev.coDl ? pc : null, 'chi')+'</div></div>';
   // --- số dư cuối ngày ---
@@ -413,7 +453,7 @@ function bdTongQuanHtml(mk){
 }
 
 function bdDanhMucHtml(mk){
-  var cur = bdThang(mk), prev = bdThang(bdThangTruoc(mk));
+  var cur = bdThang(mk), prev = bdThangSoSanh(mk);
   var h = '';
   var cats = bdXepCat('chi', cur.theoCat, prev.coDl ? prev.theoCat : null, 6);
   var tong = cur.tongChi;
@@ -430,7 +470,7 @@ function bdDanhMucHtml(mk){
           return '<div class="bd-leg-r'+(sel === i ? ' sel' : '')+'" data-act="bdPick" data-i="'+i+'"><i style="background:'+c.mau+'"></i><span>'+esc(c.ten)+'</span><b>'+bdTien(c.v)+'</b><span class="p">'+Math.round(c.v / tong * 100)+'%</span></div>';
         }).join('') + '</div>';
   } else {
-    h += bdHBars(cats, tong, { phanTram: true, soSanh: prev.coDl });
+    h += bdHBars(cats, tong, { phanTram: true, soSanh: prev.coDl, nhanTruoc: prev.nhan });
   }
   var thu = bdXepCat('thu', cur.theoCatThu, null, 6);
   h += '<div class="bd-h" style="margin-top:22px">Thu theo danh mục</div>';

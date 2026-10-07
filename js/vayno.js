@@ -491,7 +491,7 @@ function sapDenHanHtml(nNgay){
     else if (x.soNgay === 0) trang = '<span style="color:var(--red);font-weight:600">Hôm nay</span>';
     else if (x.soNgay <= 3) trang = '<span style="color:var(--amber);font-weight:600">Còn '+x.soNgay+' ngày</span>';
     else trang = '<span style="color:var(--gold)">Còn '+x.soNgay+' ngày</span>';
-    html += '<tr class="vn-sap" data-act="vnCuonTo" data-loai="'+x.loai+'" data-id="'+esc(x.id)+'"><td class="m-title" style="text-align:left">'+x.ten+'</td><td data-th="Loại">'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
+    html += '<tr class="vn-sap" data-act="vnCuonTo" data-loai="'+x.loai+'" data-id="'+esc(x.id)+'"><td class="m-title" style="text-align:left">'+esc(x.ten)+'</td><td data-th="Loại">'+(x.loai==='choVay'?'Thu hồi cho vay':'Trả nợ')+'</td>'
       + '<td data-th="Ngày">'+ngayVN(x.ngay)+'</td><td data-th="Số tiền">'+fmt(Math.round(x.soTien))+'</td><td data-th="Trạng thái">'+trang+'</td></tr>';
   });
   html += '</tbody></table></div></div>';
@@ -526,7 +526,7 @@ function renderVayNo(){
                 ? '<span style="color:var(--red);font-weight:600">Quá hạn '+qh+' ngày</span>'
                 : 'Đang chờ'));
       html += '<tr id="vn-cv-'+esc(c.id)+'">'
-        + '<td class="m-title" style="text-align:left">'+c.ten+'</td>'
+        + '<td class="m-title" style="text-align:left">'+esc(c.ten)+'</td>'
         + '<td data-th="Số tiền">'+fmt(c.soTien)+'</td>'
         + '<td data-th="Đã thu">'+fmt(c.daThu)+'</td>'
         + '<td data-th="Còn lại">'+fmt(conLai)+'</td>'
@@ -557,7 +557,7 @@ function renderVayNo(){
       var hetNoMk = thangDuKienHetNo(v);
       var tienDo = tienDoTraNo(v);
       html += '<tr id="vn-vn-'+esc(v.id)+'">'
-        + '<td class="m-title" style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+v.ten+'</a></td>'
+        + '<td class="m-title" style="text-align:left"><a href="#" data-act="vnToggleDetail" data-id="'+v.id+'" style="color:var(--primary-d);text-decoration:none">'+esc(v.ten)+'</a></td>'
         + '<td data-th="Loại vay">'+LOAI_VAY_LABEL[v.loaiVay]+'</td>'
         + '<td data-th="Hình thức">'+HINH_THUC_LABEL[v.hinhThuc]+'</td>'
         + '<td data-th="Đã trả">'+tienDo.daTraKy+'/'+tienDo.tongKy+' kỳ</td>'

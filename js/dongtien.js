@@ -177,7 +177,7 @@ function renderDongTien(){
     cats.forEach(function(c){
       var base = baseVal(g.kind, c.id);
       var tagHtml = base>0 ? ' <span class="cat-tag" title="Chỉ tiêu/tháng">'+fmt(base)+'</span>' : '';
-      html += '<tr><td class="sticky-col"><span class="cat-label">'+c.ten+tagHtml+'</span></td>';
+      html += '<tr><td class="sticky-col"><span class="cat-label">'+esc(c.ten)+tagHtml+'</span></td>';
       vm.forEach(function(mk){
         var future = mk > currentMk;
         var val = cellVal(g.kind, c.id, mk);
@@ -256,7 +256,7 @@ function renderDongTien(){
       var goiY = suggestVal(kind, c.id, monthKeyAdd(currentMk, 1));
       tBase += (base>0?base:0); tTb += (tbA||0); tGoi += (goiY||0);
       html += '<tr>'
-        + '<td class="m-title" style="text-align:left;padding-left:18px">'+c.ten+'</td>'
+        + '<td class="m-title" style="text-align:left;padding-left:18px">'+esc(c.ten)+'</td>'
         + '<td data-th="Chỉ tiêu/tháng">'+(base>0?fmt(base):'—')+'</td>'
         + '<td data-th="TB thực tế/tháng">'+(tbA!=null?fmt(Math.round(tbA)):'—')+'</td>'
         + '<td data-th="Chênh lệch">'+chenhHtml(kind, diff)+'</td>'

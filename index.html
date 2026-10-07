@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Chi Tiêu">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="style.css?v=434df3af">
+<link rel="stylesheet" href="style.css?v=d04cabf5">
 </head>
 <body>
 
@@ -53,21 +53,22 @@
   <main id="tabContent"><div class="empty">Đang tải…</div></main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- SheetJS bản chính thức (0.18.5 trên npm/jsdelivr có lỗ hổng khi đọc file: CVE-2023-30533, CVE-2024-22363) -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=434df3af"></script>
-<script src="js/ui.js?v=434df3af"></script>
-<script src="js/drive-sync.js?v=434df3af"></script>
-<script src="js/vayno.js?v=434df3af"></script>
-<script src="js/sotay.js?v=434df3af"></script>
-<script src="js/bieudo.js?v=434df3af"></script>
-<script src="js/nhap.js?v=434df3af"></script>
-<script src="js/danhmuc.js?v=434df3af"></script>
-<script src="js/dongtien.js?v=434df3af"></script>
-<script src="js/mophong.js?v=434df3af"></script>
-<script src="js/motion.js?v=434df3af"></script>
-<script src="js/app.js?v=434df3af"></script>
+<script src="js/state.js?v=d04cabf5"></script>
+<script src="js/ui.js?v=d04cabf5"></script>
+<script src="js/drive-sync.js?v=d04cabf5"></script>
+<script src="js/vayno.js?v=d04cabf5"></script>
+<script src="js/sotay.js?v=d04cabf5"></script>
+<script src="js/bieudo.js?v=d04cabf5"></script>
+<script src="js/nhap.js?v=d04cabf5"></script>
+<script src="js/danhmuc.js?v=d04cabf5"></script>
+<script src="js/dongtien.js?v=d04cabf5"></script>
+<script src="js/mophong.js?v=d04cabf5"></script>
+<script src="js/motion.js?v=d04cabf5"></script>
+<script src="js/app.js?v=d04cabf5"></script>
 
 </body>
 </html>
