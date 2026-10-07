@@ -11,7 +11,7 @@
    ==================================================================== */
 
 var DEFAULT_DATA = {
-  settings: { soDuDauKy: 957000, ngayBatDau: "2026-09-25" },
+  settings: { soDuDauKy: 0, ngayBatDau: todayStr() },   // tài khoản mới: số dư đầu kỳ 0, bắt đầu từ hôm nay
   journal: {},
   categories: { thu: [
     { id: "luong", ten: "Lương", chiTieu: 0 },
