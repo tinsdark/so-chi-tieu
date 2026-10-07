@@ -829,3 +829,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
 :root:not([data-theme="dark"]) .gate-hero:not(.nho) .gate-sub{margin-top:84px;color:var(--muted);text-shadow:none;opacity:1}
 /* màn khóa (sáng): chấm PIN và bàn phím bắt đầu dưới vùng ảnh, không nằm trên đoạn chuyển màu đỏ -> kem */
 @media (min-height:641px){ :root:not([data-theme="dark"]) .lock-body{padding-top:76px} }
+
+.gate-priv{margin:14px 0 0;text-align:center;font-size:12.5px}
+.gate-priv a{color:var(--muted);text-decoration:underline}
