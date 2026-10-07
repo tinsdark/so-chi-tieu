@@ -121,7 +121,7 @@ function _moForm(root){
   });
 }
 
-var _MO_TAB = { renderSoTay:'sotay', renderVayNo:'vayno', renderDongTien:'dongtien', renderMoPhong:'mophong', renderDanhMuc:'danhmuc' };
+var _MO_TAB = { renderSoTay:'sotay', renderVayNo:'vayno', renderDongTien:'dongtien', renderMoPhong:'dongtien', renderBaoCao:'baocao', renderDanhMuc:'danhmuc' };
 function _moFormGhi(root){ _MO_FORM.forEach(function(sel){ _mo.form[sel] = !!root.querySelector(sel); }); }
 
 function motionBoc(ten){
@@ -145,5 +145,5 @@ function motionBoc(ten){
   window[ten] = moi;
 }
 if (typeof window !== 'undefined' && window.document){
-  ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderDanhMuc'].forEach(motionBoc);
+  ['renderSoTay', 'renderVayNo', 'renderDongTien', 'renderMoPhong', 'renderBaoCao', 'renderDanhMuc'].forEach(motionBoc);
 }

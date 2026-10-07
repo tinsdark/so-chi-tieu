@@ -34,6 +34,16 @@ function recentAvgActual(kind, catId, n){
   return sum / win.length;
 }
 
+// tab Dòng tiền có 2 chế độ: số liệu thật (+ dự kiến) và vùng nháp Mô phỏng (mophong.js) — gộp chung 1 tab
+// để thanh tab dưới chỉ còn 5 mục. state.dtMoPhong quyết định vẽ cái nào (app.js renderAll).
+function dtCheDoHtml(){
+  var mp = !!state.dtMoPhong;
+  return '<div class="dt-mode" role="tablist" aria-label="Chế độ xem dòng tiền">'
+    + '<button type="button" role="tab" data-act="dtCheDo" data-v="tt" class="'+(mp ? '' : 'on')+'" aria-selected="'+!mp+'">Thực tế &amp; dự kiến</button>'
+    + '<button type="button" role="tab" data-act="dtCheDo" data-v="mp" class="'+(mp ? 'on' : '')+'" aria-selected="'+mp+'">'+icon('sliders')+' Mô phỏng</button>'
+    + '</div>';
+}
+
 var DONGTIEN_GROUPS = [ { kind:'thu', title:'Thu nhập' }, { kind:'chi', title:'Chi' } ];
 
 /* Màu ở tab này theo TỐT / XẤU chứ không theo dấu của con số:
@@ -67,7 +77,7 @@ function renderDongTien(){
     if (mk0 >= startMk) months.push(mk0);
   }
   if (!months.length){
-    root.innerHTML = '<div class="year-nav">'
+    root.innerHTML = dtCheDoHtml() + '<div class="year-nav">'
       + '<button data-act="prevYear" class="icon-btn" title="Năm trước" aria-label="Năm trước">‹</button>'
       + '<div class="lbl">'+year+'</div>'
       + '<button data-act="nextYear" class="icon-btn" title="Năm sau" aria-label="Năm sau">›</button>'
@@ -274,7 +284,7 @@ function renderDongTien(){
   });
   html += '</tbody></table></div></div>';
 
-  root.innerHTML = html;
+  root.innerHTML = dtCheDoHtml() + html;
 }
 
 /* ---- Dòng tiền: handlers ---- */
@@ -282,6 +292,9 @@ function handleDongTienAction(act, el){
   if (act === 'prevYear' || act === 'nextYear'){
     state.dongTienYear += (act==='nextYear'?1:-1);
     renderDongTien();
+  } else if (act === 'dtCheDo'){
+    state.dtMoPhong = el.getAttribute('data-v') === 'mp';
+    if (state.dtMoPhong) renderMoPhong(); else renderDongTien();
   } else if (act === 'dtThang'){
     state.dtThang = el.getAttribute('data-mk');
     renderDongTien();

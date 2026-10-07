@@ -548,3 +548,21 @@ function handleBieuDoAction(act, el){
   if (act === 'bdDay'){ state.bdDay = el.getAttribute('data-date'); veLaiBieuDo(); return true; }
   return false;
 }
+
+/* ====================================================================
+   TAB BÁO CÁO — gom các thẻ "xem lại" ra khỏi Sổ tay (Sổ tay chỉ còn việc hằng ngày):
+   hạn mức tháng, mục tiêu tiết kiệm, biểu đồ. Dùng chung tháng đang xem với Sổ tay (state.soTayMonth).
+   Chỉ ĐỌC dữ liệu (trừ nút "Gom thêm" của mục tiêu, xử lý ở sotay.js).
+   ==================================================================== */
+function renderBaoCao(){
+  var root = document.getElementById('tabContent');
+  if (!state.soTayMonth) state.soTayMonth = monthKey(todayStr());
+  var mk = state.soTayMonth;
+  var html = thangNavHtml(mk);
+  var hm = hanMucThangHtml(mk);
+  html += hm || '<div class="card k-bud"><h3>Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
+    + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
+  html += mucTieuCardHtml();
+  html += bieuDoCardHtml(mk);
+  root.innerHTML = html;
+}

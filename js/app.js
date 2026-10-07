@@ -40,9 +40,9 @@ function renderSyncStatus(){
 function renderAll(){
   renderSyncStatus();
   if (state.tab === 'sotay') renderSoTay();
-  else if (state.tab === 'dongtien') renderDongTien();
+  else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else renderDongTien(); }
+  else if (state.tab === 'baocao') renderBaoCao();
   else if (state.tab === 'vayno') renderVayNo();
-  else if (state.tab === 'mophong') renderMoPhong();
   else renderDanhMuc();
   renderVayNoBadge();
   updateStickyOffsets();
@@ -102,13 +102,13 @@ function chuyenTab(tab){
 /* ---------------- phím tắt (desktop) ----------------
    Không bắt phím khi: đang gõ trong ô nhập/chọn (isTypingNow), đang mở hộp thoại,
    giữ Ctrl/Alt/Cmd (để không cướp phím tắt của trình duyệt), chưa đăng nhập. */
-var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'vayno', '4':'mophong', '5':'danhmuc' };
+var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'danhmuc' };
 function hienPhimTat(){
   moHoiThoai({
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
       + '/ — tìm trong Sổ tay\n'
-      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Vay-Nợ · Mô phỏng · Danh mục\n'
+      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Danh mục\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
       + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',
@@ -153,7 +153,7 @@ document.addEventListener('keydown', function(ev){
 // xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
 (function(){
   var mq = window.matchMedia && window.matchMedia('(max-width:700px)');
-  var khi = function(){ if (state.data && state.tab === 'dongtien') renderDongTien(); };
+  var khi = function(){ if (state.data && state.tab === 'dongtien' && !state.dtMoPhong) renderDongTien(); };
   if (mq && mq.addEventListener) mq.addEventListener('change', khi);
 })();
 

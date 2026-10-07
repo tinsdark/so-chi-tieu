@@ -661,3 +661,22 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .bd-hb-r .bar>i{display:block;height:100%;border-radius:99px;transition:width .6s var(--ease)}
 .bd-hb-r .vs{font-size:11px;color:var(--muted);margin-top:3px}
 .bd-hb-r .vs .up{color:var(--bd-chi);font-weight:600}.bd-hb-r .vs .dn{color:var(--bd-thu);font-weight:600}
+
+/* ====================================================================
+   LỚP 8 — bố cục 5 tab (10/2026): Sổ tay gọn, tab Báo cáo, Dòng tiền có chế độ Mô phỏng.
+   ==================================================================== */
+/* số dư từng ví nằm luôn trong thẻ tổng quan (trước đây là 1 thẻ riêng) */
+.hero-vi{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 12px;font-size:12px}
+.hero-vi>span{display:flex;flex-direction:column;line-height:1.25}
+.hero-vi small{opacity:.82;font-size:11px}
+.hero-vi b{font-variant-numeric:tabular-nums;font-size:14px}
+.hero-vi b.am{color:#ffd0c4}
+.hero-vi .hero-chip{margin-left:auto}
+/* lối vào ít dùng ở cuối thẻ Ghi nhanh */
+.qa-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;margin-top:10px}
+.qa-links button{background:none;border:none;padding:6px 2px;color:var(--muted);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px}
+.qa-links button:hover{color:var(--primary-d)}
+/* chọn chế độ ở đầu tab Dòng tiền */
+.dt-mode{display:flex;gap:4px;padding:4px;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.dt-mode button{flex:1;border:none;background:none;padding:8px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.dt-mode button.on{background:var(--primary);color:#fff}

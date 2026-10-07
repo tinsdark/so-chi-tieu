@@ -249,7 +249,7 @@ function renderMoPhong(){
   html += '</div>';
 
   if (!mpDaNap()){
-    root.innerHTML = html;
+    root.innerHTML = dtCheDoHtml() + html;
     return;
   }
 
@@ -341,7 +341,7 @@ function renderMoPhong(){
     + '<div class="bd-key" style="margin-top:6px"><span class="l gray"></span> Hiện tại <span class="l chi"></span> Kịch bản</div>';
   html += '</div>';
 
-  root.innerHTML = html;
+  root.innerHTML = dtCheDoHtml() + html;
 }
 
 /* ---- actions ---- */
