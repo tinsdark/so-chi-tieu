@@ -46,6 +46,7 @@ function renderAll(){
   else if (state.tab === 'baocao') renderBaoCao();
   else if (state.tab === 'vayno') renderVayNo();
   else renderDanhMuc();
+  qaSheetVe();                       // rời tab Sổ tay thì bảng ghi khoản tự đóng
   renderVayNoBadge();
   updateStickyOffsets();
 }
@@ -70,6 +71,8 @@ function updateStickyOffsets(){
   if (tabs){
     var navDuoi = getComputedStyle(tabs).position === 'fixed';
     document.documentElement.style.setProperty('--tabs-h', navDuoi ? '0px' : tabs.offsetHeight + 'px');
+    // chiều cao thanh tab ở ĐÁY (0 khi nằm trên đỉnh): thanh "Ghi nhanh" nổi đặt ngay phía trên nó
+    document.documentElement.style.setProperty('--navduoi-h', navDuoi ? tabs.offsetHeight + 'px' : '0px');
   }
 }
 window.addEventListener('resize', updateStickyOffsets);
@@ -160,6 +163,10 @@ document.addEventListener('keydown', function(ev){
   }
 });
 
+// Esc đóng bảng ghi khoản (kể cả khi đang gõ trong ô nhập)
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Escape' && state.qa && state.qa.open && !_modalDangMo){ ev.preventDefault(); qaDongSheet(); }
+});
 // khoản / tiêu đề ngày trong Sổ tay là <div role="button"> (để vuốt ngang được): Enter hoặc Space = bấm
 document.addEventListener('keydown', function(ev){
   if ((ev.key !== 'Enter' && ev.key !== ' ') || ev.isComposing || !ev.target || !ev.target.matches) return;

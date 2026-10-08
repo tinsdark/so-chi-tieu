@@ -72,33 +72,53 @@ function qaCatChon(kind){
   var top = qaTopCats(kind, 1);
   return top.length ? top[0].id : '';
 }
+function qaNgayLui(n){
+  var p = todayStr().split('-'), t = new Date(+p[0], +p[1] - 1, +p[2] - n);
+  return t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+}
+// nút "Ghi khoản chi" đổi thành "Nhập số tiền để ghi" khi chưa có số: gọi lại mỗi lần gõ vào ô số tiền
+function qaNutCapNhat(){
+  var b = document.querySelector('#ghiNhanh .qa-save');
+  if (!b) return;
+  var co = numNonNeg(docSo(state.qa.amt)) > 0, kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
+  b.textContent = co ? 'Ghi khoản ' + kind : 'Nhập số tiền để ghi';
+  b.classList.toggle('chua', !co);
+}
+/* Thanh "Ghi nhanh" nổi trên thanh tab: bấm = mở bảng ghi khoản (ghiNhanhHtml). Thanh nằm trong trang Sổ tay
+   nên rời tab là mất; bảng ghi thì nằm ngoài #tabContent (xem qaSheetVe) để không bị animation của thẻ làm lệch. */
+function qaBarHtml(){
+  var vi = ((state.data.wallets || []).length > 1)
+    ? '<span class="qa-bar-vi">'+esc(viTen(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()))+'</span>' : '';
+  return '<div class="qa-bar-wrap"><button type="button" class="qa-bar" data-act="qaMo" aria-haspopup="dialog">'
+    + '<span class="qa-bar-plus">'+icon('plus')+'</span>'
+    + '<span class="qa-bar-txt"><b>Ghi nhanh</b><small>Khoản chi hoặc khoản thu</small></span>'+vi+'</button></div>';
+}
+// Bảng ghi khoản (bottom sheet). Cùng id (qa_amount, qa_note, qa_date, qa_wallet) và cùng đường lưu qaSave như thẻ cũ.
 function ghiNhanhHtml(){
   var kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
   var cats = qaCats(kind), top = qaTopCats(kind, 5), sel = qaCatChon(kind);
   var topIds = top.map(function(c){ return c.id; });
   var rest = cats.filter(function(c){ return topIds.indexOf(c.id) < 0; });
   var homNay = todayStr(), ngay = state.qa.date || homNay;
-  var h = '<div class="card qa k-in" id="ghiNhanh">'
-    // xác nhận NGAY TRONG THẺ (không chỉ ở toast): trên iPhone bàn phím đang mở che toast ở mép dưới màn hình
-    + (state.qa.last ? '<div class="qa-last" id="qaLast" role="status"><span>'+icon('check')+' '+esc(state.qa.last.text)+'</span>'
-        + '<button type="button" class="qa-undo" data-act="qaHoanTac">Hoàn tác</button></div>' : '')
-    // hàng 1: Chi/Thu. Hàng 2: tài khoản (trái, chỉ khi có từ 2 ví) + số tiền (phải)
-    + '<div class="qa-top"><div class="qa-seg" role="group" aria-label="Loại giao dịch">'
-    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-down')+' Chi</button>'
-    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-up')+' Thu</button>'
-    + '</div></div>'
-    + '<div class="qa-amtrow'+(((state.data.wallets || []).length > 1) ? '' : ' one')+'">'
-    + (((state.data.wallets || []).length > 1)
-        ? '<select id="qa_wallet" class="qa-wallet" data-act="qaWallet" aria-label="Tài khoản / ví">'
-          + viOptionsHtml(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()) + '</select>'
-        : '')
-    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'"></div>'
+  var coTien = numNonNeg(docSo(state.qa.amt)) > 0;
+  var ws = state.data.wallets || [], viChon = walletById(state.qa.wallet) ? state.qa.wallet : viDienSan();
+  var h = '<div class="qa-sheet" id="ghiNhanh" role="dialog" aria-modal="true" aria-label="Ghi khoản mới">'
+    + '<div class="qa-grab" aria-hidden="true"></div>'
+    + '<div class="qa-head"><h3>Ghi khoản mới</h3><button type="button" class="qa-x" data-act="qaDong" aria-label="Đóng">'+icon('x')+'</button></div>'
+    + '<div class="qa-body">'
+    + '<div class="qa-seg" role="group" aria-label="Loại giao dịch">'
+    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-down')+' Khoản chi</button>'
+    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-up')+' Khoản thu</button>'
+    + '</div>'
+    + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'">'
     // phím nhanh: điện thoại bàn phím số không có + / 000
     + '<div class="qa-keys" aria-label="Phím nhanh cho ô số tiền">'
     +   '<button type="button" data-chen="000" data-for="qa_amount">000</button>'
     +   '<button type="button" data-chen="+" data-for="qa_amount" aria-label="Cộng">+</button>'
     +   '<button type="button" data-chen="-" data-for="qa_amount" aria-label="Trừ">−</button>'
+    +   '<button type="button" data-act="qaXoa">Xoá</button>'
     + '</div>';
+  h += '<div class="qa-lbl">Danh mục</div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
   } else {
@@ -113,14 +133,67 @@ function ghiNhanhHtml(){
           : '')
       + '</div>';
   }
-  h += '<div class="qa-row">'
-    + '<input type="text" id="qa_note" placeholder="Ghi chú" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
-    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
-    + '<input type="date" id="qa_date" class="qa-date'+(ngay !== homNay ? ' lech' : '')+'" aria-label="Ngày" data-act="qaDate" value="'+esc(ngay)+'">'
+  if (ws.length > 1){
+    // ô ẩn qa_wallet: qaSave đọc ví từ đây (cùng cách cũ); các thẻ ví bên dưới chỉ đổi state.qa.wallet rồi vẽ lại
+    h += '<div class="qa-lbl">'+(kind === 'thu' ? 'Nhận vào ví' : 'Trả từ ví')+'</div>'
+      + '<input type="hidden" id="qa_wallet" value="'+esc(viChon)+'">'
+      + '<div class="qa-vis" role="group" aria-label="Ví">' + ws.map(function(w, i){
+          var on = (w.id === viChon);
+          return '<button type="button" class="qa-vi vc'+(i % 4)+(on ? ' on' : '')+'" data-act="qaViChon" data-id="'+esc(w.id)+'" aria-pressed="'+on+'">'
+            + '<i class="qa-vi-bar"></i><span><b>'+esc(w.ten)+'</b><small>'+fmt(Math.round(soDuTheoVi(w.id, homNay)))+'</small></span></button>';
+        }).join('') + '</div>';
+  }
+  var d1 = qaNgayLui(1), d2 = qaNgayLui(2);
+  var chipNgay = function(d, nhan){
+    return '<button type="button" class="qa-chip'+(ngay === d ? ' on' : '')+'" data-act="qaNgay" data-d="'+d+'" aria-pressed="'+(ngay === d)+'">'+nhan+'</button>';
+  };
+  var tuyChon = (ngay !== homNay && ngay !== d1 && ngay !== d2);
+  h += '<div class="qa-lbl">Ngày</div><div class="qa-chips">'
+    + chipNgay(homNay, 'Hôm nay') + chipNgay(d1, 'Hôm qua') + chipNgay(d2, d2.slice(8,10)+'/'+d2.slice(5,7))
+    + '<label class="qa-chip qa-chon'+(tuyChon ? ' on' : '')+'">'+icon('calendar')+' '+(tuyChon ? ngay.slice(8,10)+'/'+ngay.slice(5,7) : 'Chọn ngày')
+    +   '<input type="date" id="qa_date" class="qa-date-in" aria-label="Chọn ngày" data-act="qaDate" value="'+esc(ngay)+'"></label>'
     + '</div>';
-  h += '<button type="button" class="btn qa-save '+kind+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>Ghi khoản '+(kind === 'thu' ? 'thu' : 'chi')+'</button>'
+  h += '<div class="qa-lbl">Ghi chú</div>'
+    + '<input type="text" id="qa_note" class="qa-note" placeholder="Ví dụ: Ăn trưa với Nhật" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
+    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
+    + '</div>'
+    + '<div class="qa-foot"><button type="button" class="btn qa-save '+kind+(coTien ? '' : ' chua')+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>'
+    + (coTien ? 'Ghi khoản '+kind : 'Nhập số tiền để ghi')+'</button></div>'
     + '</div>';
   return h;
+}
+// Dựng / gỡ lớp phủ chứa bảng ghi khoản (nằm trong body, ngoài #tabContent). Đã mở sẵn thì GIỮ NGUYÊN DOM:
+// vẽ lại cả trang (poll Drive...) không được làm mất ô đang gõ; thay đổi từng phần đi qua qaVeLai().
+function qaSheetVe(){
+  if (typeof document === 'undefined' || !document.body || !document.createElement) return;
+  if (state.qa.open && state.tab !== 'sotay') state.qa.open = false;      // rời tab Sổ tay = đóng
+  var root = document.getElementById('qaSheetRoot');
+  if (!state.qa.open || !state.data){
+    if (root && root.parentNode) root.parentNode.removeChild(root);
+    document.body.classList.remove('qa-mo');
+    return;
+  }
+  if (root) return;
+  root = document.createElement('div');
+  root.id = 'qaSheetRoot';
+  root.className = 'qa-back moi';
+  root.innerHTML = '<div class="qa-scrim" data-act="qaDong"></div>' + ghiNhanhHtml();
+  document.body.appendChild(root);
+  document.body.classList.add('qa-mo');
+  setTimeout(function(){ root.classList.remove('moi'); }, 400);
+}
+function qaMoSheet(){
+  state.qa.open = true;
+  var cu = document.getElementById('qaSheetRoot');
+  if (cu && cu.parentNode) cu.parentNode.removeChild(cu);
+  qaSheetVe();
+  var o = document.getElementById('qa_amount');
+  if (o && o.focus) o.focus();      // gọi ngay trong cú bấm: iPhone chỉ bật bàn phím khi focus nằm trong thao tác của người dùng
+}
+function qaDongSheet(){
+  state.qa.open = false;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  qaSheetVe();
 }
 /* ====================================================================
    TỔNG QUAN — thẻ đầu Sổ tay: số dư to, thu/chi tháng, đã chi bao nhiêu so với chỉ tiêu,
@@ -145,8 +218,9 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
     + '<div class="hero-nums">'
     +   '<div><div class="l"><i class="dot thu"></i>Tổng thu</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
     +   '<div><div class="l"><i class="dot chi"></i>Tổng chi</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
-    +   '<div class="cl"><div class="l">Chênh lệch</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</div></div>'
-    + '</div>';
+    + '</div>'
+    // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
+    + '<div class="hero-cl"><span>Chênh lệch</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>';
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
@@ -205,7 +279,7 @@ function qaVeLai(){
 document.addEventListener('input', function(ev){
   var el = ev.target;
   if (!el || !el.id) return;
-  if (el.id === 'qa_amount') state.qa.amt = el.value;
+  if (el.id === 'qa_amount'){ state.qa.amt = el.value; qaNutCapNhat(); }
   else if (el.id === 'qa_note'){ state.qa.note = el.value; }
 });
 
@@ -296,7 +370,6 @@ function renderSoTay(){
   // Hạn mức, mục tiêu, biểu đồ nằm ở tab Báo cáo (renderBaoCao, bieudo.js).
   html += viTheHtml(mk, beforeLock);
   html += viSoDuCardHtml(mk);
-  html += ghiNhanhHtml();
   html += dinhKyDenHanHtml();
 
   // Entry form — mặc định ẨN (thẻ "Ghi nhanh" lo việc thường ngày); mở khi đang sửa 1 ngày hoặc bấm "Nhập đầy đủ" ở Ghi nhanh
@@ -430,6 +503,7 @@ function renderSoTay(){
   // Biểu đồ: js/bieudo.js (SVG tự vẽ, 3 tab)
 
   html += '</div></div>';
+  html += '<div class="qa-spacer"></div>' + qaBarHtml();       // đệm để thanh nổi không che khoản cuối cùng
   root.innerHTML = html;
 }
 
@@ -442,6 +516,7 @@ function renderSoTay(){
    nên tổng của ngày luôn khớp — không có bước tính lại riêng nào.
    Vuốt (js/motion.js) tìm nhóm ngày qua class .dl-day + data-date.
    ==================================================================== */
+var SO_NGAY_HIEN = 10;     // số ngày hiện mỗi lần ở "Chi tiết theo ngày" (bấm "Xem thêm" để hiện thêm từng đợt)
 var THU_TRONG_TUAN = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 // "Hôm nay" / "Hôm qua" / "Thứ Ba" cho tiêu đề nhóm ngày
 function ngayTenNgan(d){
@@ -481,7 +556,7 @@ function dlDongHtml(date, it){
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaItem(it))) : '';
   return '<div class="dl-row'+(mo ? ' mo' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
-    +   '<span class="dl-av" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true">'+esc((ten.trim().charAt(0) || '?').toUpperCase())+'</span>'
+    +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
     +   '<span class="dl-txt"><span class="dl-t1">'+esc(it.ghiChu || ten)+'</span><span class="dl-t2">'+esc(ten)+vi+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
@@ -495,9 +570,9 @@ function dlRefHtml(r){
   var ten = catTen(m.kind, m.cat);
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaRef(r))) : '';
   return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">'
-    + '<span class="dl-av" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true">'+icon('lock')+'</span>'
+    + '<span class="dl-dot" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true"></span>'
     + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(r.note) : '')+'</span>'
-    +   '<span class="dl-t2">'+esc(ten)+vi+' · Vay-Nợ</span></span>'
+    +   '<span class="dl-t2">'+esc(ten)+vi+' · '+icon('lock')+' Vay-Nợ</span></span>'
     + '<span class="dl-amt '+m.kind+'">'+dlSoTien(m.kind, r.soTien)+'</span>'
     + '</div></div>';
 }
@@ -553,7 +628,14 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
       : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
         + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
   } else {
-    displayDates.slice().sort().reverse().forEach(function(d){ h += dlNgayHtml(d, hasRange); });
+    // mặc định chỉ hiện SO_NGAY_HIEN ngày gần nhất của tháng cho trang đỡ dài; đang tìm / lọc thì hiện hết
+    var ds = displayDates.slice().sort().reverse();
+    var hien = filterActive ? ds : ds.slice(0, state.soTayGioiHan[mk] || SO_NGAY_HIEN);
+    hien.forEach(function(d){ h += dlNgayHtml(d, hasRange); });
+    if (hien.length < ds.length){
+      h += '<div class="dl-them"><button type="button" class="btn secondary" data-act="stThem" data-mk="'+mk+'">Xem thêm '+Math.min(SO_NGAY_HIEN, ds.length - hien.length)+' ngày</button>'
+        + '<small>Đang hiện '+hien.length+'/'+ds.length+' ngày</small></div>';
+    }
   }
   return h + '</div>';
 }
@@ -768,6 +850,7 @@ function canhBaoViAm(act, el){
 }
 
 function handleSoTayAction(act, el){
+  el = el || {};      // phím N / Enter ở ô tiền gọi handleAction(..., null): không có phần tử bấm
   if (handleBieuDoAction(act, el)) return true;
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
     var canhBao = canhBaoViAm(act, el);
@@ -938,6 +1021,24 @@ function handleSoTayAction(act, el){
       toast('Đã ghi "Trả nợ" nhưng chưa chọn khoản vay — tiến độ trả nợ của khoản vay không đổi.', { loai:'warn' });
     }
     ketThuc();
+  } else if (act === 'qaMo'){
+    qaMoSheet();
+  } else if (act === 'qaDong'){
+    qaDongSheet();
+  } else if (act === 'qaViChon'){
+    // thẻ ví trong bảng ghi: nhớ ví chọn (các lần vẽ lại không được đặt lại về mặc định), vẽ lại cả trang để nhãn "Đang ghi" theo
+    if (walletById(el.getAttribute('data-id'))) state.qa.wallet = el.getAttribute('data-id');
+    qaVeLai();
+    renderSoTay();
+  } else if (act === 'qaNgay'){
+    var dQ = el.getAttribute('data-d');
+    state.qa.date = (dQ && dQ !== todayStr()) ? dQ : '';
+    qaVeLai();
+  } else if (act === 'qaXoa'){
+    state.qa.amt = '';
+    var oXoa = document.getElementById('qa_amount');
+    if (oXoa){ oXoa.value = ''; if (oXoa.focus) oXoa.focus(); }
+    qaNutCapNhat();
   } else if (act === 'qaKind'){
     state.qa.kind = (el.getAttribute('data-kind') === 'thu') ? 'thu' : 'chi';
     qaGhiNho();
@@ -978,24 +1079,14 @@ function handleSoTayAction(act, el){
     var tinQ = 'Đã ghi ' + (kQ === 'thu' ? 'thu' : 'chi') + ' ' + catTen(kQ, catQ) + ' ' + fmt(Math.round(tienQ))
       + ' (' + ngayQ.slice(8,10) + '/' + ngayQ.slice(5,7) + ')'
       + (truocMoc ? ' — trước mốc chốt số dư ' + ngayVN(startQ) + ', không tính vào số dư.' : '.');
-    state.qa.last = { text: tinQ, ban: banGhi };
+    state.qa.last = { text: tinQ, ban: banGhi };       // giữ bản ghi cuối để hoàn tác (nút ở toast) chỉ chạy 1 lần
     banGhi.moc = state.qa.last;
     // hạ bàn phím: bàn phím che toast ở đáy màn hình, và ô số tiền sắp được xóa trắng để nhập khoản sau
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    state.qa.open = false; qaSheetVe();                        // ghi xong: đóng bảng, xác nhận + Hoàn tác nằm ở toast
     scheduleSave();
     renderSoTay();
-    if (typeof motionDaGhi === 'function') motionDaGhi();     // nút Ghi chớp dấu tích + rung nhẹ
-    var chotQ = state.qa.last;
-    setTimeout(function(){
-      if (state.qa.last === chotQ){
-        state.qa.last = null;
-        var eL = document.getElementById('qaLast');
-        if (eL && eL.parentNode) eL.parentNode.removeChild(eL);
-      }
-    }, 20000);
     toast(tinQ, { loai: truocMoc ? 'warn' : undefined, giay: 8, hoanTac: function(){ qaHoanTacLanGhi(banGhi); } });
-  } else if (act === 'qaHoanTac'){
-    if (state.qa.last){ var banH = state.qa.last.ban; qaHoanTacLanGhi(banH); toast('Đã hoàn tác.'); }
   } else if (act === 'goBaoCao'){
     var toBC = el.getAttribute('data-to') || '';
     chuyenTab('baocao');
@@ -1080,6 +1171,10 @@ function handleSoTayAction(act, el){
     var iidO = el.getAttribute('data-iid');
     state.soTayOpenIid = (state.soTayOpenIid === iidO) ? null : iidO;
     state.soTayEditIid = null;
+    renderSoTay();
+  } else if (act === 'stThem'){
+    var mkT = el.getAttribute('data-mk');
+    state.soTayGioiHan[mkT] = (state.soTayGioiHan[mkT] || SO_NGAY_HIEN) + SO_NGAY_HIEN;
     renderSoTay();
   } else if (act === 'stLocMo'){
     state.soTayLocMo = !state.soTayLocMo;
@@ -1221,9 +1316,8 @@ function handleSoTayAction(act, el){
     renderAll();
     window.scrollTo({top:0, behavior:'smooth'});
   } else if (act === 'fabAdd'){
-    /* FAB không mở bottom sheet riêng mà cuộn tới + focus thẻ "Ghi nhanh" đang có ở đầu Sổ tay.
-       Thẻ đó và form đầy đủ đều ghi qua entryAddItem; các ràng buộc khóa ref / gắn khoản vay /
-       chống nhập tay danh mục Vay-Nợ nằm ở form đầy đủ, còn Ghi nhanh loại hẳn các danh mục đó. */
+    /* mở bảng ghi khoản (cùng thanh "Ghi nhanh"): phím N, nút "+ Ghi khoản đầu tiên". Bảng ghi qua entryAddItem,
+       danh mục Vay-Nợ không có ở đây (cần gắn khoản vay: ghi ở tab Vay - Nợ). */
     if (state.tab !== 'sotay'){
       state.tab = 'sotay';
       document.querySelectorAll('.tab').forEach(function(t){
@@ -1231,14 +1325,7 @@ function handleSoTayAction(act, el){
       });
       renderAll();
     }
-    var box = document.getElementById('ghiNhanh') || document.getElementById('formGiaoDich');
-    if (box) box.scrollIntoView({ behavior:'smooth', block:'center' });
-    // ô số tiền của thẻ Ghi nhanh; nếu không có (chưa đăng nhập xong) thì ô chi đầu tiên của form đầy đủ
-    var oNhap = document.getElementById('qa_amount')
-             || document.querySelector('.f_chi:not([readonly])')
-             || document.querySelector('.f_thu:not([readonly])')
-             || document.getElementById('f_date');
-    if (oNhap) setTimeout(function(){ oNhap.focus(); }, 250);
+    qaMoSheet();
   } else if (act === 'exportExcel'){
     exportExcel();
   } else if (act === 'soTayClearFilter'){
@@ -1258,10 +1345,6 @@ function handleSoTayChange(el){
   } else if (el.matches('[data-act=qaCatSel]')){
     if (el.value){ state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.value; qaGhiNho(); }
     qaVeLai();
-    return true;
-  } else if (el.matches('[data-act=qaWallet]')){
-    // nhớ ví đang chọn: các lần vẽ lại thẻ (chạm nút danh mục, đổi Chi/Thu) không được đặt lại về ví mặc định
-    if (walletById(el.value)) state.qa.wallet = el.value;
     return true;
   } else if (el.matches('[data-act=qaDate]')){
     state.qa.date = (el.value && el.value !== todayStr()) ? el.value : '';
