@@ -198,11 +198,15 @@ document.addEventListener('input', function(ev){
 });
 // gõ ghi chú khớp quy tắc tự phân loại -> chọn sẵn danh mục (chưa tự bấm chọn danh mục nào).
 // Chỉ đổi lớp .on của chip / giá trị ô "Khác…", KHÔNG vẽ lại thẻ (vẽ lại là mất focus, bàn phím sập).
+// Đã tự bấm chọn danh mục (catTay) thì quy tắc không giật lại đúng danh mục nó vừa chọn (quyTacCuoi), nhưng
+// gõ ra một từ khóa KHÁC (khớp danh mục khác) thì vẫn nhảy sang: bấm "Xăng" rồi gõ "ăn" -> sang "Ăn".
 function qaApDungQuyTac(){
-  if (state.qa.catTay) return;
   var kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
   var id = nhapQuyTac(kind, state.qa.note);
-  if (!id || id === qaCatChon(kind)) return;
+  if (!id){ state.qa.quyTacCuoi = ''; return; }
+  if (state.qa.catTay && id === state.qa.quyTacCuoi) return;
+  state.qa.quyTacCuoi = id; state.qa.catTay = false;
+  if (id === qaCatChon(kind)) return;
   state.qa.cat[kind] = id;
   var box = document.getElementById('ghiNhanh');
   if (!box) return;
@@ -989,7 +993,7 @@ function handleSoTayAction(act, el){
       itQ.gc = ghiQ;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
-    state.qa.amt = ''; state.qa.note = ''; state.qa.catTay = false; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
+    state.qa.amt = ''; state.qa.note = ''; state.qa.catTay = false; state.qa.quyTacCuoi = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
     // có ví mặc định đã tích chọn: lần nhập sau quay về ví đó; chưa có thì nhớ ví vừa chọn như trước
     if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viMacDinhDaChon() ? '' : viQ; }
     var banGhi = { date: ngayQ, iid: itQ.iid, note: ghiQ, daHoan: false };
