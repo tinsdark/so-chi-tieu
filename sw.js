@@ -10,7 +10,7 @@
    - mọi thứ khác (đăng nhập Google, Drive API): KHÔNG can thiệp.
    Đổi file này (ví dụ tăng VERSION) thì trình duyệt tự cài bản mới, xóa cache cũ.
    ==================================================================== */
-var VERSION = 'v3';
+var VERSION = 'v4';
 var CACHE = 'sochitieu-' + VERSION;
 var CDN_HOSTS = ['cdn.sheetjs.com'];
 var MANG_CHO_MS = 6000;
