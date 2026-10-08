@@ -1245,7 +1245,7 @@ test('Sổ tay: sửa ngày rồi đổi ô Ngày KHÔNG ghi đè ngày khác', 
   loadData(d);
   ctx.state.editingDate = '2026-10-01';
   voiDom({ f_date:{ value:'2026-10-02' }, f_ghichu:{ value:'X' } }, { '.f_chi':[ oNhap('an', '150000') ] }, function(){
-    ctx.handleSoTayAction('saveEntry', {});
+    ctx.handleSoTayAction('saveEntry', { _daBaoAm: true });
   });
   ctx.state.editingDate = null;
   eq(entryChi('2026-10-02', 'an'), 200000, 'ngày 02 phải còn nguyên');
@@ -1260,7 +1260,7 @@ test('Sổ tay: sửa ngày có tiền ở danh mục đã bị xóa — tiền 
   var truoc = ctx.balanceAt('9999-12-31');
   ctx.state.editingDate = '2026-10-03';
   voiDom({ f_date:{ value:'2026-10-03' }, f_ghichu:{ value:'' } }, { '.f_chi':[ oNhap('an', '50000') ] }, function(){
-    ctx.handleSoTayAction('saveEntry', {});
+    ctx.handleSoTayAction('saveEntry', { _daBaoAm: true });
   });
   ctx.state.editingDate = null;
   ctx.invalidateBalanceCache();
@@ -1425,7 +1425,7 @@ test('Sổ tay: nhập thu hồi / trả nợ mà không chọn khoản thì có
   ctx.state.editingDate = null;
   voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'' }, sotay_selChoVay:{ value:'' }, sotay_selVayNo:{ value:'' } },
          { '.f_thu':[ oNhap('thuHoiChoVay', '500000') ], '.f_chi':[ oNhap('traNo', '300000') ] },
-         function(){ ctx.handleSoTayAction('saveEntry', {}); });
+         function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   ok(thongBao.some(function(m){ return m.indexOf('Thu hồi cho vay') >= 0 && m.indexOf('chưa chọn khoản') >= 0; }), 'nhắc thu hồi: ' + thongBao.join(' | '));
   ok(thongBao.some(function(m){ return m.indexOf('Trả nợ') >= 0 && m.indexOf('chưa chọn khoản') >= 0; }), 'nhắc trả nợ: ' + thongBao.join(' | '));
   eq(ctx.state.data.vayNo.choVay[0].daThu, 0, 'khoản cho vay không đổi');
@@ -1479,7 +1479,7 @@ test('qaSave: ghi 1 khoản chi qua entryAddItem — tổng, số dư, dòng chi
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
   thongBao.length = 0;
   voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'Ăn sáng' }, qa_date:{ value:'2026-10-10' } }, null, function(){
-    ctx.handleSoTayAction('qaSave', {});
+    ctx.handleSoTayAction('qaSave', { _daBaoAm: true });
   });
   var e = ctx.state.data.journal['2026-10-10'];
   eq(ctx.num(e.chi.an), 45000, 'tiền vào danh mục');
@@ -1490,18 +1490,50 @@ test('qaSave: ghi 1 khoản chi qua entryAddItem — tổng, số dư, dòng chi
   ok(thongBao.some(function(m){ return m.indexOf('Đã ghi chi') === 0; }), 'có thông báo: ' + thongBao.join('|'));
 });
 
+test('cảnh báo ví sắp âm: chi quá số dư thì hỏi trước; Đồng ý mới ghi; ví đã âm không nhắc lại; đủ tiền không hỏi', async function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());          // số dư 1.000.000
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
+  var x0 = ctx.xacNhan, hoi = 0, traLoi = false, noiDung = '';
+  ctx.xacNhan = function(t, nd){ hoi++; noiDung = nd; return Promise.resolve(traLoi); };
+  try{
+    var dom = { qa_amount:{ value:'1.500.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } };
+    var kq;
+    voiDom(dom, null, function(){ kq = ctx.handleSoTayAction('qaSave', {}); });
+    await Promise.resolve();
+    eq(kq, true, 'đã xử lý (chặn lại để hỏi)');
+    eq(hoi, 1, 'có hỏi khi ví sẽ âm');
+    ok(noiDung.indexOf('sẽ âm') >= 0, 'câu hỏi nêu số âm: ' + noiDung);
+    eq(!!ctx.state.data.journal['2026-10-10'], false, 'chưa Đồng ý thì chưa ghi');
+    traLoi = true;
+    var el = {};
+    voiDom(dom, null, function(){ ctx.handleSoTayAction('qaSave', el); });
+    await Promise.resolve(); await Promise.resolve();
+    eq(ctx.num(ctx.state.data.journal['2026-10-10'].chi.an), 1500000, 'Đồng ý thì ghi');
+    // ví đã âm từ trước: ghi tiếp không hỏi lại
+    hoi = 0;
+    voiDom({ qa_amount:{ value:'1.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    eq(hoi, 0, 'ví đã âm thì không nhắc lại');
+    // đủ tiền: không hỏi
+    loadData(dataGhiNhanh()); hoi = 0;
+    voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    eq(hoi, 0, 'đủ tiền thì không hỏi');
+    eq(ctx.viCanhBaoAm('', 100) , '', 'khoản thu không bao giờ cảnh báo');
+  } finally { ctx.xacNhan = x0; }
+});
+
 test('qaSave: không có số tiền thì không ghi; ghi thu vào danh mục thu; ngày trước mốc khóa sổ có cảnh báo', function(){
   setToday('2026-10-10');
   loadData(dataGhiNhanh());
   ctx.state.qa = { kind:'chi', cat:{}, amt:'', note:'', date:'', wallet:'' };
-  voiDom({ qa_amount:{ value:'' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   eq(Object.keys(ctx.state.data.journal).length, 0, 'số tiền rỗng -> không tạo ngày nào');
   ctx.state.qa = { kind:'thu', cat:{}, amt:'', note:'', date:'', wallet:'' };
-  voiDom({ qa_amount:{ value:'2.000.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'2.000.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   eq(ctx.num(ctx.state.data.journal['2026-10-10'].thu.luong), 2000000, 'vào danh mục thu đầu tiên dùng được');
   thongBao.length = 0;
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'' };
-  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-09-01' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-09-01' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   ok(thongBao.some(function(m){ return m.indexOf('trước mốc chốt số dư') >= 0; }), 'cảnh báo mốc: ' + thongBao.join('|'));
   eq(ctx.state.qa.date, '2026-09-01', 'giữ ngày đã chọn để ghi tiếp cùng ngày');
 });
@@ -1613,7 +1645,7 @@ test('Ghi nhanh: có dòng xác nhận + Hoàn tác ngay trong thẻ; hoàn tác
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   var truoc = ctx.balanceAt('9999-12-31');
   voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'Ăn sáng' }, qa_date:{ value:'2026-10-10' } }, null, function(){
-    ctx.handleSoTayAction('qaSave', {});
+    ctx.handleSoTayAction('qaSave', { _daBaoAm: true });
   });
   ok(ctx.state.qa.last && ctx.state.qa.last.text.indexOf('Đã ghi chi') === 0, 'có bản ghi cuối');
   var h = ctx.ghiNhanhHtml();
@@ -1683,7 +1715,7 @@ test('Xóa dòng ghi nhanh: tiền trừ VÀ chữ trong Nội dung cũng mất;
   loadData(dataGhiNhanh());
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   var ghi = function(tien, note){
-    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   };
   ghi('45.000', 'Ăn sáng');
   ghi('30.000', 'Cà phê');
@@ -1704,7 +1736,7 @@ test('Xóa dòng: hai khoản giống hệt nhau (cùng nội dung + số tiền
   loadData(dataGhiNhanh());
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   for (var i = 0; i < 2; i++){
-    voiDom({ qa_amount:{ value:'30.000' }, qa_note:{ value:'Cà phê' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    voiDom({ qa_amount:{ value:'30.000' }, qa_note:{ value:'Cà phê' }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   }
   var e = ctx.state.data.journal['2026-10-10'];
   eq(e.items.length, 2);
@@ -1731,7 +1763,7 @@ test('Xóa dòng của form đầy đủ nhiều danh mục: mẩu ghi chú dùn
   loadData(dataGhiNhanh());
   ctx.state.editingDate = null; ctx.state.fullFormOpen = true;
   voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
-         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   var e = ctx.state.data.journal['2026-10-10'];
   eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(150000), 'ghi chú ngày gắn tổng 2 khoản');
   eq(e.items.length, 2);
@@ -1747,7 +1779,7 @@ test('Sửa dòng: đổi số tiền / nội dung thì chữ ở Nội dung đ�
   loadData(dataGhiNhanh());
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   var ghi = function(tien, note){
-    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    voiDom({ qa_amount:{ value:tien }, qa_note:{ value:note }, qa_date:{ value:'2026-10-10' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   };
   ghi('45.000', 'Ăn sáng'); ghi('30.000', 'Cà phê'); ghi('20.000', 'Nước');
   var e = ctx.state.data.journal['2026-10-10'];
@@ -1785,7 +1817,7 @@ test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị
   loadData(dataGhiNhanh());
   ctx.state.fullFormOpen = true;
   voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'Đi chợ' }, sotay_selChoVay:null, sotay_selVayNo:null },
-         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+         { '.f_chi':[ oNhap('an', '100000'), oNhap('xang', '50000') ] }, function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   ctx.state.fullFormOpen = false;
   var e = ctx.state.data.journal['2026-10-10'];
   var a = e.items.filter(function(it){ return it.catId === 'an'; })[0];
@@ -1820,7 +1852,7 @@ test('Ghi nhanh: chọn tài khoản được nhớ qua các lần vẽ lại v�
   ctx.handleSoTayChange({ value:'w2', matches:function(s){ return s === '[data-act=qaWallet]'; } });
   eq(ctx.state.qa.wallet, 'w2', 'đã nhớ ví chọn');
   ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'vẽ lại vẫn chọn Tiền mặt');
-  voiDom({ qa_amount:{ value:'20.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'20.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   var it = ctx.state.data.journal['2026-10-10'].items[0];
   eq(it.walletId, 'w2', 'ghi vào ví Tiền mặt');
   eq(ctx.soDuTheoVi('w2', '2026-10-10'), 480000, 'số dư ví Tiền mặt giảm');
@@ -1877,12 +1909,12 @@ test('Ghi nhanh: có ví mặc định thì lần nhập sau quay về ví đó 
   setToday('2026-10-10');
   loadData(dataHaiVi('w1'));
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
-  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   eq(ctx.state.data.journal['2026-10-10'].items[0].walletId, 'w2', 'lần này ghi vào Tiền mặt như đã chọn');
   ok(ctx.ghiNhanhHtml().indexOf('<option value="w1" selected>') >= 0, 'lần sau quay về Techcombank (mặc định)');
   loadData(dataHaiVi());
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
-  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+  voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'chưa tích mặc định: nhớ ví vừa chọn như trước');
 });
 
@@ -2310,7 +2342,7 @@ function tinhFuzz(seed){
         lists['.f_' + kind].push(oNhap(c.id, String(nhap[kind + '|' + c.id] || ''), lock));
       });
     });
-    voiDom({ f_date:{ value: date }, f_ghichu:{ value: 'ghi chú' } }, lists, function(){ ctx.handleSoTayAction('saveEntry', {}); });
+    voiDom({ f_date:{ value: date }, f_ghichu:{ value: 'ghi chú' } }, lists, function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   };
   for (var step = 0; step < 40; step++){
     var op = pick(['add', 'add', 'add', 'upd', 'del', 'ref', 'ref', 'rmref', 'upsert', 'form', 'formEdit', 'delDay']);
@@ -2388,7 +2420,7 @@ test('Form đầy đủ vào ngày ĐÃ CÓ dòng: thêm đúng phần mới, ph
   try{
     voiDom({ f_date:{ value:'2026-10-08' }, f_ghichu:{ value:'thu nợ' }, sotay_selChoVay:{ value:'cv1' } },
       { '.f_thu': [ oNhap('luong', ''), oNhap('thuHoiChoVay', '300000') ], '.f_chi': [ oNhap('an', '50000') ] },
-      function(){ ctx.handleSoTayAction('saveEntry', {}); });
+      function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   } finally { ctx.toast = t0; }
   var e = ctx.state.data.journal['2026-10-08'];
   eq(ctx.num(e.chi.an), 150000, 'Ăn = 100k cũ + 50k mới'); eq(ctx.num(e.thu.thuHoiChoVay), 300000, 'thu hồi = ref 300k');

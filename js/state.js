@@ -716,6 +716,16 @@ function soDuTheoVi(walletId, dateStr, d){
   });
   return bal;
 }
+// Cảnh báo ví sắp ÂM: trả câu cảnh báo nếu một thay đổi (delta: âm = ví mất tiền) làm ví đang >= 0 thành < 0.
+// Ví ĐÃ âm từ trước (thẻ tín dụng, nợ) thì không nhắc lại mỗi lần. Chỉ cảnh báo, không chặn.
+function viCanhBaoAm(walletId, delta, d){
+  d = d || state.data;
+  var w = walletById(walletId, d) || walletById(viMacDinhId(d), d);
+  if (!w || !(delta < 0)) return '';
+  var truoc = soDuTheoVi(w.id, '9999-12-31', d), sau = truoc + delta;
+  if (truoc < 0 || sau >= 0) return '';
+  return 'Ví "' + w.ten + '" hiện còn ' + fmt(Math.round(truoc)) + ', sau khoản này sẽ âm ' + fmt(Math.round(-sau)) + '.';
+}
 // số chỗ đang tham chiếu tới ví: dòng nhập tay + khoản vay/cho vay + lần chuyển tiền.
 // > 0 thì không được xóa ví (xóa là làm mồ côi dữ liệu).
 function viDangDung(id, d){
