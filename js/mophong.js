@@ -67,6 +67,20 @@ function mpDcSum(dieuChinh, kind, mk){
   return s;
 }
 
+/* số tiền tất toán: nhập ở điều chỉnh > số dự kiến của khoản vay > phần còn phải trả theo lịch
+   TỪ tháng tất toán trở đi (gồm cả lãi các kỳ sau nên thường CAO hơn số thực trả) */
+function mpSoTienTatToan(d, dc, loan){
+  var duNoTuThang = withData(d, function(){
+    var sch = tinhLichTraNo(loan), s = 0;
+    sch.forEach(function(row, idx){
+      if (row.mk >= dc.mk && !kyDaDong(loan, idx)) s += conThieuKy(loan, idx, sch);
+    });
+    return s;
+  });
+  return num(dc.soTienTatToan) > 0 ? num(dc.soTienTatToan)
+       : (num(loan.soTienTatToan) > 0 ? num(loan.soTienTatToan) : duNoTuThang);
+}
+
 /* ---- dựng bộ dữ liệu kịch bản ----
    Clone LẦN NỮA từ state.mp.data rồi mới nặn, để bấm tính nhiều lần không
    dồn tích điều chỉnh (vay thêm 1 khoản 3 lần thành 3 khoản). */
@@ -100,17 +114,7 @@ function mpBuildScenario(){
       // Các kỳ TRƯỚC tháng tất toán vẫn phải trả như thường; từ tháng tất toán trở đi không còn kỳ nào
       // (loan.mpTatToanMk, xem tongTraNoThang) và thay bằng 1 khoản tất toán ở overlay.
       // Không tắt khoản vay (trangThai/tatToan): làm thế là mất luôn các kỳ trước tháng tất toán.
-      // số tiền tất toán: nhập ở điều chỉnh > số dự kiến của khoản vay > phần còn phải trả theo lịch
-      // TỪ tháng tất toán trở đi (gồm cả lãi các kỳ sau nên thường CAO hơn số thực trả)
-      var duNoTuThang = withData(d, function(){
-        var sch = tinhLichTraNo(loan), s = 0;
-        sch.forEach(function(row, idx){
-          if (row.mk >= dc.mk && !kyDaDong(loan, idx)) s += conThieuKy(loan, idx, sch);
-        });
-        return s;
-      });
-      var soTT = num(dc.soTienTatToan) > 0 ? num(dc.soTienTatToan)
-               : (num(loan.soTienTatToan) > 0 ? num(loan.soTienTatToan) : duNoTuThang);
+      var soTT = mpSoTienTatToan(d, dc, loan);
       loan.mpTatToanMk = dc.mk;
       overlay.push({ loai:'traSom', kind:'chi', mk: dc.mk, soTien: soTT, bat:true });
     }
@@ -134,49 +138,68 @@ function mpChieuDongTien(d, startMk, horizon, overlay){
   });
 }
 
-/* ---- form thêm/sửa 1 điều chỉnh ---- */
+
+/* ---- tính khoản vay thêm: số trả mỗi tháng, tổng lãi, tháng trả xong (dùng lịch trả của Vay - Nợ) ----
+   o = { hinhThuc: 'co_lai' (trả cố định) | 'goc_deu' | 'tra_co_dinh' (số trả tự nhập), soTien, laiSuatNam, soThang, mkTu, traTay } */
+function mpTinhVay(o){
+  var loan = { hinhThuc: o.hinhThuc, soTienGoc: num(o.soTien), laiSuatNam: num(o.laiSuatNam), soThangVay: Math.max(1, num(o.soThang) || 1),
+    ngayVay: o.mkTu + '-01', ngayTraHangThang: 1, soTienTraThang: num(o.traTay) };
+  var sch = tinhLichTraNo(loan), lai = 0;
+  sch.forEach(function(r){ lai += r.lai; });
+  return { tra: sch.length ? sch[0].tongTra : 0, tongLai: lai, hetMk: sch.length ? sch[sch.length - 1].mk : null };
+}
+var MP_HT_NHAN = { co_lai:'trả cố định', tra_co_dinh:'trả cố định', goc_deu:'gốc đều, lãi giảm', khong_lai:'không lãi', tra_1_lan:'trả 1 lần' };
+var MP_LOAI_MOTA = { motLan:'Thu/chi một lần', dinhKy:'Lặp lại mỗi tháng', vayMoi:'Khoản vay mới', traSom:'Trả hết khoản vay' };
+
+/* ---- form thêm/sửa 1 điều chỉnh (nằm trong bảng trượt từ đáy — mpSheetVe) ---- */
 function mpFormHtml(){
   var dc = (state.mp.editIdx >= 0) ? state.mp.dieuChinh[state.mp.editIdx] : null;
   var loai = dc ? dc.loai : (state.mp.formLoai || 'motLan');
   var curMk = monthKey(todayStr());
   var mkOpts = function(sel){
     var o = '';
-    for (var i=0;i<state.mp.horizon;i++){
+    for (var i=0;i<Math.max(state.mp.horizon, 36);i++){
       var m = monthKeyAdd(curMk, i);
       o += '<option value="'+m+'"'+(m===sel?' selected':'')+'>'+monthLabel(m)+'</option>';
     }
     return o;
   };
-  var h = '<div class="form-row" style="margin-top:10px">';
-  h += '<div><label>Loại điều chỉnh</label><select id="mp_loai" data-act="mpDoiLoai">'
+  var money = function(id, v, ph){
+    return '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="'+id+'" value="'+(v ? veSo(v) : '')+'" placeholder="'+(ph || '0')+'">';
+  };
+  var h = '<div class="qa-sheet mp-sheet" role="dialog" aria-modal="true" aria-label="'+(dc ? 'Sửa điều chỉnh' : 'Thêm điều chỉnh')+'"><div class="qa-grab"></div>'
+    + '<div class="qa-head"><h3>'+(dc ? 'Sửa điều chỉnh' : 'Thêm điều chỉnh')+'</h3>'
+    + '<button type="button" class="qa-x" data-act="mpCancelDc" aria-label="Đóng">'+icon('x')+'</button></div><div class="qa-body">';
+  h += '<input type="hidden" id="mp_loai" value="'+loai+'"><div class="mp-tiles-l">'
      + Object.keys(MP_LOAI_LABEL).map(function(k){
-         return '<option value="'+k+'"'+(k===loai?' selected':'')+'>'+MP_LOAI_LABEL[k]+'</option>'; }).join('')
-     + '</select></div>';
-
+         return '<button type="button" class="mp-tl '+k+(k === loai ? ' on' : '')+'" data-act="mpDoiLoai" data-v="'+k+'"'+(dc && k !== loai ? ' disabled' : '')+'>'
+           + '<b><i></i>'+MP_LOAI_LABEL[k]+'</b><small>'+MP_LOAI_MOTA[k]+'</small></button>'; }).join('')
+     + '</div>';
+  var tom = '';
   if (loai === 'motLan' || loai === 'dinhKy'){
-    h += '<div><label>Thu hay chi?</label><select id="mp_kind">'
-       + '<option value="chi"'+((dc&&dc.kind==='chi')||!dc?' selected':'')+'>Chi (tiền ra)</option>'
-       + '<option value="thu"'+(dc&&dc.kind==='thu'?' selected':'')+'>Thu (tiền vào)</option>'
-       + '</select></div>';
-    h += '<div><label>Mô tả</label><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Mua laptop"></div>';
-    h += '<div><label>Số tiền <span style="color:var(--muted);font-weight:400">(âm = giảm bớt)</span></label>'
-       + '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTien" value="'+(dc?veSo(dc.soTien):'')+'" placeholder="0"></div>';
-    h += '<div><label>'+(loai==='dinhKy'?'Bắt đầu từ tháng':'Vào tháng')+'</label><select id="mp_mk">'
-       + mkOpts(dc ? (dc.mk || dc.mkTu) : curMk) + '</select></div>';
-    if (loai === 'dinhKy'){
-      h += '<div><label>Kéo dài (tháng)</label><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):state.mp.horizon)+'"></div>';
-    }
+    var kind = dc ? dc.kind : 'chi';
+    h += '<div class="qa-lbl">Thu hay chi?</div><input type="hidden" id="mp_kind" value="'+kind+'"><div class="qa-seg" id="mp_kindSeg">'
+       + '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="mpKind" data-v="chi">Chi</button>'
+       + '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="mpKind" data-v="thu">Thu</button></div>';
+    h += '<div class="qa-lbl">Mô tả</div><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Mua laptop">';
+    h += '<div class="qa-lbl">Số tiền <span class="mp-hint">(âm = giảm bớt)</span></div>'+money('mp_soTien', dc ? dc.soTien : 0);
+    h += '<div class="mp-2"><div><div class="qa-lbl">'+(loai==='dinhKy'?'Bắt đầu từ tháng':'Vào tháng')+'</div><select id="mp_mk">'+mkOpts(dc ? (dc.mk || dc.mkTu) : curMk)+'</select></div>';
+    if (loai === 'dinhKy') h += '<div><div class="qa-lbl">Kéo dài (tháng)</div><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):state.mp.horizon)+'"></div>';
+    h += '</div>';
   } else if (loai === 'vayMoi'){
-    h += '<div><label>Tên khoản vay</label><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Vay ngân hàng mua xe"></div>';
-    h += '<div><label>Số tiền gốc</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTien" value="'+(dc?veSo(dc.soTien):'')+'" placeholder="0"></div>';
-    h += '<div><label>Hình thức</label><select id="mp_hinhThuc">'
-       + Object.keys(HINH_THUC_LABEL).map(function(k){
-           return '<option value="'+k+'"'+((dc&&dc.hinhThuc===k)?' selected':'')+'>'+HINH_THUC_LABEL[k]+'</option>'; }).join('')
-       + '</select></div>';
-    h += '<div><label>Lãi suất / năm (%)</label><input type="number" id="mp_laiSuatNam" min="0" step="0.01" value="'+(dc?num(dc.laiSuatNam):'')+'"></div>';
-    h += '<div><label>Trả mỗi tháng (nếu trả cố định)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_traThang" value="'+(dc?veSo(dc.soTienTraThang):'')+'" placeholder="0"></div>';
-    h += '<div><label>Số tháng vay</label><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):12)+'"></div>';
-    h += '<div><label>Nhận tiền tháng</label><select id="mp_mk">'+mkOpts(dc?dc.mkTu:curMk)+'</select></div>';
+    var ht = (dc && dc.hinhThuc === 'goc_deu') ? 'goc_deu' : 'co_lai';
+    var tay = (dc && dc.hinhThuc === 'tra_co_dinh') ? num(dc.soTienTraThang) : 0;
+    h += '<div class="qa-lbl">Tên khoản vay</div><input type="text" id="mp_ten" value="'+(dc?esc(dc.ten):'')+'" placeholder="VD: Vay ngân hàng mua xe">';
+    h += '<div class="qa-lbl">Số tiền gốc</div>'+money('mp_soTien', dc ? dc.soTien : 0);
+    h += '<div class="qa-lbl">Hình thức trả</div><input type="hidden" id="mp_hinhThuc" value="'+ht+'"><div class="qa-seg" id="mp_htSeg">'
+       + '<button type="button" class="'+(ht === 'co_lai' ? 'on' : '')+'" data-act="mpHinhThuc" data-v="co_lai">Trả cố định</button>'
+       + '<button type="button" class="'+(ht === 'goc_deu' ? 'on' : '')+'" data-act="mpHinhThuc" data-v="goc_deu">Gốc đều, lãi giảm</button></div>';
+    h += '<div class="mp-2"><div><div class="qa-lbl">Lãi suất %/năm</div><input type="number" id="mp_laiSuatNam" min="0" step="0.01" value="'+(dc?num(dc.laiSuatNam):'')+'"></div>'
+       + '<div><div class="qa-lbl">Số tháng</div><input type="number" id="mp_soThang" min="1" value="'+(dc?num(dc.soThang):12)+'"></div></div>';
+    h += '<div class="qa-lbl">Nhận tiền tháng</div><select id="mp_mk">'+mkOpts(dc?dc.mkTu:curMk)+'</select>';
+    h += '<div class="qa-lbl" id="mp_traNhan">Trả mỗi tháng · tự tính, có thể sửa</div>'
+       + '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_traThang" value="'+(tay ? veSo(tay) : '')+'"'+(tay ? ' data-tay="1"' : '')+' placeholder="0">';
+    tom = '<div class="mp-tom" id="mp_tom"></div>';
   } else if (loai === 'traSom') {
     var dsLoan = ((state.mp.data.vayNo||{}).vayNoPhaiTra || []).filter(function(l){
       return loanIsActive(l) && !l.tatToan;
@@ -184,53 +207,140 @@ function mpFormHtml(){
     if (!dsLoan.length){
       h += '<div class="empty">Bản nháp không có khoản vay nào đang trả — không có gì để tất toán sớm.</div>';
     } else {
-      h += '<div><label>Khoản vay</label><select id="mp_loanId">'
+      h += '<div class="qa-lbl">Khoản vay</div><select id="mp_loanId">'
          + dsLoan.map(function(l){
              return '<option value="'+l.id+'"'+((dc&&dc.loanId===l.id)?' selected':'')+'>'
                   + esc(l.ten)+' — còn '+fmt(Math.round(withData(state.mp.data, function(){ return soTienConLaiPhaiTra(l); })))
                   + '</option>'; }).join('')
-         + '</select></div>';
-      h += '<div><label>Tất toán vào tháng</label><select id="mp_mk">'+mkOpts(dc?dc.mk:curMk)+'</select></div>';
-      h += '<div><label>Số tiền tất toán</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mp_soTienTatToan" value="'+(dc?veSo(dc.soTienTatToan):'')+'" placeholder="Bỏ trống = số dự kiến của khoản vay / tổng còn phải trả"></div>';
+         + '</select>';
+      h += '<div class="qa-lbl">Tất toán vào tháng</div><select id="mp_mk">'+mkOpts(dc?dc.mk:curMk)+'</select>';
+      h += '<div class="qa-lbl">Số tiền tất toán</div>'+money('mp_soTienTatToan', dc ? dc.soTienTatToan : 0, 'Bỏ trống = số dự kiến của khoản vay / tổng còn phải trả');
     }
   }
-  h += '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
-     + '<button class="btn sm" data-act="mpSaveDc">'+(dc?'Cập nhật':'Thêm')+'</button>'
-     + '<button class="btn secondary sm" data-act="mpCancelDc">Hủy</button></div>';
+  h += '</div><div class="qa-foot">'+tom+'<button type="button" class="btn qa-save" data-act="mpSaveDc">'+(dc ? 'Cập nhật kịch bản' : 'Áp vào kịch bản')+'</button></div></div>';
   return h;
 }
 
-function mpDcMoTa(dc){
-  if (dc.loai === 'motLan'){
-    return esc(dc.ten||'(không tên)') + ' · ' + (dc.kind==='thu'?'thu':'chi') + ' ' + fmt(Math.round(num(dc.soTien))) + ' · ' + monthLabel(dc.mk);
+// bảng trượt: nằm trong body (ngoài #tabContent), đã mở thì GIỮ NGUYÊN DOM để vẽ lại trang không làm mất ô đang gõ
+function mpKhopKhungNhin(){
+  var root = document.getElementById('mpSheetRoot'), vv = window.visualViewport;
+  if (!root || !vv) return;
+  root.style.top = vv.offsetTop + 'px';
+  root.style.height = vv.height + 'px';
+  root.style.bottom = 'auto';
+}
+if (typeof window !== 'undefined' && window.visualViewport){
+  window.visualViewport.addEventListener('resize', mpKhopKhungNhin);
+  window.visualViewport.addEventListener('scroll', mpKhopKhungNhin);
+}
+function mpSheetVe(){
+  if (typeof document === 'undefined' || !document.body || !document.createElement || !state.mp) return;
+  var dangMo = state.tab === 'dongtien' && state.dtMoPhong && mpDaNap();
+  if (!dangMo && state.mp.formOpen){ state.mp.formOpen = false; state.mp.editIdx = -1; }
+  var root = document.getElementById('mpSheetRoot');
+  if (!state.mp.formOpen){
+    if (root && root.parentNode) root.parentNode.removeChild(root);
+    if (!document.getElementById('qaSheetRoot')) document.body.classList.remove('qa-mo');
+    return;
   }
+  if (root) return;
+  root = document.createElement('div');
+  root.id = 'mpSheetRoot';
+  root.className = 'qa-back moi';
+  root.innerHTML = '<div class="qa-scrim" data-act="mpCancelDc"></div>' + mpFormHtml();
+  document.body.appendChild(root);
+  document.body.classList.add('qa-mo');
+  mpKhopKhungNhin();
+  mpVayCapNhat();
+  setTimeout(function(){ root.classList.remove('moi'); }, 400);
+}
+// dựng lại bảng (đổi loại điều chỉnh): bỏ DOM cũ rồi vẽ mới
+function mpSheetLamMoi(){
+  var root = document.getElementById('mpSheetRoot');
+  if (root && root.parentNode) root.parentNode.removeChild(root);
+  mpSheetVe();
+}
+// cập nhật "Trả mỗi tháng", tổng lãi, tháng trả xong khi người dùng gõ ở form Vay thêm
+function mpDocVay(){
+  var g = function(id){ var e = document.getElementById(id); return e ? e.value : ''; };
+  var traEl = document.getElementById('mp_traThang');
+  var tay = (traEl && traEl.getAttribute('data-tay')) ? numNonNeg(docSo(traEl.value)) : 0;
+  return { hinhThuc: g('mp_hinhThuc') || 'co_lai', soTien: numNonNeg(docSo(g('mp_soTien'))), laiSuatNam: numNonNeg(g('mp_laiSuatNam')),
+    soThang: Math.max(1, num(g('mp_soThang')) || 1), mkTu: g('mp_mk') || monthKey(todayStr()), tay: tay };
+}
+function mpVayCapNhat(){
+  var tom = document.getElementById('mp_tom'), traEl = document.getElementById('mp_traThang');
+  if (!tom || !traEl) return;
+  var v = mpDocVay();
+  var auto = mpTinhVay({ hinhThuc: v.hinhThuc, soTien: v.soTien, laiSuatNam: v.laiSuatNam, soThang: v.soThang, mkTu: v.mkTu });
+  var dungTay = v.tay > 0 && v.hinhThuc === 'co_lai';
+  var kq = dungTay ? mpTinhVay({ hinhThuc: 'tra_co_dinh', soTien: v.soTien, laiSuatNam: v.laiSuatNam, soThang: v.soThang, mkTu: v.mkTu, traTay: v.tay }) : auto;
+  var nhan = document.getElementById('mp_traNhan');
+  if (nhan) nhan.textContent = v.hinhThuc === 'goc_deu' ? 'Trả kỳ đầu · giảm dần mỗi tháng' : 'Trả mỗi tháng · tự tính, có thể sửa';
+  traEl.readOnly = v.hinhThuc === 'goc_deu';
+  if (!dungTay) traEl.value = auto.tra > 0 ? veSo(Math.round(auto.tra)) : '';
+  tom.innerHTML = v.soTien > 0 && kq.hetMk
+    ? 'Tổng lãi ≈ <b>'+fmt(Math.round(kq.tongLai))+'</b> · trả xong '+kq.hetMk.slice(5, 7)+'/'+kq.hetMk.slice(0, 4)
+    : 'Nhập số tiền gốc để xem tổng lãi.';
+}
+
+// ảnh hưởng lên số dư của 1 điều chỉnh (để ghi dòng "−25.000.000 ₫ một lần")
+function mpDcDelta(dc){
+  var dau = function(v){ return (v < 0 ? '−' : '+') + fmt(Math.abs(Math.round(v))); };
+  var hs = dc.kind === 'thu' ? 1 : -1;
+  if (dc.loai === 'motLan') return { v: hs * num(dc.soTien), t: dau(hs * num(dc.soTien)) + ' một lần' };
   if (dc.loai === 'dinhKy'){
-    return esc(dc.ten||'(không tên)') + ' · ' + (dc.kind==='thu'?'thu':'chi') + ' ' + fmt(Math.round(num(dc.soTien)))
-         + '/tháng · ' + monthLabel(dc.mkTu) + ' → ' + num(dc.soThang) + ' tháng';
+    var n = Math.max(1, num(dc.soThang) || 1);
+    return { v: hs * num(dc.soTien), t: dau(hs * num(dc.soTien) * n) + ' trong ' + n + ' tháng' };
   }
   if (dc.loai === 'vayMoi'){
-    return esc(dc.ten||'(không tên)') + ' · gốc ' + fmt(Math.round(num(dc.soTien)))
-         + ' · ' + (HINH_THUC_LABEL[dc.hinhThuc]||dc.hinhThuc)
-         + (num(dc.laiSuatNam) ? ' ' + num(dc.laiSuatNam) + '%/năm' : '')
-         + ' · ' + num(dc.soThang) + ' tháng từ ' + monthLabel(dc.mkTu);
+    var kq = mpTinhVay({ hinhThuc: dc.hinhThuc === 'goc_deu' ? 'goc_deu' : (num(dc.soTienTraThang) > 0 ? 'tra_co_dinh' : 'co_lai'),
+      soTien: dc.soTien, laiSuatNam: dc.laiSuatNam, soThang: dc.soThang, mkTu: dc.mkTu, traTay: dc.soTienTraThang });
+    return { v: -kq.tra, t: dau(-kq.tra) + '/tháng' + (dc.hinhThuc === 'goc_deu' ? ' (kỳ đầu)' : '') };
   }
   if (dc.loai === 'traSom'){
     var l = ((state.mp.data.vayNo||{}).vayNoPhaiTra||[]).find(function(x){ return x.id===dc.loanId; });
-    return 'Tất toán sớm "' + esc(l?l.ten:dc.loanId) + '" vào ' + monthLabel(dc.mk)
-         + (num(dc.soTienTatToan) > 0 ? ' · số tiền ' + fmt(Math.round(num(dc.soTienTatToan))) : '');
+    var so = l ? Math.round(mpSoTienTatToan(state.mp.data, dc, l)) : 0;
+    return { v: -so, t: dau(-so) + ' một lần' };
+  }
+  return { v: 0, t: '' };
+}
+function mpDcMoTa(dc){
+  if (dc.loai === 'motLan'){
+    return (dc.kind==='thu'?'thu':'chi') + ' ' + fmt(Math.round(num(dc.soTien))) + ' · ' + monthLabel(dc.mk);
+  }
+  if (dc.loai === 'dinhKy'){
+    return (dc.kind==='thu'?'thu':'chi') + ' ' + fmt(Math.round(num(dc.soTien)))
+         + '/tháng · ' + dc.mkTu.slice(5, 7) + '/' + dc.mkTu.slice(0, 4) + ' → ' + num(dc.soThang) + ' tháng';
+  }
+  if (dc.loai === 'vayMoi'){
+    return 'gốc ' + fmt(Math.round(num(dc.soTien))) + ' · ' + (MP_HT_NHAN[dc.hinhThuc]||dc.hinhThuc)
+         + (num(dc.laiSuatNam) ? ' ' + num(dc.laiSuatNam) + '%/năm' : '')
+         + ' · ' + num(dc.soThang) + ' tháng từ ' + dc.mkTu.slice(5, 7) + '/' + dc.mkTu.slice(0, 4);
+  }
+  if (dc.loai === 'traSom'){
+    return 'vào ' + monthLabel(dc.mk) + (num(dc.soTienTatToan) > 0 ? ' · số tiền ' + fmt(Math.round(num(dc.soTienTatToan))) : '');
   }
   return dc.loai;
 }
+function mpDcTen(dc){
+  if (dc.loai === 'traSom'){
+    var l = ((state.mp.data.vayNo||{}).vayNoPhaiTra||[]).find(function(x){ return x.id===dc.loanId; });
+    return 'Tất toán sớm "' + esc(l ? l.ten : dc.loanId) + '"';
+  }
+  return esc(dc.ten || '(không tên)');
+}
 
 /* ---- render ---- */
+var MP_SO = function(v){ return Math.round(v).toLocaleString('vi-VN'); };
 function renderMoPhong(){
   var root = document.getElementById('tabContent');
   var html = '';
   // vào tab là ai cũng muốn có số liệu để thử: tự nạp bản sao dữ liệu thật, không bắt bấm "Nạp dữ liệu gốc"
   if (!mpDaNap() && state.data) mpNapGoc();
 
-  // Thẻ 1: nguồn dữ liệu nháp
-  html += '<div class="card"><h3>Vùng nháp</h3>';
+  // Thẻ 1: vùng nháp
+  html += '<div class="card mp-nhap"><h3 class="bc-h"><span>Vùng nháp</span><span class="mp-khong">Không được lưu</span></h3>';
   if (!mpDaNap()){
     html += '<div class="empty" style="padding:0 0 10px">Đây là vùng nháp RỖNG, tách hoàn toàn khỏi dữ liệu thật. '
          + 'Bấm nút dưới để copy dữ liệu hiện tại sang nháp rồi thử thoải mái — sửa ở đây '
@@ -238,48 +348,46 @@ function renderMoPhong(){
          + 'Thoát trang hoặc làm mới (kéo xuống) là nháp mất sạch.</div>';
     html += '<button class="btn" data-act="mpNapGoc">'+icon('download')+' Nạp dữ liệu gốc</button>';
   } else {
-    html += '<div class="empty" style="padding:0 0 10px">Đã nạp bản nháp lúc '
-         + pad2(state.mp.napLuc.getHours())+':'+pad2(state.mp.napLuc.getMinutes())
-         + '. Mọi con số dưới đây là <b>nháp</b> — không ghi vào dữ liệu thật, không lên Drive.</div>';
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-         + '<button class="btn secondary sm" data-act="mpNapGoc">'+icon('refresh')+' Nạp lại từ gốc</button>'
-         + '<button class="btn danger sm" data-act="mpXoaNhap">'+icon('trash')+' Làm lại từ đầu</button>'
+    html += '<div class="mp-nd">Bạn đang thử trên <b>bản sao</b> của dữ liệu. Không ghi vào dữ liệu thật, không lên Drive, mất khi tải lại trang.</div>'
+         + '<div class="mp-luc">Đã nạp bản nháp lúc '+pad2(state.mp.napLuc.getHours())+':'+pad2(state.mp.napLuc.getMinutes())+'</div>'
+         + '<div class="mp-btns">'
+         + '<button class="btn secondary" data-act="mpNapGoc">'+icon('refresh')+' Nạp lại từ gốc</button>'
+         + '<button class="btn danger" data-act="mpXoaNhap">'+icon('trash')+' Làm lại từ đầu</button>'
          + '</div>';
   }
   html += '</div>';
 
   if (!mpDaNap()){
     root.innerHTML = dtCheDoHtml() + html;
+    mpSheetVe();
     return;
   }
 
   // Thẻ 2: danh sách điều chỉnh
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Các điều chỉnh thử'
-       + (state.mp.formOpen ? '' : ' <button class="btn sm" data-act="mpAddDc">+ Thêm điều chỉnh</button>')
-       + '</h3>';
-  if (state.mp.formOpen) html += mpFormHtml();
+  html += '<div class="card bc-card" id="mpDcCard"><h3 class="bc-h"><span>Các điều chỉnh thử</span>'
+       + '<button class="btn sm" data-act="mpAddDc">+ Thêm điều chỉnh</button></h3>';
   var ds = state.mp.dieuChinh || [];
   if (!ds.length){
-    html += '<div class="empty">Chưa có điều chỉnh nào — bảng dưới đang là dự báo y như hiện tại.</div>';
+    html += '<div class="mp-trong">'+icon('sliders')+'<b>Chưa có điều chỉnh nào</b><span>Kết quả bên dưới đang là dự báo y như hiện tại. Thử thêm một khoản chi lớn, tăng lương hay khoản vay mới.</span></div>';
   } else {
-    html += '<div class="table-wrap"><table><thead><tr><th class="mp-chk"></th><th style="text-align:left">Loại</th><th style="text-align:left">Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
+    html += '<div class="mp-ds">';
     ds.forEach(function(dc, i){
-      html += '<tr'+(dc.bat?'':' class="mp-off"')+'>'
-        + '<td class="mp-chk"><input type="checkbox" data-act="mpToggleDc" data-idx="'+i+'"'+(dc.bat?' checked':'')+' title="Bật/tắt điều chỉnh này"></td>'
-        + '<td style="text-align:left">'+MP_LOAI_LABEL[dc.loai]+'</td>'
-        + '<td style="text-align:left;white-space:normal">'+mpDcMoTa(dc)+'</td>'
-        + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh">'+icon('pencil')+'</button>'
-          + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh">'+icon('trash')+'</button>'
-        + '</td></tr>';
+      var dl = mpDcDelta(dc);
+      html += '<div class="mp-dc'+(dc.bat?'':' off')+'">'
+        + '<label class="mp-sw"><input type="checkbox" data-act="mpToggleDc" data-idx="'+i+'"'+(dc.bat?' checked':'')+' aria-label="Bật/tắt điều chỉnh này"><span></span></label>'
+        + '<div class="mp-dc-b"><span class="mp-chip '+dc.loai+'"><i></i>'+MP_LOAI_LABEL[dc.loai]+'</span>'
+        + '<b class="mp-dc-t">'+mpDcTen(dc)+'</b><span class="mp-dc-d">'+mpDcMoTa(dc)+'</span>'
+        + '<span class="mp-dc-v '+(dl.v < 0 ? 'chi' : 'thu')+'">'+dl.t+'</span></div>'
+        + '<div class="mp-dc-x"><button class="icon-btn" data-act="mpEditDc" data-idx="'+i+'" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh">'+icon('pencil')+'</button>'
+        + '<button class="icon-btn" data-act="mpDelDc" data-idx="'+i+'" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh">'+icon('trash')+'</button></div></div>';
     });
-    html += '</tbody></table></div>';
+    html += '</div>';
   }
   html += '</div>';
 
   // Thẻ 3: kết quả so sánh
   var curMk = monthKey(todayStr());
-  var hz = state.mp.horizon;
+  var hz = state.mp.horizon || 24;
   var sc = mpBuildScenario();
   var rowsGoc = mpChieuDongTien(state.mp.data, curMk, hz, []);
   var rowsMoi = mpChieuDongTien(sc.data, curMk, hz, sc.overlay);
@@ -294,54 +402,53 @@ function renderMoPhong(){
     ? 'Đã tính thêm ' + hienTai.items.length + ' khoản đến hạn chưa ghi: '
       + hienTai.items.map(function(x){ return esc(x.ten) + ' ' + (x.kind === 'thu' ? '+' : '−') + fmt(Math.round(x.soTien)); }).join(', ')
       + '. Số dư theo Sổ tay: ' + fmt(Math.round(hienTai.goc))
-    : 'Theo Sổ tay, không có khoản nào đến hạn mà chưa ghi';
-  var amDauTien = null;
-  for (var i=0;i<rowsMoi.length;i++){ if (rowsMoi[i].bal < 0){ amDauTien = rowsMoi[i].mk; break; } }
+    : 'Theo Sổ tay';
+  var amDauTien = null, thapNhat = Infinity;
+  for (var i=0;i<rowsMoi.length;i++){
+    if (amDauTien == null && rowsMoi[i].bal < 0) amDauTien = rowsMoi[i].mk;
+    if (rowsMoi[i].bal < thapNhat) thapNhat = rowsMoi[i].bal;
+  }
+  var chenh = Math.round(cuoiMoi - cuoiGoc), coDc = ds.some(function(dc){ return dc.bat; });
+  var mkCuoi = rowsMoi.length ? rowsMoi[rowsMoi.length-1].mk : curMk;
 
-  html += '<div class="grid-summary">'
-    + '<div class="stat gold"><div class="lbl">Số dư hiện tại</div><div class="val">'+fmt(Math.round(hienTai.tong))+'</div>'
-      + '<div class="stat-sub">'+ghiChuHienTai+'</div></div>'
-    + '<div class="stat"><div class="lbl">Cuối tháng này — kịch bản</div><div class="val">'+fmt(Math.round(thangNayMoi))+'</div>'
-      + '<div class="stat-sub">Chưa điều chỉnh: '+fmt(Math.round(thangNayGoc))+'</div></div>'
-    + '<div class="stat '+(cuoiMoi>=cuoiGoc?'thu':'chi')+'"><div class="lbl">Chênh lệch sau '+hz+' tháng</div><div class="val">'
-      + (cuoiMoi-cuoiGoc>=0?'+':'')+fmt(Math.round(cuoiMoi-cuoiGoc))+'</div></div>'
-    + '<div class="stat '+(amDauTien?'chi':'thu')+'"><div class="lbl">Tháng âm tiền đầu tiên</div><div class="val">'
-      + (amDauTien?monthLabel(amDauTien):'Không có')+'</div></div>'
+  var tile = function(cls, lbl, val, sub, nho){ return '<div class="mp-t '+cls+'"><div class="lbl">'+lbl+'</div><div class="val'+(nho ? ' txt' : '')+'">'+val+'</div>'+(sub ? '<div class="sub">'+sub+'</div>' : '')+'</div>'; };
+  html += '<div class="mp-tiles">'
+    + tile('gold', 'Số dư hiện tại', fmt(Math.round(hienTai.tong)), ghiChuHienTai)
+    + tile(thangNayMoi < 0 ? 'chi' : '', 'Cuối tháng này — kịch bản', fmt(Math.round(thangNayMoi)),
+        Math.round(thangNayMoi) !== Math.round(thangNayGoc) ? 'Chưa điều chỉnh: ' + fmt(Math.round(thangNayGoc)) : '')
+    + tile(!coDc ? '' : (chenh >= 0 ? 'thu' : 'chi'), 'Chênh lệch sau ' + hz + ' tháng', coDc ? (chenh >= 0 ? '+' : '') + fmt(chenh) : 'Chưa thay đổi',
+        'Cuối ' + dtNhanThang(mkCuoi) + ': ' + fmt(Math.round(cuoiMoi)), !coDc)
+    + tile(amDauTien ? 'chi' : 'thu', 'Tháng âm tiền đầu tiên', amDauTien ? monthLabel(amDauTien) : 'Không có', 'Thấp nhất ' + fmt(Math.round(thapNhat === Infinity ? 0 : thapNhat)))
     + '</div>';
 
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">So sánh dòng tiền'
-    + '<select id="mp_horizon" data-act="mpHorizonChange" style="width:auto;font-size:12px;padding:4px 8px">'
-    + [6,12,24,36].map(function(h){ return '<option value="'+h+'"'+(h===hz?' selected':'')+'>'+h+' tháng tới</option>'; }).join('')
-    + '</select></h3>';
-  html += '<div class="empty" style="padding:0 0 10px">Cột "Hiện tại" là dự báo của bản nháp khi CHƯA điều chỉnh gì; '
-    + 'cột "Kịch bản" là sau khi áp các điều chỉnh đang bật. Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở tab Vay - Nợ.</div>';
-  html += '<div class="table-wrap"><table><thead>'
-    + '<tr><th style="text-align:left" rowspan="2">Tháng</th><th colspan="2" class="th-month">Hiện tại</th><th colspan="3" class="th-month">Kịch bản</th><th rowspan="2">Chênh lệch dư</th></tr>'
-    + '<tr><th>Thu - Chi</th><th>Số dư lũy kế</th><th>Thu</th><th>Chi</th><th>Số dư lũy kế</th></tr>'
-    + '</thead><tbody>';
-  rowsMoi.forEach(function(r, idx){
-    var g = rowsGoc[idx];
-    var lech = r.bal - g.bal;
-    html += '<tr'+(r.bal<0?' class="mp-am"':'')+'>'
-      + '<td style="text-align:left">'+monthLabel(r.mk)+'</td>'
-      + '<td>'+fmt(Math.round(g.thu-g.chi))+'</td>'
-      + '<td>'+fmt(Math.round(g.bal))+'</td>'
-      + '<td style="color:var(--green)">'+fmt(Math.round(r.thu))+'</td>'
-      + '<td style="color:var(--red)">'+fmt(Math.round(r.chi))+'</td>'
-      + '<td style="font-weight:600">'+fmt(Math.round(r.bal))+'</td>'
-      + '<td style="color:var(--'+(lech>=0?'green':'red')+')">'+(lech>=0?'+':'')+fmt(Math.round(lech))+'</td>'
-      + '</tr>';
-  });
-  html += '</tbody></table></div>';
-  html += '<div class="bd-h" style="margin-top:14px">Số dư lũy kế: hiện tại và kịch bản</div><div class="bd-box">'
-    + bdLine({ W: 350, H: 200, labels: rowsMoi.map(function(r){ return 'T' + parseInt(r.mk.slice(5, 7), 10) + (r.mk.slice(0, 4) !== rowsMoi[0].mk.slice(0, 4) ? '/' + r.mk.slice(2, 4) : ''); }),
+  var cung = !coDc;
+  html += '<div class="card bc-card" id="mpSoSanh"><h3 class="bc-h"><span>So sánh dòng tiền</span></h3>'
+    + '<div class="mp-hz" role="tablist" aria-label="Số tháng xem">'
+    + [6,12,24,36].map(function(h){ return '<button type="button" role="tab" data-act="mpHorizon" data-h="'+h+'" class="'+(h===hz?'on':'')+'" aria-selected="'+(h===hz)+'">'+h+' tháng</button>'; }).join('')
+    + '</div>'
+    + '<div class="mp-leg"><span><i class="g"></i>Hiện tại</span><span><i class="k"></i>Kịch bản</span><span><i class="a"></i>Tháng âm tiền</span></div>'
+    + '<div class="bd-box">'
+    + bdLine({ W: 350, H: 200, labels: rowsMoi.map(function(r){ return dtNhanThang(r.mk); }),
       series: [{ ten: 'Hiện tại', vals: rowsGoc.map(function(r){ return Math.round(r.bal); }), cls: 'gray', dash: true },
                { ten: 'Kịch bản', vals: rowsMoi.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
-      tipTitle: function(i){ return monthLabel(rowsMoi[i].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế: hiện tại và kịch bản' }) + '</div>'
-    + '<div class="bd-key" style="margin-top:6px"><span class="l gray"></span> Hiện tại <span class="l chi"></span> Kịch bản</div>';
+      tipTitle: function(k){ return monthLabel(rowsMoi[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế: hiện tại và kịch bản' }) + '</div>'
+    + '<div class="mp-strip" aria-hidden="true">'+rowsMoi.map(function(r){ return '<i'+(r.bal < 0 ? ' class="am"' : '')+' title="'+monthLabel(r.mk)+'"></i>'; }).join('')+'</div>'
+    + '<div class="mp-hint c">Chạm hoặc kéo trên biểu đồ để xem từng tháng'+(cung ? ' · chưa điều chỉnh nên hai đường trùng nhau' : '')+'</div>';
+  var hien = state.mp.hetThang ? rowsMoi : rowsMoi.slice(0, 6);
+  html += '<div class="dt-ml mp-ml"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span><span>Chênh lệch</span></div>';
+  hien.forEach(function(r, idx){
+    var g = rowsGoc[idx], lech = Math.round(r.bal - g.bal), cb = r.thu - r.chi;
+    html += '<div class="dt-ml-r'+(r.bal < 0 ? ' am' : '')+'"><span class="m"><i class="'+(r.bal < 0 ? 'am' : '')+'"></i>'+dtNhanThang(r.mk)+'</span>'
+      + '<span class="c '+(cb < 0 ? 'xau' : 'tot')+'">'+MP_SO(cb)+'</span><span class="l'+(r.bal < 0 ? ' xau' : '')+'">'+MP_SO(r.bal)+'</span>'
+      + '<span class="d '+(lech === 0 ? '' : (lech > 0 ? 'tot' : 'xau'))+'">'+(lech === 0 ? '–' : (lech > 0 ? '+' : '')+MP_SO(lech))+'</span></div>';
+  });
   html += '</div>';
+  if (rowsMoi.length > 6) html += '<button type="button" class="dt-more" data-act="mpHetThang">'+(state.mp.hetThang ? 'Thu gọn' : 'Xem thêm '+(rowsMoi.length - 6)+' tháng')+'</button>';
+  html += '<div class="mp-hint c">Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở tab Vay - Nợ · số tính bằng ₫</div></div>';
 
-  root.innerHTML = dtCheDoHtml() + html;
+  var phai = html.indexOf('<div class="mp-tiles">');
+  root.innerHTML = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">' + html.slice(0, phai) + '</div><div class="cot-phai">' + html.slice(phai) + '</div></div>';
+  mpSheetVe();
 }
 
 /* ---- actions ---- */
@@ -370,19 +477,40 @@ function handleMoPhongAction(act, el){
     state.mp.formOpen = true;
     state.mp.editIdx = -1;
     state.mp.formLoai = 'motLan';
-    renderMoPhong();
+    mpSheetLamMoi();
   } else if (act === 'mpEditDc'){
     state.mp.formOpen = true;
     state.mp.editIdx = parseInt(el.getAttribute('data-idx'),10);
-    renderMoPhong();
+    mpSheetLamMoi();
   } else if (act === 'mpCancelDc'){
     state.mp.formOpen = false;
     state.mp.editIdx = -1;
-    renderMoPhong();
+    mpSheetVe();
+  } else if (act === 'mpDoiLoai'){
+    // đổi loại -> dựng lại form cho đúng các ô cần nhập (đang sửa thì khóa loại, nút bị disabled)
+    if (state.mp.editIdx >= 0) return true;
+    state.mp.formLoai = el.getAttribute('data-v');
+    mpSheetLamMoi();
+  } else if (act === 'mpKind'){
+    var k = document.getElementById('mp_kind'); if (k) k.value = el.getAttribute('data-v');
+    var seg = document.getElementById('mp_kindSeg');
+    if (seg) [].forEach.call(seg.querySelectorAll('button'), function(b){ b.classList.toggle('on', b === el); });
+  } else if (act === 'mpHinhThuc'){
+    var ht = document.getElementById('mp_hinhThuc'); if (ht) ht.value = el.getAttribute('data-v');
+    var seg2 = document.getElementById('mp_htSeg');
+    if (seg2) [].forEach.call(seg2.querySelectorAll('button'), function(b){ b.classList.toggle('on', b === el); });
+    var tr = document.getElementById('mp_traThang'); if (tr) tr.removeAttribute('data-tay');
+    mpVayCapNhat();
   } else if (act === 'mpDelDc'){
     state.mp.dieuChinh.splice(parseInt(el.getAttribute('data-idx'),10), 1);
     state.mp.formOpen = false;
     state.mp.editIdx = -1;
+    renderMoPhong();
+  } else if (act === 'mpHorizon'){
+    state.mp.horizon = parseInt(el.getAttribute('data-h'),10) || 24;
+    renderMoPhong();
+  } else if (act === 'mpHetThang'){
+    state.mp.hetThang = !state.mp.hetThang;
     renderMoPhong();
   } else if (act === 'mpSaveDc'){
     var loai = (document.getElementById('mp_loai')||{}).value || 'motLan';
@@ -396,13 +524,19 @@ function handleMoPhongAction(act, el){
       if (loai === 'motLan') dc.mk = g('mp_mk');
       else { dc.mkTu = g('mp_mk'); dc.soThang = Math.max(1, num(g('mp_soThang')) || 1); }
     } else if (loai === 'vayMoi'){
+      var v = mpDocVay();
       dc.ten = g('mp_ten');
-      dc.soTien = numNonNeg(docSo(g('mp_soTien')));
-      dc.hinhThuc = g('mp_hinhThuc') || 'khong_lai';
-      dc.laiSuatNam = numNonNeg(g('mp_laiSuatNam'));
-      dc.soTienTraThang = numNonNeg(docSo(g('mp_traThang')));
-      dc.soThang = Math.max(1, num(g('mp_soThang')) || 1);
-      dc.mkTu = g('mp_mk');
+      dc.soTien = v.soTien;
+      dc.hinhThuc = v.hinhThuc;
+      dc.laiSuatNam = v.laiSuatNam;
+      dc.soTienTraThang = 0;
+      // người dùng tự sửa số trả mỗi tháng (khác số tự tính) -> khoản trả cố định theo số đó
+      if (v.hinhThuc === 'co_lai' && v.tay > 0){
+        var auto = mpTinhVay({ hinhThuc: 'co_lai', soTien: v.soTien, laiSuatNam: v.laiSuatNam, soThang: v.soThang, mkTu: v.mkTu });
+        if (Math.abs(auto.tra - v.tay) >= 1){ dc.hinhThuc = 'tra_co_dinh'; dc.soTienTraThang = v.tay; }
+      }
+      dc.soThang = v.soThang;
+      dc.mkTu = v.mkTu;
       dc.loaiVay = 'ngan_hang';
       if (dc.soTien <= 0){ toast('Số tiền gốc phải lớn hơn 0.', { loai:'warn' }); return true; }
     } else if (loai === 'traSom'){
@@ -427,22 +561,21 @@ function handleMoPhongAction(act, el){
 }
 
 function handleMoPhongChange(el){
-  if (el.matches('[data-act=mpDoiLoai]')){
-    // đổi loại -> dựng lại form cho đúng các ô cần nhập. Bỏ chế độ sửa vì
-    // bản ghi cũ là loại khác, giữ lại chỉ gây lẫn dữ liệu.
-    state.mp.formLoai = el.value;
-    state.mp.editIdx = -1;
-    renderMoPhong();
-    return true;
-  } else if (el.matches('[data-act=mpHorizonChange]')){
-    state.mp.horizon = parseInt(el.value,10) || 24;
-    renderMoPhong();
-    return true;
-  } else if (el.matches('[data-act=mpToggleDc]')){
+  if (el.matches('[data-act=mpToggleDc]')){
     var i = parseInt(el.getAttribute('data-idx'),10);
     state.mp.dieuChinh[i].bat = el.checked;
     renderMoPhong();
     return true;
+  } else if (el.id === 'mp_mk' || el.id === 'mp_soThang' || el.id === 'mp_laiSuatNam'){
+    mpVayCapNhat();
+    return true;
   }
+  return false;
+}
+// gõ ở form Vay thêm: tính lại số trả, tổng lãi (ô "Trả mỗi tháng" do người dùng gõ thì đánh dấu là số tự nhập)
+function handleMoPhongInput(el){
+  if (!el || !el.id) return false;
+  if (el.id === 'mp_traThang'){ el.setAttribute('data-tay', '1'); mpVayCapNhat(); return true; }
+  if (el.id === 'mp_soTien' || el.id === 'mp_soThang' || el.id === 'mp_laiSuatNam'){ mpVayCapNhat(); return true; }
   return false;
 }

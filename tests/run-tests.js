@@ -1404,8 +1404,9 @@ test('Dòng tiền: "Lũy kế số dư" từ tháng hiện tại cộng dồn c
   d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:1000000, coDinhChiTieu:true }];
   loadData(d);
   var root = { innerHTML:'' };
-  ctx.state.dongTienYear = 2026;
+  ctx.state.dongTienYear = 2026; ctx.state.dtBangNam = true;
   voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
+  ctx.state.dtBangNam = false;
   var hang = root.innerHTML.split('Lũy kế số dư')[1].split('</tr>')[0];
   var soTien = function(n){ return '<td>' + ctx.fmt(n) + '</td>'; };
   ok(hang.indexOf(soTien(4000000)) >= 0, 'T10 = 5tr - 1tr: ' + hang);
@@ -1605,7 +1606,7 @@ test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút ch�
   var d = baseData({ settings:{ soDuDauKy:3000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
   d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:1000000, coDinhChiTieu:true }];
   loadData(d);
-  ctx.state.dongTienYear = 2026; ctx.state.dtThang = null;
+  ctx.state.dongTienYear = 2026; ctx.state.dtThang = null; ctx.state.dtBangNam = true;
   var mm0 = ctx.window.matchMedia;
   var root = { innerHTML:'' };
   try{
@@ -1622,7 +1623,7 @@ test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút ch�
     voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
     var bang3 = root.innerHTML.split('<table>')[1].split('</table>')[0];
     eq((bang3.match(/class="dt-input th-month"/g) || []).length, 3, 'máy tính: đủ 3 tháng T10-T12');
-  } finally { ctx.window.matchMedia = mm0; ctx.state.dtThang = null; setToday('2026-10-01'); }
+  } finally { ctx.window.matchMedia = mm0; ctx.state.dtThang = null; ctx.state.dtBangNam = false; setToday('2026-10-01'); }
 });
 
 test('Bảng Vay-Nợ dạng thẻ: có class m-cards, mỗi ô có nhãn cột (data-th)', function(){
@@ -2066,6 +2067,131 @@ test('Tab Mô phỏng: ô đầu là "Số dư hiện tại" (kèm khoản đã 
   ok(h.indexOf('Đã tính thêm 3 khoản đến hạn chưa ghi') >= 0 && h.indexOf('Lương +') >= 0, 'nói rõ đã cộng khoản nào');
   ok(h.indexOf('Số dư cuối kỳ') < 0, 'không còn ô cuối kỳ');
   ok(h.indexOf('Cuối tháng này — kịch bản') >= 0 && h.indexOf('Chênh lệch sau 12 tháng') >= 0, 'các ô còn lại');
+  ctx.state.mp = { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] };
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('DT. Dòng tiền thiết kế mới (Thực tế & dự kiến + Mô phỏng)');
+
+function dataDongTien(){
+  var d = baseData({ settings:{ soDuDauKy:10000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:10000000 }, { id:'thuNgoai', ten:'Thu ngoài', chiTieu:0 }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:1000000 }, { id:'xang', ten:'Xăng', chiTieu:500000 }, { id:'tieu', ten:'Tiêu', chiTieu:0 }, { id:'traNo', ten:'Trả nợ', chiTieu:0 }];
+  d.journal['2026-10-05'] = { items:[], refs:[], thu:{ luong:10000000, thuNgoai:80000 }, chi:{ an:1200000, xang:100000 }, ghiChu:'' };
+  return d;
+}
+function renderDT(){
+  var root = { innerHTML:'' };
+  voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
+  return root.innerHTML;
+}
+
+test('dtThangDuLieu: thu/chi thực tế, kế hoạch, Trả nợ tách riêng, cân đối = thu − chi của tháng', function(){
+  setToday('2026-10-10');
+  loadData(dataDongTien());
+  var d = ctx.dtThangDuLieu('2026-10');
+  eq(d.thuAct, 10080000); eq(d.thuPlan, 10000000);
+  eq(d.chiAct, 1300000); eq(d.chiPlan, 1500000);
+  ok(d.traNo && d.traNo.id === 'traNo', 'Trả nợ không nằm trong d.chi');
+  ok(d.chi.every(function(r){ return r.id !== 'traNo'; }));
+  eq(Math.round(d.cb), Math.round(ctx.tongThuThangCard('2026-10') - ctx.tongChiThangCard('2026-10')));
+  setToday('2026-10-01');
+});
+
+test('Dòng tiền: thẻ đầu, Thu/Chi theo danh mục, dự kiến; không còn <table>, có nút "Xem bảng cả năm"', function(){
+  setToday('2026-10-10');
+  loadData(dataDongTien());
+  ctx.state.dtMk = null; ctx.state.dtBangNam = false; ctx.state.dtMoPhong = false;
+  var h = renderDT();
+  ok(h.indexOf('Cân đối tháng') >= 0 && h.indexOf('id="dtDau"') >= 0, 'thẻ đầu');
+  ok(h.indexOf('Thu nhập tháng 10') >= 0 && h.indexOf('Chi theo hạn mức') >= 0 && h.indexOf('Dự kiến các tháng tới') >= 0);
+  ok(h.indexOf('<table') < 0, 'không còn bảng ở màn chính');
+  ok(h.indexOf('data-act="dtBangNam"') >= 0 && h.indexOf('Xem bảng cả năm') >= 0);
+  ok(h.indexOf('data-act="dtJump"') >= 0 && h.indexOf('data-act="dtPrev"') >= 0, 'chọn tháng');
+  // Ăn 120% hạn mức -> "Cần chú ý" + chip Vượt; Xăng 20% -> Ổn
+  ok(h.indexOf('Cần chú ý · 1') >= 0 && h.indexOf('Vượt '+ctx.fmt(200000)) >= 0, 'Ăn vượt hạn mức');
+  ok(h.indexOf('Ổn · 1') >= 0, 'Xăng ổn');
+  ok(h.indexOf('Thu ngoài') >= 0 && h.indexOf('ngoài kế hoạch') >= 0, 'thu ngoài kế hoạch');
+  setToday('2026-10-01');
+});
+
+test('Dòng tiền: sang tháng sau là tháng gợi ý (nhãn gợi ý, không có nhịp ngày); mở rộng 1 dòng chi; bảng cả năm mở bằng nút', function(){
+  setToday('2026-10-10');
+  loadData(dataDongTien());
+  ctx.state.dtMk = null; ctx.state.dtBangNam = false; ctx.state.dtMoDong = null; ctx.state.dtMoPhong = false;
+  var root = { innerHTML:'' };
+  voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtNext', elAct({})); });
+  eq(ctx.state.dtMk, '2026-11');
+  ok(root.innerHTML.indexOf('Thu nhập '+ctx.monthLabel('2026-11').toLowerCase()) >= 0 && root.innerHTML.indexOf('gợi ý') >= 0);
+  ok(root.innerHTML.indexOf('Đã qua') < 0, 'tháng chưa tới không có nhịp ngày');
+  voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtPrev', elAct({})); });
+  voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtMoDong', elAct({ 'data-id':'an' })); });
+  ok(root.innerHTML.indexOf('class="dt-ct"') >= 0 && root.innerHTML.indexOf('Nhịp hiện tại') >= 0, 'chi tiết dòng Ăn');
+  voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtBangNam', elAct({})); });
+  ok(root.innerHTML.indexOf('Lũy kế số dư') >= 0 && root.innerHTML.indexOf('Ẩn bảng cả năm') >= 0, 'bảng cả năm hiện sau nút');
+  ctx.state.dtBangNam = false; ctx.state.dtMoDong = null; ctx.state.dtMk = null;
+  setToday('2026-10-01');
+});
+
+test('Dòng tiền: dtDuKienRows cộng dồn từ số dư trước tháng hiện tại; tháng đã qua dùng số dư cuối tháng', function(){
+  setToday('2026-10-10');
+  loadData(dataDongTien());
+  var rows = ctx.dtDuKienRows(3);
+  eq(rows.length, 3); eq(rows[0].mk, '2026-10');
+  eq(Math.round(rows[0].bal), Math.round(ctx.balanceBeforeMonth('2026-10') + rows[0].cb));
+  eq(Math.round(rows[1].bal), Math.round(rows[0].bal + rows[1].cb));
+  eq(ctx.dtLuyKe('2026-10', rows), rows[0].bal);
+  setToday('2026-10-01');
+});
+
+test('Mô phỏng: mpTinhVay trả cố định 150tr/9%/36 tháng = 4.769.960, tổng lãi 21.718.556; gốc đều thì giảm dần', function(){
+  var a = ctx.mpTinhVay({ hinhThuc:'co_lai', soTien:150000000, laiSuatNam:9, soThang:36, mkTu:'2026-11' });
+  eq(Math.round(a.tra), 4769960); eq(Math.round(a.tongLai), 21718556); eq(a.hetMk, '2029-11');
+  var b = ctx.mpTinhVay({ hinhThuc:'goc_deu', soTien:12000000, laiSuatNam:12, soThang:12, mkTu:'2026-11' });
+  eq(Math.round(b.tra), 1000000 + 120000, 'kỳ đầu = gốc 1tr + lãi 1%/tháng trên 12tr');
+  eq(Math.round(b.tongLai), 780000, 'lãi giảm dần: 1% × (12+11+…+1)tr');
+  var c = ctx.mpTinhVay({ hinhThuc:'tra_co_dinh', soTien:12000000, laiSuatNam:0, soThang:12, mkTu:'2026-11', traTay:1100000 });
+  eq(Math.round(c.tongLai), 1200000, 'tự nhập số trả: phần chênh là lãi');
+});
+
+test('Mô phỏng: mpDcDelta ghi đúng dấu ảnh hưởng; vay gốc đều đi qua mpBuildScenario', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  ctx.state.mp.data = JSON.parse(JSON.stringify(ctx.state.data));
+  eq(ctx.mpDcDelta({ loai:'motLan', kind:'chi', soTien:25000000 }).t, '−' + ctx.fmt(25000000) + ' một lần');
+  eq(ctx.mpDcDelta({ loai:'dinhKy', kind:'thu', soTien:3000000, soThang:12 }).t, '+' + ctx.fmt(36000000) + ' trong 12 tháng');
+  var v = { loai:'vayMoi', bat:true, ten:'Xe', soTien:12000000, hinhThuc:'goc_deu', laiSuatNam:12, soTienTraThang:0, soThang:12, mkTu:'2026-11' };
+  ok(ctx.mpDcDelta(v).t.indexOf('(kỳ đầu)') >= 0);
+  ctx.state.mp.dieuChinh = [v];
+  var sc = ctx.mpBuildScenario();
+  var rows = ctx.mpChieuDongTien(sc.data, '2026-10', 3, sc.overlay);
+  var base = ctx.mpChieuDongTien(ctx.state.mp.data, '2026-10', 3, []);
+  eq(Math.round(rows[1].thu - base[1].thu), 12000000, 'tiền vay về ví tháng nhận');
+  eq(Math.round(rows[2].chi - base[2].chi), 1120000, 'kỳ đầu gốc đều trả tháng sau');
+  ctx.state.mp.dieuChinh = []; ctx.state.mp.data = null;
+  setToday('2026-10-01');
+});
+
+test('Mô phỏng: màn mới có vùng nháp, công tắc, tab số tháng; sheet form là bảng trượt (mpFormHtml)', function(){
+  setToday('2026-10-10');
+  loadData(dataMoPhong());
+  ctx.state.mp = { data: JSON.parse(JSON.stringify(ctx.state.data)), napLuc: new Date(), horizon: 12, formOpen:false, editIdx:-1,
+    dieuChinh:[{ loai:'motLan', kind:'chi', ten:'Mua laptop', soTien:25000000, mk:'2026-12', bat:true }] };
+  var root = { innerHTML:'' };
+  var rm0 = ctx.renderMoPhong; ctx.renderMoPhong = renderThat.renderMoPhong;
+  try{ voiDom({ tabContent: root }, null, function(){ ctx.renderMoPhong(); }); } finally { ctx.renderMoPhong = rm0; }
+  var h = root.innerHTML;
+  ok(h.indexOf('Vùng nháp') >= 0 && h.indexOf('Không được lưu') >= 0, 'vùng nháp');
+  ok(h.indexOf('class="mp-sw"') >= 0 && h.indexOf('data-act="mpToggleDc"') >= 0, 'công tắc');
+  ok(h.indexOf('Mua laptop') >= 0 && h.indexOf('một lần') >= 0, 'dòng điều chỉnh có delta');
+  ok(h.indexOf('data-act="mpHorizon"') >= 0 && h.indexOf('Xem thêm 6 tháng') >= 0, 'tab số tháng + danh sách rút gọn');
+  ok(h.indexOf('<table') < 0, 'không còn bảng');
+  var f = ctx.mpFormHtml();
+  ok(f.indexOf('qa-sheet') >= 0 && f.indexOf('data-act="mpDoiLoai"') >= 0 && f.indexOf('Áp vào kịch bản') >= 0);
+  ctx.state.mp.formLoai = 'vayMoi';
+  var f2 = ctx.mpFormHtml();
+  ok(f2.indexOf('Gốc đều, lãi giảm') >= 0 && f2.indexOf('id="mp_traThang"') >= 0 && f2.indexOf('id="mp_tom"') >= 0);
   ctx.state.mp = { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] };
   setToday('2026-10-01');
 });
