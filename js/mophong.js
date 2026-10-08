@@ -235,7 +235,7 @@ function renderMoPhong(){
     html += '<div class="empty" style="padding:0 0 10px">Đây là vùng nháp RỖNG, tách hoàn toàn khỏi dữ liệu thật. '
          + 'Bấm nút dưới để copy dữ liệu hiện tại sang nháp rồi thử thoải mái — sửa ở đây '
          + '<b>không</b> ảnh hưởng Sổ tay / Vay-Nợ và <b>không</b> được lưu lên Drive. '
-         + 'Thoát trang hoặc bấm "Làm mới" là nháp mất sạch.</div>';
+         + 'Thoát trang hoặc làm mới (kéo xuống) là nháp mất sạch.</div>';
     html += '<button class="btn" data-act="mpNapGoc">'+icon('download')+' Nạp dữ liệu gốc</button>';
   } else {
     html += '<div class="empty" style="padding:0 0 10px">Đã nạp bản nháp lúc '
