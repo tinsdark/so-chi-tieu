@@ -747,8 +747,54 @@ function balanceSeries(mk){
   return { labels: labels, vals: vals };
 }
 /* ---- Sổ tay: handlers ---- */
+// Cảnh báo ví sắp âm trước khi ghi (chỉ cảnh báo, bấm Đồng ý vẫn ghi). Trả câu cảnh báo hoặc ''.
+function canhBaoViAm(act, el){
+  var d = state.data;
+  if (act === 'qaSave'){
+    if (state.qa.kind === 'thu') return '';
+    var t = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
+    var v = (document.getElementById('qa_wallet') || {}).value || state.viChon;
+    return viCanhBaoAm(v, -t);
+  }
+  if (act === 'viChuyenLuu'){
+    var tu = (document.getElementById('vi_tu') || {}).value;
+    var den = (document.getElementById('vi_den') || {}).value;
+    if (tu === den) return '';
+    return viCanhBaoAm(tu, -numNonNeg(docSo((document.getElementById('vi_tien') || {}).value)));
+  }
+  if (act === 'stSaveItem'){
+    var kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
+    var tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
+    var vi = (document.getElementById('st_it_wallet') || {}).value || '';
+    var viId = walletById(vi) ? vi : viMacDinhId();
+    var moi = (kc[0] === 'chi' ? -tien : (kc[0] === 'thu' ? tien : 0));
+    var cu = 0, iid = el.getAttribute && el.getAttribute('data-iid');
+    if (iid){
+      entryItems(d.journal[el.getAttribute('data-date')]).forEach(function(it){
+        if (it.iid === iid && viCuaItem(it) === viId) cu = (it.kind === 'chi' ? -1 : 1) * num(it.soTien);
+      });
+    }
+    return viCanhBaoAm(viId, moi - cu);
+  }
+  if (act === 'saveEntry' && !state.editingDate){
+    var tong = 0;
+    document.querySelectorAll('.f_chi').forEach(function(inp){ tong += numNonNeg(docSo(inp.value)); });
+    var vf = (document.getElementById('f_wallet') || {}).value || viMacDinhId();
+    return viCanhBaoAm(vf, -tong);
+  }
+  return '';
+}
+
 function handleSoTayAction(act, el){
   if (handleBieuDoAction(act, el)) return true;
+  if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
+    var canhBao = canhBaoViAm(act, el);
+    if (canhBao){
+      xacNhan('Ví sẽ bị âm', canhBao + '\n\nNếu bạn quên ghi khoản thu thì nên ghi thu trước. Vẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
+        .then(function(ok){ if (ok){ el._daBaoAm = true; try{ handleSoTayAction(act, el); }finally{ el._daBaoAm = false; } } });
+      return true;
+    }
+  }
   if (act === 'prevMonth' || act === 'nextMonth'){
     var p = state.soTayMonth.split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10);
     m += (act==='nextMonth'?1:-1);
