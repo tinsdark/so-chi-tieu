@@ -1675,6 +1675,19 @@ test('Ghi nhanh: ghi xong đóng bảng, Hoàn tác (ở toast) chạy 1 lần d
   eq(ctx.balanceAt('9999-12-31'), truoc, 'hoàn tác lần 2 không đổi gì');
 });
 
+test('Chi tiết theo ngày: khoản ghi sau nằm trên khoản ghi trước; bảng ghi khoản có ô ghi chú ngay dưới số tiền', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  ctx.entryAddItem('2026-10-10', 'chi', 'an', 30000, 'Ăn sáng', undefined);
+  ctx.entryAddItem('2026-10-10', 'chi', 'an', 40000, 'Ăn tối', undefined);
+  var h = ctx.dlNgayHtml('2026-10-10', false);
+  ok(h.indexOf('Ăn tối') > 0 && h.indexOf('Ăn tối') < h.indexOf('Ăn sáng'), 'khoản mới nhất ở trên');
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  var g = ctx.ghiNhanhHtml();
+  var iTien = g.indexOf('id="qa_amount"'), iGhiChu = g.indexOf('id="qa_note"'), iDm = g.indexOf('data-cat="an"');
+  ok(iTien > 0 && iGhiChu > iTien && iDm > iGhiChu, 'thứ tự: số tiền, ghi chú, danh mục');
+});
+
 test('Vay-Nợ: thẻ Sắp đến hạn — chạm vào khoản nhảy tới đúng khoản (cho vay / vay nợ) bên dưới', function(){
   setToday('2026-10-10');
   var d = baseTraNo();
