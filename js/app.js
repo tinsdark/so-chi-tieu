@@ -47,6 +47,7 @@ function renderAll(){
   else if (state.tab === 'vayno') renderVayNo();
   else renderDanhMuc();
   qaSheetVe();                       // rời tab Sổ tay thì bảng ghi khoản tự đóng
+  mpSheetVe();                       // rời Mô phỏng thì bảng thêm điều chỉnh tự đóng
   renderVayNoBadge();
   updateStickyOffsets();
 }
@@ -167,6 +168,9 @@ document.addEventListener('keydown', function(ev){
 document.addEventListener('keydown', function(ev){
   if (ev.key === 'Escape' && state.qa && state.qa.open && !_modalDangMo){ ev.preventDefault(); qaDongSheet(); }
 });
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Escape' && state.mp && state.mp.formOpen && !_modalDangMo){ ev.preventDefault(); handleAction('mpCancelDc', null); }
+});
 // khoản / tiêu đề ngày trong Sổ tay là <div role="button"> (để vuốt ngang được): Enter hoặc Space = bấm
 document.addEventListener('keydown', function(ev){
   if ((ev.key !== 'Enter' && ev.key !== ' ') || ev.isComposing || !ev.target || !ev.target.matches) return;
@@ -193,12 +197,15 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
+document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); });
+
 document.addEventListener('change', function(ev){
   var el = ev.target;
   if (handleSoTayChange(el)) return;
   if (handleNhapChange(el)) return;
   if (handleVayNoChange(el)) return;
   if (handleDanhMucChange(el)) return;
+  if (handleDongTienChange(el)) return;
   if (handleMoPhongChange(el)) return;
 });
 

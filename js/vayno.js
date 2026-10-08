@@ -7,7 +7,7 @@
    ==================================================================== */
 
 var LOAI_VAY_LABEL = { ngan_hang:'Ngân hàng', vi:'Ví', ban_be:'Bạn bè', nguoi_than:'Người thân' };
-var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng' };
+var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng', goc_deu:'Gốc đều, lãi giảm dần' };
 
 function monthKeyAdd(mk, n){
   var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + n;
@@ -57,6 +57,17 @@ function tinhLichTraNo(loan){
       duNo -= gocThang;
       var mkI = monthKeyAdd(startMk,i);
       sch.push({ mk: mkI, ngayTra: ngayTraCuaKy(mkI, ngayTrongThang), goc: gocThang, lai: 0, tongTra: gocThang, duNoConLai: Math.max(0,duNo) });
+    }
+    return sch;
+  }
+  // goc_deu (chỉ tab Mô phỏng dùng) — mỗi kỳ trả gốc bằng nhau, lãi tính trên dư nợ còn lại nên giảm dần
+  if (loan.hinhThuc === 'goc_deu'){
+    var rg = num(loan.laiSuatNam) / 12 / 100, gocG = goc0 / n, duG = goc0;
+    for (var g=1;g<=n;g++){
+      var laiG = duG * rg;
+      duG -= gocG;
+      var mkG = monthKeyAdd(startMk,g);
+      sch.push({ mk: mkG, ngayTra: ngayTraCuaKy(mkG, ngayTrongThang), goc: gocG, lai: laiG, tongTra: gocG + laiG, duNoConLai: Math.max(0,duG) });
     }
     return sch;
   }
