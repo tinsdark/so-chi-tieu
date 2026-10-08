@@ -828,5 +828,3 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
 
 .gate-priv{margin:14px 0 0;text-align:center;font-size:12.5px}
 .gate-priv a{color:var(--muted);text-decoration:underline}
-/* điện thoại/máy bảng: làm mới bằng cách kéo xuống ở đầu trang (js/motion.js), không cần nút */
-@media (hover:none) and (pointer:coarse){ #btnRefresh{display:none} }
