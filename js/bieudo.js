@@ -545,21 +545,99 @@ function handleBieuDoAction(act, el){
     veLaiBieuDo();
     return true;
   }
+  if (act === 'hmXem'){ state.hmMoHet = !state.hmMoHet; renderBaoCao(); return true; }
   if (act === 'bdDay'){ state.bdDay = el.getAttribute('data-date'); veLaiBieuDo(); return true; }
   return false;
 }
 
-// thẻ Tài sản ròng: số cuối tháng đang xem + đường tối đa 12 tháng (không vẽ tháng trước mốc chốt số dư)
+/* ====================================================================
+   TAB BÁO CÁO — các khối trên đầu: thẻ đầu, Hạn mức (sotay.js), Tài sản ròng, Mục tiêu (sotay.js).
+   "Nhịp" = phần tháng đã qua (ngày hôm nay / số ngày của tháng): vạch "Hôm nay" trên thanh hạn mức cho biết
+   mức chi lẽ ra đã tới đâu. Chỉ tháng đang chạy mới có nhịp; tháng đã qua thì hết, tháng chưa tới thì chưa tính.
+   Chỉ ĐỌC dữ liệu, không ghi gì.
+   ==================================================================== */
+function bcNhip(mk){
+  var hom = todayStr(), cur = monthKey(hom), n = daysInMonth(mk);
+  if (mk !== cur) return { dangChay: false, ngayQua: mk < cur ? n : 0, soNgay: n, tyLe: mk < cur ? 1 : 0 };
+  var q = parseInt(hom.slice(8, 10), 10);
+  return { dangChay: true, ngayQua: q, soNgay: n, tyLe: q / n };
+}
+// vòng tròn tiến độ: pct 0..1, mau = lớp màu (ok / warn / over / mt / done), giua = chữ lớn, nho = chữ nhỏ dưới
+function bcVong(pct, mau, giua, nho){
+  var c = 2 * Math.PI * 26, p = Math.max(0, Math.min(1, pct));
+  return '<div class="bc-vong"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" class="n"/>'
+    + '<circle cx="32" cy="32" r="26" class="t '+mau+'" stroke-dasharray="'+(c * p).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 32 32)"/></svg>'
+    + '<span class="g"><b>'+giua+'</b>'+(nho ? '<small>'+nho+'</small>' : '')+'</span></div>';
+}
+// biểu đồ cột nhỏ "chi mỗi ngày": tới hết denNgay; ngày chi nhiều nhất tô đậm
+function bcSpark(chi, denNgay, soNgay){
+  var W = 300, H = 40, bw = W / soNgay, mx = Math.max.apply(null, chi.slice(0, denNgay).concat([1])), s = '';
+  for (var i = 0; i < soNgay; i++){
+    if (i >= denNgay){ s += '<circle cx="'+(bw * i + bw / 2).toFixed(1)+'" cy="'+(H - 2)+'" r="1.2" class="f"/>'; continue; }
+    var v = chi[i] || 0, h = v > 0 ? Math.max(3, v / mx * (H - 6)) : 1.5;
+    s += '<rect x="'+(bw * i + bw * .17).toFixed(1)+'" y="'+(H - h).toFixed(1)+'" width="'+(bw * .66).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1.5" class="'+(v > 0 && v === mx ? 'mx' : (v > 0 ? 'b' : 'z'))+'"/>';
+  }
+  return '<svg class="bc-spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Chi mỗi ngày">'+s+'</svg>';
+}
+// thẻ đầu: tổng đã chi, thanh dùng hạn mức (có vạch Hôm nay), dòng ước tính, chi mỗi ngày, chip cảnh báo
+function baoCaoDauHtml(mk){
+  var cur = bdThang(mk), nhip = bcNhip(mk), hom = todayStr(), dang = nhip.dangChay;
+  var rows = hanMucThangRows(mk), cap = 0, daHM = 0;
+  rows.forEach(function(r){ cap += r.cap; daHM += r.da; });
+  var pct = cap > 0 ? daHM / cap : 0, muc = hanMucMuc(pct), rong = Math.min(100, Math.round(pct * 100));
+  var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
+  var nQuaHan = (state.data.mucTieu || []).filter(function(g){ return mucTieuTienDo(g, hom).quaHan; }).length;
+  var h = '<div class="card hero bc-hero" id="bcDau"><div class="hero-top"><div class="hero-lbl">Đã chi '+(mk === monthKey(hom) ? 'tháng này' : monthLabel(mk).toLowerCase())+'</div>'+thangNavHtml(mk)+'</div>'
+    + '<div class="bc-val"><span class="bc-v">'+bdTien(cur.tongChi)+'</span>'+(cap > 0 ? '<small class="bc-cap">/ '+bdTien(cap)+'</small>' : '')+'</div>';
+  if (cap > 0){
+    // vạch "Hôm nay": nhãn bám mép khi vạch sát hai đầu để không tràn khỏi thẻ
+    var vi = Math.round(nhip.tyLe * 1000) / 10, canh = vi < 14 ? ' l' : (vi > 86 ? ' r' : '');
+    h += '<div class="bc-pace '+muc+'" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="Đã dùng hạn mức tháng">'
+      + '<div class="hm-fill" style="width:'+rong+'%"></div>'
+      + (dang ? '<i class="mk" style="left:'+vi+'%"></i><span class="mkl'+canh+'" style="left:'+vi+'%">Hôm nay</span>' : '') + '</div>'
+      + '<div class="bc-pace-s"><span><b>'+Math.round(pct * 100)+'%</b> đã dùng</span>'
+      + '<span>'+(daHM > cap ? 'vượt '+bdTien(daHM - cap) : 'còn '+bdTien(cap - daHM))+'</span></div>';
+    if (dang) h += '<div class="bc-pace-n">Đã qua '+nhip.ngayQua+'/'+nhip.soNgay+' ngày</div>';
+    if (Math.abs(daHM - cur.tongChi) > 0.5) h += '<div class="bc-pace-n">Hạn mức tính trên các danh mục đã đặt hạn mức: '+bdTien(daHM)+'</div>';
+    if (dang && nhip.ngayQua >= 3 && cur.tongChi > 0){
+      var du = bdUocTinhChiThang(mk, nhip.ngayQua).tong;
+      h += '<div class="bc-ut">Giữ nhịp này, cuối tháng bạn chi khoảng <b>'+bdTien(du)+'</b> '
+        + (du <= cap ? 'và còn dư ~<b>'+bdTien(cap - du)+'</b> hạn mức.' : 'và vượt ~<b>'+bdTien(du - cap)+'</b> hạn mức.') + '</div>';
+    }
+  } else {
+    h += '<div class="bc-pace-n">Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div>';
+  }
+  if (cur.tongChi > 0){
+    var den = dang ? nhip.ngayQua : cur.soNgay, mxD = 0, mxV = 0;
+    cur.chi.forEach(function(v, i){ if (v > mxV){ mxV = v; mxD = i + 1; } });
+    h += '<div class="bc-sp-h"><span>Chi mỗi ngày</span><span>TB '+bdTien(cur.tongChi / Math.max(1, den))+' · cao nhất '+pad2(mxD)+'/'+mk.slice(5)+'</span></div>'
+      + bcSpark(cur.chi, den, cur.soNgay);
+  }
+  var chips = '';
+  if (nVuot) chips += '<button type="button" class="bc-chip red" data-act="tqCuon" data-to="cardHanMuc"><i></i>'+nVuot+' danh mục vượt <span aria-hidden="true">›</span></button>';
+  if (nQuaHan) chips += '<button type="button" class="bc-chip amber" data-act="tqCuon" data-to="cardMucTieu"><i></i>'+nQuaHan+' mục tiêu quá hạn <span aria-hidden="true">›</span></button>';
+  return h + (chips ? '<div class="bc-chips">'+chips+'</div>' : '') + '</div>';
+}
+
+// thẻ Tài sản ròng: số cuối tháng đang xem, chênh lệch so với 12 tháng trước, bảng thành phần, đường tối đa 12 tháng
+// (không vẽ tháng trước mốc chốt số dư)
 function taiSanRongCardHtml(mk){
   var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
   if (startLock && mk < startLock) return '';
   var th = _thuHoiTheoKhoan(), cur = taiSanRongThang(mk, th);
-  var h = '<div class="card" id="cardTaiSanRong"><h3>Tài sản ròng cuối '+monthLabel(mk).toLowerCase()+'</h3>'
-    + '<div class="tsr-val'+(cur.rong < 0 ? ' am' : '')+'">'+bdTien(cur.rong)+'</div>'
-    + '<div class="tsr-ct"><span>Tiền các ví <b>'+bdTien(cur.tien)+'</b></span>'
-    + (cur.phaiThu > 0 ? '<span>+ Cho vay chưa thu <b class="thu">'+bdTien(cur.phaiThu)+'</b></span>' : '')
-    + (cur.no > 0 ? '<span>− Nợ gốc còn lại <b class="chi">'+bdTien(cur.no)+'</b></span>' : '')
-    + '</div>';
+  var tien = bdTien(cur.rong);
+  var h = '<div class="card bc-card" id="cardTaiSanRong"><h3 class="bc-h"><span>Tài sản ròng cuối '+monthLabel(mk).toLowerCase()+'</span></h3>'
+    + '<div class="tsr-val'+(cur.rong < 0 ? ' am' : '')+'" style="font-size:'+(tien.length > 13 ? 26 : 30)+'px">'+tien+'</div>';
+  // so với 12 tháng trước; chưa đủ 12 tháng dữ liệu thì so với tháng xa nhất có thể và ghi đúng số tháng
+  var xa = 12, mkXa = monthKeyAdd(mk, -12);
+  while (xa > 0 && startLock && mkXa < startLock){ xa--; mkXa = monthKeyAdd(mk, -xa); }
+  if (xa > 0){
+    var dl = cur.rong - taiSanRongThang(mkXa, th).rong;
+    if (Math.abs(dl) >= 1) h += '<div class="tsr-chip '+(dl > 0 ? 'up' : 'dn')+'">'+(dl > 0 ? '↑' : '↓')+' '+bdTien(Math.abs(dl))+' so với '+xa+' tháng trước</div>';
+  }
+  h += '<div class="tsr-tbl"><div><span>Tiền các ví</span><b>'+bdTien(cur.tien)+'</b></div>'
+    + (cur.phaiThu > 0 ? '<div><span>+ Cho vay chưa thu</span><b class="thu">'+bdTien(cur.phaiThu)+'</b></div>' : '')
+    + (cur.no > 0 ? '<div><span>− Nợ gốc còn lại</span><b class="chi">'+bdTien(cur.no)+'</b></div>' : '') + '</div>';
   var ml = [], mv = [], m = mk;
   for (var i = 0; i < 12; i++){
     if (startLock && m < startLock) break;
@@ -568,7 +646,7 @@ function taiSanRongCardHtml(mk){
     m = bdThangTruoc(m);
   }
   if (mv.length >= 2){
-    h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Tài sản ròng', vals: mv, cls: 'thu', fill: true }],
+    h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Tài sản ròng', vals: mv, cls: cur.rong < 0 ? 'chi' : 'thu', fill: true }],
       tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Tài sản ròng cuối tháng' }) + '</div>';
   }
   h += ghiChuGon('Tài sản ròng = tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). '
@@ -585,12 +663,13 @@ function renderBaoCao(){
   var root = document.getElementById('tabContent');
   if (!state.soTayMonth) state.soTayMonth = monthKey(todayStr());
   var mk = state.soTayMonth;
-  var html = thangNavHtml(mk) + '<div class="cot2"><div class="cot-trai">';
+  // thứ tự: thẻ đầu (có thanh tháng) -> hạn mức -> tài sản ròng -> mục tiêu | biểu đồ (màn rộng: 2 cột)
+  var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);
   var hm = hanMucThangHtml(mk);
-  html += hm || '<div class="card k-bud"><h3>Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
+  html += hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
     + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
-  html += mucTieuCardHtml();
   html += taiSanRongCardHtml(mk);
+  html += mucTieuCardHtml();
   html += '</div><div class="cot-phai">' + bieuDoCardHtml(mk) + '</div></div>';
   root.innerHTML = html;
 }

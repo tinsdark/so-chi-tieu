@@ -35,7 +35,7 @@ function _moChaySo(el, tu, den, txt){
 }
 
 // chạy số cho các ô lớn: đổi tab -> từ 0; cùng tab -> từ giá trị cũ (nếu khác)
-var _MO_SO = '.hero-val, .hero-nums .v, .hero-cl b, .vi-the-so, .k-wal .stat .val';
+var _MO_SO = '.hero-val, .hero-nums .v, .hero-cl b, .vi-the-so, .bc-v, .tsr-val, .mt-big, .k-wal .stat .val';   // chạy số CẢ phần tử: chỉ cho ô chỉ chứa 1 số (không có phần tử con)
 function _moSo(vao, root){
   var moi = {};
   root.querySelectorAll(_MO_SO).forEach(function(el, i){

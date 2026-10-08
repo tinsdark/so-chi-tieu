@@ -2120,7 +2120,7 @@ test('Thẻ phân màu theo loại + "Số dư theo ví" nằm ngay dưới th�
   var iThe = st.indexOf('html += viTheHtml(mk, beforeLock);'), i = st.indexOf('html += viSoDuCardHtml(mk);');
   ok(iThe > 0 && i > iThe, 'dải thẻ ví đứng ngay sau thẻ tổng quan, trước thẻ chuyển ví');
   ok(st.indexOf('html += ghiNhanhHtml();') < 0 && st.lastIndexOf('qaBarHtml()') > i, 'Ghi nhanh là thanh nổi + bảng ghi, không còn thẻ trong luồng trang');
-  ok(st.indexOf('card k-wal') > 0 && st.indexOf('k-bud') > 0 && st.indexOf('k-goal') > 0 && st.indexOf('k-act') > 0);
+  ok(st.indexOf('card k-wal') > 0 && st.indexOf('k-act') > 0);   // Hạn mức / Mục tiêu ở tab Báo cáo đã chuyển sang thẻ bc-card (không viền màu theo loại)
   var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
   ['k-act', 'k-bud', 'k-goal', 'k-wal', 'k-in', 'k-debt', 'k-asset'].forEach(function(k){
     ok(css.indexOf('.' + k + '{') >= 0, 'thiếu CSS ' + k);
