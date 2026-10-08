@@ -17,7 +17,7 @@ var VN_ONLY_CHI = { choVay: 1 };
    GHI NHANH — thẻ ở đầu Sổ tay: số tiền, danh mục, ghi chú, 1 nút Lưu.
    Đi qua entryAddItem (cùng đường lưu với dòng chi tiết / nhập file) nên tổng thu/chi,
    số dư và ví luôn khớp. Các danh mục của Vay-Nợ (Trả nợ, Thu hồi cho vay, Nhận tiền
-   vay, Cho vay) KHÔNG có ở đây vì cần gắn khoản vay: dùng "Nhập đầy đủ" bên dưới.
+   vay, Cho vay) KHÔNG có ở đây vì cần gắn khoản vay: ghi ở tab Vay - Nợ.
    ==================================================================== */
 var QA_KEY = 'chitieu_qa_v1';
 (function(){
@@ -119,11 +119,6 @@ function ghiNhanhHtml(){
     + '<input type="date" id="qa_date" class="qa-date'+(ngay !== homNay ? ' lech' : '')+'" aria-label="Ngày" data-act="qaDate" value="'+esc(ngay)+'">'
     + '</div>';
   h += '<button type="button" class="btn qa-save '+kind+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>Ghi khoản '+(kind === 'thu' ? 'thu' : 'chi')+'</button>'
-    // nhiều danh mục 1 lần / trả nợ theo khoản / nhập file: ít dùng nên chỉ là đường dẫn nhỏ, không chiếm thẻ riêng
-    + '<div class="qa-links">'
-    +   '<button type="button" data-act="formToggle" aria-expanded="'+(!!state.fullFormOpen)+'">'+icon('list')+' Nhập đầy đủ (nhiều khoản, trả nợ)</button>'
-    +   '<button type="button" data-act="impMo">'+icon('upload')+' Nhập từ file</button>'
-    + '</div>'
     + '</div>';
   return h;
 }
@@ -139,23 +134,19 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var rows = hanMucThangRows(mk);
   var tongDa = 0, tongCap = 0;
   rows.forEach(function(r){ tongDa += r.da; tongCap += r.cap; });
+  var chenh = tongThu - tongChi, tongLuong = tongThu + tongChi;
+  var phanThu = tongLuong > 0 ? Math.round(tongThu / tongLuong * 100) : 50;
   var h = '<div class="card hero">'
-    + '<div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+' · '+monthLabel(mk)+'</div>'
+    + '<div class="hero-top"><div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+'</div>'+thangNavHtml(mk)+'</div>'
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
     + '<div class="hero-sub">Đầu tháng '+so(duDau)+'</div>'
-    + '<div class="hero-split">'
-    +   '<div><div class="l">'+icon('arrow-up')+' Thu tháng</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
-    +   '<div><div class="l">'+icon('arrow-down')+' Chi tháng</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    // thanh chia theo tỷ lệ thu : chi của tháng, để nhìn một cái biết tháng này thu hay chi nhiều hơn
+    + '<div class="hero-flow" aria-hidden="true"><i class="thu" style="flex:'+phanThu+'"></i><i class="chi" style="flex:'+(100 - phanThu)+'"></i></div>'
+    + '<div class="hero-nums">'
+    +   '<div><div class="l"><i class="dot thu"></i>Tổng thu</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
+    +   '<div><div class="l"><i class="dot chi"></i>Tổng chi</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    +   '<div class="cl"><div class="l">Chênh lệch</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</div></div>'
     + '</div>';
-  var ws = state.data.wallets || [];
-  if (ws.length > 1 && !beforeLock){
-    var cuoiVi = mk + '-31';
-    h += '<div class="hero-vi">' + ws.map(function(w){
-        var b = soDuTheoVi(w.id, cuoiVi);
-        return '<span><small>'+esc(w.ten)+'</small><b'+(b < 0 ? ' class="am"' : '')+'>'+fmt(Math.round(b))+'</b></span>';
-      }).join('')
-      + '<button type="button" class="hero-chip" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></div>';
-  }
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
@@ -174,6 +165,27 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
+}
+
+/* ====================================================================
+   THẺ VÍ — dải thẻ màu cuộn ngang ngay dưới thẻ tổng quan (chỉ hiện khi có từ 2 ví).
+   Số dư tính tới hết tháng đang xem, cùng mốc với "Số dư cuối tháng". Bấm thẻ = chọn ví đang ghi
+   cho thẻ Ghi nhanh (cùng ô chọn ví ở đó), nhãn "Đang ghi" cho biết khoản mới sẽ vào ví nào.
+   ==================================================================== */
+function viTheHtml(mk, beforeLock){
+  var ws = state.data.wallets || [];
+  if (ws.length < 2 || beforeLock) return '';
+  var cuoi = mk + '-31', macDinh = viMacDinhId();
+  var dangGhi = walletById(state.qa.wallet) ? state.qa.wallet : viDienSan();
+  return '<div class="vi-sec"><div class="vi-sec-head"><h3>Số dư theo ví</h3>'
+    + '<button type="button" class="vi-chuyen" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></div>'
+    + '<div class="vi-scroll">' + ws.map(function(w, i){
+        var b = soDuTheoVi(w.id, cuoi), on = (w.id === dangGhi);
+        return '<button type="button" class="vi-the vc'+(i % 4)+(on ? ' on' : '')+'" data-act="viCardChon" data-id="'+esc(w.id)+'" aria-pressed="'+on+'">'
+          + '<span class="vi-the-top"><span class="vi-the-ten">'+esc(w.ten)+'</span>'+(on ? '<span class="vi-the-tag">Đang ghi</span>' : '')+'</span>'
+          + '<span class="vi-the-sub">'+(w.id === macDinh ? 'Mặc định' : 'Số dư')+'</span>'
+          + '<span class="vi-the-so'+(b < 0 ? ' am' : '')+'">'+fmt(Math.round(b))+'</span></button>';
+      }).join('') + '</div></div>';
 }
 
 // hoàn tác 1 lần ghi nhanh. Gọi từ cả nút trong thẻ lẫn nút ở toast: cờ daHoan chặn hoàn tác 2 lần
@@ -273,7 +285,6 @@ function renderSoTay(){
   var hasRefs = state.editingDate && (editEntry.refs||[]).length > 0;
 
   var html = '';
-  html += thangNavHtml(mk);
   // màn rộng (>=1024px, CSS .cot2): cột trái = tổng quan + ghi nhanh + việc cần làm, cột phải = form + danh sách
   html += '<div class="cot2"><div class="cot-trai">';
   html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock);
@@ -283,6 +294,7 @@ function renderSoTay(){
 
   // Sổ tay chỉ giữ việc hằng ngày: tổng quan -> ghi nhanh -> việc cần làm -> danh sách giao dịch.
   // Hạn mức, mục tiêu, biểu đồ nằm ở tab Báo cáo (renderBaoCao, bieudo.js).
+  html += viTheHtml(mk, beforeLock);
   html += viSoDuCardHtml(mk);
   html += ghiNhanhHtml();
   html += dinhKyDenHanHtml();
@@ -413,60 +425,7 @@ function renderSoTay(){
   var filterActive = !!(state.soTaySearch || state.soTayFrom || state.soTayTo || state.soTayCat);
 
   html += nhapCardHtml();
-  html += '<div class="card"><h3 style="display:flex;align-items:center;justify-content:space-between">Chi tiết theo ngày <span style="display:flex;gap:6px"><button class="btn secondary sm" data-act="exportExcel">'+icon('download')+' Xuất Excel</button></span></h3>';
-  html += '<div class="search-row">'
-    + '<div class="fld"><label>Tìm nội dung</label><input type="text" data-act="soTaySearchInput" value="'+(state.soTaySearch||'').replace(/"/g,'&quot;')+'" placeholder="Từ khóa trong ghi chú..."></div>'
-    + '<div class="fld"><label>Danh mục</label><select data-act="soTayCatInput">'+soTayCatOptions(state.soTayCat)+'</select></div>'
-    + '<div class="fld"><label>Từ ngày</label><input type="date" data-act="soTayFromInput" value="'+(state.soTayFrom||'')+'"></div>'
-    + '<div class="fld"><label>Đến ngày</label><input type="date" data-act="soTayToInput" value="'+(state.soTayTo||'')+'"></div>'
-    + (filterActive ? '<div class="fld" style="flex:0"><label>&nbsp;</label><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div>' : '')
-    + '</div>';
-  if (hasRange){
-    html += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' → '+state.soTayTo+'), bảng dưới không theo tháng đang chọn ở trên nữa.</div>';
-  }
-  if (catSel.length === 2 && catSel[1] && displayDates.length){
-    var tongCat = 0;
-    displayDates.forEach(function(d){ tongCat += num((state.data.journal[d][catSel[0]] || {})[catSel[1]]); });
-    html += '<div class="empty" style="padding:0 0 8px">'+displayDates.length+' ngày có '
-      + (catSel[0] === 'thu' ? 'thu' : 'chi') + ' "'+esc(catTenTheoId(catSel[0], catSel[1]))+'" · tổng '
-      + '<b style="color:var(--'+(catSel[0] === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(tongCat))+'</b></div>';
-  }
-  html += '<div class="table-wrap">';
-  if (!displayDates.length){
-    html += filterActive
-      ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
-        + '<div><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div></div>'
-      : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
-        + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
-  } else {
-    // class t-card: ở <=700px CSS đổi bảng này (và CHỈ bảng này) thành danh sách thẻ
-    html += '<table class="t-card"><thead><tr><th>Ngày</th><th>Thu</th><th>Chi</th><th>Số dư</th><th>Nội dung</th><th class="actions-col"></th></tr></thead><tbody>';
-    var tableDates = displayDates.slice().sort().reverse();
-    tableDates.forEach(function(d){
-      var e = state.data.journal[d];
-      var moRong = (state.soTayDetailDate === d);
-      var soDong = entryItems(e).length + (e.refs||[]).length;
-      // data-th: nhãn cột, dùng cho td::before khi bảng thành thẻ trên mobile
-      html += '<tr class="st-row'+(moRong?' st-open':'')+'">'
-        + '<td class="st-c-day" style="text-align:left"><a href="#" class="st-day" data-act="stToggleDetail" data-date="'+d+'" title="Xem chi tiết từng giao dịch">'
-          + '<span class="st-caret">'+(moRong?'▾':'▸')+'</span> '
-          + d.slice(8,10)+'/'+d.slice(5,7)+(hasRange?'/'+d.slice(0,4):'')
-          + (soDong?' <span class="st-count">'+soDong+'</span>':'')
-          + '</a></td>'
-        + '<td data-th="Thu" style="color:var(--green)">'+(thuTotal(e)?fmt(thuTotal(e)):'')+'</td>'
-        + '<td data-th="Chi" style="color:var(--red)">'+(chiTotal(e)?fmt(chiTotal(e)):'')+'</td>'
-        + '<td data-th="Số dư">'+fmt(balanceAt(d))+'</td>'
-        + '<td data-th="Nội dung" style="text-align:left;white-space:normal">'+esc(e.ghiChu||'')+'</td>'
-        + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="editDay" data-date="'+d+'" title="Sửa ngày này" aria-label="Sửa giao dịch ngày '+d+'">'+icon('pencil')+'</button>'
-          + '<button class="icon-btn" data-act="delDay" data-date="'+d+'" title="Xóa ngày này" aria-label="Xóa giao dịch ngày '+d+'">'+icon('trash')+'</button>'
-          + '</td>'
-        + '</tr>';
-      if (moRong) html += soTayDetailHtml(d);
-    });
-    html += '</tbody></table>';
-  }
-  html += '</div></div>';
+  html += ngayListHtml(displayDates, hasRange, filterActive, catSel, mk);
 
   // Biểu đồ: js/bieudo.js (SVG tự vẽ, 3 tab)
 
@@ -475,87 +434,128 @@ function renderSoTay(){
 }
 
 /* ====================================================================
-   Bảng chi tiết giao dịch trong 1 ngày (bung ra khi bấm vào ô Ngày).
-   Chỉ hiển thị/sửa tầng items[] — tức là TỪNG GIAO DỊCH NHẬP TAY.
-   Các dòng do khoản vay sinh ra (refs) hiện ở đây nhưng CHỈ ĐỌC, vì sửa
-   chúng ở đây sẽ làm số Sổ tay lệch tiến độ khoản vay.
-   Sửa/xóa 1 dòng chi tiết sẽ tự cộng/trừ lại entry.thu/chi tương ứng,
-   nên bảng tổng phía trên luôn khớp — không có bước tính lại riêng nào.
+   CHI TIẾT THEO NGÀY — mỗi ngày là 1 nhóm: tiêu đề (Hôm nay / Thứ Ba, tổng thu & chi) + thẻ các khoản.
+   Mỗi khoản = 1 dòng items[] (nhập tay) hoặc 1 ref (do khoản vay sinh ra, CHỈ ĐỌC: sửa ở đây sẽ làm
+   số Sổ tay lệch tiến độ khoản vay, nên bấm vào là nhảy sang tab Vay - Nợ).
+   Bấm 1 khoản = mở Sửa / Xóa; bấm tiêu đề ngày = mở số dư cuối ngày + Xóa cả ngày.
+   Sửa/xóa 1 dòng tự cộng/trừ lại entry.thu/chi tương ứng (entryUpdateItem / entryDeleteItem),
+   nên tổng của ngày luôn khớp — không có bước tính lại riêng nào.
+   Vuốt (js/motion.js) tìm nhóm ngày qua class .dl-day + data-date.
    ==================================================================== */
-function stItemEditRow(date, it){
-  var kind = it ? it.kind : 'chi';
-  var catId = it ? it.catId : '';
+var THU_TRONG_TUAN = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+// "Hôm nay" / "Hôm qua" / "Thứ Ba" cho tiêu đề nhóm ngày
+function ngayTenNgan(d){
+  var p = d.split('-'), t = new Date(+p[0], +p[1] - 1, +p[2]);
+  var hq = new Date(); hq.setDate(hq.getDate() - 1);
+  if (d === todayStr()) return 'Hôm nay';
+  if (d === hq.getFullYear() + '-' + pad2(hq.getMonth() + 1) + '-' + pad2(hq.getDate())) return 'Hôm qua';
+  return THU_TRONG_TUAN[t.getDay()];
+}
+// "Thứ Năm, 8 tháng 10" (thêm năm khi xem khoảng ngày hoặc khác năm hiện tại)
+function ngayTenDai(d, kemNam){
+  var p = d.split('-'), t = new Date(+p[0], +p[1] - 1, +p[2]);
+  return THU_TRONG_TUAN[t.getDay()] + ', ' + (+p[2]) + ' tháng ' + (+p[1]) + ((kemNam || p[0] !== todayStr().slice(0, 4)) ? ' năm ' + p[0] : '');
+}
+function dlSoTien(kind, v){ return (kind === 'thu' ? '+' : '−') + fmt(Math.round(num(v))); }
+// ô sửa 1 khoản (cùng id với bản cũ nên stSaveItem không đổi)
+function dlSuaHtml(date, it){
+  var kind = it ? it.kind : 'chi', catId = it ? it.catId : '';
   var opt = function(k){
     return (state.data.categories[k] || []).map(function(c){
       return '<option value="'+k+'|'+c.id+'"'+((kind===k && catId===c.id)?' selected':'')+'>'
            + (k==='thu'?'Thu · ':'Chi · ') + esc(c.ten) + '</option>';
     }).join('');
   };
-  return '<tr class="st-it-edit">'
-    + '<td colspan="2" style="text-align:left"><select id="st_it_cat">'
-      + '<option value="">— chọn danh mục —</option>' + opt('thu') + opt('chi')
-      + '</select>'
-      + ((state.data.wallets || []).length > 1
-          ? '<select id="st_it_wallet" style="margin-top:4px" aria-label="Ví / nguồn tiền">'
-            + viOptionsHtml(it ? viCuaItem(it) : viDienSan()) + '</select>'
-          : '')
-      + '</td>'
-    + '<td><input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" value="'+(it?veSo(num(it.soTien)):'')+'"></td>'
-    + '<td style="text-align:left"><input type="text" id="st_it_note" placeholder="Nội dung..." value="'+(it?esc(it.ghiChu):'')+'"></td>'
-    + '<td class="actions-col">'
-      + '<button class="icon-btn" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it?it.iid:'')+'" title="Lưu" aria-label="Lưu">'+icon('check')+'</button>'
-      + '<button class="icon-btn" data-act="stCancelItem" title="Hủy" aria-label="Hủy">'+icon('x')+'</button>'
-    + '</td></tr>';
+  return '<div class="dl-edit">'
+    + '<select id="st_it_cat" aria-label="Danh mục"><option value="">— chọn danh mục —</option>' + opt('thu') + opt('chi') + '</select>'
+    + ((state.data.wallets || []).length > 1
+        ? '<select id="st_it_wallet" aria-label="Ví / nguồn tiền">' + viOptionsHtml(it ? viCuaItem(it) : viDienSan()) + '</select>' : '')
+    + '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" aria-label="Số tiền" value="'+(it ? veSo(num(it.soTien)) : '')+'">'
+    + '<input type="text" id="st_it_note" placeholder="Nội dung..." aria-label="Nội dung" value="'+(it ? esc(it.ghiChu) : '')+'">'
+    + '<div class="dl-edit-btn"><button type="button" class="btn sm" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it ? it.iid : '')+'">'+icon('check')+' Lưu</button>'
+    + '<button type="button" class="btn secondary sm" data-act="stCancelItem">Hủy</button></div></div>';
 }
-
-function soTayDetailHtml(date){
-  var e = state.data.journal[date];
-  if (!e) return '';
-  var items = entryItems(e);
-  var refs  = e.refs || [];
-  var h = '<tr class="st-detail"><td colspan="6"><div class="st-detail-box">';
-  h += '<div class="st-detail-head">Chi tiết giao dịch ngày '+date.slice(8,10)+'/'+date.slice(5,7)+'/'+date.slice(0,4)+'</div>';
-  if (!items.length && !refs.length){
-    h += '<div class="empty" style="text-align:left">Ngày này chưa có dòng chi tiết nào.</div>';
-  } else {
-    h += '<table class="st-detail-tbl"><tbody>';
-    items.forEach(function(it){
-      if (state.soTayEditIid === it.iid){ h += stItemEditRow(date, it); return; }
-      h += '<tr>'
-        + '<td style="text-align:left;width:46px"><span class="st-kind '+it.kind+'">'+(it.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+catDot(it.kind, it.catId)+esc(catTen(it.kind, it.catId))
-          + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(it)))+'</span>' : '')+'</td>'
-        + '<td style="color:var(--'+(it.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(it.soTien)))+'</td>'
-        + '<td style="text-align:left;white-space:normal">'+esc(it.ghiChu||'')+'</td>'
-        + '<td class="actions-col">'
-          + '<button class="icon-btn" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Sửa dòng này" aria-label="Sửa dòng này">'+icon('pencil')+'</button>'
-          + '<button class="icon-btn" data-act="stDelItem" data-date="'+date+'" data-iid="'+it.iid+'" title="Xóa dòng này" aria-label="Xóa dòng này">'+icon('trash')+'</button>'
-        + '</td></tr>';
-    });
-    // refs: chỉ đọc, bấm vào là nhảy sang tab Vay - Nợ để sửa cho đúng chỗ
-    refs.forEach(function(r){
-      var m = REF_MAP[r.loai];
-      if (!m) return;
-      h += '<tr class="st-ref">'
-        + '<td style="text-align:left"><span class="st-kind '+m.kind+'">'+(m.kind==='thu'?'Thu':'Chi')+'</span></td>'
-        + '<td style="text-align:left">'+esc(catTen(m.kind, m.cat))+' <span class="st-lock">'+icon('lock')+' Vay-Nợ</span>'
-          + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaRef(r)))+'</span>' : '')+'</td>'
-        + '<td style="color:var(--'+(m.kind==='thu'?'green':'red')+')">'+fmt(Math.round(num(r.soTien)))+'</td>'
-        + '<td style="text-align:left;white-space:normal">'+esc(REF_LABEL[r.loai]||r.loai)
-          + (r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')
-          + (r.note ? ' — '+esc(r.note) : '')+'</td>'
-        + '<td class="actions-col"><button class="icon-btn" data-act="goVayNo" title="Sửa ở tab Vay - Nợ" aria-label="Sửa ở tab Vay - Nợ">'+icon('up-right')+'</button></td>'
-        + '</tr>';
-    });
-    h += '</tbody></table>';
+function dlDongHtml(date, it){
+  if (state.soTayEditIid === it.iid) return '<div class="dl-row dang-sua">' + dlSuaHtml(date, it) + '</div>';
+  var mo = (state.soTayOpenIid === it.iid), ten = catTen(it.kind, it.catId);
+  var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaItem(it))) : '';
+  return '<div class="dl-row'+(mo ? ' mo' : '')+'">'
+    + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
+    +   '<span class="dl-av" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true">'+esc((ten.trim().charAt(0) || '?').toUpperCase())+'</span>'
+    +   '<span class="dl-txt"><span class="dl-t1">'+esc(it.ghiChu || ten)+'</span><span class="dl-t2">'+esc(ten)+vi+'</span></span>'
+    +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
+    + '</div>'
+    + (mo ? '<div class="dl-act"><button type="button" class="btn secondary sm" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('pencil')+' Sửa</button>'
+          + '<button type="button" class="btn secondary sm nguy" data-act="stDelItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('trash')+' Xóa</button></div>' : '')
+    + '</div>';
+}
+function dlRefHtml(r){
+  var m = REF_MAP[r.loai];
+  if (!m) return '';
+  var ten = catTen(m.kind, m.cat);
+  var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaRef(r))) : '';
+  return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">'
+    + '<span class="dl-av" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true">'+icon('lock')+'</span>'
+    + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(r.note) : '')+'</span>'
+    +   '<span class="dl-t2">'+esc(ten)+vi+' · Vay-Nợ</span></span>'
+    + '<span class="dl-amt '+m.kind+'">'+dlSoTien(m.kind, r.soTien)+'</span>'
+    + '</div></div>';
+}
+function dlNgayHtml(d, kemNam){
+  var e = state.data.journal[d];
+  var items = entryItems(e), refs = e.refs || [];
+  var thu = thuTotal(e), chi = chiTotal(e), mo = (state.soTayDetailDate === d);
+  var h = '<section class="dl-day'+(mo ? ' mo' : '')+'" data-date="'+d+'">'
+    + '<div class="dl-head" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stToggleDetail" data-date="'+d+'" title="Số dư cuối ngày, xóa cả ngày">'
+    +   '<span class="dl-d"><b>'+ngayTenNgan(d)+'</b><small>'+ngayTenDai(d, kemNam)+' · '+(items.length + refs.length)+' khoản</small></span>'
+    +   '<span class="dl-t">'+(thu ? '<span class="thu">+'+fmt(Math.round(thu))+'</span>' : '')+(chi ? '<span class="chi">−'+fmt(Math.round(chi))+'</span>' : '')+'</span>'
+    + '</div>';
+  if (mo){
+    h += '<div class="dl-dayact"><span>Số dư cuối ngày <b>'+fmt(balanceAt(d))+'</b></span>'
+      + '<button type="button" class="btn secondary sm nguy" data-act="delDay" data-date="'+d+'">'+icon('trash')+' Xóa cả ngày</button></div>';
   }
-  if (state.soTayEditIid === '_new'){
-    h += '<table class="st-detail-tbl"><tbody>' + stItemEditRow(date, null) + '</tbody></table>';
-  } else {
-    h += '<button class="btn secondary sm" data-act="stAddItem" data-date="'+date+'" style="margin-top:6px">+ Thêm dòng</button>';
+  h += '<div class="dl-card">';
+  if (!items.length && !refs.length) h += '<div class="empty" style="text-align:left">Ngày này chưa có khoản nào.</div>';
+  items.forEach(function(it){ h += dlDongHtml(d, it); });
+  refs.forEach(function(r){ h += dlRefHtml(r); });
+  return h + '</div></section>';
+}
+// tiêu đề "Chi tiết theo ngày" + 3 nút (tìm & lọc, xuất Excel, nhập từ file) + bộ lọc + danh sách nhóm ngày
+function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
+  var h = '<div class="dl"><div class="dl-bar"><h3>Chi tiết theo ngày</h3><div class="dl-tools">'
+    + '<button type="button" class="icon-btn'+((state.soTayLocMo || filterActive) ? ' on' : '')+'" data-act="stLocMo" title="Tìm kiếm và lọc" aria-label="Tìm kiếm và lọc" aria-expanded="'+!!(state.soTayLocMo || filterActive)+'">'+icon('search')+'</button>'
+    + '<button type="button" class="icon-btn" data-act="exportExcel" title="Xuất Excel" aria-label="Xuất Excel">'+icon('download')+'</button>'
+    + '<button type="button" class="icon-btn" data-act="impMo" title="Nhập từ file" aria-label="Nhập từ file">'+icon('upload')+'</button>'
+    + '</div></div>';
+  if (state.soTayLocMo || filterActive){
+    h += '<div class="search-row">'
+      + '<div class="fld"><label>Tìm nội dung</label><input type="text" data-act="soTaySearchInput" value="'+(state.soTaySearch||'').replace(/"/g,'&quot;')+'" placeholder="Từ khóa trong ghi chú..."></div>'
+      + '<div class="fld"><label>Danh mục</label><select data-act="soTayCatInput">'+soTayCatOptions(state.soTayCat)+'</select></div>'
+      + '<div class="fld"><label>Từ ngày</label><input type="date" data-act="soTayFromInput" value="'+(state.soTayFrom||'')+'"></div>'
+      + '<div class="fld"><label>Đến ngày</label><input type="date" data-act="soTayToInput" value="'+(state.soTayTo||'')+'"></div>'
+      + (filterActive ? '<div class="fld" style="flex:0"><label>&nbsp;</label><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div>' : '')
+      + '</div>';
   }
-  h += '</div></td></tr>';
-  return h;
+  if (hasRange){
+    h += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' → '+state.soTayTo+'), danh sách dưới không theo tháng đang chọn ở trên nữa.</div>';
+  }
+  if (catSel.length === 2 && catSel[1] && displayDates.length){
+    var tongCat = 0;
+    displayDates.forEach(function(d){ tongCat += num((state.data.journal[d][catSel[0]] || {})[catSel[1]]); });
+    h += '<div class="empty" style="padding:0 0 8px">'+displayDates.length+' ngày có '
+      + (catSel[0] === 'thu' ? 'thu' : 'chi') + ' "'+esc(catTenTheoId(catSel[0], catSel[1]))+'" · tổng '
+      + '<b style="color:var(--'+(catSel[0] === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(tongCat))+'</b></div>';
+  }
+  if (!displayDates.length){
+    h += filterActive
+      ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
+        + '<div><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div></div>'
+      : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
+        + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
+  } else {
+    displayDates.slice().sort().reverse().forEach(function(d){ h += dlNgayHtml(d, hasRange); });
+  }
+  return h + '</div>';
 }
 
 /* ====================================================================
@@ -1076,9 +1076,17 @@ function handleSoTayAction(act, el){
     state.soTayDetailDate = (state.soTayDetailDate === dT) ? null : dT;
     state.soTayEditIid = null;
     renderSoTay();
-  } else if (act === 'stAddItem'){
-    state.soTayDetailDate = el.getAttribute('data-date');
-    state.soTayEditIid = '_new';
+  } else if (act === 'stItem'){
+    var iidO = el.getAttribute('data-iid');
+    state.soTayOpenIid = (state.soTayOpenIid === iidO) ? null : iidO;
+    state.soTayEditIid = null;
+    renderSoTay();
+  } else if (act === 'stLocMo'){
+    state.soTayLocMo = !state.soTayLocMo;
+    renderSoTay();
+    if (state.soTayLocMo){ var oL = document.querySelector('[data-act=soTaySearchInput]'); if (oL) oL.focus(); }
+  } else if (act === 'viCardChon'){
+    state.qa.wallet = el.getAttribute('data-id');
     renderSoTay();
   } else if (act === 'stEditItem'){
     state.soTayDetailDate = el.getAttribute('data-date');
@@ -1173,7 +1181,7 @@ function handleSoTayAction(act, el){
     } else {
       if (!entryAddItem(dS, kindS, catS, tienS, noteS, viS)){ toast('Không thêm được dòng này.', { loai:'err' }); return true; }
     }
-    state.soTayEditIid = null;
+    state.soTayEditIid = null; state.soTayOpenIid = null;
     scheduleSave();
     renderSoTay();
     toast(iidS ? 'Đã sửa dòng chi tiết.' : 'Đã thêm dòng chi tiết.');
@@ -1191,7 +1199,7 @@ function handleSoTayAction(act, el){
     entryDeleteItem(dD, iidD);
     var sauXoa = JSON.stringify(state.data.journal[dD] || null);
     if (!state.data.journal[dD]) state.soTayDetailDate = null;
-    state.soTayEditIid = null;
+    state.soTayEditIid = null; state.soTayOpenIid = null;
     scheduleSave();
     renderSoTay();
     toast('Đã xóa dòng '+nhanItD+'.', { giay:6, hoanTac:function(){
