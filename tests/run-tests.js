@@ -1654,27 +1654,25 @@ test('Đăng xuất không còn ở thanh đầu trang mà ở tab Danh mục', 
 /* ==================================================================== */
 group('V2. Sau khi thử trên iPhone: xác nhận trong thẻ, chạm khoản nhảy tới khoản, Dòng tiền không cuộn lồng');
 
-test('Ghi nhanh: có dòng xác nhận + Hoàn tác ngay trong thẻ; hoàn tác 1 lần duy nhất, số dư về như cũ', function(){
+test('Ghi nhanh: ghi xong đóng bảng, Hoàn tác (ở toast) chạy 1 lần duy nhất, số dư về như cũ', function(){
   setToday('2026-10-10');
   loadData(dataGhiNhanh());
-  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
+  ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null, open:true };
   var truoc = ctx.balanceAt('9999-12-31');
   voiDom({ qa_amount:{ value:'45.000' }, qa_note:{ value:'Ăn sáng' }, qa_date:{ value:'2026-10-10' } }, null, function(){
     ctx.handleSoTayAction('qaSave', { _daBaoAm: true });
   });
   ok(ctx.state.qa.last && ctx.state.qa.last.text.indexOf('Đã ghi chi') === 0, 'có bản ghi cuối');
-  var h = ctx.ghiNhanhHtml();
-  ok(h.indexOf('id="qaLast"') >= 0 && h.indexOf('data-act="qaHoanTac"') >= 0, 'thẻ hiện dòng xác nhận + nút Hoàn tác');
+  eq(ctx.state.qa.open, false, 'ghi xong thì đóng bảng');
   eq(ctx.balanceAt('9999-12-31'), truoc - 45000, 'đã ghi');
   var ban = ctx.state.qa.last.ban;
-  ctx.handleSoTayAction('qaHoanTac', {});
+  ctx.qaHoanTacLanGhi(ban);
   ctx.invalidateBalanceCache();
   eq(ctx.balanceAt('9999-12-31'), truoc, 'hoàn tác: số dư về cũ');
   eq(ctx.state.data.journal['2026-10-10'], undefined, 'ngày rỗng bị xóa');
-  eq(ctx.state.qa.last, null, 'dòng xác nhận biến mất');
+  eq(ctx.state.qa.last, null, 'bản ghi cuối được xóa');
   ctx.qaHoanTacLanGhi(ban);   // bấm thêm lần nữa (nút ở toast) không được làm gì
   eq(ctx.balanceAt('9999-12-31'), truoc, 'hoàn tác lần 2 không đổi gì');
-  ok(ctx.ghiNhanhHtml().indexOf('qaLast') < 0, 'thẻ hết dòng xác nhận');
 });
 
 test('Vay-Nợ: thẻ Sắp đến hạn — chạm vào khoản nhảy tới đúng khoản (cho vay / vay nợ) bên dưới', function(){
@@ -1843,17 +1841,18 @@ test('Sửa dòng: chữ do người dùng tự sửa ở ngày thì không bị
   eq(e.ghiChu, 'Đi chợ ' + ctx.fmt(120000), 'xóa dòng xăng -> chỉ gỡ mẩu chung, còn mẩu của dòng đã sửa');
 });
 
-test('Ghi nhanh: có từ 2 ví thì ô tài khoản nằm TRƯỚC (bên trái) ô số tiền, cùng hàng; 1 ví thì không có ô tài khoản', function(){
+test('Ghi nhanh: có từ 2 ví thì bảng ghi có thẻ chọn ví (sau danh mục); 1 ví thì không có', function(){
   setToday('2026-10-10');
   var d = dataGhiNhanh();
   d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
   loadData(d);
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   var h = ctx.ghiNhanhHtml();
-  var iVi = h.indexOf('id="qa_wallet"'), iTien = h.indexOf('id="qa_amount"'), iHang = h.indexOf('class="qa-amtrow"');
-  ok(iVi > 0 && iTien > iVi, 'ô tài khoản đứng trước ô số tiền');
-  ok(iHang > 0 && iHang < iVi, 'cả hai nằm trong cùng hàng qa-amtrow');
+  var iTien = h.indexOf('id="qa_amount"'), iVi = h.indexOf('id="qa_wallet"'), iCat = h.indexOf('data-cat="an"');
+  ok(iTien > 0 && iCat > iTien && iVi > iCat, 'thứ tự: số tiền, danh mục, ví');
+  ok(h.indexOf('data-act="qaViChon" data-id="w1"') >= 0 && h.indexOf('data-act="qaViChon" data-id="w2"') >= 0, 'mỗi ví một thẻ chọn');
   ok(h.indexOf('Techcombank') >= 0 && h.indexOf('Tiền mặt') >= 0, 'liệt kê các tài khoản');
+  ok(h.indexOf('Trả từ ví') >= 0, 'chi: nhãn "Trả từ ví"');
   loadData(dataGhiNhanh());
   ok(ctx.ghiNhanhHtml().indexOf('qa_wallet') < 0, '1 ví: không có ô tài khoản');
 });
@@ -1864,9 +1863,9 @@ test('Ghi nhanh: chọn tài khoản được nhớ qua các lần vẽ lại v�
   d.wallets = [{ id:'w1', ten:'Techcombank', soDuDauKy:500000 }, { id:'w2', ten:'Tiền mặt', soDuDauKy:500000 }];
   loadData(d);
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
-  ctx.handleSoTayChange({ value:'w2', matches:function(s){ return s === '[data-act=qaWallet]'; } });
+  ctx.handleSoTayAction('qaViChon', { getAttribute:function(){ return 'w2'; } });
   eq(ctx.state.qa.wallet, 'w2', 'đã nhớ ví chọn');
-  ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'vẽ lại vẫn chọn Tiền mặt');
+  ok(ctx.ghiNhanhHtml().indexOf('id="qa_wallet" value="w2"') >= 0, 'vẽ lại vẫn chọn Tiền mặt');
   voiDom({ qa_amount:{ value:'20.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   var it = ctx.state.data.journal['2026-10-10'].items[0];
   eq(it.walletId, 'w2', 'ghi vào ví Tiền mặt');
@@ -1926,11 +1925,11 @@ test('Ghi nhanh: có ví mặc định thì lần nhập sau quay về ví đó 
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
   eq(ctx.state.data.journal['2026-10-10'].items[0].walletId, 'w2', 'lần này ghi vào Tiền mặt như đã chọn');
-  ok(ctx.ghiNhanhHtml().indexOf('<option value="w1" selected>') >= 0, 'lần sau quay về Techcombank (mặc định)');
+  ok(ctx.ghiNhanhHtml().indexOf('id="qa_wallet" value="w1"') >= 0, 'lần sau quay về Techcombank (mặc định)');
   loadData(dataHaiVi());
   ctx.state.qa = { kind:'chi', cat:{ chi:'an' }, amt:'', note:'', date:'', wallet:'', last:null };
   voiDom({ qa_amount:{ value:'10.000' }, qa_note:{ value:'' }, qa_date:{ value:'2026-10-10' }, qa_wallet:{ value:'w2' } }, null, function(){ ctx.handleSoTayAction('qaSave', { _daBaoAm: true }); });
-  ok(ctx.ghiNhanhHtml().indexOf('<option value="w2" selected>') >= 0, 'chưa tích mặc định: nhớ ví vừa chọn như trước');
+  ok(ctx.ghiNhanhHtml().indexOf('id="qa_wallet" value="w2"') >= 0, 'chưa tích mặc định: nhớ ví vừa chọn như trước');
 });
 
 /* ==================================================================== */
@@ -2069,8 +2068,9 @@ test('Nút + nổi (FAB) đã bỏ hẳn; phím N vẫn ghi nhanh', function(){
 test('Thẻ phân màu theo loại + "Số dư theo ví" nằm ngay dưới thẻ tổng quan', function(){
   var root = path.join(__dirname, '..');
   var st = fs.readFileSync(path.join(root, 'js', 'sotay.js'), 'utf8');
-  var i = st.indexOf('html += viSoDuCardHtml(mk);');
-  ok(i > 0 && i < st.indexOf('html += ghiNhanhHtml();'), 'thẻ ví phải đứng trước ghi nhanh');
+  var iThe = st.indexOf('html += viTheHtml(mk, beforeLock);'), i = st.indexOf('html += viSoDuCardHtml(mk);');
+  ok(iThe > 0 && i > iThe, 'dải thẻ ví đứng ngay sau thẻ tổng quan, trước thẻ chuyển ví');
+  ok(st.indexOf('html += ghiNhanhHtml();') < 0 && st.lastIndexOf('qaBarHtml()') > i, 'Ghi nhanh là thanh nổi + bảng ghi, không còn thẻ trong luồng trang');
   ok(st.indexOf('card k-wal') > 0 && st.indexOf('k-bud') > 0 && st.indexOf('k-goal') > 0 && st.indexOf('k-act') > 0);
   var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
   ['k-act', 'k-bud', 'k-goal', 'k-wal', 'k-in', 'k-debt', 'k-asset'].forEach(function(k){

@@ -155,7 +155,6 @@ if (typeof window !== 'undefined' && window.document){
    - Sổ tay trên điện thoại: vuốt 1 ngày sang TRÁI = xóa ngày (có Hoàn tác / hỏi như nút thùng rác),
      vuốt sang PHẢI = sửa ngày. Chỉ nhận khi vuốt ngang rõ ràng (không cướp thao tác cuộn dọc).
    - kéo xuống ở đầu trang = Làm mới (app mở từ màn hình chính không có kéo-làm-mới của trình duyệt).
-   - ghi xong ở Ghi nhanh: nút chớp dấu tích + rung nhẹ (Android; iPhone không cho web rung).
    Tất cả tắt khi "Giảm chuyển động" (trừ vuốt / kéo làm mới: đó là thao tác, không phải trang trí).
    ==================================================================== */
 var _moVT = false;      // đang trong 1 view transition: bỏ hiệu ứng thẻ hiện lần lượt (đã có trượt cả trang)
@@ -172,14 +171,6 @@ function motionChuyenTab(huong, lam){
   var _cardGoc = _moCard;
   _moCard = function(root){ if (!_moVT) _cardGoc(root); };
 })();
-
-function motionDaGhi(){
-  var b = document.querySelector('#ghiNhanh .qa-save');
-  if (navigator.vibrate){ try { navigator.vibrate(12); } catch (e){} }
-  if (!b || _moGiam()) return;
-  b.classList.add('da-ghi');
-  setTimeout(function(){ b.classList.remove('da-ghi'); }, 700);
-}
 
 /* ---- vuốt ngang 1 ngày ở Sổ tay (chỉ màn hình cảm ứng) ----
    Vuốt SANG TRÁI = Xóa ngày, vuốt SANG PHẢI = Sửa ngày. Để người mới biết vuốt sẽ ra gì: vừa vuốt, phía sau dòng hiện

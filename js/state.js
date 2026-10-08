@@ -60,8 +60,9 @@ var state = {
   fullFormOpen: false,    // form nhập đầy đủ ở Sổ tay đang mở (mặc định gấp lại, thẻ "Ghi nhanh" lo việc thường ngày)
   // thẻ "Ghi nhanh" ở đầu Sổ tay. Bản nháp (amt/note/date) giữ ở đây chứ không chỉ trong ô nhập,
   // để vẽ lại trang (poll Drive, đổi tab) không làm mất số vừa gõ.
-  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '' },
+  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '', open: false },   // open: bảng ghi khoản đang mở
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
+  soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayOpenIid: null,     // iid khoản đang mở nút Sửa / Xóa trong danh sách ngày
   soTayLocMo: false,      // khung tìm kiếm & lọc ở "Chi tiết theo ngày" đang mở
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
@@ -475,6 +476,7 @@ var ICON_PATHS = {
   'up-right': "<path d=\"M7 17L17 7\"/><path d=\"M8 7h9v9\"/>",
   'lock': "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"1.5\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>",
   'search': "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M16 16l4.5 4.5\"/>",
+  'calendar': "<rect x=\"4\" y=\"5.5\" width=\"16\" height=\"14.5\" rx=\"2\"/><path d=\"M4 10h16\"/><path d=\"M8.5 3.5v4M15.5 3.5v4\"/>",
   'download': "<path d=\"M12 4v11\"/><path d=\"M7.5 11L12 15.5 16.5 11\"/><path d=\"M5 20h14\"/>",
   'upload': "<path d=\"M12 15V4\"/><path d=\"M7.5 8L12 3.5 16.5 8\"/><path d=\"M5 20h14\"/>",
   'transfer': "<path d=\"M4 8h14\"/><path d=\"M14.5 4.5L18 8l-3.5 3.5\"/><path d=\"M20 16H6\"/><path d=\"M9.5 12.5L6 16l3.5 3.5\"/>",
