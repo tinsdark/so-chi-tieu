@@ -1522,6 +1522,21 @@ test('cảnh báo ví sắp âm: chi quá số dư thì hỏi trước; Đồng 
   } finally { ctx.xacNhan = x0; }
 });
 
+test('Ví để dành: lấy tiền ra là hỏi dù còn đủ tiền; ví đang gắn mục tiêu thì không xóa được; dữ liệu cũ mặc định không phải ví để dành', function(){
+  var d = dataGhiNhanh();
+  d.wallets = [{ id:'w1', ten:'Chính', soDuDauKy: 1000000 }, { id:'w2', ten:'Quỹ mua xe', soDuDauKy: 5000000 }];
+  d.mucTieu = [{ id:'mt1', ten:'Mua xe', soTien: 30000000, hanChot:'', walletId:'w2', daGom: 0 }];
+  loadData(d);
+  eq(ctx.walletById('w2').deDanh, false, 'mặc định không phải ví để dành');
+  eq(ctx.viCanhBaoAm('w2', -100000), '', 'chưa đánh dấu: chi nhỏ, còn đủ tiền -> không hỏi');
+  ctx.walletById('w2').deDanh = true;
+  var msg = ctx.viCanhBaoAm('w2', -100000);
+  ok(msg.indexOf('ví để dành') >= 0 && msg.indexOf('Mua xe') >= 0, 'hỏi, có nêu mục tiêu: ' + msg);
+  eq(ctx.viCanhBaoAm('w2', 100000), '', 'bỏ tiền VÀO ví để dành không hỏi');
+  eq(ctx.viCanhBaoAm('w1', -100000), '', 'ví thường không hỏi');
+  ok(ctx.viDangDung('w2') > 0, 'ví đang gắn mục tiêu được tính là đang dùng (không xóa được)');
+});
+
 test('qaSave: không có số tiền thì không ghi; ghi thu vào danh mục thu; ngày trước mốc khóa sổ có cảnh báo', function(){
   setToday('2026-10-10');
   loadData(dataGhiNhanh());
