@@ -535,8 +535,6 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .bd-leg1 i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bd-thu);margin-right:4px}
 
 /* phân tích bằng chữ */
-.bd-ins{margin:0 0 12px;padding:12px 14px;display:grid;gap:10px;box-shadow:none}
-.bd-ins>h3{border:none;padding:0;margin:0;font-size:14px}
 .ins-row{display:flex;gap:10px;align-items:flex-start}
 .ins-ic{flex:0 0 32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
 .ins-ic.up{background:var(--k-debt-bg);color:var(--red)}.ins-ic.dn{background:var(--k-bud-bg);color:var(--green)}
@@ -584,7 +582,6 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .bd-hb-r .bar{height:10px;border-radius:99px;background:var(--hover);overflow:hidden}
 .bd-hb-r .bar>i{display:block;height:100%;border-radius:99px;transition:width .6s var(--ease)}
 .bd-hb-r .vs{font-size:11px;color:var(--muted);margin-top:3px}
-.bd-hb-r .vs .up{color:var(--bd-chi);font-weight:600}.bd-hb-r .vs .dn{color:var(--bd-thu);font-weight:600}
 
 /* ====================================================================
    LỚP 8 — bố cục 5 tab (10/2026): Sổ tay gọn, tab Báo cáo, Dòng tiền có chế độ Mô phỏng.
@@ -1009,3 +1006,23 @@ body.qa-mo{overflow:hidden}
 .mt-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
 .mt-note{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--muted)}
 .mt-note.over{color:var(--red)} .mt-note.ok{color:var(--green)}
+
+/* ---- Biểu đồ chi tiêu (restyle theo thiết kế mới) ---- */
+.bd-ins{margin:0 0 14px;padding:0;display:grid;gap:12px}
+.bd-ins>h3{border:none;padding:0;margin:0;font-size:14px}
+.ins-ic{border-radius:50%}
+.ins-t{font-size:13.5px} .ins-s{font-size:11.5px;line-height:1.4}
+.bd-dot.sm{stroke-width:2;r:3}
+svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
+.bd-key .sq{display:inline-block;width:9px;height:9px;border-radius:3px;margin:0 4px 0 6px;vertical-align:0}
+.bd-key .sq.thu{background:var(--bd-thu)} .bd-key .sq.chi{background:var(--bd-chi)}
+.bd-note{font-size:11.5px;color:var(--muted);margin-top:4px}
+.bd-kpi .kbar{display:block;height:6px;border-radius:99px;background:var(--hover);margin-top:6px;overflow:hidden}
+.bd-kpi .kbar i{display:block;height:100%;border-radius:99px;background:var(--bd-thu)}
+.bd-kpi em.muted{display:block;margin-top:2px}
+.bd-tot{font-size:13px;font-variant-numeric:tabular-nums;color:var(--bd-thu)}
+.bd-h .bd-tot{margin-left:auto}
+.bd-hb-r .vs{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.bd-hb-r .cm{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.bd-hb-r .cm.up{background:var(--chi-bg);color:var(--bd-chi)} .bd-hb-r .cm.dn{background:var(--thu-bg);color:var(--bd-thu)}
+.bd-cal .c.today{box-shadow:inset 0 0 0 2px var(--text)}

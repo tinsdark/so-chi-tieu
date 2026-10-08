@@ -100,6 +100,9 @@ function bdLineInner(o, ve){
     }
     s += '<path d="'+bdMuot(pts)+'" pathLength="1" class="bd-ln bd-s-'+se.cls+(se.dash ? ' dash' : '')+(ve && !se.dash ? ' bd-draw' : '')+'"/>';
   });
+  if (o.dots) o.series.forEach(function(se){
+    se.vals.forEach(function(v, i){ s += '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3" class="bd-dot sm bd-s-'+se.cls+'"/>'; });
+  });
   var sx = x(sel);
   s += '<line x1="'+sx.toFixed(1)+'" x2="'+sx.toFixed(1)+'" y1="'+P.t+'" y2="'+(H - P.b)+'" class="bd-cursor"/>';
   var ymin = H;
@@ -136,39 +139,43 @@ function bdLine(o){
 /* ---------- cột (chi) + đường (thu) theo tháng ----------
    o = { id, W, H, labels:[], thu:[], chi:[], sel, avg } */
 function bdComboInner(o, ve){
-  var P = { l: 38, r: 8, t: 26, b: 22 }, W = o.W, H = o.H, n = o.labels.length;
+  var P = { l: 38, r: 8, t: 46, b: 22 }, W = o.W, H = o.H, n = o.labels.length;
   var ax = bdTruc(0, Math.max.apply(null, o.thu.concat(o.chi).concat([o.avg || 0])) * 1.08);
   var bw = (W - P.l - P.r) / n;
   var y = function(v){ return P.t + (H - P.t - P.b) * (1 - (v - ax.mn) / (ax.mx - ax.mn)); };
   var sel = o.sel == null ? n - 1 : o.sel;
-  var s = '<defs>' + bdGrad(o.id + 'b', 'chi', 1, .35) + '</defs>';
+  var s = '<defs>' + bdGrad(o.id + 'b', 'chi', 1, .5) + bdGrad(o.id + 't', 'thu', 1, .5) + '</defs>';
   ax.ticks.forEach(function(t){
     s += '<line x1="'+P.l+'" x2="'+(W - P.r)+'" y1="'+y(t).toFixed(1)+'" y2="'+y(t).toFixed(1)+'" class="bd-grid'+(t === 0 ? ' zero' : '')+'"/>'
       + '<text x="'+(P.l - 6)+'" y="'+(y(t) + 3).toFixed(1)+'" text-anchor="end">'+bdRut(t)+'</text>';
   });
-  var pts = [];
+  // 1 cột bo góc trên: x giữa cột, rộng w, cao từ v tới đáy
+  var cot = function(cx, w, v, grad, i, k){
+    if (!(v > 0)) return '';
+    var yv = y(v), r = Math.min(5, w / 2, Math.max(0, H - P.b - yv));
+    return '<path class="bd-bar'+(ve ? ' bd-grow' : '')+'" style="transform-origin:'+cx.toFixed(1)+'px '+(H - P.b)+'px;animation-delay:'+(i * 25 + k * 40)+'ms" opacity="'+(i === sel ? 1 : .6)+'" d="M'+(cx - w / 2).toFixed(1)+','+(H - P.b)
+      + ' V'+(yv + r).toFixed(1)+' Q'+(cx - w / 2).toFixed(1)+','+yv.toFixed(1)+' '+(cx - w / 2 + r).toFixed(1)+','+yv.toFixed(1)
+      + ' H'+(cx + w / 2 - r).toFixed(1)+' Q'+(cx + w / 2).toFixed(1)+','+yv.toFixed(1)+' '+(cx + w / 2).toFixed(1)+','+(yv + r).toFixed(1)
+      + ' V'+(H - P.b)+'Z" fill="url(#'+o.id+grad+')"/>';
+  };
   for (var i = 0; i < n; i++){
-    var cx = P.l + bw * i + bw / 2, w = Math.min(bw * .58, 26), yv = y(o.chi[i]), r = Math.min(7, w / 2, Math.max(0, H - P.b - yv));
-    if (o.chi[i] > 0){
-      s += '<path class="bd-bar'+(ve ? ' bd-grow' : '')+'" style="transform-origin:'+cx.toFixed(1)+'px '+(H - P.b)+'px;animation-delay:'+(i * 25)+'ms" opacity="'+(i === sel ? 1 : .55)+'" d="M'+(cx - w / 2).toFixed(1)+','+(H - P.b)
-        + ' V'+(yv + r).toFixed(1)+' Q'+(cx - w / 2).toFixed(1)+','+yv.toFixed(1)+' '+(cx - w / 2 + r).toFixed(1)+','+yv.toFixed(1)
-        + ' H'+(cx + w / 2 - r).toFixed(1)+' Q'+(cx + w / 2).toFixed(1)+','+yv.toFixed(1)+' '+(cx + w / 2).toFixed(1)+','+(yv + r).toFixed(1)
-        + ' V'+(H - P.b)+'Z" fill="url(#'+o.id+'b)"/>';
-    }
-    if (o.thu[i] > 0) pts.push([cx, y(o.thu[i]), i]);
+    var cx = P.l + bw * i + bw / 2, w = Math.min(bw * .34, 13);
+    s += cot(cx - w / 2 - 1, w, o.thu[i], 't', i, 0) + cot(cx + w / 2 + 1, w, o.chi[i], 'b', i, 1);
     s += '<text x="'+cx.toFixed(1)+'" y="'+(H - 5)+'" text-anchor="middle"'+(i === sel ? ' class="bd-sel-t"' : '')+'>'+o.labels[i]+'</text>';
     s += '<rect class="bd-hit" data-i="'+i+'" x="'+(cx - bw / 2).toFixed(1)+'" y="0" width="'+bw.toFixed(1)+'" height="'+H+'" fill="transparent"/>';
   }
   if (o.avg > 0){
     s += '<line x1="'+P.l+'" x2="'+(W - P.r)+'" y1="'+y(o.avg).toFixed(1)+'" y2="'+y(o.avg).toFixed(1)+'" class="bd-base"/>'
-      + '<text x="'+P.l+'" y="'+(y(o.avg) - 4).toFixed(1)+'" class="bd-base-t">TB chi '+bdRut(o.avg)+'</text>';
+      + '<text x="'+(W - P.r)+'" y="'+(y(o.avg) - 4).toFixed(1)+'" text-anchor="end" class="bd-base-t">TB chi '+bdRut(o.avg)+'</text>';
   }
-  if (pts.length > 1) s += '<path d="'+bdMuot(pts)+'" pathLength="1" class="bd-ln bd-s-thu'+(ve ? ' bd-draw' : '')+'"/>';
-  pts.forEach(function(p){ s += '<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="'+(p[2] === sel ? 5 : 3)+'" class="bd-dot bd-s-thu"/>'; });
+  // thẻ giá trị của tháng đang chọn, nằm phía trên vùng vẽ
   if (o.thu[sel] > 0 || o.chi[sel] > 0){
-    var cxs = P.l + bw * sel + bw / 2;
-    if (o.thu[sel] > 0) s += '<text x="'+cxs.toFixed(1)+'" y="'+(y(o.thu[sel]) - 10).toFixed(1)+'" text-anchor="middle" class="bd-val thu">'+bdRut(o.thu[sel])+'</text>';
-    if (o.chi[sel] > 0) s += '<text x="'+cxs.toFixed(1)+'" y="'+(y(o.chi[sel]) - 6).toFixed(1)+'" text-anchor="middle" class="bd-val chi">'+bdRut(o.chi[sel])+'</text>';
+    var money = o.money || bdTien, row = 'Thu ' + money(o.thu[sel]) + '  ·  Chi ' + money(o.chi[sel]);
+    var tw = Math.min(W - P.l - P.r, Math.max(120, Math.round(row.length * 6.1) + 20)), th = 34;
+    var cxs = P.l + bw * sel + bw / 2, tx = Math.min(Math.max(cxs - tw / 2, P.l), W - P.r - tw);
+    s += '<g class="bd-tip"><rect x="'+tx.toFixed(1)+'" y="3" width="'+tw+'" height="'+th+'" rx="9"/>'
+      + '<text x="'+(tx + tw / 2).toFixed(1)+'" y="16" text-anchor="middle" class="t1">'+o.labels[sel]+'</text>'
+      + '<text x="'+(tx + tw / 2).toFixed(1)+'" y="30" text-anchor="middle" class="t2">'+row+'</text></g>';
   }
   return s;
 }
@@ -213,25 +220,26 @@ if (typeof document !== 'undefined' && document.addEventListener){
    items = [{ ten, v, mau }], sel = chỉ số đang chọn (hoặc null), tong = tổng, nhan = chữ giữa */
 function bdDonut(items, sel, tong){
   var cx = 90, cy = 90, a = -Math.PI / 2;
-  var s = '<svg class="bd-donut" viewBox="0 0 180 180" role="img" aria-label="Biểu đồ vòng theo danh mục"><circle cx="90" cy="90" r="53" class="bd-ring"/>';
+  var s = '<svg class="bd-donut" viewBox="0 0 180 180" role="img" aria-label="Biểu đồ vòng theo danh mục"><circle cx="90" cy="90" r="54" class="bd-ring"/>';
   items.forEach(function(it, i){
     var f = tong > 0 ? it.v / tong : 0;
     if (f <= 0) return;
-    var rr = sel === i ? 65 : 62, r0 = sel === i ? 42 : 44;
+    var rr = sel === i ? 65 : 62, r0 = sel === i ? 44 : 46;
     var full = f > .9995;
     var a1 = a + .02, a2 = a + f * 2 * Math.PI - (items.length > 1 ? .02 : 0), big = (a2 - a1) > Math.PI ? 1 : 0;
     var p = function(g, rad){ return (cx + rad * Math.cos(g)).toFixed(1) + ',' + (cy + rad * Math.sin(g)).toFixed(1); };
     var d = full
-      ? 'M' + p(a, rr) + ' A' + rr + ',' + rr + ' 0 1 1 ' + p(a + Math.PI, rr) + ' A' + rr + ',' + rr + ' 0 1 1 ' + p(a, rr) + ' L' + p(a, r0) + ' A' + r0 + ',' + r0 + ' 0 1 0 ' + p(a + Math.PI, r0) + ' A' + r0 + ',' + r0 + ' 0 1 0 ' + p(a, r0) + 'Z'
+      ? 'M' + p(a, rr) + ' A' + rr + ',' + rr + ' 0 1 1 ' + p(a + Math.PI, rr) + ' A' + rr + ',' + rr + ' 0 1 1 ' + p(a, rr) + ' L' + p(a, r0) + ' A' + r0 + ',' + r0 + ' 0 1 0 ' + p(a + Math.PI, r0) + ' A' + r0
       : 'M' + p(a1, rr) + ' A' + rr + ',' + rr + ' 0 ' + big + ' 1 ' + p(a2, rr) + ' L' + p(a2, r0) + ' A' + r0 + ',' + r0 + ' 0 ' + big + ' 0 ' + p(a1, r0) + 'Z';
     s += '<path data-act="bdPick" data-i="'+i+'" d="'+d+'" fill="'+it.mau+'" fill-rule="evenodd" opacity="'+(sel == null || sel === i ? 1 : .32)+'"><title>'+esc(it.ten)+'</title></path>';
     a += f * 2 * Math.PI;
   });
   var c = sel != null ? items[sel] : null;
-  var big2 = fmt(c ? c.v : tong).replace(/\s*₫$/, '');
-  s += '<text x="90" y="82" text-anchor="middle" class="bd-c1">'+(c ? esc(c.ten.length > 14 ? c.ten.slice(0, 13) + '…' : c.ten) : 'Tổng chi')+'</text>'
-    + '<text x="90" y="101" text-anchor="middle" class="bd-c2" style="font-size:'+(big2.length > 10 ? 13 : 15)+'px">'+big2+'</text>'
-    + '<text x="90" y="115" text-anchor="middle" class="bd-c1">'+(c ? Math.round(c.v / tong * 100) + '% tổng chi' : '₫')+'</text></svg>';
+  var so = fmt(c ? c.v : tong).replace(/\s*₫$/, '');
+  var coChu = so.length > 11 ? 11.5 : (so.length > 9 ? 12.5 : 14.5);
+  s += '<text x="90" y="80" text-anchor="middle" class="bd-c1">'+(c ? esc(c.ten.length > 14 ? c.ten.slice(0, 13) + '…' : c.ten) : 'Tổng chi')+'</text>'
+    + '<text x="90" y="99" text-anchor="middle" class="bd-c2" style="font-size:'+coChu+'px">'+so+'<tspan class="bd-c3" dx="3">₫</tspan></text>'
+    + '<text x="90" y="114" text-anchor="middle" class="bd-c1">'+(c ? Math.round(c.v / tong * 100) + '% tổng chi' : items.length + ' danh mục')+'</text></svg>';
   return s;
 }
 
@@ -242,18 +250,18 @@ function bdHBars(items, tong, opt){
   var mx = items.length ? items[0].v : 1;
   var h = '<div class="bd-hb">';
   items.forEach(function(it, i){
-    var sub = '';
-    if (opt.phanTram) sub += Math.round(it.v / tong * 100) + '% tổng chi';
+    var trai = opt.phanTram ? Math.round(it.v / tong * 100) + '% ' + (opt.nhanTong || 'tổng chi') : '', chip = '';
     if (opt.soSanh && it.truoc != null && it.truoc > 0){
       var d = Math.round((it.v - it.truoc) / it.truoc * 100);
-      sub += (sub ? ' · ' : '') + '<span class="'+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? '↑ +' : (d < 0 ? '↓ ' : '= '))+d+'%</span> so với ' + (opt.nhanTruoc || 'tháng trước');
+      chip = '<span class="cm '+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? '↑ ' : (d < 0 ? '↓ ' : '= '))+Math.abs(d)+'% so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
     } else if (opt.soSanh && it.truoc === 0){
-      sub += (sub ? ' · ' : '') + '<span class="up">mới</span> so với ' + (opt.nhanTruoc || 'tháng trước');
+      chip = '<span class="cm up">mới so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
     }
+    var mau = opt.mauChung || it.mau;
     h += '<div class="bd-hb-r'+(opt.pick && opt.sel === i ? ' sel' : '')+'"'+(opt.pick ? ' data-act="bdPick" data-i="'+i+'"' : '')+'>'
       + '<div class="top"><span><i style="background:'+it.mau+'"></i>'+esc(it.ten)+'</span><b>'+fmt(Math.round(it.v))+'</b></div>'
-      + '<div class="bar"><i style="width:'+Math.max(2, Math.round(it.v / mx * 100))+'%;background:'+it.mau+'"></i></div>'
-      + (sub ? '<div class="vs">'+sub+'</div>' : '') + '</div>';
+      + '<div class="bar"><i style="width:'+Math.max(2, Math.round(it.v / mx * 100))+'%;background:'+mau+'"></i></div>'
+      + ((trai || chip) ? '<div class="vs"><span>'+trai+'</span>'+chip+'</div>' : '') + '</div>';
   });
   return h + '</div>';
 }
@@ -269,7 +277,7 @@ function bdHeat(mk, chi, thu, soNgay, denNgay, dau, sel){
     var v = chi[d - 1] || 0, date = mk + '-' + pad2(d);
     if (d > denNgay){ h += '<div class="c fut">'+d+'</div>'; continue; }
     var t = mx > 0 ? v / mx : 0, pct = v > 0 ? Math.round((.16 + .84 * Math.pow(t, .8)) * 100) : 0;
-    h += '<div class="c'+(v > 0 ? '' : ' emp')+(d === sel ? ' sel' : '')+(t > .5 ? ' hot' : '')+'" data-act="bdDay" data-date="'+date+'"'
+    h += '<div class="c'+(v > 0 ? '' : ' emp')+(d === sel ? ' sel' : '')+(date === todayStr() ? ' today' : '')+(t > .5 ? ' hot' : '')+'" data-act="bdDay" data-date="'+date+'"'
       + (v > 0 ? ' style="background:color-mix(in srgb,var(--bd-chi) '+pct+'%,var(--card))"' : '')
       + ' role="button" aria-label="Ngày '+d+': chi '+fmt(Math.round(v))+'">'+d
       + (thu[d - 1] > 0 ? '<span class="g"></span>' : '')
@@ -412,7 +420,7 @@ function bdTongQuanHtml(mk){
         + (cap > 0 ? ' · hạn mức ' + bdTien(cap) : '') });
   }
   if (dong.length){
-    h += '<div class="card k-act bd-ins"><h3>Phân tích '+monthLabel(mk).toLowerCase()+'</h3>'
+    h += '<div class="bd-ins"><h3>Phân tích '+monthLabel(mk).toLowerCase()+'</h3>'
       + dong.map(function(d){ return '<div class="ins-row"><div class="ins-ic '+d.ic+'">'+d.ky+'</div><div><div class="ins-t">'+d.t+'</div><div class="ins-s">'+d.s+'</div></div></div>'; }).join('')
       + '</div>';
   }
@@ -435,7 +443,7 @@ function bdTongQuanHtml(mk){
   var selDate = mk + '-' + pad2(sel), dow = new Date(parseInt(mk.slice(0, 4), 10), parseInt(mk.slice(5), 10) - 1, sel).getDay();
   h += '<div class="bd-h" style="margin-top:18px">Lịch chi tiêu '+monthLabel(mk).toLowerCase()+'<span class="bd-leg1"><i></i> có thu</span></div>'
     + bdHeat(mk, cur.chi, cur.thu, cur.soNgay, denNgay, dau, sel)
-    + '<div class="bd-dtl"><span>'+BD_DAYS[dow]+' '+pad2(sel)+'/'+mk.slice(5)+'</span><span>'
+    + '<div class="bd-dtl"><span>'+BD_DAYS[dow]+' '+pad2(sel)+'/'+mk.slice(5)+(selDate === hom ? ' · hôm nay' : '')+'</span><span>'
     + (sel <= denNgay ? 'Chi <b class="chi">'+bdTien(cur.chi[sel - 1])+'</b>' + (cur.thu[sel - 1] > 0 ? ' · Thu <b class="thu">'+bdTien(cur.thu[sel - 1])+'</b>' : '') : 'Chưa tới') + '</span></div>'
     + '<div class="bd-scale"><span>Ít</span><span class="sc">'+[16, 35, 55, 78, 100].map(function(p){ return '<i style="background:color-mix(in srgb,var(--bd-chi) '+p+'%,var(--card))"></i>'; }).join('')+'</span><span>Nhiều</span></div>';
   // --- top 3 ngày ---
@@ -448,7 +456,6 @@ function bdTongQuanHtml(mk){
       return '<div data-act="bdDay" data-date="'+mk+'-'+pad2(t.d)+'"><span>'+pad2(t.d)+'/'+mk.slice(5)+(ck ? ' · '+esc(catTen('chi', ck)) : '')+'</span><b>'+bdTien(t.v)+'</b></div>';
     }).join('') + '</div>';
   }
-  void selDate;
   return h;
 }
 
@@ -473,13 +480,13 @@ function bdDanhMucHtml(mk){
     h += bdHBars(cats, tong, { phanTram: true, soSanh: prev.coDl, nhanTruoc: prev.nhan });
   }
   var thu = bdXepCat('thu', cur.theoCatThu, null, 6);
-  h += '<div class="bd-h" style="margin-top:22px">Thu theo danh mục</div>';
-  h += thu.length ? bdHBars(thu, cur.tongThu, { phanTram: false }) : '<div class="empty">Chưa có khoản thu nào trong tháng này.</div>';
+  h += '<div class="bd-h" style="margin-top:22px">Thu theo danh mục'+(cur.tongThu > 0 ? '<b class="bd-tot">'+bdTien(cur.tongThu)+'</b>' : '')+'</div>';
+  h += thu.length ? bdHBars(thu, cur.tongThu, { phanTram: true, nhanTong: 'tổng thu', mauChung: 'var(--bd-thu)' }) : '<div class="empty">Chưa có khoản thu nào trong tháng này.</div>';
   return h;
 }
 
 function bdXuHuongHtml(mk){
-  var year = mk.slice(0, 4), labs = [], thu = [], chi = [], lastM = 0, i, tongTK = 0, tongThuNam = 0, nThang = 0;
+  var year = mk.slice(0, 4), labs = [], thu = [], chi = [], lastM = 0, i;
   for (var m = 1; m <= 12; m++){
     var k = year + '-' + pad2(m), t = bdThang(k);
     labs.push('T' + m); thu.push(t.tongThu); chi.push(t.tongChi);
@@ -489,36 +496,44 @@ function bdXuHuongHtml(mk){
   var hetM = year < hom.slice(0, 4) ? 12 : (year === hom.slice(0, 4) ? parseInt(hom.slice(5, 7), 10) : 0);
   var hien = Math.max(lastM, hetM, parseInt(mk.slice(5), 10));
   if (hien < 2) hien = Math.min(12, Math.max(2, hien));
-  // trung bình chi: chỉ tính các tháng có dữ liệu chi
-  var coChi = chi.filter(function(v, ix){ return ix < hien && v > 0; });
-  var avg = coChi.length ? coChi.reduce(function(a, b){ return a + b; }, 0) / coChi.length : 0;
-  for (i = 0; i < hien; i++){
-    if (thu[i] > 0 || chi[i] > 0){ tongTK += thu[i] - chi[i]; tongThuNam += thu[i]; nThang++; }
-  }
-  var h = '<div class="bd-h">Thu / Chi theo tháng — '+year+'<span class="bd-key"><span class="l"></span> Thu <span class="b"></span> Chi</span></div><div class="bd-box">'
-    + bdCombo({ W: 350, H: 200, labels: labs.slice(0, hien), thu: thu.slice(0, hien), chi: chi.slice(0, hien), sel: Math.min(hien, parseInt(mk.slice(5), 10)) - 1, avg: avg, aria: 'Thu chi theo tháng năm ' + year })
-    + '</div>';
-  if (nThang){
-    h += '<div class="bd-kpi" style="margin-top:12px"><div><small>Tiết kiệm TB/tháng</small><b>'+bdTien(tongTK / nThang)+'</b></div>'
-      + '<div><small>Tỉ lệ tiết kiệm</small><b>'+(tongThuNam > 0 ? Math.round(tongTK / tongThuNam * 100) + '%' : '—')+'</b></div></div>';
+  // trung bình / tiết kiệm chỉ tính các tháng ĐÃ TRỌN (bỏ tháng đang chạy dở: mới có vài ngày nên kéo số xuống).
+  // Chỉ có mỗi tháng đang chạy dở thì đành tính nó.
+  var dangDo = year === hom.slice(0, 4) ? parseInt(hom.slice(5, 7), 10) : 0;
+  var coSo = [];
+  for (i = 0; i < hien; i++){ if (thu[i] > 0 || chi[i] > 0) coSo.push(i + 1); }
+  var tron = coSo.filter(function(mm){ return mm !== dangDo; });
+  var dung = tron.length ? tron : coSo;
+  var coChi = dung.filter(function(mm){ return chi[mm - 1] > 0; });
+  var avg = coChi.length ? coChi.reduce(function(a, mm){ return a + chi[mm - 1]; }, 0) / coChi.length : 0;
+  var tongTK = 0, tongThuNam = 0;
+  dung.forEach(function(mm){ tongTK += thu[mm - 1] - chi[mm - 1]; tongThuNam += thu[mm - 1]; });
+  var khoang = dung.length ? (dung.length > 1 ? 'T' + dung[0] + '–T' + dung[dung.length - 1] : 'T' + dung[0]) : '';
+  var dangTrong = dangDo && dangDo <= hien && chi[dangDo - 1] + thu[dangDo - 1] > 0;
+  var h = '<div class="bd-h">Thu / Chi theo tháng — '+year+'<span class="bd-key"><i class="sq thu"></i> Thu <i class="sq chi"></i> Chi</span></div><div class="bd-box">'
+    + bdCombo({ W: 350, H: 210, labels: labs.slice(0, hien), thu: thu.slice(0, hien), chi: chi.slice(0, hien), sel: Math.min(hien, parseInt(mk.slice(5), 10)) - 1, avg: avg, aria: 'Thu chi theo tháng năm ' + year })
+    + '</div><div class="bd-note">'+(dangTrong && tron.length ? 'T'+dangDo+' tính đến '+pad2(parseInt(hom.slice(8, 10), 10))+'/'+hom.slice(5, 7)+' · ' : '')+'chạm cột để xem từng tháng</div>';
+  if (dung.length){
+    var tl = tongThuNam > 0 ? Math.round(tongTK / tongThuNam * 100) : null;
+    h += '<div class="bd-kpi" style="margin-top:12px"><div><small>Tiết kiệm TB/tháng</small><b>'+bdTien(tongTK / dung.length)+'</b><em class="muted">'+khoang+' · thu trừ chi</em></div>'
+      + '<div><small>Tỉ lệ tiết kiệm</small><b>'+(tl != null ? tl + '%' : '—')+'</b>'
+      + (tl != null ? '<span class="kbar"><i style="width:'+Math.max(0, Math.min(100, tl))+'%"></i></span>' : '<em class="muted">chưa có thu</em>')+'</div></div>';
   }
   // số dư cuối tháng, tối đa 10 tháng gần nhất tính tới tháng đang xem
-  var ml = [], mv = [], mm = mk;
+  var ml = [], mv = [], mm2 = mk;
   var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
   for (i = 0; i < 10; i++){
-    if (startLock && mm < startLock) break;
-    ml.unshift('T' + parseInt(mm.slice(5), 10) + (mm.slice(0, 4) !== mk.slice(0, 4) ? '/' + mm.slice(2, 4) : ''));
-    mv.unshift(balanceAtEndOfMonth(mm));
-    mm = bdThangTruoc(mm);
+    if (startLock && mm2 < startLock) break;
+    ml.unshift('T' + parseInt(mm2.slice(5), 10) + (mm2.slice(0, 4) !== mk.slice(0, 4) ? '/' + mm2.slice(2, 4) : ''));
+    mv.unshift(balanceAtEndOfMonth(mm2));
+    mm2 = bdThangTruoc(mm2);
   }
   if (mv.length >= 2){
     h += '<div class="bd-h" style="margin-top:18px">Số dư cuối tháng<span>'+mv.length+' tháng gần nhất</span></div><div class="bd-box">'
-      + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Số dư', vals: mv, cls: 'blue', fill: true }],
+      + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Số dư', vals: mv, cls: 'blue', fill: true }], dots: true,
         tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Số dư cuối tháng' }) + '</div>';
   }
   return h;
 }
-
 function bieuDoInnerHtml(mk){
   var tab = state.bdTab || 'tq';
   var h = '<h3>Biểu đồ chi tiêu</h3><div class="bd-sub" role="tablist">'
