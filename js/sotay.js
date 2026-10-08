@@ -687,32 +687,30 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
 function mucTieuCardHtml(){
   var gs = state.data.mucTieu || [];
   if (!gs.length) return '';
-  var hom = todayStr();
-  var h = '<div class="card k-goal"><h3>Mục tiêu tiết kiệm</h3><div class="hm-list">';
+  var hom = todayStr(), tongDa = 0;
+  var hanTxt = function(g){ return g.hanChot ? g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4) : ''; };
+  var h = '';
   gs.forEach(function(g){
     var t = mucTieuTienDo(g, hom);
-    var rong = Math.min(100, Math.round(t.pct * 100));
-    var phu;
-    if (t.xong) phu = '<span style="color:var(--green)">Đã đủ mục tiêu</span>';
-    else if (t.quaHan) phu = '<span style="color:var(--red)">Quá hạn '+g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4)+' · còn thiếu '+fmt(Math.round(t.conThieu))+'</span>';
+    tongDa += t.da;
+    var mau = t.xong ? 'done' : (t.quaHan ? 'over' : 'mt'), tr, note;
+    if (t.xong){ tr = '<span class="mt-st ok">Hoàn thành</span>'; note = 'Đã đủ mục tiêu' + (g.hanChot ? ', kịp trước ' + hanTxt(g) : '') + '.'; }
+    else if (t.quaHan){ tr = '<span class="mt-st over">Quá hạn</span>'; note = 'Đã quá hạn ' + hanTxt(g) + ', còn thiếu ' + fmt(Math.round(t.conThieu)) + '.'; }
     else {
-      phu = 'Còn thiếu '+fmt(Math.round(t.conThieu));
-      if (t.canMoiThang != null){
-        phu += ' · cần ~<b>'+fmt(Math.round(t.canMoiThang))+'</b>/tháng ('+t.soThangCon+' tháng tới hết '+g.hanChot.slice(5)+'/'+g.hanChot.slice(0, 4)+')';
-      }
+      tr = g.hanChot ? '<span class="mt-st">Hạn ' + hanTxt(g) + '</span>' : '';
+      note = t.canMoiThang != null
+        ? 'Gom thêm ~' + fmt(Math.round(t.canMoiThang)) + ' mỗi tháng là kịp hạn ' + hanTxt(g) + '.'
+        : 'Còn thiếu ' + fmt(Math.round(t.conThieu)) + '.';
     }
-    h += '<div class="hm-row">'
-      + '<div class="hm-top"><span class="hm-ten">'+esc(g.ten)
-        + (t.theoVi ? ' <span class="vi-chip">'+esc(viTen(g.walletId))+'</span>' : '') + '</span>'
-      + '<span class="hm-so">'+fmt(Math.round(t.da))+' / '+fmt(Math.round(t.dich))+' · '+Math.round(t.pct * 100)+'%</span></div>'
-      + '<div class="hm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(g.ten)+'">'
-      + '<div class="hm-fill mt'+(t.xong ? ' done' : '')+'" style="width:'+rong+'%"></div></div>'
-      + '<div class="hm-vuot" style="color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px">'
-        + '<span>'+phu+'</span>'
-        + (t.theoVi ? '' : '<button class="btn secondary sm" data-act="mtGom" data-id="'+esc(g.id)+'">+ Gom thêm</button>')
-      + '</div></div>';
+    h += '<div class="mt-c"><div class="mt-r">' + bcVong(t.pct, mau, Math.round(t.pct * 100) + '%', '')
+      + '<div class="mt-b"><div class="mt-h"><b class="mt-ten">'+esc(g.ten)+'</b>'
+      + (t.theoVi ? '<span class="vi-chip">'+esc(viTen(g.walletId))+'</span>' : '') + tr + '</div>'
+      + '<div class="mt-big">'+fmt(Math.round(t.da))+'</div><div class="mt-dich">/ '+fmt(Math.round(t.dich))+'</div></div></div>'
+      + '<div class="mt-f"><span class="mt-note'+(t.quaHan ? ' over' : (t.xong ? ' ok' : ''))+'">'+note+'</span>'
+      + ((t.theoVi || t.xong) ? '' : '<button type="button" class="btn secondary sm" data-act="mtGom" data-id="'+esc(g.id)+'">+ Gom thêm</button>') + '</div></div>';
   });
-  return h + '</div></div>';
+  return '<div class="card bc-card" id="cardMucTieu"><h3 class="bc-h"><span>Mục tiêu tiết kiệm</span><span class="bc-h-s">'+fmt(Math.round(tongDa))+' đã gom</span></h3>'
+    + '<div class="mt-list">' + h + '</div></div>';
 }
 
 /* ====================================================================
@@ -802,21 +800,55 @@ function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok');
 function hanMucThangHtml(mk){
   var rows = hanMucThangRows(mk);
   if (!rows.length) return '';
+  var nhip = bcNhip(mk), cur = bdThang(mk), cap = 0, da = 0;
+  rows.forEach(function(r){ cap += r.cap; da += r.da; });
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var h = '<div class="card k-bud" id="cardHanMuc"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Hạn mức '+monthLabel(mk).toLowerCase()
-    + (nVuot ? ' <span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3><div class="hm-list">';
-  rows.forEach(function(r){
-    var muc = hanMucMuc(r.pct);
-    var rong = Math.min(100, Math.round(r.pct * 100));
-    h += '<div class="hm-row">'
-      + '<div class="hm-top"><span class="hm-ten">'+catDot('chi', r.id)+esc(r.ten)+'</span>'
-      + '<span class="hm-so '+muc+'">'+fmt(Math.round(r.da))+' / '+fmt(Math.round(r.cap))+' · '+Math.round(r.pct * 100)+'%</span></div>'
-      + '<div class="hm-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(r.ten)+'">'
-      + '<div class="hm-fill '+muc+'" style="width:'+rong+'%"></div></div>'
-      + (r.pct > 1 ? '<div class="hm-vuot">Vượt '+fmt(Math.round(r.da - r.cap))+'</div>' : '')
-      + '</div>';
-  });
-  return h + '</div></div>';
+  // từ 80% hạn mức trở lên (hoặc vượt) = cần chú ý; còn lại = ổn (rows đã xếp % giảm dần)
+  var chuY = rows.filter(function(r){ return r.pct >= 0.8; }), on = rows.filter(function(r){ return r.pct < 0.8; });
+  var pctAll = cap > 0 ? da / cap : 0;
+  var h = '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h"><span>Hạn mức '+monthLabel(mk).toLowerCase()+'</span>'
+    + (nVuot ? '<span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3>';
+  // tóm tắt: vòng % đã dùng + thanh chia theo danh mục (tỉ trọng trong tổng chi)
+  var chia = bdXepCat('chi', cur.theoCat, null, 0), tong = 0;
+  chia.forEach(function(c){ tong += c.v; });
+  h += '<div class="hm-sum">' + bcVong(pctAll, hanMucMuc(pctAll), Math.round(pctAll * 100) + '%', 'đã dùng') + '<div class="hm-sum-r">';
+  if (tong > 0){
+    h += '<div class="hm-sum-t">Chi theo danh mục</div><div class="hm-stack" aria-hidden="true">'
+      + chia.map(function(c){ return '<i style="flex:'+c.v+';background:'+c.mau+'"></i>'; }).join('') + '</div><div class="hm-stack-l">'
+      + chia.slice(0, 3).map(function(c){ return '<span><i style="background:'+c.mau+'"></i>'+esc(c.ten)+' '+Math.round(c.v / tong * 100)+'%</span>'; }).join('') + '</div>';
+  } else {
+    h += '<div class="hm-sum-t">Chưa có khoản chi nào trong tháng này</div>';
+  }
+  h += '</div></div>';
+  if (chuY.length){
+    h += '<div class="hm-sec"><b>Cần chú ý · '+chuY.length+'</b>'
+      + (nhip.dangChay ? '<span class="hm-leg"><i class="tk"></i> nhịp hôm nay <i class="en"></i> hạn mức</span>' : '') + '</div><div class="hm-cg">';
+    chuY.forEach(function(r){
+      var muc = hanMucMuc(r.pct), rong = Math.min(100, Math.round(r.pct * 100));
+      h += '<div class="hm-c '+muc+'">'
+        + '<div class="hm-c-t">'+catDot('chi', r.id)+'<span>'+esc(r.ten)+'</span></div>'
+        + '<div class="hm-c-p">'+Math.round(r.pct * 100)+'%</div>'
+        + '<div class="hm-c-chip">'+(r.pct > 1 ? 'Vượt '+fmt(Math.round(r.da - r.cap)) : 'Còn '+fmt(Math.round(r.cap - r.da)))+'</div>'
+        + '<div class="hm-c-bar'+(r.pct > 1 ? ' of' : '')+'" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="'+esc(r.ten)+'">'
+        + '<div class="hm-fill" style="width:'+rong+'%;background:'+catMau('chi', r.id)+'"></div>'
+        + (nhip.dangChay ? '<i class="tick" style="left:'+(Math.round(nhip.tyLe * 1000) / 10)+'%"></i>' : '') + '</div>'
+        + '<div class="hm-c-so"><span>'+fmt(Math.round(r.da))+'</span> <span>/ '+fmt(Math.round(r.cap))+'</span></div></div>';
+    });
+    h += '</div>';
+  }
+  if (on.length){
+    var hien = state.hmMoHet ? on : on.slice(0, 3);
+    h += '<div class="hm-sec"><b>Ổn · '+on.length+'</b></div><div class="hm-og">';
+    hien.forEach(function(r){
+      h += '<div class="hm-o"><span class="nm">'+catDot('chi', r.id)+'<span>'+esc(r.ten)+'</span></span>'
+        + '<span class="cl">còn '+fmt(Math.round(r.cap - r.da)).replace(/\s*₫$/, '')+'</span>'
+        + '<span class="mb"><i style="width:'+Math.max(r.da > 0 ? 6 : 0, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
+        + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
+    });
+    h += '</div>';
+    if (on.length > 3) h += '<button type="button" class="hm-more" data-act="hmXem">'+(state.hmMoHet ? 'Thu gọn' : 'Xem thêm '+(on.length - 3))+'</button>';
+  }
+  return h + '</div>';
 }
 
 // <option> cho bộ lọc danh mục: nhóm Thu / Chi, giá trị dạng 'thu:<id>' | 'chi:<id>'

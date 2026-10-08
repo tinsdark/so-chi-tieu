@@ -64,6 +64,7 @@ var state = {
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
+  hmMoHet: false,         // tab Báo cáo: mở hết nhóm "Ổn" ở thẻ Hạn mức (mặc định chỉ hiện 3)
   soTayOpenIid: null,     // iid khoản đang mở nút Sửa / Xóa trong danh sách ngày
   soTayLocMo: false,      // khung tìm kiếm & lọc ở "Chi tiết theo ngày" đang mở
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
