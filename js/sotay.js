@@ -145,8 +145,9 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
     + '<div class="hero-nums">'
     +   '<div><div class="l"><i class="dot thu"></i>Tổng thu</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
     +   '<div><div class="l"><i class="dot chi"></i>Tổng chi</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
-    +   '<div class="cl"><div class="l">Chênh lệch</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</div></div>'
-    + '</div>';
+    + '</div>'
+    // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
+    + '<div class="hero-cl"><span>Chênh lệch</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>';
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
@@ -481,7 +482,7 @@ function dlDongHtml(date, it){
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaItem(it))) : '';
   return '<div class="dl-row'+(mo ? ' mo' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
-    +   '<span class="dl-av" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true">'+esc((ten.trim().charAt(0) || '?').toUpperCase())+'</span>'
+    +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
     +   '<span class="dl-txt"><span class="dl-t1">'+esc(it.ghiChu || ten)+'</span><span class="dl-t2">'+esc(ten)+vi+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
@@ -495,9 +496,9 @@ function dlRefHtml(r){
   var ten = catTen(m.kind, m.cat);
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaRef(r))) : '';
   return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">'
-    + '<span class="dl-av" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true">'+icon('lock')+'</span>'
+    + '<span class="dl-dot" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true"></span>'
     + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(r.note) : '')+'</span>'
-    +   '<span class="dl-t2">'+esc(ten)+vi+' · Vay-Nợ</span></span>'
+    +   '<span class="dl-t2">'+esc(ten)+vi+' · '+icon('lock')+' Vay-Nợ</span></span>'
     + '<span class="dl-amt '+m.kind+'">'+dlSoTien(m.kind, r.soTien)+'</span>'
     + '</div></div>';
 }
