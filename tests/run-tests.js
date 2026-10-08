@@ -1688,6 +1688,42 @@ test('Chi tiết theo ngày: khoản ghi sau nằm trên khoản ghi trước; b
   ok(iTien > 0 && iGhiChu > iTien && iDm > iGhiChu, 'thứ tự: số tiền, ghi chú, danh mục');
 });
 
+test('Chi tiết theo ngày: ghi chú chung của cả ngày (dữ liệu cũ) không lặp ở từng khoản — tiêu đề là tên danh mục', function(){
+  setToday('2026-10-10');
+  loadData(dataGhiNhanh());
+  var e = { thu:{}, chi:{ an:70000 }, refs:[], ghiChu:'Ăn sáng 30.000 đ; Ăn tối 40.000 đ',
+    items:[ { iid:'i1', kind:'chi', catId:'an', soTien:30000, ghiChu:'Ăn sáng 30.000 đ; Ăn tối 40.000 đ' },
+            { iid:'i2', kind:'chi', catId:'an', soTien:40000, ghiChu:'Ăn sáng 30.000 đ; Ăn tối 40.000 đ' } ] };
+  ctx.state.data.journal['2026-10-09'] = e;
+  var h = ctx.dlNgayHtml('2026-10-09', false);
+  ok(h.indexOf('class="dl-t1">Ăn sáng') < 0 && h.indexOf('class="dl-t1">Ăn<') >= 0, 'tiêu đề lấy tên danh mục, không lặp ghi chú chung');
+  ctx.entryAddItem('2026-10-10', 'chi', 'an', 20000, 'Cà phê', undefined);
+  ok(ctx.dlNgayHtml('2026-10-10', false).indexOf('class="dl-t1">Cà phê') >= 0, 'ghi chú riêng của khoản vẫn là tiêu đề');
+});
+
+test('Thẻ tổng quan: dòng so sánh chi với tháng trước (đúng chiều, đúng nhãn); không có dữ liệu tháng trước thì không hiện', function(){
+  setToday('2026-10-10');
+  var d = dataGhiNhanh();
+  loadData(d);
+  eq(ctx.tongQuanSoSanhHtml('2026-10', 100000, false), '', 'chưa có tháng trước: không hiện');
+  ctx.entryAddItem('2026-09-03', 'chi', 'an', 100000, '', undefined);
+  var nhieu = ctx.tongQuanSoSanhHtml('2026-10', 150000, false);
+  ok(nhieu.indexOf('Chi nhiều hơn 50%') >= 0 && nhieu.indexOf('cùng kỳ 1–10/9') >= 0 && nhieu.indexOf('hero-tin len') >= 0, 'chi nhiều hơn, so cùng kỳ');
+  var it = ctx.tongQuanSoSanhHtml('2026-10', 50000, false);
+  ok(it.indexOf('Chi ít hơn 50%') >= 0 && it.indexOf('hero-tin xuong') >= 0, 'chi ít hơn');
+  ok(ctx.tongQuanSoSanhHtml('2026-10', 101000, false).indexOf('Chi gần bằng') >= 0, 'lệch dưới 3% là gần bằng');
+  eq(ctx.tongQuanSoSanhHtml('2026-10', 150000, true), '', 'tháng trước mốc chốt số dư: không hiện');
+});
+
+test('Lớp chồng: bảng ghi khoản nằm DƯỚI hộp thoại (cảnh báo ví âm hiện trên bảng) và TRÊN thanh tab', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  var z = function(re){ var m = re.exec(css); return m ? parseInt(m[1], 10) : -1; };
+  var bang = z(/\.qa-back\{[^}]*z-index:(\d+)/), modal = z(/\.modal-back\{[^}]*z-index:(\d+)/), tab = z(/padding-bottom:env\(safe-area-inset-bottom\);z-index:(\d+)/);
+  ok(bang > 0 && modal > 0 && tab > 0, 'đọc được z-index: ' + [bang, modal, tab].join('/'));
+  ok(bang < modal, 'bảng ghi (' + bang + ') phải thấp hơn hộp thoại (' + modal + ')');
+  ok(bang > tab, 'bảng ghi (' + bang + ') phải cao hơn thanh tab (' + tab + ')');
+});
+
 test('Vay-Nợ: thẻ Sắp đến hạn — chạm vào khoản nhảy tới đúng khoản (cho vay / vay nợ) bên dưới', function(){
   setToday('2026-10-10');
   var d = baseTraNo();

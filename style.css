@@ -835,7 +835,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
 .qa-bar-vi{flex:0 0 auto;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;
   background:var(--hover);border-radius:10px;padding:7px 11px}
 
-.qa-back{position:fixed;left:0;right:0;top:0;bottom:0;z-index:65;display:flex;align-items:flex-end;justify-content:center}
+.qa-back{position:fixed;left:0;right:0;top:0;bottom:0;z-index:55;display:flex;align-items:flex-end;justify-content:center}
 .qa-scrim{position:absolute;inset:0;background:var(--mask)}
 body.qa-mo{overflow:hidden}
 .qa-sheet{position:relative;overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:520px;max-height:100%;
@@ -899,3 +899,19 @@ body.qa-mo{overflow:hidden}
   .qa-cats::-webkit-scrollbar{display:none}
   .qa-cats>*{flex:0 0 auto}
 }
+
+/* dòng so sánh dưới số dư (thẻ tổng quan) */
+.hero-tin{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.hero-tin .ic{width:14px;height:14px;flex:0 0 auto}
+.hero-tin.len{color:var(--red)} .hero-tin.xuong{color:var(--green)}
+/* chạm: thẻ ví, khoản, thanh Ghi nhanh nhún nhẹ */
+.vi-the,.qa-bar,.dl-main,.qa-vi{transition:transform .14s var(--ease),background-color .18s,border-color .18s}
+.vi-the:active,.qa-bar:active,.qa-vi:active{transform:scale(.97)}
+.dl-main:active{background:var(--hover)}
+/* bảng ghi khoản đóng: trượt xuống + mờ nền */
+.qa-back.dong{pointer-events:none}
+.qa-back.dong .qa-sheet{animation:qa-xuong .18s ease-in both}
+.qa-back.dong .qa-scrim{animation:qa-tat .18s ease-in both}
+@keyframes qa-xuong{to{transform:translateY(100%)}}
+@keyframes qa-tat{to{opacity:0}}
+@media (prefers-reduced-motion:reduce){ .qa-back.dong .qa-sheet,.qa-back.dong .qa-scrim{animation:none} }

@@ -35,7 +35,7 @@ function _moChaySo(el, tu, den, txt){
 }
 
 // chạy số cho các ô lớn: đổi tab -> từ 0; cùng tab -> từ giá trị cũ (nếu khác)
-var _MO_SO = '.hero-val, .hero-split .v, .k-wal .stat .val';
+var _MO_SO = '.hero-val, .hero-nums .v, .hero-cl b, .vi-the-so, .k-wal .stat .val';
 function _moSo(vao, root){
   var moi = {};
   root.querySelectorAll(_MO_SO).forEach(function(el, i){
@@ -71,7 +71,7 @@ function _moCard(root){
 }
 
 // hàng có nút xóa: key = các data-* của nút, vị trí = đường đi từ #tabContent
-var _MO_HANG = 'tr, .dk-row, .form-row, li';
+var _MO_HANG = 'tr, .dk-row, .form-row, li, .dl-row';
 function _moChup(root){
   var kq = {};
   root.querySelectorAll('[data-act*="Xoa"], [data-act*="Del"]').forEach(function(b){

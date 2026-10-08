@@ -169,8 +169,12 @@ function qaSheetVe(){
   if (state.qa.open && state.tab !== 'sotay') state.qa.open = false;      // rời tab Sổ tay = đóng
   var root = document.getElementById('qaSheetRoot');
   if (!state.qa.open || !state.data){
-    if (root && root.parentNode) root.parentNode.removeChild(root);
     document.body.classList.remove('qa-mo');
+    if (!root) return;
+    var giam = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (giam || root.classList.contains('dong')){ if (root.parentNode) root.parentNode.removeChild(root); return; }
+    root.classList.add('dong');           // trượt xuống rồi gỡ (qaMoSheet gỡ ngay nếu mở lại giữa chừng)
+    setTimeout(function(){ if (root.parentNode && root.classList.contains('dong')) root.parentNode.removeChild(root); }, 200);
     return;
   }
   if (root) return;
@@ -227,7 +231,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var h = '<div class="card hero">'
     + '<div class="hero-top"><div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+'</div>'+thangNavHtml(mk)+'</div>'
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
-    + '<div class="hero-sub">Đầu tháng '+so(duDau)+'</div>'
+    + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(daysInMonth(mk) - parseInt(todayStr().slice(8, 10), 10))+' ngày' : '')+'</div>'
     // thanh chia theo tỷ lệ thu : chi của tháng, để nhìn một cái biết tháng này thu hay chi nhiều hơn
     + '<div class="hero-flow" aria-hidden="true"><i class="thu" style="flex:'+phanThu+'"></i><i class="chi" style="flex:'+(100 - phanThu)+'"></i></div>'
     + '<div class="hero-nums">'
@@ -245,6 +249,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
+  h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   var nDk = dinhKyDenHan(todayStr()).length;
   var nVn = danhSachSapDenHan(7).length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
@@ -254,6 +259,20 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
+}
+
+// 1 dòng đọc nhanh dưới số dư: chi tháng này so với tháng trước (đang chạy dở thì CÙNG KỲ: ngày 1 -> hôm nay).
+// Dùng lại bdThangSoSanh (bieudo.js) nên con số giống tab Báo cáo. Thiếu dữ liệu tháng trước thì không hiện gì.
+function tongQuanSoSanhHtml(mk, tongChi, beforeLock){
+  if (beforeLock || typeof bdThangSoSanh !== 'function') return '';
+  var prev = bdThangSoSanh(mk);
+  if (!prev.coDl || !(prev.tongChi > 0)) return '';
+  var pct = bdPhanTram(tongChi, prev.tongChi);
+  var hu, ic, lop;
+  if (Math.abs(pct) < 3){ hu = 'Chi gần bằng'; ic = ''; lop = ''; }
+  else if (pct > 0){ hu = 'Chi nhiều hơn ' + pct + '% so với'; ic = icon('arrow-up'); lop = ' len'; }
+  else { hu = 'Chi ít hơn ' + (-pct) + '% so với'; ic = icon('arrow-down'); lop = ' xuong'; }
+  return '<div class="hero-tin'+lop+'">'+ic+'<span>'+hu+' '+(/^\d/.test(prev.nhan) ? 'cùng kỳ ' : '')+esc(prev.nhan)+'</span></div>';
 }
 
 /* ====================================================================
@@ -520,6 +539,7 @@ function renderSoTay(){
   html += '</div></div>';
   html += '<div class="qa-spacer"></div>' + qaBarHtml();       // đệm để thanh nổi không che khoản cuối cùng
   root.innerHTML = html;
+  state.soTayVuaGhi = null;
 }
 
 /* ====================================================================
@@ -567,12 +587,17 @@ function dlSuaHtml(date, it){
 }
 function dlDongHtml(date, it){
   if (state.soTayEditIid === it.iid) return '<div class="dl-row dang-sua">' + dlSuaHtml(date, it) + '</div>';
+  var e = state.data.journal[date] || {};
   var mo = (state.soTayOpenIid === it.iid), ten = catTen(it.kind, it.catId);
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaItem(it))) : '';
-  return '<div class="dl-row'+(mo ? ' mo' : '')+'">'
+  // dữ liệu cũ (chưa có dòng chi tiết): mọi khoản của ngày mang nguyên ghi chú chung của cả ngày -> lặp lại ở từng dòng thì rối,
+  // lấy tên danh mục làm tiêu đề (chữ ghi chú vẫn ở ô Sửa)
+  var ghiChung = !!(it.ghiChu && e.ghiChu === it.ghiChu && entryItems(e).length > 1);
+  var tieuDe = (it.ghiChu && !ghiChung) ? it.ghiChu : ten;
+  return '<div class="dl-row'+(mo ? ' mo' : '')+(it.iid === state.soTayVuaGhi ? ' anim-moi' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
     +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
-    +   '<span class="dl-txt"><span class="dl-t1">'+esc(it.ghiChu || ten)+'</span><span class="dl-t2">'+esc(ten)+vi+'</span></span>'
+    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+(tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi)+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
     + (mo ? '<div class="dl-act"><button type="button" class="btn secondary sm" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('pencil')+' Sửa</button>'
@@ -1078,6 +1103,7 @@ function handleSoTayAction(act, el){
     if (!catQ){ toast('Chưa có danh mục '+(kQ === 'thu' ? 'thu' : 'chi')+' để ghi — thêm ở tab "Danh mục".', { loai:'warn' }); return true; }
     var itQ = entryAddItem(ngayQ, kQ, catQ, tienQ, noteQ, viQ || state.viChon);
     if (!itQ){ toast('Không ghi được khoản này.', { loai:'err' }); return true; }
+    state.soTayVuaGhi = itQ.iid;       // khoản này hiện dần ở lần vẽ ngay sau đây (xem cuối renderSoTay)
     // ghi chú của NGÀY: giống saveEntry — có nội dung thì gắn thêm số tiền để cột Nội dung đọc ra luôn có số
     var ghiQ = noteQ ? noteQ + ' ' + fmt(Math.round(tienQ)) : '';
     if (ghiQ){
