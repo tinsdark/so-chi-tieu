@@ -16,20 +16,6 @@ function nhapBoDau(s){
   return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 }
 
-/* ---- QUY TẮC TỰ PHÂN LOẠI: settings.quyTac = [{ id, tuKhoa, kind, catId }] ----
-   Ghi chú chứa từ khóa (không phân biệt hoa thường / dấu) -> danh mục đó. Quy tắc đứng trước thắng.
-   Dùng ở Nhập file (dòng không có cột danh mục) và Ghi nhanh (gõ ghi chú tự chọn danh mục). */
-function nhapQuyTac(kind, text){
-  var t = nhapBoDau(text);
-  if (!t) return '';
-  var ds = (state.data.settings && state.data.settings.quyTac) || [];
-  for (var i = 0; i < ds.length; i++){
-    var q = ds[i], k = nhapBoDau(q.tuKhoa);
-    if (!k || q.kind !== kind || t.indexOf(k) < 0) continue;
-    if ((state.data.categories[kind] || []).some(function(c){ return c.id === q.catId; })) return q.catId;
-  }
-  return '';
-}
 // "chữ ký" của 1 file sao kê = dòng tiêu đề đã bỏ dấu. Cùng ngân hàng/ví xuất ra thì giống nhau -> dùng lại cách ghép cột.
 function nhapChuKy(rows, coHeader){
   if (!coHeader || !rows.length) return '';
@@ -199,8 +185,6 @@ function nhapPhanTich(imp){
         else if (chon === '+'){ x.catMoi = tenCat; }
         else { var c = catDaTim(x.kind, tenCat); if (c) x.catId = c.id; else x.catMoi = tenCat; }
         out.catCanChon[key] = { kind: x.kind, ten: tenCat, chon: x.catId ? x.kind + '|' + x.catId : '+' };
-      } else if (nhapQuyTac(x.kind, x.note)){
-        x.catId = nhapQuyTac(x.kind, x.note);
       } else if (macDinh.length === 2 && macDinh[0] === x.kind && macDinh[1]){
         x.catId = macDinh[1];
       } else {
@@ -309,7 +293,6 @@ function nhapCardHtml(){
   var nCot = imp.rows.reduce(function(m, r){ return Math.max(m, r.length); }, 0);
   var h = '<div class="card"><h3>Nhập từ file: '+esc(imp.ten)+'</h3>';
   if (imp.dungMau) h += '<div class="empty" style="padding:0 0 10px;text-align:left">'+icon('check')+' File cùng kiểu với lần nhập trước: đã dùng lại cách ghép cột, danh mục mặc định và ví của lần đó. Kiểm tra lại bên dưới nếu cần.</div>';
-  if ((state.data.settings.quyTac || []).length) h += '<div class="empty" style="padding:0 0 10px;text-align:left">Dòng không có danh mục sẽ được xếp theo <b>quy tắc tự phân loại</b> (tab Danh mục) trước khi dùng danh mục mặc định.</div>';
   h += '<label style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><input type="checkbox" data-act="impHeader"'+(imp.coHeader ? ' checked' : '')+'> Dòng đầu là tiêu đề cột</label>';
   h += '<div class="form-row">'
     + '<div><label>Cột Ngày *</label><select data-act="impMap" data-f="ngay">'+nhapOptCot(imp, nCot, imp.map.ngay)+'</select></div>'
