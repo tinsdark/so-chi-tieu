@@ -156,7 +156,7 @@ async function driveLoad(){
       // KHÔNG tải được != chưa có file. Đánh dấu để driveSave không tạo file mới đè lên file thật
       // (findFile chọn file sửa gần nhất, file trống mới tạo sẽ "thắng" file dữ liệu thật).
       state.taiLoi = true;
-      state.errorMsg = 'Không tải được dữ liệu từ Google Drive — đang dùng dữ liệu mặc định. Bấm "Làm mới" để thử lại.';
+      state.errorMsg = 'Không tải được dữ liệu từ Google Drive — đang dùng dữ liệu mặc định. Kéo xuống ở đầu trang (hoặc bấm "Làm mới") để thử lại.';
     } else {
       state.errorMsg = 'Làm mới thất bại, vẫn giữ dữ liệu hiện tại trên máy.';
     }
@@ -291,7 +291,7 @@ async function driveSave(){
   // ngoại tuyến (chưa đăng nhập): thay đổi đã nằm trong nháp trên máy, không có gì để gửi
   if (!accessToken){ renderSyncStatus(); return; }
   if (state.taiLoi){
-    state.errorMsg = 'Chưa tải được dữ liệu từ Drive nên CHƯA lưu lên Drive (để khỏi tạo file mới đè lên file thật). Thay đổi vẫn được giữ trên máy — bấm "Làm mới" khi có mạng.';
+    state.errorMsg = 'Chưa tải được dữ liệu từ Drive nên CHƯA lưu lên Drive (để khỏi tạo file mới đè lên file thật). Thay đổi vẫn được giữ trên máy — kéo xuống để làm mới (hoặc bấm "Làm mới") khi có mạng.';
     renderSyncStatus();
     return;
   }

@@ -262,7 +262,12 @@ function vuotHoi(loai, date){
   document.addEventListener('touchcancel', function(){ xong(true); });
 })();
 
-/* ---- kéo xuống ở đầu trang để làm mới ---- */
+/* ---- kéo xuống ở đầu trang để làm mới ----
+   Trên điện thoại nút "Làm mới" ở đầu trang bị ẩn (xem style.css), kéo xuống là cách duy nhất nên phải chắc ăn:
+   - "ở đầu trang" cho lệch <= 2px (iOS đôi khi báo scrollY lẻ như 0.3 hoặc 1 dù đã ở trên cùng).
+   - touchmove KHÔNG passive và chặn cử chỉ kéo xuống ở đầu trang, để iOS không giành mất cử chỉ
+     (nảy cao su / kéo-làm-mới của trình duyệt) rồi hủy touch giữa chừng.
+   - nếu iOS vẫn bắn touchcancel mà đã kéo đủ ngưỡng thì vẫn tính là làm mới. */
 (function(){
   if (typeof window === 'undefined' || !window.document || !document.addEventListener) return;
   var keo = null, NGUONG = 80;
@@ -271,27 +276,37 @@ function vuotHoi(loai, date){
     if (!el){ el = document.createElement('div'); el.id = 'keoLamMoi'; el.className = 'keo-lam-moi'; document.body.appendChild(el); }
     return el;
   }
+  function oDauTrang(){
+    var se = document.scrollingElement || document.documentElement;
+    return (window.scrollY || 0) <= 2 && (se.scrollTop || 0) <= 2;
+  }
+  function an(){
+    var el = document.getElementById('keoLamMoi');
+    if (el){ el.classList.remove('hien', 'du'); el.style.transform = ''; }
+  }
+  function xong(huy){
+    if (!keo) return;
+    var du = keo.d >= NGUONG; keo = null;
+    an();
+    if (du){ var b = document.getElementById('btnRefresh'); if (b) b.click(); }
+  }
   document.addEventListener('touchstart', function(ev){
     var app = document.getElementById('app');
-    if (ev.touches.length !== 1 || window.scrollY > 0 || !app || app.style.display === 'none' || _modalDangMo || _khoaDangMoAn()) { keo = null; return; }
+    if (ev.touches.length !== 1 || !oDauTrang() || !app || app.style.display === 'none' || _modalDangMo || _khoaDangMoAn()) { keo = null; return; }
     keo = { y: ev.touches[0].clientY, x: ev.touches[0].clientX, d: 0 };
   }, { passive: true });
   document.addEventListener('touchmove', function(ev){
     if (!keo) return;
     var d = ev.touches[0].clientY - keo.y;
-    if (d <= 0 || window.scrollY > 0 || Math.abs(ev.touches[0].clientX - keo.x) > d){ keo.d = 0; chiBao().classList.remove('hien', 'du'); return; }
+    if (d <= 0 || !oDauTrang() || Math.abs(ev.touches[0].clientX - keo.x) > d){ keo.d = 0; an(); return; }
     keo.d = d;
+    if (ev.cancelable && d > 6) ev.preventDefault();   // đang kéo xuống từ đầu trang: không để trình duyệt tự nảy/làm mới
     var el = chiBao();
     el.classList.add('hien'); el.classList.toggle('du', d >= NGUONG);
     el.textContent = d >= NGUONG ? 'Thả để làm mới' : 'Kéo xuống để làm mới';
     el.style.transform = 'translate(-50%,' + Math.min(d, NGUONG + 20) * 0.6 + 'px)';
-  }, { passive: true });
-  document.addEventListener('touchend', function(){
-    if (!keo) return;
-    var du = keo.d >= NGUONG; keo = null;
-    var el = document.getElementById('keoLamMoi');
-    if (el){ el.classList.remove('hien', 'du'); el.style.transform = ''; }
-    if (du){ var b = document.getElementById('btnRefresh'); if (b) b.click(); }
-  });
+  }, { passive: false });
+  document.addEventListener('touchend', function(){ xong(false); });
+  document.addEventListener('touchcancel', function(){ xong(true); });
   function _khoaDangMoAn(){ return typeof _khoaDangMo !== 'undefined' && _khoaDangMo; }
 })();
