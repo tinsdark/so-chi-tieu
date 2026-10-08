@@ -117,12 +117,15 @@ function ghiNhanhHtml(){
     +   '<button type="button" data-chen="+" data-for="qa_amount" aria-label="Cộng">+</button>'
     +   '<button type="button" data-chen="-" data-for="qa_amount" aria-label="Trừ">−</button>'
     +   '<button type="button" data-act="qaXoa">Xoá</button>'
-    + '</div>';
+    + '</div>'
+    // ghi chú ngay dưới số tiền: gõ xong số là tới ghi chú, không phải cuộn xuống khi bàn phím đang che màn hình
+    + '<input type="text" id="qa_note" class="qa-note" placeholder="Ghi chú, ví dụ: Ăn trưa với Nhật" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
+    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>';
   h += '<div class="qa-lbl">Danh mục</div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
   } else {
-    h += '<div class="qa-chips" role="group" aria-label="Danh mục">'
+    h += '<div class="qa-chips qa-cats" role="group" aria-label="Danh mục">'
       + top.map(function(c){
           return '<button type="button" class="qa-chip'+(c.id === sel ? ' on' : '')+'" data-act="qaCat" data-cat="'+esc(c.id)+'" aria-pressed="'+(c.id === sel)+'">'+catDot(kind, c.id)+esc(c.ten)+'</button>';
         }).join('')
@@ -153,10 +156,7 @@ function ghiNhanhHtml(){
     + '<label class="qa-chip qa-chon'+(tuyChon ? ' on' : '')+'">'+icon('calendar')+' '+(tuyChon ? ngay.slice(8,10)+'/'+ngay.slice(5,7) : 'Chọn ngày')
     +   '<input type="date" id="qa_date" class="qa-date-in" aria-label="Chọn ngày" data-act="qaDate" value="'+esc(ngay)+'"></label>'
     + '</div>';
-  h += '<div class="qa-lbl">Ghi chú</div>'
-    + '<input type="text" id="qa_note" class="qa-note" placeholder="Ví dụ: Ăn trưa với Nhật" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
-    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
-    + '</div>'
+  h += '</div>'          // đóng .qa-body
     + '<div class="qa-foot"><button type="button" class="btn qa-save '+kind+(coTien ? '' : ' chua')+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>'
     + (coTien ? 'Ghi khoản '+kind : 'Nhập số tiền để ghi')+'</button></div>'
     + '</div>';
@@ -180,7 +180,22 @@ function qaSheetVe(){
   root.innerHTML = '<div class="qa-scrim" data-act="qaDong"></div>' + ghiNhanhHtml();
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
+  qaKhopKhungNhin();
   setTimeout(function(){ root.classList.remove('moi'); }, 400);
+}
+// iPhone: bàn phím chỉ thu nhỏ "khung nhìn thấy" (visualViewport), không thu nhỏ khung layout -> bảng neo đáy bị bàn phím đè,
+// ô số tiền trôi lên khỏi màn hình. Ép lớp phủ đúng bằng vùng nhìn thấy để bảng nằm TRÊN bàn phím.
+function qaKhopKhungNhin(){
+  var root = document.getElementById('qaSheetRoot'), vv = window.visualViewport;
+  if (!root || !vv) return;
+  root.style.top = vv.offsetTop + 'px';
+  root.style.height = vv.height + 'px';
+  root.style.bottom = 'auto';
+  var b = root.querySelector('.qa-body'); if (b && !b._daCuon){ b.scrollTop = 0; b._daCuon = true; }
+}
+if (typeof window !== 'undefined' && window.visualViewport){
+  window.visualViewport.addEventListener('resize', qaKhopKhungNhin);
+  window.visualViewport.addEventListener('scroll', qaKhopKhungNhin);
 }
 function qaMoSheet(){
   state.qa.open = true;
@@ -591,7 +606,8 @@ function dlNgayHtml(d, kemNam){
   }
   h += '<div class="dl-card">';
   if (!items.length && !refs.length) h += '<div class="empty" style="text-align:left">Ngày này chưa có khoản nào.</div>';
-  items.forEach(function(it){ h += dlDongHtml(d, it); });
+  // khoản ghi sau nằm trên (items[] xếp theo thứ tự ghi); khoản do Vay-Nợ sinh ra (refs) không có giờ ghi nên xếp dưới cùng
+  items.slice().reverse().forEach(function(it){ h += dlDongHtml(d, it); });
   refs.forEach(function(r){ h += dlRefHtml(r); });
   return h + '</div></section>';
 }
