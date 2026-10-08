@@ -194,26 +194,8 @@ document.addEventListener('input', function(ev){
   var el = ev.target;
   if (!el || !el.id) return;
   if (el.id === 'qa_amount') state.qa.amt = el.value;
-  else if (el.id === 'qa_note'){ state.qa.note = el.value; qaApDungQuyTac(); }
+  else if (el.id === 'qa_note'){ state.qa.note = el.value; }
 });
-// gõ ghi chú khớp quy tắc tự phân loại -> chọn sẵn danh mục (chưa tự bấm chọn danh mục nào).
-// Chỉ đổi lớp .on của chip / giá trị ô "Khác…", KHÔNG vẽ lại thẻ (vẽ lại là mất focus, bàn phím sập).
-function qaApDungQuyTac(){
-  if (state.qa.catTay) return;
-  var kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
-  var id = nhapQuyTac(kind, state.qa.note);
-  if (!id || id === qaCatChon(kind)) return;
-  state.qa.cat[kind] = id;
-  var box = document.getElementById('ghiNhanh');
-  if (!box) return;
-  var trongChip = false;
-  box.querySelectorAll('[data-act=qaCat]').forEach(function(b){
-    var on = b.getAttribute('data-cat') === id; if (on) trongChip = true;
-    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
-  });
-  var sel = box.querySelector('[data-act=qaCatSel]');
-  if (sel){ sel.value = trongChip ? '' : id; sel.classList.toggle('on', !trongChip); }
-}
 
 // thanh chọn tháng dùng chung cho Sổ tay và Báo cáo (cùng state.soTayMonth)
 function thangNavHtml(mk){
@@ -960,10 +942,8 @@ function handleSoTayAction(act, el){
     state.qa.kind = (el.getAttribute('data-kind') === 'thu') ? 'thu' : 'chi';
     qaGhiNho();
     qaVeLai();
-    qaApDungQuyTac();
   } else if (act === 'qaCat'){
     state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.getAttribute('data-cat');
-    state.qa.catTay = true;      // tự bấm chọn danh mục thì quy tắc tự phân loại không đổi nữa
     qaGhiNho();
     qaVeLai();
   } else if (act === 'qaSave'){
@@ -989,7 +969,7 @@ function handleSoTayAction(act, el){
       itQ.gc = ghiQ;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
-    state.qa.amt = ''; state.qa.note = ''; state.qa.catTay = false; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
+    state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
     // có ví mặc định đã tích chọn: lần nhập sau quay về ví đó; chưa có thì nhớ ví vừa chọn như trước
     if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viMacDinhDaChon() ? '' : viQ; }
     var banGhi = { date: ngayQ, iid: itQ.iid, note: ghiQ, daHoan: false };
@@ -1268,7 +1248,7 @@ function handleSoTayChange(el){
     veLaiTabSoTay();
     return true;
   } else if (el.matches('[data-act=qaCatSel]')){
-    if (el.value){ state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.value; state.qa.catTay = true; qaGhiNho(); }
+    if (el.value){ state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.value; qaGhiNho(); }
     qaVeLai();
     return true;
   } else if (el.matches('[data-act=qaWallet]')){

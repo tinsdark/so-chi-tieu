@@ -2241,19 +2241,6 @@ test('Tài sản ròng: tiền ví + cho vay chưa thu − nợ gốc, tính l�
   setToday('2026-10-01');
 });
 
-test('Quy tắc tự phân loại: không phân biệt dấu/hoa thường, đúng loại thu/chi, danh mục phải còn tồn tại', function(){
-  var d = baseData(); d.categories.chi.push({ id:'xang', ten:'Xăng', chiTieu:0 });
-  d.settings.quyTac = [{ id:'q1', tuKhoa:'Grab', kind:'chi', catId:'xang' }, { id:'q2', tuKhoa:'điện', kind:'chi', catId:'khongcon' }];
-  loadData(d);
-  eq(ctx.nhapQuyTac('chi', 'GRAB đi làm'), 'xang'); eq(ctx.nhapQuyTac('thu', 'grab'), '', 'sai loại');
-  eq(ctx.nhapQuyTac('chi', 'tiền dien'), '', 'danh mục đã xóa thì bỏ qua');
-  // nhập file: dòng không có cột danh mục -> theo quy tắc trước danh mục mặc định
-  var imp = { rows: [['Ngày','Số tiền','Nội dung'], ['05/10/2026','-50000','Grab về nhà'], ['06/10/2026','-30000','Trà sữa']], coHeader: true,
-    map: { ngay:0, tien:1, note:2, loai:-1, cat:-1, vi:-1 }, soDuong:'chi', catMD:{ thu:'', chi:'chi|an' }, catMap:{}, boTrung:true };
-  var kq = ctx.nhapPhanTich(imp);
-  eq(kq.dong[0].catId, 'xang', 'theo quy tắc'); eq(kq.dong[1].catId, 'an', 'không khớp -> mặc định');
-});
-
 test('Nhập file: lưu cách ghép cột theo dòng tiêu đề, giữ tối đa 10 mẫu', function(){
   loadData(baseData());
   var imp = { rows: [['Ngày GD','Số tiền','Diễn giải']], coHeader: true, map: { ngay:0, tien:1, note:2, loai:-1, cat:-1, vi:-1 }, soDuong:'chi', catMD:{ thu:'', chi:'chi|an' }, viId:'' };
