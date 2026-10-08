@@ -62,6 +62,8 @@ var state = {
   // để vẽ lại trang (poll Drive, đổi tab) không làm mất số vừa gõ.
   qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '' },
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
+  soTayOpenIid: null,     // iid khoản đang mở nút Sửa / Xóa trong danh sách ngày
+  soTayLocMo: false,      // khung tìm kiếm & lọc ở "Chi tiết theo ngày" đang mở
   // bản nháp mô phỏng — CHỈ nằm trong RAM, không bao giờ ghi vào data/Drive.
   // Thoát trang / đăng xuất / tải lại từ Drive là mất sạch (cố ý).
   mp: { data: null, napLuc: null, horizon: 24, formOpen: false, editIdx: -1, dieuChinh: [] },
@@ -472,6 +474,7 @@ var ICON_PATHS = {
   'x': "<path d=\"M6 6l12 12M18 6L6 18\"/>",
   'up-right': "<path d=\"M7 17L17 7\"/><path d=\"M8 7h9v9\"/>",
   'lock': "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"1.5\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>",
+  'search': "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M16 16l4.5 4.5\"/>",
   'download': "<path d=\"M12 4v11\"/><path d=\"M7.5 11L12 15.5 16.5 11\"/><path d=\"M5 20h14\"/>",
   'upload': "<path d=\"M12 15V4\"/><path d=\"M7.5 8L12 3.5 16.5 8\"/><path d=\"M5 20h14\"/>",
   'transfer': "<path d=\"M4 8h14\"/><path d=\"M14.5 4.5L18 8l-3.5 3.5\"/><path d=\"M20 16H6\"/><path d=\"M9.5 12.5L6 16l3.5 3.5\"/>",

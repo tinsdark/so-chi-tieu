@@ -186,7 +186,7 @@ function motionDaGhi(){
    nền màu + biểu tượng + chữ ("Xóa" đỏ / "Sửa" xanh); vuốt đủ xa thì đổi thành "Thả để xóa / Thả để sửa".
    Thả tay ở vị trí đủ xa thì HỎI XÁC NHẬN rồi mới làm (nhầm tay cũng không mất gì). Chưa đủ xa thì dòng bật về chỗ cũ. */
 function vuotNenTao(row){
-  var tbody = row.parentNode;
+  var tbody = row.parentNode;   // khung .dl (position:relative) chứa các nhóm ngày
   var nen = document.createElement('div');
   nen.className = 'vuot-nen';
   nen.setAttribute('aria-hidden', 'true');
@@ -218,7 +218,7 @@ function vuotHoi(loai, date){
   var bd = null;
   document.addEventListener('touchstart', function(ev){
     if (ev.touches.length !== 1 || state.tab !== 'sotay') return;
-    var row = ev.target.closest && ev.target.closest('tr.st-row');
+    var row = ev.target.closest && ev.target.closest('.dl-day');
     if (!row || ev.target.closest('button, a, input, select')) { bd = null; return; }
     bd = { row: row, x: ev.touches[0].clientX, y: ev.touches[0].clientY, dx: 0, ngang: null, nen: null, qua: false,
            nguong: Math.min(110, row.offsetWidth * 0.3) };
@@ -245,13 +245,12 @@ function vuotHoi(loai, date){
     vuotNenBo(b);
     if (huy || Math.abs(dx) < b.nguong) return;
     var loai = dx < 0 ? 'xoa' : 'sua';
-    var nut = b.row.querySelector(dx < 0 ? '[data-act=delDay]' : '[data-act=editDay]');
-    var date = nut && nut.getAttribute('data-date');
+    var date = b.row.getAttribute('data-date');
     if (!date) return;
     var chay = function(){
-      // vẽ lại có thể đã thay dòng trong lúc hộp thoại mở: tìm lại nút theo ngày
-      var n2 = document.querySelector((loai === 'xoa' ? '[data-act=delDay]' : '[data-act=editDay]') + '[data-date="' + date + '"]');
-      if (n2) n2.click();
+      // vẽ lại có thể đã thay nhóm ngày trong lúc hộp thoại mở: tìm lại theo ngày (handler chỉ đọc data-date)
+      var n2 = document.querySelector('.dl-day[data-date="' + date + '"]');
+      if (n2) handleAction(loai === 'xoa' ? 'delDay' : 'editDay', n2);
     };
     // ngày có khoản vay: nút Xóa tự hỏi bằng hộp thoại riêng, có liệt kê hậu quả ở Vay - Nợ -> không hỏi 2 lần
     var coRef = loai === 'xoa' && state.data.journal[date] && (state.data.journal[date].refs || []).length;

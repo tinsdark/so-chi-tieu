@@ -140,6 +140,7 @@ document.addEventListener('keydown', function(ev){
   } else if (k === '/'){
     ev.preventDefault();
     if (state.tab !== 'sotay') chuyenTab('sotay');
+    if (!state.soTayLocMo){ state.soTayLocMo = true; renderSoTay(); }   // khung tìm kiếm mặc định gấp lại
     var oTim = document.querySelector('[data-act=soTaySearchInput]');
     if (oTim){ oTim.scrollIntoView({ behavior:'smooth', block:'center' }); oTim.focus(); }
   } else if (k === '?'){
@@ -157,6 +158,12 @@ document.addEventListener('keydown', function(ev){
     ev.preventDefault();
     handleAction('qaSave', null);
   }
+});
+
+// khoản / tiêu đề ngày trong Sổ tay là <div role="button"> (để vuốt ngang được): Enter hoặc Space = bấm
+document.addEventListener('keydown', function(ev){
+  if ((ev.key !== 'Enter' && ev.key !== ' ') || ev.isComposing || !ev.target || !ev.target.matches) return;
+  if (ev.target.matches('div[role=button][data-act]')){ ev.preventDefault(); ev.target.click(); }
 });
 
 // xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
