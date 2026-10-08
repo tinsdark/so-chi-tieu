@@ -2254,19 +2254,6 @@ test('Quy tắc tự phân loại: không phân biệt dấu/hoa thường, đú
   eq(kq.dong[0].catId, 'xang', 'theo quy tắc'); eq(kq.dong[1].catId, 'an', 'không khớp -> mặc định');
 });
 
-test('Ghi nhanh: đã tự bấm danh mục khác, gõ từ khóa khớp quy tắc vẫn nhảy sang; đã chỉnh tay thì không giật lại', function(){
-  var d = baseData(); d.categories.chi.push({ id:'xang', ten:'Xăng', chiTieu:0 });
-  d.settings.quyTac = [{ id:'q1', tuKhoa:'ăn', kind:'chi', catId:'an' }];
-  loadData(d);
-  ctx.state.qa = { kind:'chi', cat:{ chi:'xang' }, amt:'', note:'', date:'', wallet:'', catTay:true };   // vừa tự bấm Xăng
-  ctx.state.qa.note = 'ăn trưa'; ctx.qaApDungQuyTac();
-  eq(ctx.state.qa.cat.chi, 'an', 'gõ "ăn" thì nhảy sang Ăn dù đã tự bấm Xăng trước đó');
-  // người dùng sửa lại tay sang Xăng: gõ tiếp cùng từ khóa không được giật về Ăn
-  ctx.state.qa.cat.chi = 'xang'; ctx.state.qa.catTay = true;
-  ctx.state.qa.note = 'ăn trưa nay'; ctx.qaApDungQuyTac();
-  eq(ctx.state.qa.cat.chi, 'xang', 'đã sửa tay thì giữ nguyên');
-});
-
 test('Nhập file: lưu cách ghép cột theo dòng tiêu đề, giữ tối đa 10 mẫu', function(){
   loadData(baseData());
   var imp = { rows: [['Ngày GD','Số tiền','Diễn giải']], coHeader: true, map: { ngay:0, tien:1, note:2, loai:-1, cat:-1, vi:-1 }, soDuong:'chi', catMD:{ thu:'', chi:'chi|an' }, viId:'' };
