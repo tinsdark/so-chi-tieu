@@ -590,6 +590,7 @@ function normalizeData(d){
   }
   d.wallets.forEach(function(w){
     w.soDuDauKy = num(w.soDuDauKy);
+    w.deDanh = !!w.deDanh;
     if (!w.ten) w.ten = 'Ví';
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   });
@@ -715,12 +716,17 @@ function soDuTheoVi(walletId, dateStr, d){
   });
   return bal;
 }
-// Cảnh báo ví sắp ÂM: trả câu cảnh báo nếu một thay đổi (delta: âm = ví mất tiền) làm ví đang >= 0 thành < 0.
+// Cảnh báo khi lấy tiền ra khỏi ví để dành, hoặc ví sắp ÂM: trả câu cảnh báo nếu một thay đổi (delta: âm = ví mất tiền) làm ví đang >= 0 thành < 0.
 // Ví ĐÃ âm từ trước (thẻ tín dụng, nợ) thì không nhắc lại mỗi lần. Chỉ cảnh báo, không chặn.
 function viCanhBaoAm(walletId, delta, d){
   d = d || state.data;
   var w = walletById(walletId, d) || walletById(viMacDinhId(d), d);
   if (!w || !(delta < 0)) return '';
+  // ví để dành: lấy tiền ra là hỏi lại, kể cả khi ví vẫn đủ tiền
+  if (w.deDanh){
+    var mt = (d.mucTieu || []).filter(function(g){ return g.walletId === w.id; }).map(function(g){ return g.ten; });
+    return 'Ví "' + w.ten + '" là ví để dành' + (mt.length ? ' (mục tiêu: ' + mt.join(', ') + ')' : '') + '. Khoản này lấy ' + fmt(Math.round(-delta)) + ' ra khỏi ví đó.';
+  }
   var truoc = soDuTheoVi(w.id, '9999-12-31', d), sau = truoc + delta;
   if (truoc < 0 || sau >= 0) return '';
   return 'Ví "' + w.ten + '" hiện còn ' + fmt(Math.round(truoc)) + ', sau khoản này sẽ âm ' + fmt(Math.round(-sau)) + '.';
@@ -735,6 +741,7 @@ function viDangDung(id, d){
   });
   ((d.vayNo && d.vayNo.vayNoPhaiTra) || []).concat((d.vayNo && d.vayNo.choVay) || []).forEach(function(l){ if (l.walletId === id) n++; });
   (d.chuyenVi || []).forEach(function(t){ if (t.tuVi === id || t.denVi === id) n++; });
+  (d.mucTieu || []).forEach(function(g){ if (g.walletId === id) n++; });   // mục tiêu đang gắn ví này: xóa ví là làm mục tiêu tụt về 0
   return n;
 }
 // <option> chọn ví, dùng chung cho form Sổ tay / dòng chi tiết / khoản vay

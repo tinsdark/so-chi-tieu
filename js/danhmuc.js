@@ -119,13 +119,14 @@ function viCardHtml(){
   var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
   var h = '<div class="card k-wal"><h3>Ví / nguồn tiền</h3>'
     + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
-    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch thì không xóa được, chỉ đổi tên.', 'Ví / nguồn tiền hoạt động thế nào?');
+    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch hoặc đang gắn mục tiêu thì không xóa được, chỉ đổi tên. Tích <b>Để dành</b> cho ví quỹ/tiết kiệm: chi hoặc chuyển tiền ra khỏi ví đó sẽ được hỏi lại.', 'Ví / nguồn tiền hoạt động thế nào?');
   ws.forEach(function(w){
     var dung = viDangDung(w.id);
     h += '<div class="form-row vi-row" style="align-items:flex-end">'
       + '<div><label>Tên ví</label><input type="text" data-act="viTen" data-id="'+esc(w.id)+'" value="'+esc(w.ten)+'"></div>'
       + '<div><label>Số dư đầu kỳ</label><input type="text" inputmode="numeric" autocomplete="off" class="money" data-act="viDu" data-id="'+esc(w.id)+'" value="'+veSo(w.soDuDauKy)+'" placeholder="0"></div>'
       + '<div style="flex:0"><label class="vi-md" title="Ví điền sẵn khi nhập giao dịch, thêm khoản vay, khoản định kỳ mới"><input type="radio" name="viMd" data-act="viMd" data-id="'+esc(w.id)+'"'+(w.id === viMacDinhId() ? ' checked' : '')+'> Mặc định</label></div>'
+      + '<div style="flex:0"><label class="vi-md" title="Ví để dành riêng (quỹ, tiết kiệm): chi hoặc chuyển tiền ra khỏi ví này sẽ được hỏi lại trước khi ghi"><input type="checkbox" data-act="viDeDanh" data-id="'+esc(w.id)+'"'+(w.deDanh ? ' checked' : '')+'> Để dành</label></div>'
       + '<div style="flex:0"><button class="icon-btn" data-act="viXoa" data-id="'+esc(w.id)+'" title="'+(dung ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được' : 'Xóa ví này')+'" aria-label="Xóa ví '+esc(w.ten)+'"'
       + ((ws.length < 2 || dung) ? ' disabled style="opacity:.35"' : '')+'>'+icon('trash')+'</button></div></div>';
   });
@@ -134,14 +135,14 @@ function viCardHtml(){
     + '<span style="color:var(--muted);font-size:13px">Tổng số dư đầu kỳ: <b style="color:var(--text)">'+fmt(Math.round(tong))+'</b></span></div></div>';
 }
 
-/* ---- Mục tiêu tiết kiệm: khai báo (tiến độ hiện ở Sổ tay, logic ở state.js) ---- */
+/* ---- Mục tiêu tiết kiệm: khai báo (tiến độ hiện ở tab Báo cáo, logic ở state.js) ---- */
 function mtCardHtml(){
   var gs = state.data.mucTieu || [];
   var coVi = (state.data.wallets || []).length > 1;
   var h = '<div class="card k-goal"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px">Mục tiêu tiết kiệm'
     + '<button class="btn secondary sm" data-act="mtThem">+ Thêm</button></h3>'
-    + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt số tiền cần có và hạn chót, app tính còn thiếu và cần để dành bao nhiêu mỗi tháng.'
-    + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự lấy từ số dư ví đó; không gắn thì tự bấm "+ Gom thêm" ở Sổ tay.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví để dành.')
+    + '<div class="empty" style="padding:0 0 10px;text-align:left">Đặt số tiền cần có và hạn chót, tab Báo cáo hiện còn thiếu bao nhiêu và cần để dành mỗi tháng bao nhiêu.'
+    + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự bằng số dư ví đó, chuyển tiền sang ví bằng "Chuyển ví" ở Sổ tay. Không gắn thì tự bấm "+ Gom thêm" ở tab Báo cáo.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví để dành.')
     + ' Mục tiêu chỉ để theo dõi, không ghi thu/chi và không đổi số dư.</div>';
   if (state.mtForm){
     var ed = state.mtForm.id ? gs.find(function(g){ return g.id === state.mtForm.id; }) : null;
@@ -151,7 +152,7 @@ function mtCardHtml(){
       + '<div><label>Số tiền cần có</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_tien" value="'+veSo(g0.soTien)+'" placeholder="0"></div>'
       + '<div><label>Hạn chót (tùy chọn)</label><input type="month" id="mt_han" value="'+esc(g0.hanChot || '')+'"></div>'
       + (coVi ? '<div><label>Gắn ví</label><select id="mt_vi"><option value="">Không gắn — tự gom tay</option>'+viOptionsHtml(g0.walletId)+'</select></div>' : '')
-      + '<div><label>Đã gom (khi gom tay)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_gom" value="'+veSo(g0.daGom)+'" placeholder="0"></div>'
+      + '<div><label>Đã gom (chỉ dùng khi không gắn ví)</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="mt_gom" value="'+veSo(g0.daGom)+'" placeholder="0"></div>'
       + '</div><div style="display:flex;gap:8px;margin-bottom:12px">'
       + '<button class="btn sm" data-act="mtLuu">'+(ed ? 'Cập nhật' : 'Lưu')+'</button>'
       + '<button class="btn secondary sm" data-act="mtHuy">Hủy</button></div>';
@@ -591,6 +592,10 @@ function handleDanhMucChange(el){
     }
     wT.ten = tenMoi;
     scheduleSave();
+    return true;
+  } else if (el.matches('[data-act=viDeDanh]')){
+    var wD2 = walletById(el.getAttribute('data-id'));
+    if (wD2){ wD2.deDanh = !!el.checked; scheduleSave(); }
     return true;
   } else if (el.matches('[data-act=viMd]')){
     // chỉ ví đang tích mới có hiệu lực; ví khác không còn là mặc định. Không đụng gì tới dòng/khoản đã ghi.

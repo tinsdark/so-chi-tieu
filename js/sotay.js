@@ -772,7 +772,7 @@ function handleSoTayAction(act, el){
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
     var canhBao = canhBaoViAm(act, el);
     if (canhBao){
-      xacNhan('Ví sẽ bị âm', canhBao + '\n\nNếu bạn quên ghi khoản thu thì nên ghi thu trước. Vẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
+      xacNhan('Kiểm tra trước khi ghi', canhBao + '\n\nVẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
         .then(function(ok){ if (ok){ el._daBaoAm = true; try{ handleSoTayAction(act, el); }finally{ el._daBaoAm = false; } } });
       return true;
     }
