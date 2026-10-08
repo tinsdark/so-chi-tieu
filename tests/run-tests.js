@@ -1626,7 +1626,7 @@ test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút ch�
   } finally { ctx.window.matchMedia = mm0; ctx.state.dtThang = null; ctx.state.dtBangNam = false; setToday('2026-10-01'); }
 });
 
-test('Bảng Vay-Nợ dạng thẻ: có class m-cards, mỗi ô có nhãn cột (data-th)', function(){
+test('Vay-Nợ dạng thẻ: mỗi khoản là 1 thẻ có id, lịch trả là danh sách kỳ (không còn bảng)', function(){
   setToday('2026-10-10');
   var d = baseTraNo();
   d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', ten:'Xe', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10 })];
@@ -1638,10 +1638,34 @@ test('Bảng Vay-Nợ dạng thẻ: có class m-cards, mỗi ô có nhãn cột 
   ctx.renderVayNo = renderThat.renderVayNo;
   try{ voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); }); } finally { ctx.renderVayNo = rv0; }
   var h = root.innerHTML;
-  eq((h.match(/<table class="m-cards">/g) || []).length, 4, '4 bảng: sắp đến hạn, cho vay, vay nợ, lịch trả');
-  ok(h.indexOf('data-th="Dư nợ còn lại"') >= 0 && h.indexOf('data-th="Dự kiến thu"') >= 0 && h.indexOf('data-th="Theo lịch"') >= 0, 'nhãn cột');
-  ok(h.indexOf('<tr class="m-detail">') >= 0, 'dòng chứa lịch trả');
+  eq((h.match(/<table/g) || []).length, 0, 'không còn bảng nào');
+  ok(h.indexOf('id="vn-vn-v1"') >= 0 && h.indexOf('id="vn-cv-c1"') >= 0, 'thẻ khoản vay + cho vay có id');
+  ok(h.indexOf('Dư nợ còn lại') >= 0 && h.indexOf('Dự kiến hết nợ') >= 0, 'nhãn thẻ khoản vay');
+  eq((h.match(/class="vn-ky /g) || []).length, 6, 'lịch 6 kỳ mở sẵn (khoản vay ngắn, hiện đủ)');
+  ok(h.indexOf('data-act="vnGhiNhanTra"') >= 0, 'kỳ tiếp theo có nút Ghi nhận đã trả');
+  ok(h.indexOf('Gốc / lãi') >= 0, 'mỗi kỳ có gốc / lãi');
   ctx.state.vnDetailId = null;
+  setToday('2026-10-01');
+});
+
+test('Vay-Nợ: thẻ tổng quan cộng đúng nợ / cho vay / tháng này; Sắp đến hạn hiện phần CÒN THIẾU của kỳ trả dở', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  var v = loanKhongLai({ id:'v1', ten:'Xe', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:12 });
+  v.traNo = [{ rid:'r0', ky:0, mk:'2026-10', soTien:600000, ngay:'2026-10-05', dongKy:false }];
+  d.vayNo.vayNoPhaiTra = [v];
+  d.vayNo.choVay = [{ id:'c1', ten:'Hùng', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-10-12' }];
+  loadData(d);
+  var ds = ctx.danhSachSapDenHan(7).filter(function(x){ return x.loai === 'vayNo'; });
+  near(ds[0].soTien, 400000, 0.01, 'kỳ trả dở: chỉ còn 400.000');
+  var root = { innerHTML:'' };
+  var rv0 = ctx.renderVayNo; ctx.renderVayNo = renderThat.renderVayNo;
+  try{ voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); }); } finally { ctx.renderVayNo = rv0; }
+  var h = root.innerHTML;
+  ok(h.indexOf('5.400.000') >= 0, 'còn nợ = 6.000.000 − 600.000');
+  ok(h.indexOf('Nợ ròng') >= 0 && h.indexOf('4.900.000') >= 0, 'nợ ròng = nợ − cho vay chờ thu (500.000)');
+  ok(h.indexOf('<b>60%</b>') >= 0, 'tháng này đã trả 600.000 / 1.000.000');
+  ok(h.indexOf('kỳ 1') >= 0 || h.indexOf('Kỳ 1 còn thiếu') >= 0, 'thẻ ghi rõ kỳ đang trả dở còn thiếu');
   setToday('2026-10-01');
 });
 
