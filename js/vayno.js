@@ -114,7 +114,7 @@ function choVayBoMotPhan(c, soBo){ c.daBo = (c.daBo || []).concat([{ soTien: soB
 function choVayHoanBo(c){
   if (c.tatToan || !(c.daBo || []).length) return null;
   var lan = c.daBo.pop();
-  c.trangThai = conLaiPhaiThu(c) <= 0.01 ? 'da_thu_du' : 'dang_cho';
+  choVayCapNhatTrangThai(c);
   return lan;
 }
 // ghi số tiền THỰC THU của khoản cho vay: cộng daThu + giao dịch thu "Thu hồi cho vay" ở Sổ tay (có ref gắn khoản).
@@ -124,9 +124,13 @@ function choVayGhiThu(c, so, ngay, viId, dongKhoan){
   c.daThu = num(c.daThu) + so;
   journalAddRef(ngay, c.id, 'thuHoiChoVay', so, 'Thu hồi cho vay: ' + c.ten, { rid: 't' + Date.now().toString(36), walletId: viId });
   if (dongKhoan && thieu > 0.01) c.tatToan = { soTien: thieu, ngay: ngay };
-  c.trangThai = (c.tatToan || conLaiPhaiThu(c) <= 0.01) ? 'da_thu_du' : 'dang_cho';
+  choVayCapNhatTrangThai(c);
   invalidateBalanceCache();
   return thieu;
+}
+// trạng thái khoản cho vay luôn suy ra từ số liệu: đóng khi đã xóa nợ phần còn lại hoặc thu + xóa nợ đủ số cho vay
+function choVayCapNhatTrangThai(c){
+  c.trangThai = (c.tatToan || conLaiPhaiThu(c) <= 0.01) ? 'da_thu_du' : 'dang_cho';
 }
 function conLaiPhaiThu(loan){
   if (loan.tatToan) return 0;
@@ -971,7 +975,10 @@ function loanRevertRef(r){
     var c = (state.data.vayNo.choVay||[]).find(function(x){ return x.id === r.loanId; });
     if (!c) return;
     c.daThu = Math.max(0, num(c.daThu) - num(r.soTien));
-    if (!c.tatToan && conLaiPhaiThu(c) > 0.01) c.trangThai = 'dang_cho';
+    // đã tất toán (phần thiếu = xóa nợ) mà hoàn lại tiền thu thì phần xóa nợ không còn đúng số -> mở lại khoản,
+    // còn phải thu tính lại = số cho vay − đã thu − các lần xóa nợ một phần
+    c.tatToan = null;
+    choVayCapNhatTrangThai(c);
   }
   // nhanTienVay / choVay là giao dịch GỐC sinh ra khoản vay -> không hoàn ở đây,
   // phải sửa/xóa chính khoản vay ở tab Vay - Nợ (xem chặn ở delDay của sotay.js)
@@ -1085,6 +1092,7 @@ function handleVayNoAction(act, el){
     if (state.vnFormId){
       var oldCV = state.data.vayNo.choVay.find(function(x){ return x.id===state.vnFormId; });
       Object.assign(oldCV, objCV);
+      choVayCapNhatTrangThai(oldCV);   // đổi số cho vay thì đủ/thiếu thay đổi theo
       cvId = oldCV.id;
     } else {
       objCV.id = 'cv_' + slugify(tenCV) + '_' + Date.now().toString(36);
@@ -1269,6 +1277,7 @@ function handleVayNoAction(act, el){
           if (so > conT + 0.01) return { loi: 'Không được lớn hơn số còn phải thu (' + fmt(Math.round(conT)) + ').' };
           var ngay = root.querySelector('#vn_dl_ngay').value;
           if (!ngay) return { loi: 'Chọn ngày thu.' };
+          if (cvT.ngayChoVay && ngay < cvT.ngayChoVay) return { loi: 'Ngày thu không được trước ngày cho vay (' + ngayVN(cvT.ngayChoVay) + ').' };
           var xong = root.querySelector('input[name=vn_dl_k]:checked');
           return { so: so, ngay: ngay, viId: vnDlViDoc(cvT), tatToan: so < conT - 1 && !!xong && xong.value === 'xong' };
         }
@@ -1322,7 +1331,7 @@ function handleVayNoAction(act, el){
     var cvHTT = state.data.vayNo.choVay.find(function(x){ return x.id===idHTT; });
     if (!cvHTT || !cvHTT.tatToan) return true;
     cvHTT.tatToan = null;
-    cvHTT.trangThai = conLaiPhaiThu(cvHTT) <= 0.01 ? 'da_thu_du' : 'dang_cho';
+    choVayCapNhatTrangThai(cvHTT);
     scheduleSave(); renderVayNo();
   } else if (act === 'vnGhiNhanTra'){
     var idGTr = el.getAttribute('data-id');
