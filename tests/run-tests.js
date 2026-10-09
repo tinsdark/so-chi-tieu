@@ -1976,6 +1976,16 @@ test('normalizeData: ví mặc định đã bị xóa / không có thật thì b
   eq(ctx.viMacDinhId(), 'w1');
 });
 
+test('Danh mục: hàng ví KHÔNG hiện số dư đầu kỳ (dễ nhầm với tiền đang có), số chỉ nằm trong bảng sửa', function(){
+  loadData(dataHaiVi());
+  ctx.state.data.wallets[0].soDuDauKy = 1234567;
+  var h = ctx.viCardHtml();
+  ok(!/1[.,]?234[.,]?567/.test(h), 'thẻ ví không hiện số tiền');
+  ok(h.indexOf('Tổng số dư đầu kỳ') < 0, 'không còn dòng tổng');
+  var sheet = ctx.viSheetHtml({ loai:'vi', id: ctx.state.data.wallets[0].id });
+  ok(/id="dm_vi_du" value="1[.,]?234[.,]?567"/.test(sheet) && sheet.indexOf('KHÔNG phải số tiền ví đang có') >= 0, 'bảng sửa có số đầu kỳ và nhắc đây không phải số đang có');
+});
+
 test('Danh mục: tích chọn ví mặc định lưu vào settings, không đổi dòng đã ghi; xóa ví mặc định thì bỏ cờ', function(){
   setToday('2026-10-10');
   var d = dataHaiVi();
