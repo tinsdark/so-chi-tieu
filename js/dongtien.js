@@ -321,7 +321,7 @@ function dtDuKienHtml(rows, selMk){
   });
   list += '</div>';
   var fcM = forecastEligibleMonths(), startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
-  return '<div class="card bc-card" id="dtDuKien"><h3 class="bc-h"><span>Dự kiến các tháng tới</span><span class="bc-h-s">'+n+' tháng</span></h3>'
+  return '<div class="card bc-card" id="dtDuKien"><h3 class="bc-h"><span>Dòng tiền tích lũy tương lai</span><span class="bc-h-s">'+n+' tháng</span></h3>'
     + tiles + chart + list
     + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số dư tính bằng ₫</span>'
     + '<button type="button" class="dt-more in" data-act="dtDuKienHet">'+(state.dtDuKienHet ? 'Thu gọn' : 'Xem cả '+n+' tháng')+'</button></div>'

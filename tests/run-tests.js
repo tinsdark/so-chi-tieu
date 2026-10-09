@@ -2274,7 +2274,7 @@ test('Dòng tiền: thẻ đầu, Thu/Chi theo danh mục, dự kiến; không c
   ctx.state.dtMk = null; ctx.state.dtBangNam = false; ctx.state.dtMoPhong = false;
   var h = renderDT();
   ok(h.indexOf('Cân đối tháng') >= 0 && h.indexOf('id="dtDau"') >= 0, 'thẻ đầu');
-  ok(h.indexOf('Thu nhập tháng 10') >= 0 && h.indexOf('Chi theo hạn mức') >= 0 && h.indexOf('Dự kiến các tháng tới') >= 0);
+  ok(h.indexOf('Thu nhập tháng 10') >= 0 && h.indexOf('Chi theo hạn mức') >= 0 && h.indexOf('Dòng tiền tích lũy tương lai') >= 0);
   ok(h.indexOf('<table') < 0, 'không còn bảng ở màn chính');
   ok(h.indexOf('data-act="dtBangNam"') >= 0 && h.indexOf('Xem bảng cả năm') >= 0);
   ok(h.indexOf('data-act="dtJump"') >= 0 && h.indexOf('data-act="dtPrev"') >= 0, 'chọn tháng');
@@ -3010,14 +3010,14 @@ test('vnTheoDoiRows: phải thu = còn chờ thu (quá hạn dồn vào tháng n
   eq(r[1].thuCan, 500000, 'T1/27 = khoản A'); eq(r[1].thuDa, 0); eq(r[2].thuCan, 0);
 });
 
-test('Dòng tiền tích lũy tương lai (Vay - Nợ): ô số liệu + biểu đồ + danh sách đủ số tháng đã chọn; chỉ nợ (cột Phải trả/Phải thu); không có khoản nào thì ẩn thẻ', function(){
+test('Bảng theo dõi (Vay - Nợ): ô số liệu + biểu đồ + danh sách đủ số tháng đã chọn; chỉ nợ (cột Phải trả/Phải thu); không có khoản nào thì ẩn thẻ', function(){
   setToday('2026-12-10');
   var d = baseData(); loadData(d);
   eq(ctx.vnTheoDoiHtml(), '', 'chưa có khoản nào -> không hiện');
   d.vayNo.vayNoPhaiTra = [loanKhongLai()]; loadData(d);
   ctx.state.vnHorizon = 12;
   var h = ctx.vnTheoDoiHtml();
-  ok(h.indexOf('Dòng tiền tích lũy tương lai') >= 0, 'tiêu đề');
+  ok(h.indexOf('Bảng theo dõi') >= 0 && h.indexOf('Dòng tiền tích lũy') < 0, 'tiêu đề');
   ok(h.indexOf('class="dt-tiles"') >= 0 && h.indexOf('Tháng này còn phải trả') >= 0, 'ô số liệu');
   ok(h.indexOf('<svg') >= 0 && h.indexOf('Phải trả') >= 0, 'biểu đồ có nhãn Phải trả');
   ok(h.indexOf('Còn lại') >= 0 && h.indexOf('Đã trả') >= 0, 'danh sách có cột Đã trả / Còn lại');

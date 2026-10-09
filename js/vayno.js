@@ -1,7 +1,7 @@
 "use strict";
 /* ====================================================================
    vayno.js — toàn bộ logic + giao diện tab "Vay - Nợ": tính lịch trả nợ,
-   render bảng Cho vay / Vay-Nợ phải trả, dòng tiền tích lũy tương lai (trả nợ & thu tiền theo tháng),
+   render bảng Cho vay / Vay-Nợ phải trả, bảng theo dõi trả nợ & thu tiền theo tháng,
    và xử lý các hành động (thêm/sửa/xóa/tất toán/ghi nhận thu-trả) của tab này.
    Cần state.js, drive-sync.js load trước.
    ==================================================================== */
@@ -775,7 +775,7 @@ function vnTheoDoiHtml(){
       + '<span class="t">'+(r.thuCan > 0 ? vnSo(r.thuCan) : '–')+'</span></div>';
   });
   list += '</div>';
-  return '<div class="card vn-dt"><h3>Dòng tiền tích lũy tương lai</h3><div class="mp-hz">'
+  return '<div class="card vn-dt"><h3>Bảng theo dõi</h3><div class="mp-hz">'
     + [6,12,24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="vnHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
     + '</div>' + tiles + chart + list
     + '<div class="vn-sub" style="text-align:center;margin-top:4px">Số tính bằng ₫</div>'
