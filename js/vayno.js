@@ -721,72 +721,99 @@ function vnChoVayHtml(){
   return h + '</div>';
 }
 
-/* ---- theo dõi trả nợ & thu tiền theo tháng (thẻ dưới cùng của tab Vay-Nợ) ----
-   CHỈ nợ: phải trả (lịch trả các khoản vay) và phải thu (cho vay). Không gồm thu chi sinh hoạt —
-   dòng tiền cả sổ nằm ở tab Dòng tiền. Số "phải trả" cùng cách tính thẻ tổng quan: kỳ quá hạn chưa đóng dồn vào tháng này. */
-function vnTheoDoiRows(n){
+/* ---- BẢNG THEO DÕI (thẻ dưới cùng của tab Vay-Nợ) ----
+   Mỗi tháng: SỐ TIỀN TRẢ (các kỳ trả nợ) và SỐ TIỀN THU (các khoản cho vay), dạng "đã / dự kiến".
+   Số nhỏ = tiền THẬT đã trả / đã thu (có thể ít hơn dự kiến), số to = dự kiến. "Done" = lần trả / thu đó đã hoàn thành
+   (kỳ đã đóng, hoặc khoản cho vay đã thu đủ / xóa nợ) — kể cả khi tiền thật ít hơn dự kiến, ví dụ 2.900.000 / 3.000.000 · Done.
+   Kỳ / khoản quá hạn chưa xong dồn vào tháng này. Đã xong từ tháng trước thì không hiện (tháng đã qua), trừ khi xong ở tháng này. */
+function vnThangThuCuoi(loanId){
+  var last = '';
+  Object.keys(state.data.journal).forEach(function(d){
+    ((state.data.journal[d].refs) || []).forEach(function(r){ if (r.loanId === loanId && r.loai === 'thuHoiChoVay' && d > last) last = d; });
+  });
+  return last ? monthKey(last) : '';
+}
+function vnBangTheoDoi(n){
   var cur = monthKey(todayStr()), rows = [], idx = {}, i;
   for (i = 0; i < n; i++){
-    var mk = monthKeyAdd(cur, i);
-    var r = { mk: mk, can: 0, da: 0, thuCan: 0, thuDa: 0 };
+    var mk = monthKeyAdd(cur, i), r = { mk: mk, tra: { need: 0, da: 0, items: [] }, thu: { need: 0, da: 0, items: [] } };
     rows.push(r); idx[mk] = r;
   }
-  (state.data.vayNo.vayNoPhaiTra || []).filter(loanIsActive).forEach(function(v){
+  var them = function(ben, mk, it){
+    var r = idx[mk];
+    if (!r) return;
+    r[ben].items.push(it); r[ben].need += it.need; r[ben].da += it.da;
+  };
+  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(v){
     tinhLichTraNo(v).forEach(function(row, k){
-      var dong = kyDaDong(v, k);
-      if (row.mk < cur && dong) return;
-      var r = idx[row.mk < cur ? cur : row.mk];
-      if (!r) return;
-      var need = num(row.tongTra);
-      r.can += need;
-      r.da += dong ? need : Math.min(need, soTienTraKy(v, k));
+      var recs = kyRecords(v, k), dong = kyDaDong(v, k), mk;
+      if (v.tatToan && !recs.length) return;                     // đã tất toán: các kỳ chưa trả không còn nữa
+      if (!dong) mk = row.mk < cur ? cur : row.mk;
+      else if (row.mk >= cur) mk = row.mk;
+      else {                                                      // kỳ cũ đóng muộn: hiện ở tháng của lần trả cuối nếu từ tháng này trở đi
+        var cuoi = ''; recs.forEach(function(x){ if (x.ngay && x.ngay > cuoi) cuoi = x.ngay; });
+        mk = cuoi && monthKey(cuoi) >= cur ? monthKey(cuoi) : '';
+      }
+      if (!mk) return;
+      them('tra', mk, { ten: v.ten, nhan: 'kỳ ' + (k + 1), need: num(row.tongTra), da: soTienTraKy(v, k), done: dong, quaHan: !dong && row.mk < cur });
     });
+    if (v.tatToan && v.tatToan.ngay){
+      var tt = num(v.tatToan.soTien);
+      them('tra', monthKey(v.tatToan.ngay), { ten: v.ten, nhan: 'tất toán', need: tt, da: tt, done: true, quaHan: false });
+    }
+  });
+  (state.data.vayNo.choVay || []).forEach(function(c){
+    var xong = choVayDaXong(c), due = monthKey(c.ngayDuKienThu || todayStr()), mk;
+    if (!xong) mk = due < cur ? cur : due;
+    else if (due >= cur) mk = due;
+    else { var t = vnThangThuCuoi(c.id); mk = t >= cur ? t : ''; }
+    if (!mk) return;
+    // dự kiến thu = số cho vay trừ phần đã xóa nợ (không đòi nữa); số thật = đã thu
+    var need = Math.max(0, num(c.soTien) - tongDaBo(c) - (c.tatToan ? num(c.tatToan.soTien) : 0));
+    them('thu', mk, { ten: c.ten, nhan: '', need: need, da: num(c.daThu), done: xong, quaHan: !xong && due < cur });
   });
   rows.forEach(function(r){
-    r.thuDa = actualCatInMonth('thu', 'thuHoiChoVay', r.mk);
-    r.thuCan = r.thuDa + tongThuHoiThang(r.mk);
+    ['tra', 'thu'].forEach(function(b){ r[b].done = r[b].items.length > 0 && r[b].items.every(function(x){ return x.done; }); });
   });
   return rows;
 }
-function vnTheoDoiHtml(){
+function vnTdSo(da, need){
+  return '<span class="td-v"><small>'+vnSo(da)+'</small><i>/</i> <b>'+vnSo(need)+'</b></span>';
+}
+function vnTdO(b){
+  if (!b.items.length) return '<span class="td-c rong">–</span>';
+  return '<span class="td-c'+(b.done ? ' d' : '')+'">'+(b.done ? '<em class="td-done">Done</em>' : '')+vnTdSo(b.da, b.need)+'</span>';
+}
+function vnBangTheoDoiHtml(){
   var vn = state.data.vayNo;
   if (!(vn.vayNoPhaiTra || []).length && !(vn.choVay || []).length) return '';
-  var horizon = state.vnHorizon || 12, rows = vnTheoDoiRows(horizon), n = rows.length, cur = rows[0];
+  var horizon = state.vnHorizon || 12, rows = vnBangTheoDoi(horizon), cur = rows[0].mk;
   var nhan = function(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(2, 4); };
-  var conTra = function(r){ return Math.max(0, r.can - r.da); };
-  var tongCon = 0, tongThu = 0, nang = rows[0];
-  rows.forEach(function(r){ tongCon += conTra(r); tongThu += r.thuCan - r.thuDa; if (r.can > nang.can) nang = r; });
-  var o = function(l, big, sub, cls){ return '<div class="dt-ti '+(cls || '')+'"><small>'+l+'</small><b>'+big+'</b><span>'+sub+'</span></div>'; };
-  var tiles = '<div class="dt-tiles">'
-    + (cur.can > 0
-        ? (conTra(cur) > 0 ? o('Tháng này còn phải trả', vnSo(conTra(cur)), 'đã trả '+vnSo(cur.da)+' / '+vnSo(cur.can), 'xau') : o('Tháng này', 'Đã trả đủ', vnSo(cur.can), 'tot'))
-        : o('Tháng này', 'Không có kỳ', 'phải trả'))
-    + (nang.can > 0 ? o('Tháng nặng nhất', nhan(nang.mk), vnSo(nang.can)) : o('Phải trả', 'Không có', 'trong '+n+' tháng', 'tot'))
-    + (tongThu > 0.5 ? o('Sẽ thu '+n+' tháng', vnSo(tongThu), 'cho vay chờ thu', 'tot') : o('Còn phải trả', vnSo(tongCon), 'trong '+n+' tháng'))
-    + '</div>';
-  var chart = '<div class="bd-box" style="margin-top:8px">' + bdCombo({ W: 350, H: 190, labels: rows.map(function(r){ return nhan(r.mk); }),
-    thu: rows.map(function(r){ return Math.round(r.thuCan); }), chi: rows.map(function(r){ return Math.round(r.can); }),
-    nhanThu: 'Phải thu', nhanChi: 'Phải trả', thuaNhan: true, sel: 0, money: function(v){ return fmt(v); }, aria: 'Số tiền phải trả và phải thu theo tháng' }) + '</div>';
-  var list = '<div class="vn-ml"><div class="vn-ml-h"><span>Tháng</span><span>Phải trả</span><span>Đã trả</span><span>Còn lại</span><span>Phải thu</span></div>';
+  var h = '<div class="card vn-dt"><h3>Bảng theo dõi</h3><div class="mp-hz">'
+    + [6, 12, 24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="vnHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
+    + '</div><div class="td"><div class="td-h"><span>Tháng</span><span>Số tiền trả</span><span>Số tiền thu</span></div>';
   rows.forEach(function(r){
-    var con = conTra(r);
-    list += '<div class="vn-ml-r'+(r.mk === cur.mk ? ' sel' : '')+'"><span>'+nhan(r.mk)+'</span><span class="c">'+(r.can > 0 ? vnSo(r.can) : '–')+'</span>'
-      + '<span>'+(r.da > 0 ? vnSo(r.da) : '–')+'</span><span class="l'+(con > 0 ? ' am' : '')+'">'+(r.can > 0 ? vnSo(con) : '–')+'</span>'
-      + '<span class="t">'+(r.thuCan > 0 ? vnSo(r.thuCan) : '–')+'</span></div>';
+    var mo = state.vnTdMo === r.mk && (r.tra.items.length || r.thu.items.length);
+    h += '<div class="td-r'+(r.mk === cur ? ' sel' : '')+(mo ? ' mo' : '')+'" data-act="vnTdMo" data-mk="'+r.mk+'" role="button" tabindex="0">'
+      + '<span class="td-m">'+nhan(r.mk)+(r.mk === cur ? '<small>tháng này</small>' : '')+'</span>' + vnTdO(r.tra) + vnTdO(r.thu) + '</div>';
+    if (mo){
+      h += '<div class="td-ct">';
+      [['tra', 'Trả nợ'], ['thu', 'Thu tiền']].forEach(function(bn){
+        r[bn[0]].items.forEach(function(it){
+          h += '<div class="td-it"><span>'+esc(it.ten)+(it.nhan ? ' · '+it.nhan : '')+(it.quaHan ? ' <u>quá hạn</u>' : '')+'<small>'+bn[1]+'</small></span>'
+            + '<span class="td-c'+(it.done ? ' d' : '')+'">'+(it.done ? '<em class="td-done">Done</em>' : '')+vnTdSo(it.da, it.need)+'</span></div>';
+        });
+      });
+      h += '</div>';
+    }
   });
-  list += '</div>';
-  return '<div class="card vn-dt"><h3>Bảng theo dõi</h3><div class="mp-hz">'
-    + [6,12,24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="vnHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
-    + '</div>' + tiles + chart + list
-    + '<div class="vn-sub" style="text-align:center;margin-top:4px">Số tính bằng ₫</div>'
-    + '<details class="giai-thich"><summary>ⓘ Các số này tính thế nào?</summary>'
-    + '<div><b>Phải trả</b>: tổng số kỳ trả nợ theo lịch của từng khoản vay trong tháng; kỳ đã quá hạn mà chưa đóng được dồn vào tháng này. <b>Đã trả</b>: số đã ghi nhận trả cho các kỳ đó (kỳ đã đóng tính đủ). <b>Phải thu</b>: cho vay còn chờ thu theo ngày dự kiến thu (quá hạn dồn vào tháng này) cộng số đã thu trong tháng. Chỉ gồm nợ; dòng tiền cả sổ xem ở tab Dòng tiền.</div></details></div>';
+  return h + '</div><div class="vn-sub" style="margin-top:8px">Số nhỏ là tiền thật đã trả / đã thu, số to là dự kiến. "Done" là lần trả / thu đó đã hoàn thành (kể cả khi tiền thật ít hơn dự kiến). Chạm một tháng để xem từng khoản.</div></div>';
 }
 
 function renderVayNo(){
   var root = document.getElementById('tabContent');
   var trai = vnTongQuanHtml() + sapDenHanHtml(7) + vnVayHtml();
-  var phai = vnChoVayHtml() + vnTheoDoiHtml();
+  var phai = vnChoVayHtml() + vnBangTheoDoiHtml();
   root.innerHTML = '<div class="cot2"><div class="cot-trai">' + trai + '</div><div class="cot-phai">' + phai + '</div></div>';
   vnSheetVe();
 }
@@ -1094,6 +1121,10 @@ function handleVayNoAction(act, el){
     [].forEach.call(el.parentNode.querySelectorAll('.qa-chip'), function(b){ b.classList.toggle('on', b === el); });
     if (el.getAttribute('data-f') === 'vn_vn_hinh') vnLocTruong();
     vnTomCapNhat();
+  } else if (act === 'vnTdMo'){
+    var mkTd = el.getAttribute('data-mk');
+    state.vnTdMo = state.vnTdMo === mkTd ? null : mkTd;
+    renderVayNo();
   } else if (act === 'vnHorizon'){
     state.vnHorizon = parseInt(el.getAttribute('data-h'), 10) || 12;
     renderVayNo();

@@ -2981,52 +2981,99 @@ test('Cho vay: Hủy xóa nợ (khoản đã tất toán có thu) -> còn phải
 });
 
 /* ==================================================================== */
-group('TD. Bảng theo dõi trả nợ & thu tiền theo tháng (tab Vay - Nợ)');
+group('TD. Bảng theo dõi (Vay - Nợ) + Dòng tiền tích lũy tương lai (Dòng tiền)');
 
-test('vnTheoDoiRows: kỳ quá hạn dồn vào tháng này; kỳ đã đóng không dồn; đã trả = tiền ghi nhận; tháng sau theo lịch', function(){
+var tdVay = function(traNo, over){ var d = baseData(); d.vayNo.vayNoPhaiTra = [loanKhongLai(Object.assign({ traNo: traNo }, over || {}))]; loadData(d); return ctx.vnBangTheoDoi(4); };
+
+test('Bảng theo dõi — trả nợ: chưa trả thì dự kiến to / đã 0; kỳ quá hạn dồn vào tháng này; tháng sau theo lịch', function(){
   setToday('2026-12-10');                                   // kỳ 0 = T11 (quá hạn), kỳ 1 = T12 (tháng này), kỳ 2 = T1/27
-  var mk = function(traNo){ var d = baseData(); d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: traNo })]; loadData(d); return ctx.vnTheoDoiRows(4); };
-  var r = mk([]);
+  var r = tdVay([]);
   eq(r.length, 4); eq(r[0].mk, '2026-12', 'bắt đầu từ tháng này');
-  eq(r[0].can, 2000000, 'tháng này = kỳ T12 + kỳ T11 quá hạn'); eq(r[0].da, 0);
-  eq(r[1].can, 1000000, 'T1/27 theo lịch'); eq(r[3].can, 1000000);
-  r = mk([{ ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-11-05', dongKy:true }, { ky:1, mk:'2026-12', soTien:400000, ngay:'2026-12-05', dongKy:false }]);
-  eq(r[0].can, 1000000, 'kỳ T11 đã đóng thì không dồn vào tháng này'); eq(r[0].da, 400000, 'đã trả 400k kỳ T12');
-  r = mk([{ ky:1, mk:'2026-12', soTien:1000000, ngay:'2026-12-05', dongKy:true }]);
-  eq(r[0].da, 1000000, 'kỳ đã đóng tính đủ'); eq(Math.max(0, r[0].can - r[0].da) , 1000000, 'còn lại = kỳ T11 quá hạn chưa đóng');
+  eq(r[0].tra.need, 2000000, 'T12 + kỳ T11 quá hạn'); eq(r[0].tra.da, 0); eq(r[0].tra.done, false);
+  eq(r[0].tra.items.filter(function(x){ return x.quaHan; }).length, 1, 'đánh dấu kỳ quá hạn');
+  eq(r[1].tra.need, 1000000, 'T1/27 theo lịch'); eq(r[1].tra.done, false);
+  eq(r[0].thu.items.length, 0, 'không có cho vay thì ô thu trống');
 });
 
-test('vnTheoDoiRows: phải thu = còn chờ thu (quá hạn dồn vào tháng này) + đã thu trong tháng', function(){
+test('Bảng theo dõi — Done ghi TIỀN THẬT: trả 900.000 / dự kiến 1.000.000 mà đã đóng kỳ vẫn hiện 900.000/1.000.000 + Done', function(){
+  setToday('2026-12-10');
+  var r = tdVay([{ ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-11-05', dongKy:true }, { ky:1, mk:'2026-12', soTien:900000, ngay:'2026-12-05', dongKy:true }]);
+  eq(r[0].tra.items.length, 1, 'kỳ T11 đã đóng từ tháng trước thì không hiện nữa');
+  eq(r[0].tra.da, 900000, 'số thật'); eq(r[0].tra.need, 1000000, 'số dự kiến'); eq(r[0].tra.done, true, 'Done dù ít hơn dự kiến');
+  var h = (function(){ var d = ctx.state.data; ctx.state.vnHorizon = 6; return ctx.vnBangTheoDoiHtml(); })();
+  ok(h.indexOf('<small>900.000</small><i>/</i> <b>1.000.000</b>') >= 0, 'hiển thị "đã nhỏ / dự kiến to": ' + h.slice(h.indexOf('td-r'), h.indexOf('td-r') + 400));
+  ok(h.indexOf('>Done<') >= 0, 'có nhãn Done');
+});
+
+test('Bảng theo dõi — trả dở chưa đóng kỳ: chưa Done; kỳ cũ đóng muộn trong tháng này thì vẫn hiện; trả sớm kỳ sau thì Done', function(){
+  setToday('2026-12-10');
+  var r = tdVay([{ ky:1, mk:'2026-12', soTien:400000, ngay:'2026-12-05', dongKy:false }]);
+  eq(r[0].tra.da, 400000, 'đã trả 400k'); eq(r[0].tra.done, false, 'chưa đóng kỳ -> chưa Done');
+  r = tdVay([{ ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-12-02', dongKy:true }]);
+  eq(r[0].tra.items.some(function(x){ return x.nhan === 'kỳ 1' && x.done && x.da === 1000000; }), true, 'kỳ T11 đóng muộn ở T12 vẫn hiện ở tháng này, Done');
+  r = tdVay([{ ky:2, mk:'2027-01', soTien:1000000, ngay:'2026-12-08', dongKy:true }]);
+  eq(r[1].tra.done, true, 'trả sớm kỳ T1/27: tháng đó Done'); eq(r[1].tra.da, 1000000);
+});
+
+test('Bảng theo dõi — khoản vay đã tất toán: kỳ chưa trả biến mất, số tất toán là 1 dòng Done ở tháng tất toán', function(){
+  setToday('2026-12-10');
+  var r = tdVay([], { tatToan:{ soTien:5000000, ngay:'2026-12-08' }, trangThai:'da_tra_het' });
+  eq(r[0].tra.items.length, 1, 'chỉ còn dòng tất toán'); eq(r[0].tra.items[0].nhan, 'tất toán');
+  eq(r[0].tra.da, 5000000); eq(r[0].tra.need, 5000000); eq(r[0].tra.done, true); eq(r[1].tra.items.length, 0, 'tháng sau không còn kỳ nào');
+});
+
+test('Bảng theo dõi — thu tiền: theo ngày dự kiến thu (quá hạn dồn vào tháng này); thu đủ thì Done; tất toán thu thiếu: số thật = phần đã thu', function(){
   setToday('2026-12-10');
   var d = baseData();
   d.vayNo.choVay = [
-    { id:'cv1', ten:'A', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2027-01-15' },
-    { id:'cv2', ten:'B', soTien:300000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-11-30' }
+    { id:'cvA', ten:'A', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2027-01-15' },
+    { id:'cvB', ten:'B', soTien:300000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-11-30' },
+    { id:'cvC', ten:'C', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'' }
   ];
   loadData(d);
-  ctx.choVayGhiThu(ctx.state.data.vayNo.choVay[1], 100000, '2026-12-05', '', false);
-  var r = ctx.vnTheoDoiRows(3);
-  eq(r[0].thuDa, 100000, 'đã thu tháng này'); eq(r[0].thuCan, 300000, '100k đã thu + 200k còn lại (quá hạn dồn vào tháng này)');
-  eq(r[1].thuCan, 500000, 'T1/27 = khoản A'); eq(r[1].thuDa, 0); eq(r[2].thuCan, 0);
+  var cv = ctx.state.data.vayNo.choVay;
+  var r = ctx.vnBangTheoDoi(3);
+  eq(r[1].thu.need, 500000, 'A ở T1/27'); eq(r[1].thu.da, 0); eq(r[1].thu.done, false);
+  eq(r[0].thu.items.filter(function(x){ return x.quaHan; }).length, 1, 'B quá hạn dồn vào tháng này');
+  ctx.choVayGhiThu(cv[1], 100000, '2026-12-05', '', false);
+  r = ctx.vnBangTheoDoi(3);
+  eq(r[0].thu.items.filter(function(x){ return x.ten === 'B'; })[0].da, 100000, 'B đã thu 100k'); eq(r[0].thu.done, false, 'còn khoản chưa xong');
+  ctx.choVayGhiThu(cv[1], 200000, '2026-12-06', '', false);                 // B thu nốt -> Done, vẫn hiện ở tháng thu
+  ctx.choVayGhiThu(cv[2], 600000, '2026-12-09', '', true);                  // C: thu 600k, phần thiếu 400k xóa nợ -> Done
+  r = ctx.vnBangTheoDoi(3);
+  var B = r[0].thu.items.filter(function(x){ return x.ten === 'B'; })[0], C = r[0].thu.items.filter(function(x){ return x.ten === 'C'; })[0];
+  eq(B.done, true); eq(B.da, 300000); eq(B.need, 300000);
+  eq(C.done, true); eq(C.da, 600000, 'C: số thật = 600.000'); eq(C.need, 600000, 'C: dự kiến sau xóa nợ = 600.000');
+  eq(r[0].thu.done, true, 'cả tháng này xong'); eq(r[1].thu.done, false, 'A tháng sau chưa');
 });
 
-test('Bảng theo dõi (Vay - Nợ): ô số liệu + biểu đồ + danh sách đủ số tháng đã chọn; chỉ nợ (cột Phải trả/Phải thu); không có khoản nào thì ẩn thẻ', function(){
+test('Bảng theo dõi: ô hiển thị — tháng trống là "–", mở rộng một tháng thấy từng khoản, không có khoản nào thì ẩn thẻ', function(){
   setToday('2026-12-10');
   var d = baseData(); loadData(d);
-  eq(ctx.vnTheoDoiHtml(), '', 'chưa có khoản nào -> không hiện');
-  d.vayNo.vayNoPhaiTra = [loanKhongLai()]; loadData(d);
+  eq(ctx.vnBangTheoDoiHtml(), '', 'chưa có khoản nào -> ẩn');
+  tdVay([]);
+  ctx.state.vnHorizon = 6; ctx.state.vnTdMo = null;
+  var h = ctx.vnBangTheoDoiHtml();
+  ok(h.indexOf('Bảng theo dõi') >= 0 && h.indexOf('Số tiền trả') >= 0 && h.indexOf('Số tiền thu') >= 0, 'tiêu đề + 2 cột');
+  eq((h.match(/class="td-r/g) || []).length, 6, '6 tháng -> 6 dòng'); ok(h.indexOf('td-c rong">–') >= 0, 'ô trống là –');
+  ok(h.indexOf('td-ct') < 0, 'chưa mở rộng');
+  ctx.state.vnTdMo = '2026-12'; h = ctx.vnBangTheoDoiHtml();
+  ok(h.indexOf('td-ct') >= 0 && h.indexOf('Vay test') >= 0 && h.indexOf('quá hạn') >= 0, 'mở rộng thấy từng khoản + quá hạn');
+  ctx.state.vnTdMo = null; ctx.state.vnHorizon = 24; eq((ctx.vnBangTheoDoiHtml().match(/class="td-r/g) || []).length, 24, '24 tháng -> 24 dòng');
   ctx.state.vnHorizon = 12;
-  var h = ctx.vnTheoDoiHtml();
-  ok(h.indexOf('Bảng theo dõi') >= 0 && h.indexOf('Dòng tiền tích lũy') < 0, 'tiêu đề');
-  ok(h.indexOf('class="dt-tiles"') >= 0 && h.indexOf('Tháng này còn phải trả') >= 0, 'ô số liệu');
-  ok(h.indexOf('<svg') >= 0 && h.indexOf('Phải trả') >= 0, 'biểu đồ có nhãn Phải trả');
-  ok(h.indexOf('Còn lại') >= 0 && h.indexOf('Đã trả') >= 0, 'danh sách có cột Đã trả / Còn lại');
-  ok(h.indexOf('Lũy kế') < 0 && h.indexOf('>Chi<') < 0, 'không còn cột Chi / Lũy kế của dòng tiền cả sổ');
-  var dem = function(){ return (ctx.vnTheoDoiHtml().match(/class="vn-ml-r/g) || []).length; };
-  eq(dem(), 12, 'chọn 12 tháng -> đủ 12 dòng'); ok(h.indexOf('Xem cả') < 0, 'không còn nút Xem cả');
-  ctx.state.vnHorizon = 6; eq(dem(), 6, '6 tháng -> 6 dòng');
-  ctx.state.vnHorizon = 24; eq(dem(), 24, '24 tháng -> 24 dòng');
-  ctx.state.vnHorizon = 12;
+});
+
+test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng đã chọn, 3 cột Tháng / Cân đối / Lũy kế, có số cuối kỳ + thấp nhất', function(){
+  setToday('2026-12-10');
+  loadData(baseData());
+  var rows = ctx.dtDuKienRows(24), dem = function(){ return (ctx.dtDuKienHtml(rows, '2026-12').match(/class="dt-ml-r/g) || []).length; };
+  ctx.state.dtHorizon = 12; var h = ctx.dtDuKienHtml(rows, '2026-12');
+  ok(h.indexOf('Dòng tiền tích lũy tương lai') >= 0, 'tiêu đề');
+  ok(h.indexOf('<span>Tháng</span><span>Cân đối</span><span>Lũy kế</span>') >= 0, 'đúng 3 cột');
+  ok(h.indexOf('Tích lũy dự kiến cuối') >= 0 && h.indexOf('Thấp nhất') >= 0, 'số cuối kỳ + thấp nhất');
+  ok(h.indexOf('Xem cả') < 0 && h.indexOf('Chi</span>') < 0, 'không còn nút Xem cả / cột Chi');
+  eq(dem(), 12, '12 tháng'); ctx.state.dtHorizon = 6; eq(dem(), 6, '6 tháng'); ctx.state.dtHorizon = 24; eq(dem(), 24, '24 tháng');
+  ctx.state.dtHorizon = 12;
 });
 
 /* ==================================================================== */
