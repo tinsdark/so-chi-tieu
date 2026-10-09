@@ -303,7 +303,7 @@ function dtDuKienHtml(rowsAll, selMk){
   rows.forEach(function(r){
     list += '<div class="dt-ml-r'+(r.mk === selMk ? ' sel' : '')+'" data-act="dtChonThang" data-mk="'+r.mk+'" role="button" tabindex="0">'
       + '<span class="m">'+dtNhanThang(r.mk)+(r.mk > cur ? '*' : '')+'</span>'
-      + '<span class="c '+(r.cb < 0 ? 'xau' : 'tot')+'">'+Math.round(r.cb).toLocaleString('vi-VN')+'</span>'
+      + '<span class="c '+(Math.round(r.cb) < 0 ? 'xau' : (Math.round(r.cb) > 0 ? 'tot' : ''))+'">'+Math.round(r.cb).toLocaleString('vi-VN')+'</span>'
       + '<span class="l'+(r.bal < 0 ? ' xau' : '')+'">'+Math.round(r.bal).toLocaleString('vi-VN')+'</span></div>';
   });
   list += '</div>';

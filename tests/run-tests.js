@@ -3077,6 +3077,27 @@ test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng 
 });
 
 /* ==================================================================== */
+group('DK. Bảng màu chế độ tối: khung không chìm vào nền, chữ đủ tương phản');
+
+test('dark: thẻ / viền / khung con tách khỏi nền; chữ chính, chữ phụ, số xanh / đỏ, nút đặc và chip Done đọc được (WCAG)', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  var i = css.indexOf('[data-theme="dark"]{'), blk = css.slice(i, css.indexOf('}', i));
+  var v = function(n){ var m = new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(blk); ok(m, 'thiếu biến --' + n + ' trong khối dark'); return m[1]; };
+  var lum = function(h){ var c = [1, 3, 5].map(function(k){ var x = parseInt(h.substr(k, 2), 16) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  var cr = function(a, b){ var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  var bg = v('bg'), card = v('card'), border = v('border'), hover = v('hover'), text = v('text'), muted = v('muted'), green = v('green'), red = v('red');
+  ok(cr(card, bg) >= 1.25, 'thẻ phải sáng hơn nền (>= 1,25), đang ' + cr(card, bg).toFixed(2));
+  ok(cr(border, card) >= 1.5, 'viền phải nổi so với thẻ (>= 1,5), đang ' + cr(border, card).toFixed(2));
+  ok(cr(hover, card) >= 1.2, 'khung con (--hover) phải tách khỏi thẻ (>= 1,2), đang ' + cr(hover, card).toFixed(2));
+  ok(cr(v('row-total'), card) >= 1.1, 'dòng tổng phải khác màu thẻ');
+  [['chữ chính / thẻ', text, card], ['chữ phụ / thẻ', muted, card], ['chữ phụ / khung con', muted, hover], ['số xanh / khung con', green, hover],
+   ['số đỏ / khung con', red, hover], ['số đỏ / dòng đang chọn', red, v('row-bal')], ['chữ trắng / nút đặc (chi-solid)', '#ffffff', v('chi-solid')],
+   ['chữ trắng / chip Done (thu-solid)', '#ffffff', v('thu-solid')]].forEach(function(r){
+    ok(cr(r[1], r[2]) >= 4.5, r[0] + ' cần >= 4,5, đang ' + cr(r[1], r[2]).toFixed(2));
+  });
+});
+
+/* ==================================================================== */
 group('IMG. Ảnh nền được tham chiếu trong CSS phải tồn tại');
 test('mọi url(img/...) trong style.css trỏ tới file có thật (nền họa tiết, ảnh đầu màn đăng nhập)', function(){
   var root = path.join(__dirname, '..');
