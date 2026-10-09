@@ -120,7 +120,10 @@ function ghiNhanhHtml(){
     + '</div>'
     // ghi chú ngay dưới số tiền: gõ xong số là tới ghi chú, không phải cuộn xuống khi bàn phím đang che màn hình
     + '<input type="text" id="qa_note" class="qa-note" placeholder="Ghi chú, ví dụ: Ăn trưa với Nhật" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
-    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>';
+    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
+    // nhãn (tùy chọn): giữ nguyên sau mỗi lần ghi để ghi liền cả chuyến đi; xóa chữ là hết gắn
+    + '<input type="text" id="qa_nhan" class="qa-note qa-nhan" placeholder="Nhãn (tùy chọn), ví dụ: Du lịch Đà Lạt" aria-label="Nhãn" list="qa_nhan_goiy" autocomplete="off" value="'+esc(state.qa.nhan || '')+'">'
+    + '<datalist id="qa_nhan_goiy">' + nhanThongKe().slice(0, 30).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>';
   h += '<div class="qa-lbl">Danh mục</div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
@@ -315,6 +318,7 @@ document.addEventListener('input', function(ev){
   if (!el || !el.id) return;
   if (el.id === 'qa_amount'){ state.qa.amt = el.value; qaNutCapNhat(); }
   else if (el.id === 'qa_note'){ state.qa.note = el.value; }
+  else if (el.id === 'qa_nhan'){ state.qa.nhan = el.value; }
 });
 
 // thanh chọn tháng dùng chung cho Sổ tay và Báo cáo (cùng state.soTayMonth)
@@ -511,7 +515,7 @@ function renderSoTay(){
   var displayDates = kw ? baseDates.filter(function(d){
     var ed = state.data.journal[d];
     if ((ed.ghiChu||'').toLowerCase().indexOf(kw) !== -1) return true;
-    return entryItems(ed).some(function(it){ return (it.ghiChu||'').toLowerCase().indexOf(kw) !== -1; });
+    return entryItems(ed).some(function(it){ return (it.ghiChu||'').toLowerCase().indexOf(kw) !== -1 || nhanChuoi(it).toLowerCase().indexOf(kw) !== -1; });
   }) : baseDates;
   // lọc theo danh mục: giữ ngày có phát sinh ở danh mục đó (tiền nằm ở bucket thu/chi của ngày)
   var catSel = (state.soTayCat || '').split(':');
@@ -573,6 +577,8 @@ function dlSuaHtml(date, it){
         ? '<select id="st_it_wallet" aria-label="Ví / nguồn tiền">' + viOptionsHtml(it ? viCuaItem(it) : viDienSan()) + '</select>' : '')
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="st_it_tien" placeholder="0" aria-label="Số tiền" value="'+(it ? veSo(num(it.soTien)) : '')+'">'
     + '<input type="text" id="st_it_note" placeholder="Nội dung..." aria-label="Nội dung" value="'+(it ? esc(it.ghiChu) : '')+'">'
+    + '<input type="text" id="st_it_nhan" placeholder="Nhãn (tùy chọn)" aria-label="Nhãn" list="st_it_nhan_goiy" autocomplete="off" value="'+(it ? esc(nhanChuoi(it)) : '')+'">'
+    + '<datalist id="st_it_nhan_goiy">' + nhanThongKe().slice(0, 30).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>'
     + '<div class="dl-edit-btn"><button type="button" class="btn sm" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it ? it.iid : '')+'">'+icon('check')+' Lưu</button>'
     + '<button type="button" class="btn secondary sm" data-act="stCancelItem">Hủy</button></div></div>';
 }
@@ -588,7 +594,7 @@ function dlDongHtml(date, it){
   return '<div class="dl-row'+(mo ? ' mo' : '')+(it.iid === state.soTayVuaGhi ? ' anim-moi' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
     +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
-    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+(tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi)+'</span></span>'
+    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+((tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi) + itemNhan(it).map(function(t){ return ' · #'+esc(t); }).join('')).replace(/^ · /, '')+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
     + (mo ? '<div class="dl-act"><button type="button" class="btn secondary sm" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('pencil')+' Sửa</button>'
@@ -1112,6 +1118,7 @@ function handleSoTayAction(act, el){
     if (!catQ){ toast('Chưa có danh mục '+(kQ === 'thu' ? 'thu' : 'chi')+' để ghi — thêm ở tab "Danh mục".', { loai:'warn' }); return true; }
     var itQ = entryAddItem(ngayQ, kQ, catQ, tienQ, noteQ, viQ || state.viChon);
     if (!itQ){ toast('Không ghi được khoản này.', { loai:'err' }); return true; }
+    itemDatNhan(itQ, nhanParse((document.getElementById('qa_nhan') || {}).value));
     state.soTayVuaGhi = itQ.iid;       // khoản này hiện dần ở lần vẽ ngay sau đây (xem cuối renderSoTay)
     // ghi chú của NGÀY: giống saveEntry — có nội dung thì gắn thêm số tiền để cột Nội dung đọc ra luôn có số
     var ghiQ = noteQ ? noteQ + ' ' + fmt(Math.round(tienQ)) : '';
@@ -1324,10 +1331,14 @@ function handleSoTayAction(act, el){
       toast('Danh mục "'+catTen(kindS, catS)+'" chỉ ghi được từ tab Vay - Nợ.', { loai:'err' });
       return true;
     }
+    var nhanS = nhanParse((document.getElementById('st_it_nhan') || {}).value);
     if (iidS){
       if (!entryUpdateItem(dS, iidS, tienS, noteS, kindS, catS, viS)){ toast('Không tìm thấy dòng cần sửa.', { loai:'err' }); return true; }
+      itemDatNhan(entryFindItem(state.data.journal[dS], iidS), nhanS);
     } else {
-      if (!entryAddItem(dS, kindS, catS, tienS, noteS, viS)){ toast('Không thêm được dòng này.', { loai:'err' }); return true; }
+      var itS = entryAddItem(dS, kindS, catS, tienS, noteS, viS);
+      if (!itS){ toast('Không thêm được dòng này.', { loai:'err' }); return true; }
+      itemDatNhan(itS, nhanS);
     }
     state.soTayEditIid = null; state.soTayOpenIid = null;
     scheduleSave();

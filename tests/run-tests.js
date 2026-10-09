@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3248,6 +3248,60 @@ test('mô phỏng: khoản vay thêm trả đầu mỗi kỳ, kỳ trả đầu 
   kyData(20);
   var r = ctx.mpTinhVay({ hinhThuc:'tra_co_dinh', soTien:3000, soThang:3, mkTu:'2026-09', traTay:1000 });
   eq(r.hetMk, '2026-12');
+});
+
+/* ==================================================================== */
+group('Nhãn (tag) cho giao dịch');
+
+function nhanData(){
+  var j = {};
+  j['2026-10-02'] = { thu: {}, chi: { an: 300 }, ghiChu: '', refs: [], items: [{ iid:'a1', kind:'chi', catId:'an', soTien:100, ghiChu:'cơm', nhan:['Du lịch Đà Lạt'] }, { iid:'a2', kind:'chi', catId:'an', soTien:200, ghiChu:'', nhan:['du lịch đà lạt', 'Ăn chơi'] }] };
+  j['2026-10-05'] = { thu: { luong: 50 }, chi: {}, ghiChu: '', refs: [], items: [{ iid:'b1', kind:'thu', catId:'luong', soTien:50, ghiChu:'hoàn tiền', nhan:['Du lịch Đà Lạt'] }] };
+  return loadData(baseData({ journal: j }));
+}
+test('nhanParse: tách theo , ; #, bỏ rỗng và trùng (không phân biệt hoa/thường)', function(){
+  eq(JSON.stringify(ctx.nhanParse('Du lịch,  #du lịch ; Đám cưới ,, ')), JSON.stringify(['Du lịch', 'Đám cưới']));
+  eq(ctx.nhanParse('').length, 0); eq(ctx.nhanParse(null).length, 0);
+  eq(ctx.nhanChuan('  ##a   b  '), 'a b');
+  eq(ctx.nhanChuan(new Array(60).join('x')).length, 40);
+});
+test('nhanThongKe: gộp tên chỉ khác hoa/thường, cộng chi và thu riêng, khoảng ngày', function(){
+  nhanData();
+  var r = ctx.nhanThongKe(), dl = r.filter(function(x){ return x.khoa === 'du lịch đà lạt'; })[0];
+  eq(r.length, 2); eq(dl.n, 3); eq(dl.chi, 300); eq(dl.thu, 50); eq(dl.tu, '2026-10-02'); eq(dl.den, '2026-10-05');
+  eq(dl.ten, 'Du lịch Đà Lạt', 'tên theo lần gặp đầu (sổ đọc từ ngày cũ tới mới)');
+});
+test('nhãn không đổi số dư / tổng thu chi của ngày', function(){
+  nhanData();
+  eq(ctx.chiTotal(ctx.state.data.journal['2026-10-02']), 300);
+  eq(ctx.balanceAt('2026-10-05'), 50 - 300);
+});
+test('nhanDoiTen: đổi tên, gộp vào nhãn đã có, không để trùng trong 1 dòng', function(){
+  nhanData();
+  eq(ctx.nhanDoiTen('ăn chơi', 'Du lịch Đà Lạt'), 1, 'chỉ a2 đổi');
+  var it = ctx.state.data.journal['2026-10-02'].items[1];
+  eq(JSON.stringify(it.nhan), JSON.stringify(['Du lịch Đà Lạt']), 'a2 có 2 nhãn cùng khóa -> còn 1');
+  eq(ctx.nhanThongKe().length, 1);
+  ctx.nhanDoiTen('du lịch đà lạt', 'Đà Lạt 2026');
+  eq(ctx.nhanThongKe()[0].ten, 'Đà Lạt 2026'); eq(ctx.nhanThongKe()[0].n, 3);
+});
+test('nhanXoa: gỡ nhãn, dòng hết nhãn thì không còn trường nhan, giao dịch giữ nguyên', function(){
+  nhanData();
+  eq(ctx.nhanXoa('ăn chơi'), 1);
+  eq(JSON.stringify(ctx.state.data.journal['2026-10-02'].items[1].nhan), JSON.stringify(['du lịch đà lạt']));
+  ctx.nhanXoa('du lịch đà lạt');
+  ok(!('nhan' in ctx.state.data.journal['2026-10-05'].items[0]), 'hết nhãn thì xóa trường');
+  eq(ctx.nhanThongKe().length, 0); eq(ctx.chiTotal(ctx.state.data.journal['2026-10-02']), 300);
+});
+test('nhãn sống sót qua sửa dòng (entryUpdateItem) và thẻ Báo cáo vẽ được cả khi rỗng / có nhãn', function(){
+  nhanData();
+  ctx.entryUpdateItem('2026-10-02', 'a1', 150, 'cơm tối', 'chi', 'an', '');
+  eq(ctx.state.data.journal['2026-10-02'].items[0].nhan[0], 'Du lịch Đà Lạt');
+  ctx.state.nhanMo = 'du lịch đà lạt';
+  var h = ctx.nhanCardHtml();
+  ok(h.indexOf('Du lịch Đà Lạt') >= 0 && h.indexOf('nhanDoiTen') >= 0, 'thẻ có nhãn + nút đổi tên');
+  ctx.state.nhanMo = null;
+  loadData(baseData()); ok(ctx.nhanCardHtml().indexOf('Chưa có nhãn') >= 0, 'rỗng có hướng dẫn');
 });
 
 /* ==================================================================== */

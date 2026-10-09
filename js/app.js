@@ -223,6 +223,7 @@ function handleAction(act, el){
   if (act === 'capNhatApp'){ capNhatApp(); return; }
   if (handleSoTayAction(act, el)) return;
   if (handleNhapAction(act, el)) return;
+  if (handleNhanAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;

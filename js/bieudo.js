@@ -686,6 +686,7 @@ function renderBaoCao(){
     + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
   html += taiSanRongCardHtml(mk);
   html += mucTieuCardHtml();
+  html += nhanCardHtml();
   html += '</div><div class="cot-phai">' + bieuDoCardHtml(mk) + '</div></div>';
   root.innerHTML = html;
 }
