@@ -356,6 +356,68 @@ test('cho vay TẤT TOÁN: hết phải thu, hết quá hạn, không còn dự 
   setToday('2026-10-01');
 });
 
+test('cho vay BỎ MỘT PHẦN: còn phải thu giảm, khoản vẫn mở; thu nốt phần còn lại thì đóng; không sinh giao dịch', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:400000, trangThai:'dang_cho',
+                      ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-11-01' }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  eq(ctx.conLaiPhaiThu(c), 600000, 'trước khi bỏ');
+  eq(ctx.loaiBoChoVay(c, 700000), 'qua-so', 'bỏ nhiều hơn phần còn lại không hợp lệ');
+  eq(ctx.loaiBoChoVay(c, 600000), 'het', 'bỏ đúng bằng phần còn lại = tất toán cả khoản');
+  eq(ctx.loaiBoChoVay(c, 200000), 'mot-phan', 'bỏ ít hơn = một phần');
+  ctx.choVayBoMotPhan(c, 200000);
+  eq(ctx.conLaiPhaiThu(c), 400000, 'còn phải thu = 1.000.000 − 400.000 đã thu − 200.000 đã bỏ');
+  eq(c.trangThai, 'dang_cho', 'khoản vẫn mở');
+  eq(c.tatToan, undefined, 'không phải tất toán');
+  ok(ctx.soNgayQuaHan(c) > 0, 'phần còn lại vẫn có thể quá hạn');
+  eq(ctx.tongThuHoiThang('2026-12'), 400000, 'dự trù thu hồi chỉ tính phần còn lại');
+  eq(Object.keys(ctx.state.data.journal).length, 0, 'bỏ một phần KHÔNG ghi giao dịch nào');
+  eq(ctx.loaiBoChoVay(c, 400000), 'het', 'sau khi bỏ một phần, "hết" tính theo phần còn lại mới');
+});
+
+test('cho vay bỏ một phần: tài sản ròng theo NGÀY chỉ trừ các lần bỏ đã xảy ra tới ngày đó', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01',
+                      daBo:[{ soTien:300000, ngay:'2026-11-15' }] }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  eq(ctx.phaiThuTaiNgay(c, '2026-11-01', {}), 1000000, 'trước ngày bỏ vẫn phải thu đủ');
+  eq(ctx.phaiThuTaiNgay(c, '2026-11-15', {}), 700000, 'từ ngày bỏ trừ đi phần đã bỏ');
+  eq(ctx.phaiThuTaiNgay(c, '2026-12-10', {}), 700000, 'sau đó giữ nguyên');
+});
+
+test('cho vay bỏ một phần: thu nốt phần còn lại ở Sổ tay thì khoản đóng; xóa lần thu thì mở lại; hoàn lần bỏ', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01',
+                      daBo:[{ soTien:300000, ngay:'2026-11-15' }] }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  c.daThu = 700000;   // thu đủ phần còn lại (1.000.000 − 300.000 đã bỏ)
+  c.trangThai = ctx.conLaiPhaiThu(c) <= 0.01 ? 'da_thu_du' : 'dang_cho';
+  eq(c.trangThai, 'da_thu_du', 'thu hết phần còn lại thì đóng dù daThu < soTien');
+  ctx.loanRevertRef({ loanId:'cv1', loai:'thuHoiChoVay', soTien:200000 });
+  eq(c.daThu, 500000, 'xóa lần thu 200.000');
+  eq(c.trangThai, 'dang_cho', 'xóa lần thu thì mở lại khoản');
+  var lan = ctx.choVayHoanBo(c);
+  eq(lan.soTien, 300000, 'hoàn đúng lần bỏ gần nhất');
+  eq(ctx.conLaiPhaiThu(c), 500000, 'sau khi hoàn: 1.000.000 − 500.000 đã thu');
+  eq(ctx.choVayHoanBo(c), null, 'không còn gì để hoàn');
+});
+
+test('cho vay: dữ liệu cũ không có daBo vẫn chạy như cũ (normalizeData thêm mảng rỗng)', function(){
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:250000, trangThai:'dang_cho', ngayChoVay:'2026-10-01' }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  ok(Array.isArray(c.daBo) && c.daBo.length === 0, 'daBo = []');
+  eq(ctx.conLaiPhaiThu(c), 750000, 'công thức cũ không đổi');
+  eq(ctx.phaiThuTaiNgay(c, '2026-12-10', {}), 1000000, 'tài sản ròng cũ không đổi (daThu lấy từ journal)');
+});
+
 /* ==================================================================== */
 group('3. Migration dữ liệu cũ daTraGoc -> traNo[]');
 

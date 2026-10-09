@@ -95,9 +95,29 @@ function tinhLichTraNo(loan){
 }
 // còn phải thu của 1 khoản cho vay. Đã tất toán = phần còn lại coi như không đòi
 // được (cho luôn / mất) -> không còn nằm trong "sẽ thu được" nữa.
+// daBo = các lần bỏ MỘT PHẦN (không đòi nữa, khoản vẫn mở): [{soTien, ngay}]. Khác tatToan là bỏ hết phần còn lại và đóng khoản.
+function tongDaBo(loan, d){
+  var s = 0;
+  (loan.daBo || []).forEach(function(x){ if (!d || !x.ngay || x.ngay <= d) s += num(x.soTien); });
+  return s;
+}
+// soBo so với phần còn phải thu: 'qua-so' (lớn hơn, không hợp lệ) | 'mot-phan' (chỉ ghi daBo) | 'het' (tất toán cả khoản)
+function loaiBoChoVay(c, soBo){
+  var cl = conLaiPhaiThu(c);
+  if (soBo > cl + 0.01) return 'qua-so';
+  return soBo < cl - 0.01 ? 'mot-phan' : 'het';
+}
+function choVayBoMotPhan(c, soBo){ c.daBo = (c.daBo || []).concat([{ soTien: soBo, ngay: todayStr() }]); }
+// hoàn lần bỏ gần nhất; trả về lần vừa hoàn (null nếu không có gì để hoàn)
+function choVayHoanBo(c){
+  if (c.tatToan || !(c.daBo || []).length) return null;
+  var lan = c.daBo.pop();
+  c.trangThai = conLaiPhaiThu(c) <= 0.01 ? 'da_thu_du' : 'dang_cho';
+  return lan;
+}
 function conLaiPhaiThu(loan){
   if (loan.tatToan) return 0;
-  return Math.max(0, num(loan.soTien) - num(loan.daThu));
+  return Math.max(0, num(loan.soTien) - num(loan.daThu) - tongDaBo(loan));
 }
 // số ngày quá hạn của 1 khoản cho vay (0 nếu chưa tới hạn / đã thu đủ)
 function soNgayQuaHan(loan){
@@ -288,7 +308,7 @@ function phaiThuTaiNgay(loan, d, thuHoi){
   if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
   var da = 0;
   ((thuHoi || _thuHoiTheoKhoan())[loan.id] || []).forEach(function(x){ if (x.ngay <= d) da += x.soTien; });
-  return Math.max(0, num(loan.soTien) - da);
+  return Math.max(0, num(loan.soTien) - da - tongDaBo(loan, d));
 }
 function noGocTaiNgay(loan, d){
   if (!loan.ngayVay || loan.ngayVay > d) return 0;
@@ -623,9 +643,10 @@ function vnVayHtml(){
 function vnChoVayCardHtml(c){
   var conLai = conLaiPhaiThu(c), qh = soNgayQuaHan(c);
   var xong = !!c.tatToan || c.trangThai === 'da_thu_du' || conLai <= 0;
+  var daBo = tongDaBo(c);
   var chip = c.tatToan
     ? vnChip('', 'Đã tất toán' + (num(c.tatToan.soTien) > 0 ? ' (bỏ '+fmt(Math.round(c.tatToan.soTien))+')' : ''))
-    : (xong ? vnChip('ok', 'Đã thu đủ') : (qh > 0 ? vnChip('red', 'Quá hạn '+qh+' ngày') : vnChip('amber', 'Đang chờ')));
+    : (xong ? (daBo > 0 ? vnChip('', 'Đã đóng (bỏ '+fmt(Math.round(daBo))+')') : vnChip('ok', 'Đã thu đủ')) : (qh > 0 ? vnChip('red', 'Quá hạn '+qh+' ngày') : vnChip('amber', 'Đang chờ')));
   var pct = num(c.soTien) > 0 ? Math.min(100, Math.round(num(c.daThu) / num(c.soTien) * 100)) : 0;
   return '<div class="vn-c'+(xong ? ' xong' : '')+'" id="vn-cv-'+esc(c.id)+'">'
     + '<div class="vn-c-h"><b class="vn-c-t">'+esc(c.ten)+'</b>'+chip+'</div>'
@@ -633,11 +654,13 @@ function vnChoVayCardHtml(c){
     + '<div><div class="vn-lbl">Đã thu</div><b class="thu">'+vnSo(c.daThu)+'</b></div>'
     + '<div><div class="vn-lbl">Còn lại</div><b>'+vnSo(conLai)+'</b></div></div>'
     + '<div class="dt-track sm" style="margin:10px 0 0"><i style="width:'+pct+'%"></i></div>'
+    + (daBo > 0 && !c.tatToan ? '<div class="vn-sub" style="margin-top:10px">Đã bỏ <b>'+fmt(Math.round(daBo))+'</b> không đòi được</div>' : '')
     + (c.ngayDuKienThu ? '<div class="vn-sub" style="margin-top:10px">Dự kiến thu <b>'+ngayVN(c.ngayDuKienThu)+'</b></div>' : '')
     + '<div class="vn-act"><span class="sp"></span>'
     + (c.tatToan
         ? '<button class="btn sm secondary" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy tất toán, mở lại khoản">Hủy tất toán</button>'
-        : (conLai > 0 ? '<button class="btn sm secondary" data-act="vnTatToanChoVay" data-id="'+c.id+'" title="Tất toán: bỏ phần không đòi được. KHÔNG ghi giao dịch nào ở Sổ tay">Tất toán</button>' : ''))
+        : ((c.daBo || []).length ? '<button class="btn sm secondary" data-act="vnHoanBoChoVay" data-id="'+c.id+'" title="Hoàn lại lần bỏ gần nhất">Hoàn lại lần bỏ</button>' : '')
+          + (conLai > 0 ? '<button class="btn sm secondary" data-act="vnTatToanChoVay" data-id="'+c.id+'" title="Bỏ phần không đòi được (cả khoản hoặc một phần). KHÔNG ghi giao dịch nào ở Sổ tay">Tất toán / bỏ</button>' : ''))
     + '<button class="icon-btn" data-act="vnEditChoVay" data-id="'+c.id+'" title="Sửa khoản cho vay" aria-label="Sửa khoản cho vay '+esc(c.ten)+'">'+icon('pencil')+'</button>'
     + '<button class="icon-btn" data-act="vnDelChoVay" data-id="'+c.id+'" title="Xóa khoản cho vay" aria-label="Xóa khoản cho vay '+esc(c.ten)+'">'+icon('trash')+'</button></div></div>';
 }
@@ -645,7 +668,7 @@ function vnChoVayCardHtml(c){
 function vnChoVayHtml(){
   var ds = state.data.vayNo.choVay;
   var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
-  h += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút "Tất toán" ở đây chỉ dùng để bỏ phần không đòi được và không tạo giao dịch.', 'Ghi tiền thu về thế nào?');
+  h += ghiChuGon('Tiền thu về nhập ở tab Sổ tay (danh mục "Thu hồi cho vay", nhớ chọn khoản trong ô bên dưới) để ghi đúng ngày phát sinh. Nút "Tất toán / bỏ" ở đây chỉ dùng để bỏ phần không đòi được (cả khoản hoặc một phần) và không tạo giao dịch.', 'Ghi tiền thu về thế nào?');
   if (!ds.length) h += '<div class="empty-box">Chưa có khoản cho vay nào.<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div></div>';
   else ds.forEach(function(c){ h += vnChoVayCardHtml(c); });
   return h + '</div>';
@@ -926,7 +949,7 @@ function loanRevertRef(r){
     var c = (state.data.vayNo.choVay||[]).find(function(x){ return x.id === r.loanId; });
     if (!c) return;
     c.daThu = Math.max(0, num(c.daThu) - num(r.soTien));
-    if (c.daThu < num(c.soTien) - 0.01) c.trangThai = 'dang_cho';
+    if (!c.tatToan && conLaiPhaiThu(c) > 0.01) c.trangThai = 'dang_cho';
   }
   // nhanTienVay / choVay là giao dịch GỐC sinh ra khoản vay -> không hoàn ở đây,
   // phải sửa/xóa chính khoản vay ở tab Vay - Nợ (xem chặn ở delDay của sotay.js)
@@ -1187,15 +1210,28 @@ function handleVayNoAction(act, el){
     renderVayNo();
     window.scrollTo(0, yTD); // render lại innerHTML có thể làm trang nhảy; giữ nguyên vị trí đang xem
   } else if (act === 'vnTatToanChoVay'){
-    // TẤT TOÁN cho vay = phần còn lại không đòi được (cho luôn/mất). KHÔNG sinh
-    // giao dịch nào ở Sổ tay: tiền chi đã ghi đủ lúc cho vay, tiền thu chỉ ghi
-    // phần thực nhận -> số dư vốn đã đúng, ghi thêm là đếm 2 lần.
+    // TẤT TOÁN cho vay = bỏ phần không đòi được. Bỏ HẾT phần còn lại -> đóng khoản (tatToan);
+    // bỏ MỘT PHẦN -> ghi vào daBo, khoản vẫn mở để thu tiếp. KHÔNG sinh giao dịch nào ở Sổ tay:
+    // tiền chi đã ghi đủ lúc cho vay, tiền thu chỉ ghi phần thực nhận -> số dư vốn đã đúng,
+    // ghi thêm là đếm 2 lần.
     var idTTCV = el.getAttribute('data-id');
     var cvTT = state.data.vayNo.choVay.find(function(x){ return x.id===idTTCV; });
     if (!cvTT) return true;
     var boTT = conLaiPhaiThu(cvTT);
     if (boTT <= 0) return true;
     (async function(){
+      var soBo = await hoiSo('Bỏ bao nhiêu của khoản "'+cvTT.ten+'"?',
+        'Còn phải thu '+fmt(Math.round(boTT))+'. Nhập đúng số này để tất toán cả khoản; nhập ít hơn thì chỉ bỏ phần đó, khoản vẫn mở để thu tiếp. Không ghi giao dịch nào ở Sổ tay.',
+        'Số tiền không đòi được', Math.round(boTT));
+      if (soBo == null) return;
+      var loaiBo = loaiBoChoVay(cvTT, soBo);
+      if (loaiBo === 'qua-so'){ toast('Số tiền bỏ không được lớn hơn phần còn phải thu ('+fmt(Math.round(boTT))+').'); return; }
+      if (loaiBo === 'mot-phan'){
+        choVayBoMotPhan(cvTT, soBo);
+        scheduleSave(); renderVayNo();
+        toast('Đã bỏ '+fmt(Math.round(soBo))+' của khoản "'+cvTT.ten+'", còn phải thu '+fmt(Math.round(conLaiPhaiThu(cvTT)))+'.');
+        return;
+      }
       if (!await xacNhan('Tất toán khoản cho vay "'+cvTT.ten+'"?',
             'Còn phải thu '+fmt(Math.round(boTT))+' sẽ coi như KHÔNG ĐÒI ĐƯỢC và bỏ qua.\n\n'
             + 'Không có giao dịch nào được ghi ở Sổ tay (số dư đã đúng từ trước).',
@@ -1205,12 +1241,19 @@ function handleVayNoAction(act, el){
       scheduleSave(); renderVayNo();
       toast('Đã tất toán khoản cho vay "'+cvTT.ten+'".');
     })();
+  } else if (act === 'vnHoanBoChoVay'){
+    var idHB = el.getAttribute('data-id');
+    var cvHB = state.data.vayNo.choVay.find(function(x){ return x.id===idHB; });
+    var lanBo = cvHB && choVayHoanBo(cvHB);
+    if (!lanBo) return true;
+    scheduleSave(); renderVayNo();
+    toast('Đã hoàn lại '+fmt(Math.round(num(lanBo.soTien)))+' đã bỏ.');
   } else if (act === 'vnHuyTatToanChoVay'){
     var idHTT = el.getAttribute('data-id');
     var cvHTT = state.data.vayNo.choVay.find(function(x){ return x.id===idHTT; });
     if (!cvHTT || !cvHTT.tatToan) return true;
     cvHTT.tatToan = null;
-    cvHTT.trangThai = (num(cvHTT.daThu) >= num(cvHTT.soTien) - 0.01) ? 'da_thu_du' : 'dang_cho';
+    cvHTT.trangThai = conLaiPhaiThu(cvHTT) <= 0.01 ? 'da_thu_du' : 'dang_cho';
     scheduleSave(); renderVayNo();
   } else if (act === 'vnGhiNhanTra'){
     var idGTr = el.getAttribute('data-id');

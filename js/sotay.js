@@ -1048,7 +1048,7 @@ function handleSoTayAction(act, el){
       var cvApply = state.data.vayNo.choVay.find(function(x){ return x.id===cvIdSel; });
       if (cvApply){
         cvApply.daThu = num(cvApply.daThu) + thu['thuHoiChoVay'];
-        if (cvApply.daThu >= cvApply.soTien - 0.01) cvApply.trangThai = 'da_thu_du';
+        if (conLaiPhaiThu(cvApply) <= 0.01) cvApply.trangThai = 'da_thu_du';
         journalTagRef(date, cvApply.id, 'thuHoiChoVay', thu['thuHoiChoVay']);
         daTag['thu|thuHoiChoVay'] = 1;
       }

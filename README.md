@@ -42,9 +42,10 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Tài khoản mới bắt đầu với số dư đầu kỳ 0 và ngày bắt đầu là hôm nay.
 - Đã bỏ tính năng "quy tắc tự phân loại" (làm rồi gỡ hẳn khỏi Danh mục, Ghi nhanh, Nhập từ file).
 - **Đợt thiết kế lại từng tab** (thiết kế bằng Claude Design, code và kiểm tra ở 320 / 375 / 1280px, sáng và tối): Sổ tay, Báo cáo, Dòng tiền (Thực tế & dự kiến + Mô phỏng), Vay - Nợ, Danh mục. Điểm chung: thẻ gọn thay cho bảng nhiều cột, bảng trượt từ đáy cho form, thu màu xanh / chi màu đỏ trầm / trả nợ màu hổ phách, tiền hiện đầy đủ không viết tắt.
+- Cho vay: nút **Tất toán / bỏ** hỏi số tiền không đòi được. Bỏ hết phần còn lại thì đóng khoản (`tatToan`), bỏ một phần thì ghi vào `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần bỏ. Không ghi giao dịch Sổ tay; tài sản ròng theo ngày trừ đúng các lần bỏ tới ngày đó.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 193 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 197 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -144,6 +145,5 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 Chưa có kế hoạch cố định. Một vài việc đã biết:
 
-- Cho tất toán một phần khoản cho vay (hiện chỉ bỏ toàn bộ phần còn lại).
 
 Phần này ghi lại khi có ý tưởng mới.
