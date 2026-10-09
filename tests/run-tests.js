@@ -3157,32 +3157,34 @@ test('qaGoiYGhiChu: ghi chú hay dùng nhất của danh mục, bỏ "(chưa chi
 /* ==================================================================== */
 group('TB. Thanh tab dưới đáy luôn dính đáy phần nhìn thấy (iOS)');
 
-test('lechThanhTab: thanh sát đáy phần nhìn thấy = 0; bàn phím mở = 0; thanh nằm cao hơn đáy nhìn thấy thì đẩy đúng phần chênh', function(){
-  eq(uiCtx.lechThanhTab(0, 780, 780), 0, 'bình thường');
-  eq(uiCtx.lechThanhTab(0, 420, 780), 0, 'bàn phím mở: không đụng, thanh vẫn nằm sau bàn phím');
-  eq(uiCtx.lechThanhTab(0, 782, 780), 0, 'lệch 2px là sai số làm tròn, bỏ qua');
-  eq(uiCtx.lechThanhTab(0, 780, 500), 280, 'thanh lơ lửng cách đáy 280px -> đẩy xuống 280px');
-  eq(uiCtx.lechThanhTab(150, 780, 780), 150, 'khung nhìn thấy trượt xuống 150px so với layout -> đẩy 150px');
+test('coBanPhim: chỉ coi là bàn phím khi phần nhìn thấy thấp hơn khung layout > 150px (lỗi khung layout ngắn hơn không bị nhầm)', function(){
+  eq(uiCtx.coBanPhim(780, 780), false, 'bình thường');
+  eq(uiCtx.coBanPhim(780, 420), true, 'bàn phím iOS mở');
+  eq(uiCtx.coBanPhim(780, 700), false, 'thanh địa chỉ Safari co giãn ~80px: không phải bàn phím');
+  eq(uiCtx.coBanPhim(500, 780), false, 'khung layout NGẮN hơn phần nhìn thấy (lỗi iOS): không phải bàn phím');
 });
 
-test('Thanh tab / header không là nhóm view-transition riêng, và chuyển cảnh không thể kẹt quá 1 giây', function(){
+test('Thanh tab luôn đứng yên: không dùng View Transitions, không dịch thanh theo số đo, đặt theo đáy phần nhìn thấy', function(){
   var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  ok(!/\.tabs\s*\{[^}]*view-transition-name/.test(css), '.tabs không được có view-transition-name');
-  ok(!/header\s*\{[^}]*view-transition-name/.test(css), 'header không được có view-transition-name');
-  ok(/#tabContent\s*\{[^}]*view-transition-name:\s*noi-dung/.test(css), 'vùng nội dung vẫn trượt khi đổi tab');
-  var mo = fs.readFileSync(path.join(JS_DIR, 'motion.js'), 'utf8');
-  ok(/skipTransition\(\)/.test(mo), 'có skipTransition() chặn kẹt');
-});
-
-test('Lớp phủ toàn màn hình (.gate, .modal-back, nền) và thanh tab / thanh Ghi nhanh bám biến --vv-* thay vì chỉ neo theo khung layout', function(){
-  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  var mo = fs.readFileSync(path.join(JS_DIR, 'motion.js'), 'utf8'), ui = fs.readFileSync(path.join(JS_DIR, 'ui.js'), 'utf8');
+  ok(css.indexOf('view-transition') < 0 && css.indexOf('::view-transition') < 0, 'CSS không còn view-transition');
+  ok(mo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').indexOf('startViewTransition') < 0, 'motion.js không gọi startViewTransition');
+  ok(css.indexOf('--vv-dy') < 0 && ui.replace(/\/\*[\s\S]*?\*\//g, '').indexOf('--vv-dy') < 0, 'không còn cơ chế dịch thanh --vv-dy');
   var rule = function(sel){ var i = css.indexOf(sel + '{'); ok(i >= 0, 'thiếu rule ' + sel); return css.slice(i, css.indexOf('}', i)); };
+  ok(/#tabContent\.doi-tab\{[^}]*animation/.test(css) && rule('@keyframes doi-tab-vao').indexOf('transform') < 0, 'đổi tab chỉ mờ dần (opacity), không transform');
+  ok(/\.tabs\{[^}]*top:calc\(var\(--vv-top,0px\) \+ var\(--vv-h,100%\)\)[^}]*translateY\(-100%\)/.test(css), '.tabs (điện thoại) đặt theo đáy phần nhìn thấy');
+  var qb = (/(^|\n)\.qa-bar-wrap\{[^}]*\}/.exec(css) || [''])[0];
+  ok(qb.indexOf('var(--vv-top,0px) + var(--vv-h,100%)') >= 0 && qb.indexOf('translateY(-100%)') >= 0, '.qa-bar-wrap đặt theo đáy phần nhìn thấy');
+  ok(css.indexOf('html[data-kb] .tabs') >= 0, 'bàn phím mở thì ẩn thanh tab');
+});
+
+test('Lớp phủ toàn màn hình (.gate, .modal-back, nền) bám biến --vv-* thay vì chỉ neo theo khung layout', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   ['.gate', '.modal-back', 'body::before'].forEach(function(sel){
-    var r = rule(sel);
+    var i = css.indexOf(sel + '{'); ok(i >= 0, 'thiếu rule ' + sel);
+    var r = css.slice(i, css.indexOf('}', i));
     ok(r.indexOf('var(--vv-h,100%)') >= 0 && r.indexOf('var(--vv-top,0px)') >= 0, sel + ' phải dùng --vv-top / --vv-h');
   });
-  ok(rule('.qa-bar-wrap').indexOf('translateY(var(--vv-dy,0px))') >= 0, '.qa-bar-wrap dịch theo --vv-dy');
-  ok(/\.tabs\{[^}]*translateY\(var\(--vv-dy,0px\)\)/.test(css), '.tabs (điện thoại) dịch theo --vv-dy');
 });
 
 /* ==================================================================== */
