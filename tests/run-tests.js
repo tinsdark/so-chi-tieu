@@ -2923,24 +2923,39 @@ test('Cho vay: xóa ngày thu ở Sổ tay khi khoản đã tất toán -> kho�
   eq(c.trangThai, 'dang_cho', 'khoản mở lại'); eq(ctx.conLaiPhaiThu(c), 1000000, 'còn phải thu = cả khoản');
 });
 
-test('Cho vay: sửa số cho vay thì trạng thái tính lại (đã thu đủ rồi tăng số -> mở lại; giảm xuống bằng đã thu -> đóng)', function(){
+test('Cho vay: sửa số cho vay — có lời nhắc khi đổi tình trạng khoản; đổi tên/ngày thì không hỏi; trạng thái luôn tính lại', function(){
   setToday('2026-12-10');
   var d = baseData();
-  d.vayNo.choVay = [{ id:'cv1', ten:'A', soTien:500000, daThu:500000, trangThai:'da_thu_du', ngayChoVay:'2026-10-01', ngayDuKienThu:'' }];
+  d.vayNo.choVay = [
+    { id:'cv1', ten:'A', soTien:500000, daThu:500000, trangThai:'da_thu_du', ngayChoVay:'2026-10-01', ngayDuKienThu:'' },
+    { id:'cv2', ten:'B', soTien:1000000, daThu:300000, trangThai:'dang_cho', ngayChoVay:'2026-10-01' },
+    { id:'cv3', ten:'C', soTien:1000000, daThu:600000, trangThai:'da_thu_du', ngayChoVay:'2026-10-01', tatToan:{ soTien:400000, ngay:'2026-11-01' } }
+  ];
   loadData(d);
-  var c = ctx.state.data.vayNo.choVay[0], t0 = ctx.toast; ctx.toast = function(){};
-  var sua = function(soTien){
-    ctx.state.vnFormId = 'cv1';
-    voiDom({ vn_cv_ten:{ value:'A' }, vn_cv_soTien:{ value:String(soTien) }, vn_cv_ngay:{ value:'2026-10-01' }, vn_cv_ngayThu:{ value:'' }, vn_cv_wallet:null },
-      null, function(){ ctx.handleVayNoAction('vnSaveChoVay', {}); });
-  };
+  var cv = ctx.state.data.vayNo.choVay;
+  var n1 = ctx.canhBaoSuaChoVay(cv[0], 800000);
+  ok(n1.indexOf('mở lại') >= 0 && n1.indexOf('300.000') >= 0, 'đã thu đủ rồi tăng số: nhắc khoản mở lại, còn 300.000: ' + n1);
+  var n2 = ctx.canhBaoSuaChoVay(cv[1], 200000);
+  ok(n2.indexOf('đóng') >= 0 && n2.indexOf('thu vượt') >= 0, 'giảm xuống dưới số đã thu: nhắc đóng + thu vượt: ' + n2);
+  var n2b = ctx.canhBaoSuaChoVay(cv[1], 300000);
+  ok(n2b.indexOf('đóng') >= 0 && n2b.indexOf('thu vượt') < 0, 'giảm đúng bằng số đã thu: nhắc đóng, không phải thu vượt: ' + n2b);
+  var n3 = ctx.canhBaoSuaChoVay(cv[2], 1200000);
+  ok(n3.indexOf('Hủy xóa nợ') >= 0 && n3.indexOf('400.000') >= 0, 'khoản đã xóa nợ: nhắc phần xóa nợ không tự đổi: ' + n3);
+  eq(ctx.canhBaoSuaChoVay(cv[1], 1000000), '', 'số không đổi thì không nhắc');
+  eq(ctx.canhBaoSuaChoVay(cv[1], 900000), '', 'đổi số nhưng khoản vẫn mở, chưa thu vượt thì không nhắc');
+  // đổi số xong thì trạng thái tính lại
+  cv[0].soTien = 800000; ctx.choVayCapNhatTrangThai(cv[0]);
+  eq(cv[0].trangThai, 'dang_cho', 'mở lại'); eq(ctx.choVayDaXong(cv[0]), false, 'không còn trong Đã xong');
+  cv[0].soTien = 500000; ctx.choVayCapNhatTrangThai(cv[0]);
+  eq(cv[0].trangThai, 'da_thu_du', 'đóng lại'); eq(ctx.choVayDaXong(cv[0]), true);
+  // sửa tên (số không đổi): lưu thẳng, không hỏi
+  var t0 = ctx.toast, hoi = 0, x0 = ctx.xacNhan; ctx.toast = function(){}; ctx.xacNhan = function(){ hoi++; return Promise.resolve(true); };
   try{
-    sua(800000);
-    eq(c.soTien, 800000, 'đã sửa số'); eq(ctx.conLaiPhaiThu(c), 300000, 'còn 300k'); eq(c.trangThai, 'dang_cho', 'mở lại');
-    eq(ctx.choVayDaXong(c), false, 'không còn nằm trong Đã xong');
-    sua(500000);
-    eq(c.trangThai, 'da_thu_du', 'giảm về bằng đã thu thì đóng'); eq(ctx.choVayDaXong(c), true);
-  } finally { ctx.toast = t0; ctx.state.vnFormId = null; }
+    ctx.state.vnFormId = 'cv2';
+    voiDom({ vn_cv_ten:{ value:'B mới' }, vn_cv_soTien:{ value:'1000000' }, vn_cv_ngay:{ value:'2026-10-01' }, vn_cv_ngayThu:{ value:'' }, vn_cv_wallet:null },
+      null, function(){ ctx.handleVayNoAction('vnSaveChoVay', {}); });
+    eq(hoi, 0, 'sửa tên không hỏi'); eq(cv[1].ten, 'B mới', 'đã lưu ngay');
+  } finally { ctx.toast = t0; ctx.xacNhan = x0; ctx.state.vnFormId = null; }
 });
 
 test('normalizeData: daBo có mục hỏng (số âm, không phải số, null) thì bỏ, còn phải thu không bị đội lên', function(){
@@ -2957,12 +2972,11 @@ test('Cho vay: Hủy xóa nợ (khoản đã tất toán có thu) -> còn phải
   var d = baseData();
   d.vayNo.choVay = [{ id:'cv1', ten:'A', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', daBo:[{ soTien:100000, ngay:'2026-11-01' }] }];
   loadData(d);
-  var c = ctx.state.data.vayNo.choVay[0], t0 = ctx.toast; ctx.toast = function(){};
-  try{
-    ctx.choVayGhiThu(c, 400000, '2026-12-09', '', true);    // còn 900k, thu 400k, xóa nợ 500k, đóng
-    eq(c.tatToan.soTien, 500000);
-    ctx.handleVayNoAction('vnHuyTatToanChoVay', { getAttribute: function(a){ return a === 'data-id' ? 'cv1' : null; } });
-  } finally { ctx.toast = t0; }
+  var c = ctx.state.data.vayNo.choVay[0];
+  ctx.choVayGhiThu(c, 400000, '2026-12-09', '', true);    // còn 900k, thu 400k, xóa nợ 500k, đóng
+  eq(c.tatToan.soTien, 500000);
+  eq(ctx.choVayHuyXoaNo(c), true, 'hủy được');
+  eq(ctx.choVayHuyXoaNo(c), false, 'không còn gì để hủy');
   eq(c.tatToan, null); eq(c.trangThai, 'dang_cho'); eq(ctx.conLaiPhaiThu(c), 500000, '1.000.000 − 400.000 − 100.000');
 });
 
