@@ -3174,6 +3174,17 @@ test('Thanh tab / header không là nhóm view-transition riêng, và chuyển c
   ok(/skipTransition\(\)/.test(mo), 'có skipTransition() chặn kẹt');
 });
 
+test('Lớp phủ toàn màn hình (.gate, .modal-back, nền) và thanh tab / thanh Ghi nhanh bám biến --vv-* thay vì chỉ neo theo khung layout', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  var rule = function(sel){ var i = css.indexOf(sel + '{'); ok(i >= 0, 'thiếu rule ' + sel); return css.slice(i, css.indexOf('}', i)); };
+  ['.gate', '.modal-back', 'body::before'].forEach(function(sel){
+    var r = rule(sel);
+    ok(r.indexOf('var(--vv-h,100%)') >= 0 && r.indexOf('var(--vv-top,0px)') >= 0, sel + ' phải dùng --vv-top / --vv-h');
+  });
+  ok(rule('.qa-bar-wrap').indexOf('translateY(var(--vv-dy,0px))') >= 0, '.qa-bar-wrap dịch theo --vv-dy');
+  ok(/\.tabs\{[^}]*translateY\(var\(--vv-dy,0px\)\)/.test(css), '.tabs (điện thoại) dịch theo --vv-dy');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

@@ -376,34 +376,41 @@ if (window.matchMedia){
 }
 
 /* ====================================================================
-   THANH TAB DƯỚI ĐÁY LUÔN DÍNH ĐÁY PHẦN NHÌN THẤY (điện thoại)
-   Thanh tab là position:fixed nên neo theo khung layout. Trên iOS (nhất là app mở từ màn hình chính) đôi khi khung NHÌN THẤY
-   (visualViewport) lệch / cao hơn khung layout -> thanh nằm lơ lửng giữa màn hình, nội dung chạy tiếp bên dưới.
-   Đo VỊ TRÍ THỰC của thanh: nếu đáy thanh nằm trên đáy phần nhìn thấy thì đẩy xuống đúng phần chênh. Bình thường chênh = 0, không làm gì.
-   (Bàn phím mở thì phần nhìn thấy NHỎ hơn nên chênh âm -> không đụng, thanh vẫn nằm sau bàn phím như cũ.)
+   MỌI LỚP position:fixed PHẢI BÁM THEO PHẦN NHÌN THẤY (điện thoại)
+   position:fixed neo theo khung LAYOUT. Trên iOS (nhất là khi vuốt lên / app mở từ màn hình chính) đôi khi khung layout
+   ngắn hơn hoặc lệch so với phần NHÌN THẤY (visualViewport): thanh tab lơ lửng giữa màn hình, màn hình khóa PIN / đăng nhập chỉ phủ
+   một phần phía trên, phần dưới lộ nội dung app. Nên đo visualViewport và đặt 3 biến CSS trên <html>:
+     --vv-top, --vv-h : vị trí / chiều cao phần nhìn thấy -> lớp phủ toàn màn hình (.gate, .modal-back, nền) dùng thay cho inset:0
+     --vv-dy          : đáy thanh tab đang cao hơn đáy phần nhìn thấy bao nhiêu px -> thanh tab và thanh Ghi nhanh dịch xuống đúng phần đó
+   Bình thường các biến bằng khung layout (dy = 0) nên không đổi gì. Bàn phím mở thì phần nhìn thấy NHỎ hơn: dy âm -> bỏ qua
+   (thanh vẫn nằm sau bàn phím như cũ), còn lớp phủ co lại phía trên bàn phím.
    ==================================================================== */
 function lechThanhTab(vvTop, vvH, barBottom){
   var x = vvTop + vvH - barBottom;
   return x > 4 ? Math.round(x) : 0;
 }
-function ghimThanhTab(){
-  var nav = document.querySelector('.tabs'), vv = window.visualViewport;
-  if (!nav || !vv) return;
-  nav.style.transform = '';                                   // đo vị trí gốc, không tính phần đã dịch lần trước
-  if (getComputedStyle(nav).position !== 'fixed') return;     // desktop: thanh sticky ở đầu trang
-  var r = nav.getBoundingClientRect();
-  if (!r.height) return;                                      // thanh đang ẩn (màn hình đăng nhập): chưa có vị trí để đo
-  var x = lechThanhTab(vv.offsetTop, vv.height, r.bottom);
-  if (x) nav.style.transform = 'translateY(' + x + 'px)';
+function canKhungNhin(){
+  var vv = window.visualViewport, root = document.documentElement;
+  if (!vv || !root || !root.style) return;
+  root.style.setProperty('--vv-top', Math.round(vv.offsetTop) + 'px');
+  root.style.setProperty('--vv-h', Math.round(vv.height) + 'px');
+  var nav = document.querySelector('.tabs'), dy = 0;
+  root.style.setProperty('--vv-dy', '0px');                   // đo vị trí gốc của thanh tab, không tính phần đã dịch lần trước
+  if (nav && getComputedStyle(nav).position === 'fixed'){
+    var r = nav.getBoundingClientRect();
+    if (r.height) dy = lechThanhTab(vv.offsetTop, vv.height, r.bottom);   // thanh đang ẩn (màn hình đăng nhập) thì không đo
+  }
+  root.style.setProperty('--vv-dy', dy + 'px');
 }
 if (typeof window !== 'undefined' && window.document && window.visualViewport){
   (function(){
     var cho = 0;
-    var lich = function(){ if (cho) return; cho = requestAnimationFrame(function(){ cho = 0; ghimThanhTab(); }); };
+    var lich = function(){ if (cho) return; cho = requestAnimationFrame(function(){ cho = 0; canKhungNhin(); }); };
     window.visualViewport.addEventListener('resize', lich);
     window.visualViewport.addEventListener('scroll', lich);
     window.addEventListener('resize', lich);
     window.addEventListener('scroll', lich, { passive: true });
+    window.addEventListener('touchend', lich, { passive: true });
     window.addEventListener('orientationchange', lich);
     window.addEventListener('pageshow', lich);
     document.addEventListener('visibilitychange', lich);
