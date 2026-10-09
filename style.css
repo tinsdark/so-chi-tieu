@@ -168,6 +168,25 @@ tr.mp-am td{background:var(--chi-bg)}
   .modal-box{max-width:none}
   .modal-btns .modal-btn{flex:1 1 120px}
 }
+/* dạng bảng trượt từ đáy (hộp không có ô nhập): cùng ngôn ngữ với .qa-sheet / .vn-sheet */
+.modal-grab{display:none}
+.modal-back.sheet{align-items:flex-end;padding:0}
+.modal-back.sheet .modal-box{max-width:520px;max-height:100%;border-bottom:none;border-radius:26px 26px 0 0;
+  padding:0 20px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:modal-len .32s var(--ease) both}
+.modal-back.sheet .modal-box.nguy-hiem{border-top:1px solid var(--border)}
+.modal-back.sheet .modal-grab{display:block;width:42px;height:5px;border-radius:99px;background:var(--border);margin:7px auto 14px}
+.modal-back.sheet .modal-title{font-size:17px}
+.modal-back.sheet .modal-btns{flex-direction:column-reverse;gap:8px;margin-top:16px}
+.modal-back.sheet .modal-btns .modal-btn{flex:none;width:100%;min-height:46px;border-radius:14px}
+.modal-back.sheet.dong{pointer-events:none;animation:modal-tat .18s ease-in both}
+.modal-back.sheet.dong .modal-box{animation:modal-xuong .18s ease-in both}
+@keyframes modal-len{from{transform:translateY(100%)}to{transform:none}}
+@keyframes modal-xuong{to{transform:translateY(100%)}}
+@keyframes modal-tat{to{opacity:0}}
+@media (min-width:700px){
+  .modal-back.sheet{align-items:center;padding:18px}
+  .modal-back.sheet .modal-box{border:1px solid var(--border);border-radius:24px}
+}
 
 /* ====================================================================
    LỚP 2 — ô nhập tiền, nav dưới, FAB, bảng dạng thẻ

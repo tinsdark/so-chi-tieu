@@ -42,6 +42,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Tài khoản mới bắt đầu với số dư đầu kỳ 0 và ngày bắt đầu là hôm nay.
 - Đã bỏ tính năng "quy tắc tự phân loại" (làm rồi gỡ hẳn khỏi Danh mục, Ghi nhanh, Nhập từ file).
 - **Đợt thiết kế lại từng tab** (thiết kế bằng Claude Design, code và kiểm tra ở 320 / 375 / 1280px, sáng và tối): Sổ tay, Báo cáo, Dòng tiền (Thực tế & dự kiến + Mô phỏng), Vay - Nợ, Danh mục. Điểm chung: thẻ gọn thay cho bảng nhiều cột, bảng trượt từ đáy cho form, thu màu xanh / chi màu đỏ trầm / trả nợ màu hổ phách, tiền hiện đầy đủ không viết tắt.
+- Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
 - Có 193 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
@@ -134,7 +135,7 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - Khóa PIN là khóa **màn hình**, không mã hóa dữ liệu trong `localStorage`. Ai mở được DevTools trên máy vẫn đọc được. Mục đích chỉ là người khác cầm máy đang mở app không xem được số tiền.
 - Quên PIN thì chỉ còn cách xóa khóa cùng dữ liệu lưu trên máy đó rồi đăng nhập Google lại (dữ liệu trên Drive vẫn còn).
 - Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`; quá hạn thì phải đăng nhập lại.
-- Vài hộp thoại xác nhận (xóa khoản vay, tất toán khoản cho vay, chốt số dư, khôi phục, đăng xuất) vẫn dùng hộp thoại chung kiểu cũ, chưa chuyển sang bảng trượt.
+- Hộp thoại có ô nhập (hỏi số, hỏi chữ, nhập PIN) vẫn hiện giữa màn hình, không phải bảng trượt, để bàn phím điện thoại không che nút.
 - Cần mạng ở lần mở đầu để tải thư viện Google đăng nhập và SheetJS (từ `cdn.sheetjs.com`).
 
 ---
@@ -143,7 +144,6 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 Chưa có kế hoạch cố định. Một vài việc đã biết:
 
-- Chuyển nốt các hộp thoại xác nhận còn lại sang bảng trượt cho đồng bộ giao diện.
 - Cho tất toán một phần khoản cho vay (hiện chỉ bỏ toàn bộ phần còn lại).
 
 Phần này ghi lại khi có ý tưởng mới.
