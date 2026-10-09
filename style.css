@@ -76,6 +76,7 @@ input[type=number],input[type=date],input[type=month],input[type=text],input[typ
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px}
 .cat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:10px}
+.dm-card .cat-list{display:block;margin:0}
 .btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:#fff;background:var(--primary)}
 .btn:hover{background:var(--primary-d)}
 .btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
@@ -1276,3 +1277,70 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .vn-opt:has(input:checked){border-color:var(--amber)}
 .vn-opt input{margin-top:3px;flex:0 0 auto}
 .vn-opt small{color:var(--muted);font-size:12px;line-height:1.4}
+
+/* ====================================================================
+   Tab Danh mục: thẻ dạng hàng, chạm mở bảng trượt (khung .vn-sheet dùng chung với Vay - Nợ)
+   ==================================================================== */
+.dm-sec{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:20px 2px 8px}
+.dm-page>.dm-sec:first-child{margin-top:2px}
+.dm-card{border-radius:20px;padding:14px 16px 12px}
+.dm-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.dm-h h3{margin:0;border:none;padding:0;font-size:16px}
+.dm-sub{font-size:12.5px;color:var(--muted);line-height:1.45}
+.dm-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-top:1px solid var(--border);cursor:pointer;min-height:52px}
+.dm-row:active{background:var(--hover)}
+.dm-row.dm-static{cursor:default} .dm-row.dm-static:active{background:none}
+.dm-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dm-n{font-size:15px;overflow-wrap:anywhere}
+.dm-s{font-size:12.5px;color:var(--muted);line-height:1.4}
+.dm-chips{display:flex;flex-wrap:wrap;gap:4px}
+.dm-chip{font-size:11px;font-weight:600;background:var(--hover);color:var(--muted);border-radius:99px;padding:2px 9px;white-space:nowrap}
+.dm-chip.md{background:var(--warn-bg);color:var(--warn-tx)}
+.dm-v{display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.dm-v b{font-size:15px;white-space:nowrap} .dm-v small{font-size:11.5px;color:var(--muted)}
+.dm-v b.thu{color:var(--green)} .dm-v b.chi{color:var(--red)} .dm-un{color:var(--muted)}
+.dm-go{width:16px;height:16px;color:var(--muted);transform:rotate(-90deg);flex:0 0 auto}
+.cat-drag{cursor:grab;color:var(--muted);user-select:none;padding:0 2px;font-size:17px;line-height:1;flex:0 0 auto}
+.dm-card .cat-dot{margin:0;flex:0 0 10px;width:10px;height:10px}
+.dm-tong{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--border);padding:12px 2px 6px;font-size:13px;color:var(--muted)}
+.dm-tong b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--text)} .dm-tong b.thu{color:var(--green)} .dm-tong b.chi{color:var(--red)}
+.dm-mt{align-items:stretch}
+.dm-mt-b{flex:1;min-width:0}
+.dm-mt-1{display:flex;align-items:center;gap:8px} .dm-mt-1 .dm-n{flex:1;min-width:0}
+.dm-pct{font-size:15px;color:var(--green);font-variant-numeric:tabular-nums}
+.dm-mt-3{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.dm-mt-3 b{color:var(--text)}
+.dm-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.dm-bk{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--border)}
+.dm-bk>div{flex:1;min-width:0} .dm-bk b{display:block;font-size:13.5px;font-weight:600;overflow-wrap:anywhere} .dm-bk small{font-size:12px;color:var(--muted)}
+.dm-chot{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.dm-step{display:flex;align-items:center;flex:1;min-width:190px;background:var(--hover);border-radius:12px}
+.dm-step b{flex:1;text-align:center;font-size:14px}
+.dm-step button{border:none;background:none;color:var(--text);font-size:20px;width:44px;height:44px}
+.dm-sel{width:auto;max-width:55%;border:none;background:none;font-weight:700;font-size:14px;text-align:right;color:var(--text);padding:6px 2px}
+.dm-card input.dm-swi,.dm-tg input.dm-swi{appearance:none;-webkit-appearance:none;flex:0 0 46px;width:46px;min-width:46px;height:28px;padding:0;border:none;border-radius:99px;background:var(--border);position:relative;margin:0;cursor:pointer;transition:background .2s}
+.dm-swi::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
+.dm-card input.dm-swi:checked,.dm-tg input.dm-swi:checked{background:var(--thu-solid)} .dm-swi:checked::after{transform:translateX(18px)}
+.dm-swi:disabled{opacity:.55}
+button.dm-sw{flex:0 0 46px;width:46px;height:28px;border:none;border-radius:99px;background:var(--border);position:relative;padding:0}
+button.dm-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
+button.dm-sw.on{background:var(--thu-solid)} button.dm-sw.on::after{transform:translateX(18px)}
+.dm-mn{display:inline-block} .dm-mn .vn-mn-l{top:auto;bottom:calc(100% + 4px)}
+.dm-mn .dm-nguy{color:var(--red)}
+/* bảng trượt */
+.dm-tg{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;cursor:pointer}
+.dm-tg b{font-size:14.5px;display:block} .dm-tg small{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px}
+.dm-mau{display:flex;align-items:center;gap:12px}
+.dm-mau input[type=color]{width:56px;min-width:56px;height:44px;padding:2px;border-radius:12px;cursor:pointer}
+.dm-tool{display:flex;gap:8px;margin-top:18px} .dm-tool .btn{flex:1;min-height:44px}
+.dm-xoa{width:100%;margin-top:14px;min-height:46px;border-radius:14px}
+.dm-xoa .ic{vertical-align:-3px;margin-right:4px}
+/* desktop: mỗi nhóm chia 2 cột kiểu xếp gạch, thẻ nào ngắn thì lấp chỗ trống bên dưới, không để khoảng hở */
+@media (min-width:1024px){
+  .dm-page{max-width:1100px;margin:0 auto}
+  .dm-grid{column-count:2;column-gap:16px}
+  .dm-grid>.card{break-inside:avoid;display:inline-block;width:100%;margin-bottom:16px}
+  /* thu | chi là một cặp: 2 cột cạnh nhau, mỗi bên cao theo nội dung của mình */
+  .dm-grid.dm-cap{column-count:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .dm-grid.dm-cap>.card{display:block;margin-bottom:0}
+}

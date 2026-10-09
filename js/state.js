@@ -51,6 +51,7 @@ var state = {
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
   imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
+  dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Danh mục: { loai:'cat'|'cfg'|'vi', kind?, id? }
   mtForm: null,           // form mục tiêu tiết kiệm ở tab Danh mục (như dkForm)
   dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
@@ -995,7 +996,7 @@ function isTypingNow(){
 // đang có form mở dở (thêm/sửa khoản vay, sửa 1 ngày Sổ tay) -> cũng không được ghi đè
 function isFormOpen(){
   return !!(state.vnFormKind || state.editingDate || state.soTayEditIid
-            || state.viFormOpen || state.dkForm || state.mtForm || state.imp || state.fullFormOpen
+            || state.viFormOpen || state.dkForm || state.mtForm || state.dmForm || state.imp || state.fullFormOpen
             || (state.mp && state.mp.formOpen));
 }
 
