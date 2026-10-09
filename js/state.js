@@ -56,6 +56,7 @@ var state = {
   dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
   viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
+  backupMo: false,        // true = đang mở danh sách bản sao lưu
   backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
   backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'

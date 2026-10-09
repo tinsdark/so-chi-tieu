@@ -263,17 +263,21 @@ function backupLoai(name){
   return m[1] === 'thu-cong' ? 'Thủ công' : (BACKUP_NHAN[m[1]] || m[1]);
 }
 function backupCardHtml(){
+  var ds = state.backupDs, mo = !!(ds && state.backupMo);
+  var cuoi = null;
+  (ds || []).forEach(function(f){ if (f.modifiedTime && (!cuoi || f.modifiedTime > cuoi.modifiedTime)) cuoi = f; });
   var h = '<div class="card dm-card">'+dmHead('Sao lưu dữ liệu')
-    + '<div class="dm-sub">Tự lưu mỗi ngày · giữ '+BACKUP_GIU+' bản gần nhất</div>'
+    + '<div class="dm-sub">'+(cuoi ? 'Lần cuối: '+esc(backupGio(cuoi))+' · '+esc(backupLoai(cuoi.name).toLowerCase()) : 'Tự lưu mỗi ngày · giữ '+BACKUP_GIU+' bản gần nhất')+'</div>'
     + '<div class="dm-btns">'
     + '<button class="btn sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
-    + '<button class="btn secondary sm" data-act="bkXem"'+(state.backupBusy?' disabled':'')+'>'+(state.backupDs ? icon('refresh')+' Tải lại danh sách' : 'Xem các bản sao lưu')+'</button>'
+    + (mo ? '<button class="btn secondary sm" data-act="bkAn">Ẩn các bản sao lưu ('+ds.length+')</button>'
+          : '<button class="btn secondary sm" data-act="'+(ds ? 'bkMo' : 'bkXem')+'"'+(state.backupBusy?' disabled':'')+'>Xem các bản sao lưu'+(ds ? ' ('+ds.length+')' : '')+'</button>')
     + '</div>';
-  if (state.backupDs){
-    if (!state.backupDs.length){
+  if (mo){
+    if (!ds.length){
       h += '<div class="empty">Chưa có bản sao lưu nào.</div>';
     } else {
-      state.backupDs.forEach(function(f){
+      ds.forEach(function(f){
         h += '<div class="dm-bk"><div><b>'+esc(backupGio(f))+'</b><small>'+esc(backupLoai(f.name))+' · '+(f.size ? Math.max(1, Math.round(num(f.size) / 1024)) + ' KB' : '—')+'</small></div>'
           + '<button class="btn sm secondary" data-act="bkKhoiPhuc" data-id="'+esc(f.id)+'" data-name="'+esc(f.name)+'"'+(state.backupBusy?' disabled':'')+'>Khôi phục</button></div>';
       });
@@ -456,7 +460,9 @@ function catNameExists(kind, name, excludeId){
 
 /* ---- Danh mục: handlers ---- */
 function handleDanhMucAction(act, el){
-  if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
+  if (act === 'bkMo' || act === 'bkAn'){
+    state.backupMo = (act === 'bkMo'); renderDanhMuc();
+  } else if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
     // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
     if (state.backupBusy) return true;
     (async function(){
@@ -466,8 +472,10 @@ function handleDanhMucAction(act, el){
           await saoLuuNgay('thu-cong', JSON.stringify(state.data));
           toast('Đã sao lưu dữ liệu hiện tại lên Drive.');
           state.backupDs = await driveListBackups();
+          state.backupMo = true;
         } else if (act === 'bkXem'){
           state.backupDs = await driveListBackups();
+          state.backupMo = true;
         } else {
           var bkId = el.getAttribute('data-id'), bkTen = el.getAttribute('data-name');
           if (!await xacNhan('Khôi phục "'+backupTenDep(bkTen)+'"?',
