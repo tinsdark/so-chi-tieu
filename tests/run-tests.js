@@ -3155,6 +3155,26 @@ test('qaGoiYGhiChu: ghi chú hay dùng nhất của danh mục, bỏ "(chưa chi
 });
 
 /* ==================================================================== */
+group('TB. Thanh tab dưới đáy luôn dính đáy phần nhìn thấy (iOS)');
+
+test('lechThanhTab: thanh sát đáy phần nhìn thấy = 0; bàn phím mở = 0; thanh nằm cao hơn đáy nhìn thấy thì đẩy đúng phần chênh', function(){
+  eq(uiCtx.lechThanhTab(0, 780, 780), 0, 'bình thường');
+  eq(uiCtx.lechThanhTab(0, 420, 780), 0, 'bàn phím mở: không đụng, thanh vẫn nằm sau bàn phím');
+  eq(uiCtx.lechThanhTab(0, 782, 780), 0, 'lệch 2px là sai số làm tròn, bỏ qua');
+  eq(uiCtx.lechThanhTab(0, 780, 500), 280, 'thanh lơ lửng cách đáy 280px -> đẩy xuống 280px');
+  eq(uiCtx.lechThanhTab(150, 780, 780), 150, 'khung nhìn thấy trượt xuống 150px so với layout -> đẩy 150px');
+});
+
+test('Thanh tab / header không là nhóm view-transition riêng, và chuyển cảnh không thể kẹt quá 1 giây', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  ok(!/\.tabs\s*\{[^}]*view-transition-name/.test(css), '.tabs không được có view-transition-name');
+  ok(!/header\s*\{[^}]*view-transition-name/.test(css), 'header không được có view-transition-name');
+  ok(/#tabContent\s*\{[^}]*view-transition-name:\s*noi-dung/.test(css), 'vùng nội dung vẫn trượt khi đổi tab');
+  var mo = fs.readFileSync(path.join(JS_DIR, 'motion.js'), 'utf8');
+  ok(/skipTransition\(\)/.test(mo), 'có skipTransition() chặn kẹt');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

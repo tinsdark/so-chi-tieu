@@ -629,9 +629,9 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 /* ====================================================================
    LỚP 9 — chuyển cảnh & cử chỉ (js/motion.js, phần cuối)
    ==================================================================== */
-/* đổi tab: chỉ vùng nội dung trượt, header + thanh tab đứng yên */
-header{view-transition-name:dau-trang}
-.tabs{view-transition-name:thanh-tab}
+/* đổi tab: chỉ vùng nội dung trượt, header + thanh tab đứng yên.
+   KHÔNG đặt view-transition-name cho header / .tabs: chúng là phần tử sticky / fixed, nếu bị chụp thành nhóm riêng thì khi chuyển cảnh
+   lỗi trên iOS (khung nhìn đổi giữa chừng) thanh tab bị kẹt lơ lửng giữa màn hình. Không đặt tên thì chúng thuộc ảnh chụp gốc và vẫn đứng yên. */
 #tabContent{view-transition-name:noi-dung}
 @keyframes vt-ra-trai{to{opacity:0;transform:translateX(-36px)}}
 @keyframes vt-vao-phai{from{opacity:0;transform:translateX(36px)}}

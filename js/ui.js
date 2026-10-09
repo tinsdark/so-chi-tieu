@@ -374,3 +374,39 @@ if (window.matchMedia){
   if (mq.addEventListener) mq.addEventListener('change', onMq);
   else if (mq.addListener) mq.addListener(onMq);
 }
+
+/* ====================================================================
+   THANH TAB DƯỚI ĐÁY LUÔN DÍNH ĐÁY PHẦN NHÌN THẤY (điện thoại)
+   Thanh tab là position:fixed nên neo theo khung layout. Trên iOS (nhất là app mở từ màn hình chính) đôi khi khung NHÌN THẤY
+   (visualViewport) lệch / cao hơn khung layout -> thanh nằm lơ lửng giữa màn hình, nội dung chạy tiếp bên dưới.
+   Đo VỊ TRÍ THỰC của thanh: nếu đáy thanh nằm trên đáy phần nhìn thấy thì đẩy xuống đúng phần chênh. Bình thường chênh = 0, không làm gì.
+   (Bàn phím mở thì phần nhìn thấy NHỎ hơn nên chênh âm -> không đụng, thanh vẫn nằm sau bàn phím như cũ.)
+   ==================================================================== */
+function lechThanhTab(vvTop, vvH, barBottom){
+  var x = vvTop + vvH - barBottom;
+  return x > 4 ? Math.round(x) : 0;
+}
+function ghimThanhTab(){
+  var nav = document.querySelector('.tabs'), vv = window.visualViewport;
+  if (!nav || !vv) return;
+  nav.style.transform = '';                                   // đo vị trí gốc, không tính phần đã dịch lần trước
+  if (getComputedStyle(nav).position !== 'fixed') return;     // desktop: thanh sticky ở đầu trang
+  var r = nav.getBoundingClientRect();
+  if (!r.height) return;                                      // thanh đang ẩn (màn hình đăng nhập): chưa có vị trí để đo
+  var x = lechThanhTab(vv.offsetTop, vv.height, r.bottom);
+  if (x) nav.style.transform = 'translateY(' + x + 'px)';
+}
+if (typeof window !== 'undefined' && window.document && window.visualViewport){
+  (function(){
+    var cho = 0;
+    var lich = function(){ if (cho) return; cho = requestAnimationFrame(function(){ cho = 0; ghimThanhTab(); }); };
+    window.visualViewport.addEventListener('resize', lich);
+    window.visualViewport.addEventListener('scroll', lich);
+    window.addEventListener('resize', lich);
+    window.addEventListener('scroll', lich, { passive: true });
+    window.addEventListener('orientationchange', lich);
+    window.addEventListener('pageshow', lich);
+    document.addEventListener('visibilitychange', lich);
+    lich();
+  })();
+}
