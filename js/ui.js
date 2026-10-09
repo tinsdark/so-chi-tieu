@@ -374,3 +374,46 @@ if (window.matchMedia){
   if (mq.addEventListener) mq.addEventListener('change', onMq);
   else if (mq.addListener) mq.addListener(onMq);
 }
+
+/* ====================================================================
+   MỌI LỚP position:fixed PHẢI BÁM THEO PHẦN NHÌN THẤY (điện thoại)
+   position:fixed neo theo khung LAYOUT. Trên iOS (nhất là khi vuốt lên / app mở từ màn hình chính) đôi khi khung layout
+   ngắn hơn hoặc lệch so với phần NHÌN THẤY (visualViewport): thanh tab lơ lửng giữa màn hình, màn hình khóa PIN / đăng nhập chỉ phủ
+   một phần phía trên, phần dưới lộ nội dung app. Nên đo visualViewport và đặt 3 biến CSS trên <html>:
+     --vv-top, --vv-h : vị trí / chiều cao phần nhìn thấy -> lớp phủ toàn màn hình (.gate, .modal-back, nền) dùng thay cho inset:0
+     --vv-dy          : đáy thanh tab đang cao hơn đáy phần nhìn thấy bao nhiêu px -> thanh tab và thanh Ghi nhanh dịch xuống đúng phần đó
+   Bình thường các biến bằng khung layout (dy = 0) nên không đổi gì. Bàn phím mở thì phần nhìn thấy NHỎ hơn: dy âm -> bỏ qua
+   (thanh vẫn nằm sau bàn phím như cũ), còn lớp phủ co lại phía trên bàn phím.
+   ==================================================================== */
+function lechThanhTab(vvTop, vvH, barBottom){
+  var x = vvTop + vvH - barBottom;
+  return x > 4 ? Math.round(x) : 0;
+}
+function canKhungNhin(){
+  var vv = window.visualViewport, root = document.documentElement;
+  if (!vv || !root || !root.style) return;
+  root.style.setProperty('--vv-top', Math.round(vv.offsetTop) + 'px');
+  root.style.setProperty('--vv-h', Math.round(vv.height) + 'px');
+  var nav = document.querySelector('.tabs'), dy = 0;
+  root.style.setProperty('--vv-dy', '0px');                   // đo vị trí gốc của thanh tab, không tính phần đã dịch lần trước
+  if (nav && getComputedStyle(nav).position === 'fixed'){
+    var r = nav.getBoundingClientRect();
+    if (r.height) dy = lechThanhTab(vv.offsetTop, vv.height, r.bottom);   // thanh đang ẩn (màn hình đăng nhập) thì không đo
+  }
+  root.style.setProperty('--vv-dy', dy + 'px');
+}
+if (typeof window !== 'undefined' && window.document && window.visualViewport){
+  (function(){
+    var cho = 0;
+    var lich = function(){ if (cho) return; cho = requestAnimationFrame(function(){ cho = 0; canKhungNhin(); }); };
+    window.visualViewport.addEventListener('resize', lich);
+    window.visualViewport.addEventListener('scroll', lich);
+    window.addEventListener('resize', lich);
+    window.addEventListener('scroll', lich, { passive: true });
+    window.addEventListener('touchend', lich, { passive: true });
+    window.addEventListener('orientationchange', lich);
+    window.addEventListener('pageshow', lich);
+    document.addEventListener('visibilitychange', lich);
+    lich();
+  })();
+}

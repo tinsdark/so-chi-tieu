@@ -166,6 +166,8 @@ function motionChuyenTab(huong, lam){
   try { vt = document.startViewTransition(function(){ lam(); window.scrollTo(0, 0); }); }
   catch (e){ _moVT = false; lam(); return; }
   vt.finished.finally(function(){ _moVT = false; document.documentElement.removeAttribute('data-huong'); });
+  // chuyển cảnh chỉ kéo dài ~0,25s; quá 1s mà chưa xong (trình duyệt kẹt) thì bỏ hiệu ứng, trang trở lại bình thường
+  setTimeout(function(){ try { vt.skipTransition(); } catch (e) {} }, 1000);
 }
 (function(){
   var _cardGoc = _moCard;
