@@ -68,6 +68,7 @@ var state = {
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
+  nguoiMo: null,          // tab Vay - Nợ: khóa người đang mở ở thẻ "Sổ nợ theo người"
   nhanMo: null,           // tab Báo cáo: khóa nhãn đang mở ở thẻ "Theo nhãn" (null = gấp hết)
   hmMoHet: false,         // tab Báo cáo: mở hết nhóm "Ổn" ở thẻ Hạn mức (mặc định chỉ hiện 3)
   soTayOpenIid: null,     // iid khoản đang mở nút Sửa / Xóa trong danh sách ngày
@@ -459,6 +460,7 @@ function ghiChuGon(noiDung, nhan){
    Dùng: icon('trash') -> chuỗi <svg>. Icon thuần trang trí (aria-hidden): nút bấm vẫn phải có title/aria-label/chữ.
    ==================================================================== */
 var ICON_PATHS = {
+  'user': "<circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6\"/>",
   'book': "<path d=\"M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5z\"/><path d=\"M5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3\"/><path d=\"M9 7h6\"/>",
   'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
   'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
