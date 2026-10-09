@@ -27,15 +27,22 @@ function ngayTraCuaKy(mk, ngayTrongThang){
   return mk + '-' + pad2(Math.min(n, daysInMonth(mk)));
 }
 // trả về lịch trả từng tháng: [{mk, ngayTra, goc, lai, tongTra, duNoConLai}]
+// Ngày trả tính theo THÁNG DƯƠNG LỊCH (ngày trả hàng tháng là ngày thật trên lịch), rồi mk của từng kỳ mới đổi sang
+// kỳ tài chính chứa ngày đó (khi ngayKy = 1 thì hai cái trùng nhau).
 function tinhLichTraNo(loan){
+  var sch = _tinhLichTraNoLich(loan);
+  if (ngayKy() > 1) sch.forEach(function(r){ r.mk = monthKey(r.ngayTra); });
+  return sch;
+}
+function _tinhLichTraNoLich(loan){
   var sch = [];
-  var startMk = monthKey(loan.ngayVay || todayStr());
+  var startMk = (loan.ngayVay || todayStr()).slice(0, 7);
   var goc0 = num(loan.soTienGoc);
   // "ngày trả hàng tháng" là field nhập tay riêng (1-31), tách biệt với ngày vay;
   // khoản cũ chưa có thì tạm lấy ngày-trong-tháng của ngày vay làm mặc định
   var ngayTrongThang = num(loan.ngayTraHangThang) || (loan.ngayVay ? parseInt(loan.ngayVay.slice(8,10),10) : 1);
   if (loan.hinhThuc === 'tra_1_lan'){
-    var mkDue = loan.ngayDaoHan ? monthKey(loan.ngayDaoHan) : monthKeyAdd(startMk, num(loan.soThangVay) || 0);
+    var mkDue = loan.ngayDaoHan ? loan.ngayDaoHan.slice(0, 7) : monthKeyAdd(startMk, num(loan.soThangVay) || 0);
     var ngayTraDue = loan.ngayDaoHan || ngayTraCuaKy(mkDue, ngayTrongThang);
     sch.push({ mk: mkDue, ngayTra: ngayTraDue, goc: goc0, lai: 0, tongTra: goc0, duNoConLai: 0 });
     return sch;
@@ -361,7 +368,7 @@ function noGocTaiNgay(loan, d){
 }
 // tài sản ròng tại cuối tháng mk
 function taiSanRongThang(mk, thuHoi){
-  var d = mk + '-31', th = thuHoi || _thuHoiTheoKhoan(), phaiThu = 0, no = 0;
+  var d = kyDen(mk), th = thuHoi || _thuHoiTheoKhoan(), phaiThu = 0, no = 0;
   (state.data.vayNo.choVay || []).forEach(function(l){ phaiThu += phaiThuTaiNgay(l, d, th); });
   (state.data.vayNo.vayNoPhaiTra || []).forEach(function(l){ no += noGocTaiNgay(l, d); });
   var tien = balanceAtEndOfMonth(mk);

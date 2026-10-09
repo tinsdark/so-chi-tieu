@@ -101,8 +101,8 @@ function mpBuildScenario(){
         laiSuatNam: num(dc.laiSuatNam),
         soTienTraThang: num(dc.soTienTraThang),
         soThangVay: Math.max(1, num(dc.soThang) || 1),
-        ngayVay: dc.mkTu + '-01',
-        ngayTraHangThang: 1,
+        ngayVay: kyTu(dc.mkTu),
+        ngayTraHangThang: ngayKy(),
         traNo: [],
         trangThai: 'dang_vay'
       });
@@ -143,7 +143,7 @@ function mpChieuDongTien(d, startMk, horizon, overlay){
    o = { hinhThuc: 'co_lai' (trả cố định) | 'goc_deu' | 'tra_co_dinh' (số trả tự nhập), soTien, laiSuatNam, soThang, mkTu, traTay } */
 function mpTinhVay(o){
   var loan = { hinhThuc: o.hinhThuc, soTienGoc: num(o.soTien), laiSuatNam: num(o.laiSuatNam), soThangVay: Math.max(1, num(o.soThang) || 1),
-    ngayVay: o.mkTu + '-01', ngayTraHangThang: 1, soTienTraThang: num(o.traTay) };
+    ngayVay: kyTu(o.mkTu), ngayTraHangThang: ngayKy(), soTienTraThang: num(o.traTay) };
   var sch = tinhLichTraNo(loan), lai = 0;
   sch.forEach(function(r){ lai += r.lai; });
   return { tra: sch.length ? sch[0].tongTra : 0, tongLai: lai, hetMk: sch.length ? sch[sch.length - 1].mk : null };

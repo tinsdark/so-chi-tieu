@@ -541,9 +541,12 @@ function normalizeData(d){
   // mốc bắt đầu tính dự trù: tháng ĐẦY ĐỦ đầu tiên. Nếu ngayBatDau không phải ngày 01
   // thì tháng đó là tháng lẻ (số liệu không phản ánh đúng cả tháng) -> bỏ, lấy tháng sau.
   // Cố ý tách khỏi ngayBatDau để khóa sổ KHÔNG làm mất lịch sử dùng cho dự trù.
+  // ngày bắt đầu kỳ tài chính (ngày lương): 1 = tháng dương lịch, chỉ nhận 2..28
+  var nk = Math.floor(num(d.settings.ngayKy));
+  d.settings.ngayKy = (nk >= 2 && nk <= 28) ? nk : 1;
   if (!d.settings.thangBatDauDuTru){
     var nb = d.settings.ngayBatDau || todayStr();
-    d.settings.thangBatDauDuTru = (nb.slice(8,10) === '01') ? monthKey(nb) : monthKeyAdd(monthKey(nb), 1);
+    d.settings.thangBatDauDuTru = (nb.slice(8,10) === '01') ? nb.slice(0,7) : monthKeyAdd(nb.slice(0,7), 1);
   }
   // migrate dữ liệu cũ: thu là số đơn -> chuyển thành object theo danh mục (giữ nguyên tổng)
   var soNgayLech = 0;
@@ -810,8 +813,14 @@ function viChotSoDuDauKy(dateStr){
    Dòng được ghi mang dkId (+ dkMk) -> biết chắc khoản nào của tháng nào đã ghi, không
    đoán theo số tiền/danh mục. bo[] = các tháng đã chọn "Bỏ qua".
    Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
-   Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
+   Hàm ngayDinhKyCuaKy (bên dưới) tự co ngày 31 về cuối tháng ngắn và đặt ngày vào đúng kỳ tài chính.
    ==================================================================== */
+// ngày thật của khoản định kỳ (ngày dk.ngay hằng tháng) rơi trong kỳ mk: từ ngày bắt đầu kỳ trở đi thì ở tháng mk,
+// nhỏ hơn thì sang tháng sau. ngayKy = 1: luôn là tháng mk.
+function ngayDinhKyCuaKy(mk, ngayTrongThang){
+  var n = Math.max(1, Math.min(31, num(ngayTrongThang) || 1));
+  return ngayTraCuaKy(n >= ngayKy() ? mk : monthKeyAdd(mk, 1), n);
+}
 function dinhKyDaGhi(dk, mk){
   var da = false;
   Object.keys(state.data.journal).forEach(function(date){
@@ -838,7 +847,7 @@ function dinhKyDenHan(homNay){
   var mk = monthKey(homNay), out = [];
   (state.data.dinhKy || []).forEach(function(dk){
     if (!dk.bat || num(dk.soTien) <= 0) return;
-    var han = ngayTraCuaKy(mk, dk.ngay);
+    var han = ngayDinhKyCuaKy(mk, dk.ngay);
     if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
     out.push({ dk: dk, mk: mk, han: han });
   });
@@ -849,7 +858,7 @@ function dinhKyDenHan(homNay){
 // khóa sổ (không còn tính vào số dư) thì ghi vào hôm nay để tiền không biến mất khỏi số dư.
 // Trả về {date, iid, note} để hoàn tác được; null nếu không ghi được.
 function dinhKyGhi(dk, mk, homNay){
-  var han = ngayTraCuaKy(mk, dk.ngay);
+  var han = ngayDinhKyCuaKy(mk, dk.ngay);
   var start = state.data.settings.ngayBatDau || '';
   var date = (!start || han >= start) ? han : homNay;
   var it = entryAddItem(date, dk.kind, dk.catId, dk.soTien, dk.ghiChu || dk.ten, dk.walletId);
@@ -921,7 +930,46 @@ function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }
 function pad2(n){ return n<10 ? '0'+n : ''+n; }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
-function monthKey(dateStr){ return dateStr.slice(0,7); }
+/* ====================================================================
+   KỲ TÀI CHÍNH — settings.ngayKy (1..28, mặc định 1 = tháng dương lịch).
+   "Tháng" (mk, 'YYYY-MM') là kỳ BẮT ĐẦU từ ngày ngayKy của tháng mk và kết thúc ngày trước ngayKy của tháng sau.
+   Ví dụ ngayKy=20: kỳ '2026-09' = 20/09 -> 19/10. Kỳ gọi tên theo tháng BẮT ĐẦU.
+   Mọi chỗ gom theo tháng đều đi qua monthKey() nên chỉ cần đổi ở đây; chỗ nào lặp từng ngày của tháng thì dùng
+   kyTu / kyDen / kySoNgay / kyNgay thay vì ghép mk + '-' + ngày.
+   ==================================================================== */
+function ngayKy(){
+  var st = state && state.data && state.data.settings;
+  var n = st ? Math.floor(num(st.ngayKy)) : 1;
+  return (n >= 2 && n <= 28) ? n : 1;
+}
+function monthKey(dateStr){
+  var mk = dateStr.slice(0,7), n = ngayKy();
+  return (n > 1 && parseInt(dateStr.slice(8,10),10) < n) ? monthKeyAdd(mk, -1) : mk;
+}
+// ngày đầu / ngày cuối của kỳ mk
+function kyTu(mk){ return mk + '-' + pad2(ngayKy()); }
+function kyDen(mk){
+  var n = ngayKy();
+  return n === 1 ? mk + '-' + pad2(daysInMonth(mk)) : monthKeyAdd(mk, 1) + '-' + pad2(n - 1);
+}
+function kySoNgay(mk){ return daysBetween(kyTu(mk), kyDen(mk)) + 1; }
+// ngày thứ i (1 = ngày đầu kỳ) của kỳ mk
+function kyNgay(mk, i){
+  if (ngayKy() === 1) return mk + '-' + pad2(i);
+  var t = new Date(kyTu(mk) + 'T00:00:00');
+  t.setDate(t.getDate() + i - 1);
+  return t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+}
+// ngày d là ngày thứ mấy của kỳ mk (1 = ngày đầu kỳ)
+function kyThuNgay(mk, d){ return daysBetween(kyTu(mk), d) + 1; }
+// "20/9 – 19/10" cho kỳ lệch tháng; '' khi là tháng dương lịch
+function kyKhoang(mk){
+  if (ngayKy() === 1) return '';
+  var a = kyTu(mk), b = kyDen(mk);
+  return parseInt(a.slice(8),10) + '/' + parseInt(a.slice(5,7),10) + ' – ' + parseInt(b.slice(8),10) + '/' + parseInt(b.slice(5,7),10);
+}
+// ngày dd/mm của ngày d dạng 'DD/MM'
+function ngayNganVN(d){ return d.slice(8,10) + '/' + d.slice(5,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
 function monthLabel(mk){ var p=mk.split('-'); return 'Tháng ' + parseInt(p[1],10) + '/' + p[0]; }
 // "YYYY-MM-DD" -> "DD/MM/YYYY", dùng hiển thị ngày trả/ngày thu cụ thể
@@ -988,7 +1036,7 @@ function balanceAt(dateStr){
 }
 function balanceBeforeMonth(mk){
   var c = balanceCache();
-  var k = _countBefore(c.dates, mk + '-01');
+  var k = _countBefore(c.dates, kyTu(mk));
   return k === 0 ? c.start : c.pre[k-1];
 }
 // số dư tính tới hết tháng mk (cộng dồn toàn bộ lịch sử, không phụ thuộc năm đang xem)
