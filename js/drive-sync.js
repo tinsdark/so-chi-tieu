@@ -42,6 +42,20 @@ function readSavedToken(){
 }
 function clearSavedToken(){ try{ localStorage.removeItem(TOKEN_KEY); }catch(e){} }
 
+// Tên / email tài khoản Google: lấy từ Drive about.get (không cần thêm quyền ngoài drive.file),
+// lưu lại để hiện ở thẻ Tài khoản và dùng được cả khi ngoại tuyến. Lỗi thì bỏ qua, chỉ là thông tin phụ.
+async function taiThongTinTaiKhoan(){
+  if (!accessToken || docTaiKhoan()) return;
+  try{
+    var res = await fetch(API_BASE + '/about?fields=user(displayName,emailAddress)', { headers: { 'Authorization': 'Bearer ' + accessToken } });
+    if (!res.ok) return;
+    var u = (await res.json()).user;
+    if (!u || (!u.displayName && !u.emailAddress)) return;
+    localStorage.setItem(TAI_KHOAN_KEY, JSON.stringify({ ten: u.displayName || '', email: u.emailAddress || '' }));
+    if (typeof renderAll === 'function' && state.data) renderAll();
+  }catch(e){}
+}
+
 function initTokenClient(){
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
@@ -57,6 +71,7 @@ function requestToken(interactive){
       accessToken = resp.access_token;
       saveToken(resp);
       try{ localStorage.setItem(DA_DN_KEY, '1'); }catch(e){}
+      taiThongTinTaiKhoan();
       resolve(accessToken);
     };
     tokenClient.error_callback = function(err){ reject(err); };
@@ -566,6 +581,7 @@ async function tiepTucPhienDangNhap(){
   var tok = readSavedToken() || await thuXinTokenAmTham();
   if (!tok) return false;
   accessToken = tok;
+  taiThongTinTaiKhoan();
   gateMsg('Đang vào bằng phiên đăng nhập gần nhất…');
   var ok = false;
   try{ ok = await driveLoad(); }catch(e){ ok = false; }
@@ -618,6 +634,7 @@ function signOut(){
   state.offline = false;
   clearSavedToken();
   try{ localStorage.removeItem(DA_DN_KEY); }catch(e){}
+  try{ localStorage.removeItem(TAI_KHOAN_KEY); }catch(e){}
   try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');

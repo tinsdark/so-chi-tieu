@@ -497,6 +497,15 @@ function icon(ten, lop){
   return '<svg class="ic'+(lop ? ' '+lop : '')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+d+'</svg>';
 }
 
+// Tài khoản Google đang đăng nhập {ten, email} (drive-sync.js ghi, thẻ Tài khoản ở Danh mục đọc); null nếu chưa có
+var TAI_KHOAN_KEY = 'chitieu_tai_khoan_v1';
+function docTaiKhoan(){
+  try{
+    var o = JSON.parse(localStorage.getItem(TAI_KHOAN_KEY) || 'null');
+    return (o && (o.ten || o.email)) ? o : null;
+  }catch(e){ return null; }
+}
+
 // escape khi nhồi text người dùng vào innerHTML
 function esc(s){
   return String(s == null ? '' : s)

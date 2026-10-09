@@ -227,7 +227,9 @@ function khoaCardHtml(){
   return h + '</div>';
 }
 function taiKhoanCardHtml(){
+  var tk = docTaiKhoan();
   return '<div class="card dm-card">'+dmHead('Tài khoản')
+    + (tk ? '<div class="dm-sub">Đang đăng nhập: <b>'+esc(tk.ten || tk.email)+'</b>'+(tk.ten && tk.email ? ' · '+esc(tk.email) : '')+'</div>' : '')
     + '<div class="dm-sub">Đăng xuất khỏi Google trên máy này.</div>'
     + '<button class="btn danger" data-act="dangXuat">Đăng xuất</button>'
     + ghiChuGon('Dữ liệu trên Google Drive vẫn còn nguyên; chỉ bản lưu để mở ngoại tuyến trên máy này bị xóa.', 'Đăng xuất có mất dữ liệu không?') + '</div>';
