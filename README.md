@@ -22,7 +22,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 
 - **Nhắc thu/chi theo ngày của danh mục.** Mỗi danh mục thu/chi (trừ danh mục hệ thống của Vay - Nợ) có ô "Ngày thu/chi hằng tháng" (`cat.ngay`, 1–31): Tiền nhà ngày 5, Lương ngày 20... Trong vòng 7 ngày trước hạn, thẻ tổng quan Sổ tay hiện chip "N khoản thu/chi sắp đến hạn"; bấm mở bảng trượt từ đáy (giống Ghi nhanh) liệt kê từng khoản, có nút **Ghi** mở Ghi nhanh với đúng danh mục đó. Hết nhắc khi tháng này đã có giao dịch ở danh mục đó (quá hạn mà chưa ghi thì nhắc "Quá hạn N ngày" suốt tháng); đã ghi rồi thì cuối tháng nhắc kỳ tháng sau. Chỉ nhắc trong app, chưa phải thông báo đẩy (xem 7.1). Code ở `js/nhachan.js`.
 - **Nhãn (tag) cho giao dịch.** Ô "Nhãn" ở Ghi nhanh (giữ nguyên sau mỗi lần ghi để ghi liền cả chuyến đi) và khi sửa một dòng; nhiều nhãn cách nhau bằng dấu phẩy. Lưu ở `it.nhan` (mảng chữ, không có nhãn thì không có trường), hai tên chỉ khác hoa/thường là một nhãn. Thẻ **Theo nhãn** ở Báo cáo: tổng chi / thu, số khoản, khoảng ngày, chạm để xem từng khoản, đổi tên / gộp, gỡ nhãn. Tìm ở Sổ tay cũng tìm theo nhãn. Nhãn không đổi số dư hay hạn mức.
-- **Sổ nợ theo người.** Mỗi khoản cho vay / vay có ô "Người" (`loan.nguoi`). Thẻ **Sổ nợ theo người** ở Vay - Nợ gom các khoản còn mở cùng một người để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Người).
+- **Sổ nợ theo đối tượng.** Mỗi khoản cho vay / vay có ô "Đối tượng" (người hoặc nơi vay, ví dụ Minh, Vietcombank) (`loan.nguoi`). Thẻ **Sổ nợ theo đối tượng** ở Vay - Nợ gom các khoản còn mở cùng một đối tượng để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Đối tượng).
 - **Chia hóa đơn nhóm.** Nút trong thẻ Cho vay: mình trả cả hóa đơn, nhập tổng và mỗi dòng một người (`Lan 150k` nếu không chia đều; người không ghi số chia đều phần còn lại cùng mình, lẻ đồng dồn về mình). Phần của mình thành một khoản chi ở Sổ tay, mỗi người khác thành một khoản cho vay (gắn `nguoi`), có Hoàn tác. Chưa có chiều ngược lại (người khác trả hộ, mình nợ họ).
 
 - **Đăng nhập Google, dữ liệu ở Drive của bạn.** Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
@@ -72,7 +72,7 @@ js/
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
   nhan.js           Nhãn (tag) cho giao dịch + thẻ "Theo nhãn" ở Báo cáo
   nhachan.js        Nhắc thu/chi theo ngày của danh mục + bảng "Sắp đến hạn"
-  nguoi.js          Người trong Vay - Nợ: Sổ nợ theo người + Chia hóa đơn nhóm
+  nguoi.js          Đối tượng trong Vay - Nợ: Sổ nợ theo đối tượng + Chia hóa đơn nhóm
   nhap.js           Nhập giao dịch từ CSV / Excel
   danhmuc.js        Tab Danh mục: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
   dongtien.js       Tab Dòng tiền (Thực tế & dự kiến)
@@ -156,7 +156,7 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 
 ### 7.1. Cần triển khai
 
-Đã làm: nhãn cho giao dịch, chia hóa đơn nhóm, sổ nợ theo người, nhắc thu/chi theo ngày của danh mục (xem mục 1). Còn lại:
+Đã làm: nhãn cho giao dịch, chia hóa đơn nhóm, sổ nợ theo đối tượng, nhắc thu/chi theo ngày của danh mục (xem mục 1). Còn lại:
 
 1. **Nhắc việc trên iPhone (thông báo ngoài app)** cho kỳ trả nợ, các khoản có ngày ở danh mục, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
    - **Xuất file `.ics`** rồi nhập vào Lịch iPhone, kèm báo thức nhắc trước hạn. Không cần server nhưng là ảnh chụp tại thời điểm xuất, dữ liệu đổi thì phải xuất lại. Cần thử: iOS có giữ báo thức trong file khi nhập không, và app mở từ màn hình chính có tải được file `.ics` để nhập không.
