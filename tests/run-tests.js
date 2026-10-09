@@ -1477,7 +1477,7 @@ test('Dòng tiền: "Lũy kế số dư" từ tháng hiện tại cộng dồn c
   setToday('2026-10-01');
 });
 
-test('Sổ tay: nhập thu hồi / trả nợ mà không chọn khoản thì có nhắc', function(){
+test('Sổ tay: nhập trả nợ mà không chọn khoản thì có nhắc (thu hồi cho vay không còn nhập ở Sổ tay)', function(){
   setToday('2026-10-10');
   var d = baseTraNo();
   d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'Thu hồi', chiTieu:0 }];
@@ -1487,11 +1487,47 @@ test('Sổ tay: nhập thu hồi / trả nợ mà không chọn khoản thì có
   thongBao.length = 0;
   ctx.state.editingDate = null;
   voiDom({ f_date:{ value:'2026-10-10' }, f_ghichu:{ value:'' }, sotay_selChoVay:{ value:'' }, sotay_selVayNo:{ value:'' } },
-         { '.f_thu':[ oNhap('thuHoiChoVay', '500000') ], '.f_chi':[ oNhap('traNo', '300000') ] },
+         { '.f_thu':[], '.f_chi':[ oNhap('traNo', '300000') ] },
          function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
-  ok(thongBao.some(function(m){ return m.indexOf('Thu hồi cho vay') >= 0 && m.indexOf('chưa chọn khoản') >= 0; }), 'nhắc thu hồi: ' + thongBao.join(' | '));
   ok(thongBao.some(function(m){ return m.indexOf('Trả nợ') >= 0 && m.indexOf('chưa chọn khoản') >= 0; }), 'nhắc trả nợ: ' + thongBao.join(' | '));
   eq(ctx.state.data.vayNo.choVay[0].daThu, 0, 'khoản cho vay không đổi');
+});
+
+test('cho vay TẤT TOÁN (thu thực tế): thu đủ -> ghi thu vào Sổ tay đúng ví/ngày, khoản đóng, sổ cái khớp; xóa ngày thì khoản mở lại', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.wallets = [{ id:'w1', ten:'Chính', soDuDauKy: 0 }, { id:'w2', ten:'Tiền mặt', soDuDauKy: 0 }];
+  d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', walletId:'w1' }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0];
+  var thieu = ctx.choVayGhiThu(c, 1000000, '2026-12-09', 'w2', false);
+  eq(thieu, 0, 'không còn thiếu');
+  eq(c.daThu, 1000000, 'daThu'); eq(c.trangThai, 'da_thu_du', 'thu đủ thì đóng'); eq(c.tatToan, undefined, 'không có xóa nợ');
+  var e = ctx.state.data.journal['2026-12-09'];
+  eq(e.refs.length, 1, 'có 1 ref'); eq(e.refs[0].loai, 'thuHoiChoVay'); eq(ctx.num(e.thu.thuHoiChoVay), 1000000, 'thu hồi vào Sổ tay');
+  eq(ctx.soDuTheoVi('w2', '2026-12-10'), 1000000, 'tiền vào đúng ví đã chọn'); eq(ctx.soDuTheoVi('w1', '2026-12-10'), 0, 'ví khác không đổi');
+  eq(ctx.journalKiemTra().length, 0, 'sổ cái khớp');
+  ok(ctx.dlRefHtml(e.refs[0]).indexOf('Thu hồi cho vay') >= 0, 'vẫn hiện ở chi tiết theo ngày');
+  ctx.loanRevertRef(e.refs[0]);
+  eq(c.daThu, 0, 'xóa ngày thu thì daThu lùi lại'); eq(c.trangThai, 'dang_cho', 'khoản mở lại');
+});
+
+test('cho vay TẤT TOÁN: thu thiếu -> giữ mở (thu một phần) hoặc đóng với phần thiếu = xóa nợ', function(){
+  setToday('2026-12-10');
+  var mk = function(){
+    var d = baseData();
+    d.vayNo.choVay = [{ id:'cv1', ten:'Bạn A', soTien:1000000, daThu:100000, trangThai:'dang_cho', ngayChoVay:'2026-10-01' }];
+    loadData(d); return ctx.state.data.vayNo.choVay[0];
+  };
+  var c = mk();
+  eq(ctx.choVayGhiThu(c, 500000, '2026-12-09', '', false), 400000, 'thiếu 400k');
+  eq(c.trangThai, 'dang_cho', 'thu một phần: khoản vẫn mở'); eq(ctx.conLaiPhaiThu(c), 400000, 'còn 400k'); eq(c.tatToan, undefined);
+  c = mk();
+  eq(ctx.choVayGhiThu(c, 500000, '2026-12-09', '', true), 400000, 'thiếu 400k');
+  eq(c.trangThai, 'da_thu_du', 'tất toán: đóng'); eq(c.tatToan.soTien, 400000, 'phần thiếu = xóa nợ'); eq(ctx.conLaiPhaiThu(c), 0);
+  eq(ctx.num(ctx.state.data.journal['2026-12-09'].thu.thuHoiChoVay), 500000, 'chỉ ghi số thực thu vào Sổ tay');
+  eq(ctx.phaiThuTaiNgay(c, '2026-12-10'), 0, 'tài sản ròng: không còn phải thu sau tất toán');
+  eq(ctx.journalKiemTra().length, 0);
 });
 
 test('fmt: làm tròn đồng, không hiện phần lẻ (tổng cộng từ lãi chia lẻ)', function(){
@@ -2771,26 +2807,24 @@ test('Fuzz 150 chuỗi × 40 thao tác (thêm/sửa/xóa dòng, gắn/gỡ ref, 
   } finally { ctx.toast = t0; ctx.xacNhan = x0; ctx.state.editingDate = null; }
 });
 
-test('Form đầy đủ vào ngày ĐÃ CÓ dòng: thêm đúng phần mới, phần cũ giữ nguyên; thu hồi gắn khoản cho vay đi vào refs (không thành dòng items)', function(){
+test('Form đầy đủ vào ngày ĐÃ CÓ dòng: thêm đúng phần mới, phần cũ giữ nguyên; phần thu mới đi vào items', function(){
   var d = baseData();
-  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'Thu hồi', chiTieu:0 }];
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }];
   d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }];
-  d.vayNo = { choVay: [{ id:'cv1', ten:'A', soTien:1000000, daThu:0, ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-12-01' }], vayNoPhaiTra: [] };
   loadData(d); setToday('2026-10-10');
   ctx.entryAddItem('2026-10-08', 'chi', 'an', 100000, 'Cơm');
   ctx.state.editingDate = null;
   var t0 = ctx.toast; ctx.toast = function(){};
   try{
-    voiDom({ f_date:{ value:'2026-10-08' }, f_ghichu:{ value:'thu nợ' }, sotay_selChoVay:{ value:'cv1' } },
-      { '.f_thu': [ oNhap('luong', ''), oNhap('thuHoiChoVay', '300000') ], '.f_chi': [ oNhap('an', '50000') ] },
+    voiDom({ f_date:{ value:'2026-10-08' }, f_ghichu:{ value:'thu nợ' } },
+      { '.f_thu': [ oNhap('luong', '300000') ], '.f_chi': [ oNhap('an', '50000') ] },
       function(){ ctx.handleSoTayAction('saveEntry', { _daBaoAm: true }); });
   } finally { ctx.toast = t0; }
   var e = ctx.state.data.journal['2026-10-08'];
-  eq(ctx.num(e.chi.an), 150000, 'Ăn = 100k cũ + 50k mới'); eq(ctx.num(e.thu.thuHoiChoVay), 300000, 'thu hồi = ref 300k');
-  eq(e.refs.length, 1, 'có 1 ref'); eq(ctx.entryItems(e).filter(function(it){ return it.catId === 'thuHoiChoVay'; }).length, 0, 'thu hồi KHÔNG thành dòng items');
+  eq(ctx.num(e.chi.an), 150000, 'Ăn = 100k cũ + 50k mới'); eq(ctx.num(e.thu.luong), 300000, 'lương = 300k');
+  eq(ctx.entryItems(e).filter(function(it){ return it.catId === 'luong'; }).length, 1, 'lương thành 1 dòng items');
   eq(ctx.entryItems(e).filter(function(it){ return it.catId === 'an'; }).length, 2, 'Ăn có 2 dòng');
   eq(ctx.journalKiemTra().length, 0);
-  eq(ctx.state.data.vayNo.choVay[0].daThu, 300000, 'khoản cho vay ghi nhận đã thu');
   setToday('2026-10-01');
 });
 

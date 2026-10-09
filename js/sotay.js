@@ -10,7 +10,7 @@
    rồi tự hạch toán sang Sổ tay. Nhập tay ở đây sẽ tạo tiền mồ côi không gắn với
    khoản nào, sửa/xóa khoản vay không hoàn lại được -> khóa ô.
    Ngoại lệ: ngày đang sửa đã có số nhập tay (dữ liệu cũ) thì vẫn mở để xóa đi được. */
-var VN_ONLY_THU = { nhanTienVay: 1 };
+var VN_ONLY_THU = { nhanTienVay: 1, thuHoiChoVay: 1 };
 var VN_ONLY_CHI = { choVay: 1 };
 
 /* ====================================================================
@@ -442,18 +442,9 @@ function renderSoTay(){
       + '>';
     if (VN_ONLY_THU[c.id]){
       html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
-        + (roThu ? 'Ghi ở tab Vay - Nợ (thêm khoản vay) — tự hạch toán sang đây.'
+        + (roThu ? 'Ghi ở tab Vay - Nợ — tự hạch toán sang đây.'
                  : 'Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
         + '</div>';
-    }
-    if (c.id === 'thuHoiChoVay' && !state.editingDate){
-      var pendingCV = (state.data.vayNo.choVay||[]).filter(function(l){ return l.trangThai !== 'da_thu_du' && conLaiPhaiThu(l) > 0.01; });
-      if (pendingCV.length){
-        html += '<select id="sotay_selChoVay" data-act="soTayChonChoVay" style="margin-top:4px;width:100%;font-size:12px">'
-          + '<option value="">— chọn khoản cho vay (tùy chọn) —</option>'
-          + pendingCV.map(function(l){ return '<option value="'+l.id+'">'+esc(l.ten)+' (còn '+fmt(conLaiPhaiThu(l))+')</option>'; }).join('')
-          + '</select>';
-      }
     }
     html += '</div>';
   });
@@ -945,9 +936,7 @@ function handleSoTayAction(act, el){
     var wasEditing = !!state.editingDate;
     var viSel = (document.getElementById('f_wallet') || {}).value || viMacDinhId();
     if (!wasEditing && walletById(viSel)) state.viChon = viSel;
-    var selCV = document.getElementById('sotay_selChoVay');
     var selVN = document.getElementById('sotay_selVayNo');
-    var cvIdSel = (!wasEditing && selCV) ? selCV.value : '';
     var vnIdSel = (!wasEditing && selVN) ? selVN.value : '';
     // data-lock = phần tiền do khoản vay sinh ra, ô nhập chỉ chứa phần nhập tay -> cộng lại
     var thu = {};
@@ -1044,15 +1033,6 @@ function handleSoTayAction(act, el){
       toast('Đã lưu giao dịch ngày ' + date.slice(8,10)+'/'+date.slice(5,7)+'/'+date.slice(0,4) + '.');
     }
 
-    if (cvIdSel && thu['thuHoiChoVay']){
-      var cvApply = state.data.vayNo.choVay.find(function(x){ return x.id===cvIdSel; });
-      if (cvApply){
-        cvApply.daThu = num(cvApply.daThu) + thu['thuHoiChoVay'];
-        if (conLaiPhaiThu(cvApply) <= 0.01) cvApply.trangThai = 'da_thu_du';
-        journalTagRef(date, cvApply.id, 'thuHoiChoVay', thu['thuHoiChoVay']);
-        daTag['thu|thuHoiChoVay'] = 1;
-      }
-    }
     // CHỈ ghi nhận trả nợ khi thực sự có nhập tiền vào danh mục "Trả nợ", và ghi đúng
     // SỐ ĐÃ NHẬP vào kỳ tiếp theo (trước đây chọn khoản vay mà không nhập tiền vẫn
     // cộng tiến độ 1 kỳ -> trả nợ khống)
@@ -1085,11 +1065,8 @@ function handleSoTayAction(act, el){
     } else if (vnIdSel && !chi['traNo']){
       toast('Đã chọn khoản vay nhưng chưa nhập số tiền ở danh mục "Trả nợ" — không ghi nhận kỳ trả nào.', { loai:'warn' });
     }
-    // chiều ngược lại: có nhập tiền mà không chọn khoản -> tiền vẫn vào Sổ tay nhưng khoản vay/cho vay
+    // chiều ngược lại: có nhập tiền mà không chọn khoản -> tiền vẫn vào Sổ tay nhưng khoản vay
     // không đổi gì (vẫn còn nợ / còn phải thu), nên nhắc để người dùng biết
-    if (!wasEditing && selCV && !cvIdSel && thu['thuHoiChoVay']){
-      toast('Đã ghi "Thu hồi cho vay" nhưng chưa chọn khoản cho vay — khoản đó vẫn tính là chưa thu.', { loai:'warn' });
-    }
     if (!wasEditing && selVN && !vnIdSel && chi['traNo']){
       toast('Đã ghi "Trả nợ" nhưng chưa chọn khoản vay — tiến độ trả nợ của khoản vay không đổi.', { loai:'warn' });
     }
@@ -1423,14 +1400,6 @@ function handleSoTayChange(el){
   } else if (el.matches('[data-act=qaDate]')){
     state.qa.date = (el.value && el.value !== todayStr()) ? el.value : '';
     qaVeLai();
-    return true;
-  } else if (el.matches('[data-act=soTayChonChoVay]')){
-    var cvId = el.value;
-    var inpThu = document.querySelector('.f_thu[data-cat=thuHoiChoVay]');
-    if (cvId && inpThu){
-      var cvSel = state.data.vayNo.choVay.find(function(x){ return x.id===cvId; });
-      if (cvSel) inpThu.value = veSo(conLaiPhaiThu(cvSel));   // ô .money -> phải ghi dạng có phân cách
-    }
     return true;
   } else if (el.matches('[data-act=soTayChonVayNo]')){
     var vnId = el.value;
