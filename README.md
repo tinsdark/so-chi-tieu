@@ -144,7 +144,36 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 ## 7. Hướng phát triển
 
-Chưa có kế hoạch cố định. Một vài việc đã biết:
+Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ tự sau) và **hướng phát triển tương lai** (chưa làm, có thể làm khi cần). Cuối mục có các việc **đã cân nhắc và quyết định không làm**, để khỏi đề xuất lại.
 
+### 7.1. Cần triển khai
+
+1. **Tháng tài chính theo ngày lương.** Hiện mọi báo cáo chia theo tháng dương lịch. Người dùng nhận lương ngày **20**, nên "tháng này" bị lệch số. Làm thành **một ô nhập ngày ở tab Danh mục** (ngày bắt đầu kỳ, mặc định 1 = như hiện tại) vì ngày lương sau này có thể đổi, không viết cứng 20.
+   - Đụng nhiều nơi gom theo tháng (khoảng 50 chỗ gọi `monthKey`): Dòng tiền, Báo cáo, hạn mức, dự trù, Mô phỏng, Bảng theo dõi, Dòng tiền tích lũy tương lai.
+   - Cần quyết trước: kỳ gọi tên theo tháng nào (kỳ 20/9 đến 19/10 gọi là "tháng 9" hay "tháng 10"), và dữ liệu cũ (kỳ 1) chuyển sang thế nào. Phải thêm migration và test cho các trường hợp giáp ranh ngày đổi kỳ.
+2. **Nhãn (tag) cho giao dịch** ngoài danh mục (ví dụ "du lịch Đà Lạt", "đám cưới") và báo cáo theo nhãn, để trả lời "chuyến đi này tổng cộng tốn bao nhiêu". Thêm trường vào giao dịch nên cần migration; nhãn gắn ở Ghi nhanh phải gọn để không làm rối.
+3. **Nhắc việc trên iPhone** cho kỳ trả nợ, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
+   - **Xuất file `.ics`** rồi nhập vào Lịch iPhone, kèm báo thức nhắc trước hạn. Không cần server nhưng là ảnh chụp tại thời điểm xuất, dữ liệu đổi thì phải xuất lại. Cần thử: iOS có giữ báo thức trong file khi nhập không, và app mở từ màn hình chính có tải được file `.ics` để nhập không.
+   - **Tạo sự kiện thẳng vào Google Calendar** qua đăng nhập Google sẵn có (tự cập nhật, đồng bộ sang Lịch iPhone nếu tài khoản Google đã thêm vào máy). Phải xin thêm quyền Lịch (quyền nhạy cảm hơn `drive.file` hiện tại, đổi màn hình đồng ý và `privacy.html`).
+   - **Thông báo đẩy (Web Push)**: cần có server riêng, trái nguyên tắc "không server", không chọn.
+4. **Đường dẫn ghi nhanh** (ví dụ `?them=45000&ghichu=...`) kết hợp iPhone Shortcuts để tin nhắn ngân hàng mở app với số tiền và nội dung điền sẵn. Không cần AI hay server. **Cần nghiên cứu thêm trước khi làm:** Shortcuts có mở được PWA ổn trên máy dùng thật không, và cú pháp đọc nội dung tin nhắn của từng ngân hàng.
+5. **Chia hóa đơn nhóm / hùn tiền** (ăn chung, ai nợ ai), nối với Vay - Nợ: tạo khoản cho vay theo từng người.
+6. **Sổ nợ theo người:** **ghi chung** các khoản với cùng một người để thấy số ròng "mình nợ A bao nhiêu", nhưng **từng khoản vẫn giữ cách trả riêng** (hình thức, lịch trả, kỳ, tất toán). Tức là gộp chỉ để xem và cộng tổng, không gộp cách tính. Hiện mỗi khoản là một thẻ riêng. Nên làm cùng hoặc sau mục 5 vì dùng chung khái niệm "người".
+
+### 7.2. Hướng phát triển tương lai
+
+- **Mã hóa dữ liệu bằng mã PIN** (WebCrypto) cho bản lưu trên máy, tùy chọn cả file trên Drive. Hiện khóa PIN chỉ là khóa màn hình (xem mục 6). Nặng và rủi ro cao: quên PIN thì không giải mã được, cần cảnh báo rõ, migration cho dữ liệu cũ và test kỹ.
+- **Báo cáo để chia sẻ:** tổng kết tháng / năm xuất ảnh hoặc PDF.
+- **Đính kèm ảnh hóa đơn** vào giao dịch (lưu lên Drive, quyền `drive.file` đủ). Cần quản lý dung lượng.
+- **Huy hiệu số trên biểu tượng app** (số khoản sắp tới hạn). **Chưa chắc** iOS hỗ trợ ổn cho web app khi chưa có đẩy thông báo, cần thử.
+- **Sổ tiết kiệm có kỳ hạn** (lãi suất, ngày đáo hạn, tự tính lãi) và **vàng / chứng khoán** vào tài sản ròng. Giá nhập tay vì không có server.
+- **Đa tiền tệ**, chỉ đáng khi có chi tiêu bằng ngoại tệ.
+
+### 7.3. Đã cân nhắc, quyết định không làm
+
+- **AI / chatbot** trong app: không cần.
+- **Giao dịch định kỳ tự ghi:** giữ nhắc rồi ghi tay, vì số tiền nhiều khoản không cố định.
+- **Mẫu giao dịch / yêu thích** ở Ghi nhanh: giữ ghi tay cho khỏi rối giao diện.
+- **Dùng chung sổ nhiều người:** rủi ro xung đột ghi chồng, bỏ.
 
 Phần này ghi lại khi có ý tưởng mới.
