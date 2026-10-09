@@ -1982,10 +1982,10 @@ test('Danh mục: tích chọn ví mặc định lưu vào settings, không đ�
   d.journal['2026-10-02'] = { thu:{}, chi:{ an:10000 }, ghiChu:'', refs:[], items:[ { iid:'i1', kind:'chi', catId:'an', soTien:10000, ghiChu:'', walletId:'w1' } ] };
   loadData(d);
   var h = ctx.viCardHtml();
-  ok(/data-act="viMd" data-id="w1" checked/.test(h) && !/data-act="viMd" data-id="w2" checked/.test(h), 'ví đầu đang là mặc định');
-  ctx.handleDanhMucChange({ checked:true, matches:function(s){ return s === '[data-act=viMd]'; }, getAttribute:function(a){ return a === 'data-id' ? 'w2' : null; } });
+  ok(/data-id="w1"[^>]*>\s*<span class="dm-main"><b class="dm-n">[^<]*<\/b><span class="dm-chips"><span class="dm-chip md">Mặc định/.test(h) && (h.match(/Mặc định<\/span>/g) || []).length === 1, 'ví đầu đang là mặc định (đúng 1 ví có chip)');
+  ctx.viDatMacDinh('w2');
   eq(ctx.state.data.settings.viMacDinh, 'w2', 'đã lưu');
-  ok(/data-act="viMd" data-id="w2" checked/.test(ctx.viCardHtml()), 'giao diện đánh dấu Tiền mặt');
+  ok(/data-id="w2"[^>]*>\s*<span class="dm-main"><b class="dm-n">[^<]*<\/b><span class="dm-chips"><span class="dm-chip md">Mặc định/.test(ctx.viCardHtml()), 'giao diện đánh dấu ví mới');
   eq(ctx.state.data.journal['2026-10-02'].items[0].walletId, 'w1', 'dòng cũ không bị xếp lại ví');
   eq(ctx.soDuTheoVi('w1', '2026-10-10'), 490000, 'số dư ví cũ không đổi');
   // thêm dòng mới không chọn ví -> vào ví mặc định mới
