@@ -140,7 +140,7 @@ function dtThangDuLieu(mk){
   d.tn = dtTraNoKy(mk);
   return d;
 }
-// cân đối + số dư lũy kế từng tháng, bắt đầu từ tháng hiện tại (cùng cách tính thẻ "Dòng tiền tích lũy tương lai" ở Vay - Nợ)
+// cân đối + số dư lũy kế từng tháng, bắt đầu từ tháng hiện tại
 function dtDuKienRows(n){
   var cur = monthKey(todayStr()), run = balanceBeforeMonth(cur), out = [];
   for (var i = 0; i < n; i++){

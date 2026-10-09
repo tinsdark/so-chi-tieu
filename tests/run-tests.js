@@ -2981,6 +2981,55 @@ test('Cho vay: Hủy xóa nợ (khoản đã tất toán có thu) -> còn phải
 });
 
 /* ==================================================================== */
+group('TD. Bảng theo dõi trả nợ & thu tiền theo tháng (tab Vay - Nợ)');
+
+test('vnTheoDoiRows: kỳ quá hạn dồn vào tháng này; kỳ đã đóng không dồn; đã trả = tiền ghi nhận; tháng sau theo lịch', function(){
+  setToday('2026-12-10');                                   // kỳ 0 = T11 (quá hạn), kỳ 1 = T12 (tháng này), kỳ 2 = T1/27
+  var mk = function(traNo){ var d = baseData(); d.vayNo.vayNoPhaiTra = [loanKhongLai({ traNo: traNo })]; loadData(d); return ctx.vnTheoDoiRows(4); };
+  var r = mk([]);
+  eq(r.length, 4); eq(r[0].mk, '2026-12', 'bắt đầu từ tháng này');
+  eq(r[0].can, 2000000, 'tháng này = kỳ T12 + kỳ T11 quá hạn'); eq(r[0].da, 0);
+  eq(r[1].can, 1000000, 'T1/27 theo lịch'); eq(r[3].can, 1000000);
+  r = mk([{ ky:0, mk:'2026-11', soTien:1000000, ngay:'2026-11-05', dongKy:true }, { ky:1, mk:'2026-12', soTien:400000, ngay:'2026-12-05', dongKy:false }]);
+  eq(r[0].can, 1000000, 'kỳ T11 đã đóng thì không dồn vào tháng này'); eq(r[0].da, 400000, 'đã trả 400k kỳ T12');
+  r = mk([{ ky:1, mk:'2026-12', soTien:1000000, ngay:'2026-12-05', dongKy:true }]);
+  eq(r[0].da, 1000000, 'kỳ đã đóng tính đủ'); eq(Math.max(0, r[0].can - r[0].da) , 1000000, 'còn lại = kỳ T11 quá hạn chưa đóng');
+});
+
+test('vnTheoDoiRows: phải thu = còn chờ thu (quá hạn dồn vào tháng này) + đã thu trong tháng', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [
+    { id:'cv1', ten:'A', soTien:500000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2027-01-15' },
+    { id:'cv2', ten:'B', soTien:300000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-11-30' }
+  ];
+  loadData(d);
+  ctx.choVayGhiThu(ctx.state.data.vayNo.choVay[1], 100000, '2026-12-05', '', false);
+  var r = ctx.vnTheoDoiRows(3);
+  eq(r[0].thuDa, 100000, 'đã thu tháng này'); eq(r[0].thuCan, 300000, '100k đã thu + 200k còn lại (quá hạn dồn vào tháng này)');
+  eq(r[1].thuCan, 500000, 'T1/27 = khoản A'); eq(r[1].thuDa, 0); eq(r[2].thuCan, 0);
+});
+
+test('Dòng tiền tích lũy tương lai (Vay - Nợ): ô số liệu + biểu đồ + danh sách đủ số tháng đã chọn; chỉ nợ (cột Phải trả/Phải thu); không có khoản nào thì ẩn thẻ', function(){
+  setToday('2026-12-10');
+  var d = baseData(); loadData(d);
+  eq(ctx.vnTheoDoiHtml(), '', 'chưa có khoản nào -> không hiện');
+  d.vayNo.vayNoPhaiTra = [loanKhongLai()]; loadData(d);
+  ctx.state.vnHorizon = 12;
+  var h = ctx.vnTheoDoiHtml();
+  ok(h.indexOf('Dòng tiền tích lũy tương lai') >= 0, 'tiêu đề');
+  ok(h.indexOf('class="dt-tiles"') >= 0 && h.indexOf('Tháng này còn phải trả') >= 0, 'ô số liệu');
+  ok(h.indexOf('<svg') >= 0 && h.indexOf('Phải trả') >= 0, 'biểu đồ có nhãn Phải trả');
+  ok(h.indexOf('Còn lại') >= 0 && h.indexOf('Đã trả') >= 0, 'danh sách có cột Đã trả / Còn lại');
+  ok(h.indexOf('Lũy kế') < 0 && h.indexOf('>Chi<') < 0, 'không còn cột Chi / Lũy kế của dòng tiền cả sổ');
+  var dem = function(){ return (ctx.vnTheoDoiHtml().match(/class="vn-ml-r/g) || []).length; };
+  eq(dem(), 12, 'chọn 12 tháng -> đủ 12 dòng'); ok(h.indexOf('Xem cả') < 0, 'không còn nút Xem cả');
+  ctx.state.vnHorizon = 6; eq(dem(), 6, '6 tháng -> 6 dòng');
+  ctx.state.vnHorizon = 24; eq(dem(), 24, '24 tháng -> 24 dòng');
+  ctx.state.vnHorizon = 12;
+});
+
+/* ==================================================================== */
 group('IMG. Ảnh nền được tham chiếu trong CSS phải tồn tại');
 test('mọi url(img/...) trong style.css trỏ tới file có thật (nền họa tiết, ảnh đầu màn đăng nhập)', function(){
   var root = path.join(__dirname, '..');

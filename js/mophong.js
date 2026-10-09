@@ -444,7 +444,7 @@ function renderMoPhong(){
   });
   html += '</div>';
   if (rowsMoi.length > 6) html += '<button type="button" class="dt-more" data-act="mpHetThang">'+(state.mp.hetThang ? 'Thu gọn' : 'Xem thêm '+(rowsMoi.length - 6)+' tháng')+'</button>';
-  html += '<div class="mp-hint c">Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở tab Vay - Nợ · số tính bằng ₫</div></div>';
+  html += '<div class="mp-hint c">Cách tính giống thẻ "Dự kiến các tháng tới" ở chế độ Thực tế &amp; dự kiến · số tính bằng ₫</div></div>';
 
   var phai = html.indexOf('<div class="mp-tiles">');
   root.innerHTML = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">' + html.slice(0, phai) + '</div><div class="cot-phai">' + html.slice(phai) + '</div></div>';

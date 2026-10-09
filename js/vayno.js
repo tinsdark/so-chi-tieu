@@ -1,7 +1,7 @@
 "use strict";
 /* ====================================================================
    vayno.js — toàn bộ logic + giao diện tab "Vay - Nợ": tính lịch trả nợ,
-   render bảng Cho vay / Vay-Nợ phải trả, dòng tiền tích lũy tương lai,
+   render bảng Cho vay / Vay-Nợ phải trả, dòng tiền tích lũy tương lai (trả nợ & thu tiền theo tháng),
    và xử lý các hành động (thêm/sửa/xóa/tất toán/ghi nhận thu-trả) của tab này.
    Cần state.js, drive-sync.js load trước.
    ==================================================================== */
@@ -368,7 +368,7 @@ function taiSanRongThang(mk, thuHoi){
   return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
 }
 
-/* ---- dòng tiền tích lũy tương lai (thẻ dưới cùng của tab Vay-Nợ) ---- */
+/* ---- tổng thu / chi cả tháng (dùng cho dự báo ở Dòng tiền, Mô phỏng, Báo cáo) ---- */
 function actualCatMonthAll(kind, mk){
   var s = 0;
   Object.keys(state.data.journal).forEach(function(d){
@@ -721,46 +721,72 @@ function vnChoVayHtml(){
   return h + '</div>';
 }
 
-/* ---- dòng tiền tích lũy tương lai ---- */
-function vnDongTienHtml(){
-  var horizon = state.vnHorizon || 12;
-  var startMk = monthKey(todayStr()), months = [];
-  for (var i=0;i<horizon;i++) months.push(monthKeyAdd(startMk, i));
-  var runningBal = balanceBeforeMonth(startMk);
-  var rows = months.map(function(mk){
-    var thu = tongThuThangCard(mk), chi = tongChiThangCard(mk);
-    runningBal += thu - chi;
-    return { mk:mk, thu:thu, chi:chi, bal: runningBal };
+/* ---- theo dõi trả nợ & thu tiền theo tháng (thẻ dưới cùng của tab Vay-Nợ) ----
+   CHỈ nợ: phải trả (lịch trả các khoản vay) và phải thu (cho vay). Không gồm thu chi sinh hoạt —
+   dòng tiền cả sổ nằm ở tab Dòng tiền. Số "phải trả" cùng cách tính thẻ tổng quan: kỳ quá hạn chưa đóng dồn vào tháng này. */
+function vnTheoDoiRows(n){
+  var cur = monthKey(todayStr()), rows = [], idx = {}, i;
+  for (i = 0; i < n; i++){
+    var mk = monthKeyAdd(cur, i);
+    var r = { mk: mk, can: 0, da: 0, thuCan: 0, thuDa: 0 };
+    rows.push(r); idx[mk] = r;
+  }
+  (state.data.vayNo.vayNoPhaiTra || []).filter(loanIsActive).forEach(function(v){
+    tinhLichTraNo(v).forEach(function(row, k){
+      var dong = kyDaDong(v, k);
+      if (row.mk < cur && dong) return;
+      var r = idx[row.mk < cur ? cur : row.mk];
+      if (!r) return;
+      var need = num(row.tongTra);
+      r.can += need;
+      r.da += dong ? need : Math.min(need, soTienTraKy(v, k));
+    });
   });
-  var cuoi = rows[rows.length-1], thap = rows.reduce(function(a, r){ return r.bal < a.bal ? r : a; }, rows[0]);
-  var hien = state.vnHetThang ? rows : rows.slice(0, 6);
-  var h = '<div class="card vn-dt"><h3>Dòng tiền tích lũy tương lai</h3><div class="mp-hz">'
+  rows.forEach(function(r){
+    r.thuDa = actualCatInMonth('thu', 'thuHoiChoVay', r.mk);
+    r.thuCan = r.thuDa + tongThuHoiThang(r.mk);
+  });
+  return rows;
+}
+function vnTheoDoiHtml(){
+  var vn = state.data.vayNo;
+  if (!(vn.vayNoPhaiTra || []).length && !(vn.choVay || []).length) return '';
+  var horizon = state.vnHorizon || 12, rows = vnTheoDoiRows(horizon), n = rows.length, cur = rows[0];
+  var nhan = function(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(2, 4); };
+  var conTra = function(r){ return Math.max(0, r.can - r.da); };
+  var tongCon = 0, tongThu = 0, nang = rows[0];
+  rows.forEach(function(r){ tongCon += conTra(r); tongThu += r.thuCan - r.thuDa; if (r.can > nang.can) nang = r; });
+  var o = function(l, big, sub, cls){ return '<div class="dt-ti '+(cls || '')+'"><small>'+l+'</small><b>'+big+'</b><span>'+sub+'</span></div>'; };
+  var tiles = '<div class="dt-tiles">'
+    + (cur.can > 0
+        ? (conTra(cur) > 0 ? o('Tháng này còn phải trả', vnSo(conTra(cur)), 'đã trả '+vnSo(cur.da)+' / '+vnSo(cur.can), 'xau') : o('Tháng này', 'Đã trả đủ', vnSo(cur.can), 'tot'))
+        : o('Tháng này', 'Không có kỳ', 'phải trả'))
+    + (nang.can > 0 ? o('Tháng nặng nhất', nhan(nang.mk), vnSo(nang.can)) : o('Phải trả', 'Không có', 'trong '+n+' tháng', 'tot'))
+    + (tongThu > 0.5 ? o('Sẽ thu '+n+' tháng', vnSo(tongThu), 'cho vay chờ thu', 'tot') : o('Còn phải trả', vnSo(tongCon), 'trong '+n+' tháng'))
+    + '</div>';
+  var chart = '<div class="bd-box" style="margin-top:8px">' + bdCombo({ W: 350, H: 190, labels: rows.map(function(r){ return nhan(r.mk); }),
+    thu: rows.map(function(r){ return Math.round(r.thuCan); }), chi: rows.map(function(r){ return Math.round(r.can); }),
+    nhanThu: 'Phải thu', nhanChi: 'Phải trả', thuaNhan: true, sel: 0, money: function(v){ return fmt(v); }, aria: 'Số tiền phải trả và phải thu theo tháng' }) + '</div>';
+  var list = '<div class="vn-ml"><div class="vn-ml-h"><span>Tháng</span><span>Phải trả</span><span>Đã trả</span><span>Còn lại</span><span>Phải thu</span></div>';
+  rows.forEach(function(r){
+    var con = conTra(r);
+    list += '<div class="vn-ml-r'+(r.mk === cur.mk ? ' sel' : '')+'"><span>'+nhan(r.mk)+'</span><span class="c">'+(r.can > 0 ? vnSo(r.can) : '–')+'</span>'
+      + '<span>'+(r.da > 0 ? vnSo(r.da) : '–')+'</span><span class="l'+(con > 0 ? ' am' : '')+'">'+(r.can > 0 ? vnSo(con) : '–')+'</span>'
+      + '<span class="t">'+(r.thuCan > 0 ? vnSo(r.thuCan) : '–')+'</span></div>';
+  });
+  list += '</div>';
+  return '<div class="card vn-dt"><h3>Dòng tiền tích lũy tương lai</h3><div class="mp-hz">'
     + [6,12,24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="vnHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
-    + '</div>'
-    + '<div class="vn-lbl">Tích lũy dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
-    + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
-    + '<div class="bd-box" style="margin-top:8px">'
-    + bdLine({ W: 350, H: 190, labels: rows.map(function(r){ return 'T' + parseInt(r.mk.slice(5, 7), 10) + (r.mk.slice(0, 4) !== rows[0].mk.slice(0, 4) ? '/' + r.mk.slice(2, 4) : ''); }),
-      series: [{ ten: 'Số dư', vals: rows.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
-      tipTitle: function(i){ return monthLabel(rows[i].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế dự kiến' }) + '</div>'
-    + '<div class="vn-ml"><div class="vn-ml-h"><span>Tháng</span><span>Thu</span><span>Chi</span><span>Tích lũy</span></div>';
-  hien.forEach(function(r){
-    h += '<div class="vn-ml-r"><span>T'+parseInt(r.mk.slice(5,7),10)+'/'+r.mk.slice(2,4)+'</span><span class="t">'+vnSo(r.thu)+'</span><span class="c">'+vnSo(r.chi)+'</span>'
-      + '<span class="l'+(r.bal < 0 ? ' am' : '')+'">'+vnSo(r.bal)+'</span></div>';
-  });
-  h += '</div>';
-  if (rows.length > 6) h += '<button type="button" class="vn-more" data-act="vnHetThang">'+(state.vnHetThang ? 'Thu gọn' : 'Xem cả '+rows.length+' tháng')+'</button>';
-  h += '<div class="vn-sub" style="text-align:center;margin-top:4px">Số tính bằng ₫</div>';
-  // Khối giải thích dài đẩy hẳn bảng xuống dưới màn hình, mà đọc 1 lần là nhớ -> gấp lại, mặc định đóng.
-  h += '<details class="giai-thich"><summary>ⓘ Số tháng tương lai tính thế nào?</summary>'
-    + '<div>Tháng hiện tại/quá khứ dùng số thực tế từ Sổ tay; tháng tương lai dùng gợi ý: TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất (tính từ "Tháng bắt đầu tính dự kiến" ở tab Danh mục), chưa có tháng hoàn chỉnh nào thì dùng Hạn mức/tháng. Riêng Trả nợ/Thu hồi cho vay lấy thẳng từ lịch vay (kỳ đã ghi nhận trả thì không cộng lại; khoản cho vay quá hạn dồn vào tháng hiện tại), và các danh mục có cờ "Cố định theo Hạn mức": nếu tháng hiện tại chưa ghi Sổ tay thì vẫn hiện số biết trước.</div></details>';
-  return h + '</div>';
+    + '</div>' + tiles + chart + list
+    + '<div class="vn-sub" style="text-align:center;margin-top:4px">Số tính bằng ₫</div>'
+    + '<details class="giai-thich"><summary>ⓘ Các số này tính thế nào?</summary>'
+    + '<div><b>Phải trả</b>: tổng số kỳ trả nợ theo lịch của từng khoản vay trong tháng; kỳ đã quá hạn mà chưa đóng được dồn vào tháng này. <b>Đã trả</b>: số đã ghi nhận trả cho các kỳ đó (kỳ đã đóng tính đủ). <b>Phải thu</b>: cho vay còn chờ thu theo ngày dự kiến thu (quá hạn dồn vào tháng này) cộng số đã thu trong tháng. Chỉ gồm nợ; dòng tiền cả sổ xem ở tab Dòng tiền.</div></details></div>';
 }
 
 function renderVayNo(){
   var root = document.getElementById('tabContent');
   var trai = vnTongQuanHtml() + sapDenHanHtml(7) + vnVayHtml();
-  var phai = vnChoVayHtml() + vnDongTienHtml();
+  var phai = vnChoVayHtml() + vnTheoDoiHtml();
   root.innerHTML = '<div class="cot2"><div class="cot-trai">' + trai + '</div><div class="cot-phai">' + phai + '</div></div>';
   vnSheetVe();
 }
@@ -1070,9 +1096,6 @@ function handleVayNoAction(act, el){
     vnTomCapNhat();
   } else if (act === 'vnHorizon'){
     state.vnHorizon = parseInt(el.getAttribute('data-h'), 10) || 12;
-    renderVayNo();
-  } else if (act === 'vnHetThang'){
-    state.vnHetThang = !state.vnHetThang;
     renderVayNo();
   } else if (act === 'vnXong'){
     state.vnXong = !state.vnXong;
