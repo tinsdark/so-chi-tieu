@@ -214,11 +214,15 @@ tr.mp-am td{background:var(--chi-bg)}
 .giai-thich>div{margin-top:7px;line-height:1.55}
 
 
+/* bàn phím mở (iOS: phần nhìn thấy nhỏ hơn khung layout): thanh tab và thanh Ghi nhanh ẩn đi thay vì nổi trên bàn phím */
+html[data-kb] .tabs,html[data-kb] .qa-bar-wrap{visibility:hidden}
 @media (max-width:700px){
   /* điều hướng xuống đáy (vùng ngón tay). Markup + handler không đổi 1 dòng,
      nhưng updateStickyOffsets() PHẢI set --tabs-h:0px vì nav không còn
      chiếm chỗ ở đỉnh — nếu không .month-nav/.year-nav sẽ hở 1 khoảng trống. */
-  .tabs{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;transform:translateY(var(--vv-dy,0px));
+  /* đặt theo ĐÁY PHẦN NHÌN THẤY (visualViewport) thay vì bottom:0 của khung layout: iOS đôi khi khung layout ngắn hơn / lệch nên thanh lơ lửng.
+     top = đáy phần nhìn thấy, translateY(-100%) kéo thanh lên đúng chiều cao của nó; vuốt hết cỡ / nảy thì thanh vẫn nằm đáy màn hình. */
+  .tabs{position:fixed;top:calc(var(--vv-top,0px) + var(--vv-h,100%));bottom:auto;left:0;right:0;margin:0;transform:translateY(-100%);
     justify-content:space-around;gap:0;background:var(--card);
     border-top:1px solid var(--border);border-bottom:none;
     padding-bottom:env(safe-area-inset-bottom);z-index:50}
@@ -629,19 +633,10 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 /* ====================================================================
    LỚP 9 — chuyển cảnh & cử chỉ (js/motion.js, phần cuối)
    ==================================================================== */
-/* đổi tab: chỉ vùng nội dung trượt, header + thanh tab đứng yên.
-   KHÔNG đặt view-transition-name cho header / .tabs: chúng là phần tử sticky / fixed, nếu bị chụp thành nhóm riêng thì khi chuyển cảnh
-   lỗi trên iOS (khung nhìn đổi giữa chừng) thanh tab bị kẹt lơ lửng giữa màn hình. Không đặt tên thì chúng thuộc ảnh chụp gốc và vẫn đứng yên. */
-#tabContent{view-transition-name:noi-dung}
-@keyframes vt-ra-trai{to{opacity:0;transform:translateX(-36px)}}
-@keyframes vt-vao-phai{from{opacity:0;transform:translateX(36px)}}
-@keyframes vt-ra-phai{to{opacity:0;transform:translateX(36px)}}
-@keyframes vt-vao-trai{from{opacity:0;transform:translateX(-36px)}}
-::view-transition-old(noi-dung),::view-transition-new(noi-dung){animation-duration:.24s;animation-timing-function:var(--ease)}
-[data-huong="toi"]::view-transition-old(noi-dung){animation-name:vt-ra-trai}
-[data-huong="toi"]::view-transition-new(noi-dung){animation-name:vt-vao-phai}
-[data-huong="lui"]::view-transition-old(noi-dung){animation-name:vt-ra-phai}
-[data-huong="lui"]::view-transition-new(noi-dung){animation-name:vt-vao-trai}
+/* đổi tab: chỉ vùng nội dung mờ dần vào; header + thanh tab không bị đụng tới (không dùng View Transitions: trên iOS nó làm thanh tab chớp mờ).
+   Chỉ dùng opacity (không transform) để #tabContent không thành khung chứa của các lớp fixed bên trong. */
+@keyframes doi-tab-vao{from{opacity:0}to{opacity:1}}
+#tabContent.doi-tab{animation:doi-tab-vao .22s var(--ease)}
 /* vuốt 1 ngày ở Sổ tay: nền báo trước hành động */
 .dl-day{transition:transform .2s var(--ease)}
 /* nền hiện phía sau nhóm ngày khi vuốt: trái = Xóa (đỏ), phải = Sửa (xanh) */
@@ -828,7 +823,7 @@ body::before{content:'';position:fixed;inset:0;top:var(--vv-top,0px);bottom:auto
    Ghi nhanh: thanh nổi trên thanh tab + bảng ghi khoản (bottom sheet)
    ==================================================================== */
 .qa-spacer{height:96px}
-.qa-bar-wrap{position:fixed;left:0;right:0;bottom:calc(var(--navduoi-h,0px) + 12px);transform:translateY(var(--vv-dy,0px));z-index:40;display:flex;justify-content:center;padding:0 14px;pointer-events:none}
+.qa-bar-wrap{position:fixed;left:0;right:0;top:calc(var(--vv-top,0px) + var(--vv-h,100%) - var(--navduoi-h,0px) - 12px);bottom:auto;transform:translateY(-100%);z-index:40;display:flex;justify-content:center;padding:0 14px;pointer-events:none}
 .qa-bar{pointer-events:auto;display:flex;align-items:center;gap:12px;width:100%;max-width:560px;text-align:left;
   background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:9px 10px 9px 9px;
   box-shadow:0 4px 8px rgba(110,80,20,.10),0 12px 30px rgba(110,80,20,.20)}

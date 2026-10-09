@@ -150,24 +150,26 @@ if (typeof window !== 'undefined' && window.document){
 
 /* ====================================================================
    CHUYỂN CẢNH & CỬ CHỈ (10/2026)
-   - đổi tab: View Transitions API, nội dung trượt sang trái/phải theo thứ tự tab; header + thanh tab đứng yên.
-     Trình duyệt chưa có API -> đổi tab như cũ (thẻ hiện lần lượt).
+   - đổi tab: nội dung mờ dần vào (CSS), header + thanh tab không bị đụng tới. KHÔNG dùng View Transitions API (làm thanh tab chớp trên iOS).
    - Sổ tay trên điện thoại: vuốt 1 ngày sang TRÁI = xóa ngày (có Hoàn tác / hỏi như nút thùng rác),
      vuốt sang PHẢI = sửa ngày. Chỉ nhận khi vuốt ngang rõ ràng (không cướp thao tác cuộn dọc).
    - kéo xuống ở đầu trang = Làm mới (app mở từ màn hình chính không có kéo-làm-mới của trình duyệt).
    Tất cả tắt khi "Giảm chuyển động" (trừ vuốt / kéo làm mới: đó là thao tác, không phải trang trí).
    ==================================================================== */
-var _moVT = false;      // đang trong 1 view transition: bỏ hiệu ứng thẻ hiện lần lượt (đã có trượt cả trang)
+var _moVT = false;      // đang đổi tab (~0,25s): bỏ hiệu ứng thẻ hiện lần lượt (đã có mờ dần cả vùng nội dung)
 function motionChuyenTab(huong, lam){
-  if (_moGiam() || !document.startViewTransition){ lam(); return; }
-  document.documentElement.setAttribute('data-huong', huong > 0 ? 'toi' : 'lui');
+  if (_moGiam()){ lam(); window.scrollTo(0, 0); return; }
+  // KHÔNG dùng View Transitions: nó chụp ảnh cả trang rồi trộn, trên iOS làm thanh tab / header chớp mờ khi đổi tab.
+  // Chỉ vùng nội dung mờ dần vào; thanh tab và header không bị đụng tới nên đứng yên tuyệt đối.
   _moVT = true;
-  var vt;
-  try { vt = document.startViewTransition(function(){ lam(); window.scrollTo(0, 0); }); }
-  catch (e){ _moVT = false; lam(); return; }
-  vt.finished.finally(function(){ _moVT = false; document.documentElement.removeAttribute('data-huong'); });
-  // chuyển cảnh chỉ kéo dài ~0,25s; quá 1s mà chưa xong (trình duyệt kẹt) thì bỏ hiệu ứng, trang trở lại bình thường
-  setTimeout(function(){ try { vt.skipTransition(); } catch (e) {} }, 1000);
+  var nd = document.getElementById('tabContent');
+  lam();
+  window.scrollTo(0, 0);
+  if (nd){
+    nd.classList.remove('doi-tab'); void nd.offsetWidth;      // chạy lại hiệu ứng nếu đổi tab liên tục
+    nd.classList.add('doi-tab');
+  }
+  setTimeout(function(){ _moVT = false; if (nd) nd.classList.remove('doi-tab'); }, 260);
 }
 (function(){
   var _cardGoc = _moCard;

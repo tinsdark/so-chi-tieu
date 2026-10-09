@@ -101,7 +101,7 @@ document.addEventListener('click', function(ev){
 });
 
 // chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
-// Có View Transitions (Chrome, Safari 18+) thì nội dung trượt theo hướng tab (motionChuyenTab ở motion.js)
+// Đổi tab: nội dung mờ dần vào (motionChuyenTab ở motion.js)
 var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc'];
 function chuyenTab(tab){
   var cu = state.tab;
