@@ -68,7 +68,7 @@ function categoryCardHtml(kind, title, cats){
     cats.forEach(function(c){
       var chips = (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
                 + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '');
-      h += '<div class="cat-item dm-row" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
+      h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
         + '<span class="cat-drag" draggable="true" data-act="dmNop" title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>'
         + '<span class="cat-dot" style="background:'+catMau(kind, c.id)+'"></span>'
         + '<span class="dm-main"><b class="dm-n">'+esc(c.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
@@ -102,7 +102,7 @@ function viCardHtml(){
   var h = '<div class="card dm-card k-wal">'+dmHead('Ví / nguồn tiền', '<button class="btn secondary sm" data-act="dmThemVi">+ Thêm ví</button>');
   ws.forEach(function(w){
     var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '');
-    h += '<div class="dm-row" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
+    h += '<div class="dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
       + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
       + dmGo()+'</div>';
   });
@@ -205,16 +205,16 @@ function khoaCardHtml(){
   var c = khoaCauHinh();
   var h = '<div class="card dm-card">'+dmHead('Khóa app trên máy này');
   if (!c){
-    return h + '<div class="dm-sub" style="margin-bottom:12px">Đặt mã PIN 6 số để người khác cầm máy không xem được số tiền. '
+    return h + '<div class="dm-sub">Đặt mã PIN 6 số để người khác cầm máy không xem được số tiền. '
       + 'Mở khóa là tự quét Face ID / vân tay nếu máy hỗ trợ và đã bật. Chỉ áp dụng trên máy này.</div>'
       + '<button class="btn sm" data-act="khoaDatPin">'+icon('lock')+' Đặt mã PIN</button></div>';
   }
   var phut = num(c.phut);
   if (c.len && c.len !== KHOA_DO_DAI) h += '<div class="vn-note">'+icon('alert')+' Mã PIN hiện tại dài '+c.len+' số (đặt từ bản cũ). Nên bấm "Đổi mã PIN" để chuyển sang đúng 6 số.</div>';
   h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Mã PIN</b></span><span class="vn-chip ok">Đã đặt</span></div>'
-    + '<label class="dm-row"><span class="dm-main"><b class="dm-n">Khóa lại khi rời app quá</b></span>'
+    + '<label class="dm-row"><span class="dm-main"><b class="dm-n">Tự khóa khi rời app</b></span>'
     + '<select data-act="khoaPhut" class="dm-sel">'
-    + [[0, 'Ngay khi rời app'], [1, '1 phút'], [5, '5 phút'], [15, '15 phút']].map(function(o){
+    + [[0, 'Ngay'], [1, 'Sau 1 phút'], [5, 'Sau 5 phút'], [15, 'Sau 15 phút']].map(function(o){
         return '<option value="'+o[0]+'"'+(phut === o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; }).join('')
     + '</select></label>';
   if (khoaCoSinhTrac()){
@@ -228,7 +228,7 @@ function khoaCardHtml(){
 }
 function taiKhoanCardHtml(){
   return '<div class="card dm-card">'+dmHead('Tài khoản')
-    + '<div class="dm-sub" style="margin-bottom:12px">Đăng xuất khỏi Google trên máy này.</div>'
+    + '<div class="dm-sub">Đăng xuất khỏi Google trên máy này.</div>'
     + '<button class="btn danger" data-act="dangXuat">Đăng xuất</button>'
     + ghiChuGon('Dữ liệu trên Google Drive vẫn còn nguyên; chỉ bản lưu để mở ngoại tuyến trên máy này bị xóa.', 'Đăng xuất có mất dữ liệu không?') + '</div>';
 }
