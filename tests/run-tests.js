@@ -1530,6 +1530,32 @@ test('cho vay TẤT TOÁN: thu thiếu -> giữ mở (thu một phần) hoặc �
   eq(ctx.journalKiemTra().length, 0);
 });
 
+test('Cho vay: khoản đã xong (thu đủ / đã xóa nợ) vào mục "Đã xong", không hiện ở danh sách chính; bấm mới mở', function(){
+  setToday('2026-12-10');
+  var d = baseData();
+  d.vayNo.choVay = [
+    { id:'cv1', ten:'Đang chờ', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01' },
+    { id:'cv2', ten:'Thu đủ', soTien:500000, daThu:500000, trangThai:'da_thu_du', ngayChoVay:'2026-10-01' },
+    { id:'cv3', ten:'Đã xóa nợ', soTien:300000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01', tatToan:{ soTien:300000, ngay:'2026-12-01' } }
+  ];
+  loadData(d);
+  eq(ctx.choVayDaXong(ctx.state.data.vayNo.choVay[0]), false, 'đang chờ thu: chưa xong');
+  eq(ctx.choVayDaXong(ctx.state.data.vayNo.choVay[1]), true, 'thu đủ: xong');
+  eq(ctx.choVayDaXong(ctx.state.data.vayNo.choVay[2]), true, 'đã xóa nợ: xong');
+  ctx.state.vnXongCV = false;
+  var h = ctx.vnChoVayHtml();
+  ok(h.indexOf('id="vn-cv-cv1"') >= 0, 'khoản đang chờ vẫn hiện');
+  ok(h.indexOf('id="vn-cv-cv2"') < 0 && h.indexOf('id="vn-cv-cv3"') < 0, 'khoản đã xong bị gấp lại');
+  ok(h.indexOf('Đã xong (2)') >= 0, 'có nút Đã xong (2)');
+  ctx.state.vnXongCV = true;
+  h = ctx.vnChoVayHtml();
+  ok(h.indexOf('id="vn-cv-cv2"') >= 0 && h.indexOf('id="vn-cv-cv3"') >= 0, 'bấm mở thì hiện đủ');
+  ctx.state.vnXongCV = false;
+  ctx.state.data.vayNo.choVay = [d.vayNo.choVay[1]];
+  h = ctx.vnChoVayHtml();
+  ok(h.indexOf('Không còn khoản nào đang chờ thu') >= 0 && h.indexOf('Đã xong (1)') >= 0, 'toàn khoản đã xong: có dòng báo và vẫn có mục Đã xong');
+});
+
 test('fmt: làm tròn đồng, không hiện phần lẻ (tổng cộng từ lãi chia lẻ)', function(){
   eq(ctx.fmt(3323544.303), ctx.fmt(3323544), 'bỏ phần lẻ');
   eq(ctx.fmt(13676455.697), ctx.fmt(13676456), 'làm tròn lên');
