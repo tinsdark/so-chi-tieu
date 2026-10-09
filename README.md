@@ -10,7 +10,7 @@ Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn
 
 | Tab | Phím tắt | Nội dung |
 |---|---|---|
-| **Sổ tay** | `1` | Ghi giao dịch thu/chi theo ngày. Thẻ đầu là số dư (chọn tháng, đầu tháng / cuối tháng, thanh thu-chi). **Ghi nhanh**: thanh nổi phía trên thanh tab, chạm mở bảng trượt từ đáy (số tiền, danh mục, ví, ghi chú, 1 nút Lưu); **Nhập đầy đủ** cho ngày nhiều khoản. Số dư theo từng ví và chuyển tiền giữa các ví, nhắc **giao dịch định kỳ** đến hạn, tìm kiếm / lọc, xuất Excel, nhập từ file CSV/Excel, vuốt ngày để sửa/xóa, hoàn tác khi xóa. |
+| **Sổ tay** | `1` | Ghi giao dịch thu/chi theo ngày. Thẻ đầu là số dư (chọn tháng, đầu tháng / cuối tháng, thanh thu-chi). **Ghi nhanh**: thanh nổi phía trên thanh tab, chạm mở bảng trượt từ đáy (số tiền, danh mục, ví, ghi chú, 1 nút Lưu); bấm vào một ngày để sửa cả ngày trong form đầy đủ. Số dư theo từng ví và chuyển tiền giữa các ví, nhắc **giao dịch định kỳ** đến hạn, tìm kiếm / lọc, xuất Excel, nhập từ file CSV/Excel, vuốt ngày để sửa/xóa, hoàn tác khi xóa. |
 | **Dòng tiền** | `2` | Hai chế độ. **Thực tế & dự kiến**: chọn tháng, Cân đối tháng (thiếu / dư), thanh Thu / Chi / Trả nợ, thu và chi theo danh mục chia nhóm "Cần chú ý" / "Ổn" (chạm một dòng để xem 4 số chi tiết, vượt hạn mức có chip "Vượt X"), dự kiến 24 tháng (tháng âm đầu tiên, đáy, tháng dương lại), bảng cả năm sau nút "Xem bảng cả năm". **Mô phỏng**: vùng nháp để thử số liệu mà không đụng dữ liệu thật, thêm điều chỉnh (thu/chi một lần, lặp lại mỗi tháng, **vay thêm** tự tính số trả và tổng lãi, trả hết khoản vay sớm), bật/tắt từng điều chỉnh, so sánh với dữ liệu gốc 6 / 12 / 24 / 36 tháng. |
 | **Báo cáo** | `3` | Thẻ đầu theo tháng, theo dõi **hạn mức** từng danh mục chi, **tài sản ròng** (tiền các ví + cho vay chưa thu − nợ gốc), **mục tiêu tiết kiệm** (tiến độ, cần để dành mỗi tháng bao nhiêu), biểu đồ chi tiêu (Tổng quan / Danh mục / Xu hướng), so sánh tháng với cùng kỳ. |
 | **Vay - Nợ** | `4` | **Cho vay** và **vay phải trả** (ngân hàng / ví / bạn bè / người thân). Hình thức trả: 1 lần, không lãi, có lãi, trả cố định/tháng, gốc đều lãi giảm dần. Thẻ tổng quan (còn nợ, cho vay chờ thu, nợ ròng, tháng này cần trả / đã trả, dự kiến hết nợ), thẻ "Sắp đến hạn / quá hạn", mỗi khoản là một thẻ với **lịch trả theo từng kỳ** (đã trả đủ / xong kỳ nhưng thiếu / trả dở / chưa trả), ghi nhận trả (trả một phần hoặc đóng kỳ), tất toán sớm, dòng tiền tích lũy 6 / 12 / 24 tháng. Ghi thu/trả tự hạch toán sang Sổ tay. Thêm/sửa khoản vay có khối xem trước số trả mỗi tháng, tổng lãi, tháng trả xong. |
@@ -42,8 +42,10 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Tài khoản mới bắt đầu với số dư đầu kỳ 0 và ngày bắt đầu là hôm nay.
 - Đã bỏ tính năng "quy tắc tự phân loại" (làm rồi gỡ hẳn khỏi Danh mục, Ghi nhanh, Nhập từ file).
 - **Đợt thiết kế lại từng tab** (thiết kế bằng Claude Design, code và kiểm tra ở 320 / 375 / 1280px, sáng và tối): Sổ tay, Báo cáo, Dòng tiền (Thực tế & dự kiến + Mô phỏng), Vay - Nợ, Danh mục. Điểm chung: thẻ gọn thay cho bảng nhiều cột, bảng trượt từ đáy cho form, thu màu xanh / chi màu đỏ trầm / trả nợ màu hổ phách, tiền hiện đầy đủ không viết tắt.
+- Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó.
+- Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 193 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 199 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -117,7 +119,7 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - **Tiền của ngày tính từ danh sách giao dịch** (`entryTinhLai`), không ghi 2 nơi để tránh lệch.
 - **Mô phỏng không bao giờ ghi dữ liệu thật**: bản nháp chỉ nằm trong RAM, không đi vào đường lưu Drive.
 - **Nhập hàng loạt luôn có bước xem trước**, dòng trùng mặc định bị bỏ qua nên nhập lại cùng 1 file không nhân đôi tiền.
-- Các danh mục sinh ra từ Vay - Nợ (nhận tiền vay, cho vay, trả nợ, thu hồi) không nhập tay ở Sổ tay, để khỏi tạo tiền mồ côi không gắn với khoản vay nào.
+- Các danh mục sinh ra từ Vay - Nợ (nhận tiền vay, cho vay, trả nợ, thu hồi) không nhập tay ở Sổ tay (ô bị khóa, Ghi nhanh không có), để khỏi tạo tiền mồ côi không gắn với khoản vay nào. Mọi thao tác ghi ở tab Vay - Nợ (thêm khoản, Ghi nhận trả, Tất toán) tự sinh giao dịch và vẫn hiện trong Chi tiết theo ngày ở Sổ tay (dòng có ổ khóa).
 
 ### Quy ước giao diện
 
@@ -134,7 +136,7 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - Khóa PIN là khóa **màn hình**, không mã hóa dữ liệu trong `localStorage`. Ai mở được DevTools trên máy vẫn đọc được. Mục đích chỉ là người khác cầm máy đang mở app không xem được số tiền.
 - Quên PIN thì chỉ còn cách xóa khóa cùng dữ liệu lưu trên máy đó rồi đăng nhập Google lại (dữ liệu trên Drive vẫn còn).
 - Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`; quá hạn thì phải đăng nhập lại.
-- Vài hộp thoại xác nhận (xóa khoản vay, tất toán khoản cho vay, chốt số dư, khôi phục, đăng xuất) vẫn dùng hộp thoại chung kiểu cũ, chưa chuyển sang bảng trượt.
+- Hộp thoại có ô nhập (hỏi số, hỏi chữ, nhập PIN) vẫn hiện giữa màn hình, không phải bảng trượt, để bàn phím điện thoại không che nút.
 - Cần mạng ở lần mở đầu để tải thư viện Google đăng nhập và SheetJS (từ `cdn.sheetjs.com`).
 
 ---
@@ -143,7 +145,5 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 Chưa có kế hoạch cố định. Một vài việc đã biết:
 
-- Chuyển nốt các hộp thoại xác nhận còn lại sang bảng trượt cho đồng bộ giao diện.
-- Cho tất toán một phần khoản cho vay (hiện chỉ bỏ toàn bộ phần còn lại).
 
 Phần này ghi lại khi có ý tưởng mới.

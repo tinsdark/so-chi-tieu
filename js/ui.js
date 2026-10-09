@@ -82,13 +82,16 @@ function moHoiThoai(cf){
   _modalDangMo = true;
   return new Promise(function(resolve){
     var back = document.createElement('div');
-    back.className = 'modal-back';
+    // hộp không có ô nhập (xác nhận, chọn một) hiện dạng bảng trượt từ đáy như các form khác;
+    // hộp có ô nhập giữ dạng giữa màn hình để bàn phím điện thoại không che nút
+    back.className = 'modal-back' + (cf.oNhap ? '' : ' sheet');
     var box = document.createElement('div');
     box.className = 'modal-box' + (cf.nguyHiem ? ' nguy-hiem' : '');
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-modal', 'true');
 
-    var h = '<div class="modal-title">'+esc(cf.tieuDe||'')+'</div>';
+    var h = cf.oNhap ? '' : '<div class="modal-grab"></div>';
+    h += '<div class="modal-title">'+esc(cf.tieuDe||'')+'</div>';
     if (cf.noiDung) h += '<div class="modal-body">'+esc(cf.noiDung).replace(/\n/g,'<br>')+'</div>';
     if (cf.oNhap){
       // kieu:'tien' -> ô text có phân cách nghìn (đọc lại bằng docSo), bàn phím số trên điện thoại
@@ -116,8 +119,12 @@ function moHoiThoai(cf){
 
     function dong(kq){
       document.removeEventListener('keydown', onKey, true);
-      if (back.parentNode) back.parentNode.removeChild(back);
       _modalDangMo = false;
+      if (back.classList && back.classList.contains('sheet')){
+        // trượt xuống rồi mới gỡ khỏi DOM; resolve ngay để handler chạy tiếp không phải đợi
+        back.classList.add('dong');
+        setTimeout(function(){ if (back.parentNode) back.parentNode.removeChild(back); }, 200);
+      } else if (back.parentNode) back.parentNode.removeChild(back);
       if (truocDo && truocDo.focus) { try { truocDo.focus(); } catch(e){} }
       resolve(kq);
     }
