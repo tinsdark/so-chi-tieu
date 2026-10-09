@@ -1347,3 +1347,10 @@ button.dm-sw.on{background:var(--thu-solid)} button.dm-sw.on::after{transform:tr
 .vn-sheet .qa-seg{margin-top:12px}
 .vn-sheet .qa-seg button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
 .vn-sheet .qa-lbl+.qa-seg,.vn-f .qa-seg{margin-top:0}
+.dm-more{min-width:44px;padding:0 12px}
+.dm-more .ic{width:18px;height:18px}
+.dm-menu{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.dm-menu button{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);font-size:15.5px;font-weight:600;padding:16px 4px;border-top:1px solid var(--border);min-height:52px}
+.dm-menu button:first-child{border-top:none}
+.dm-menu button:active{background:var(--hover)}
+.dm-menu .dm-nguy{color:var(--red)}

@@ -223,9 +223,7 @@ function khoaCardHtml(){
       + '<button type="button" class="dm-sw'+(c.credId ? ' on' : '')+'" role="switch" aria-checked="'+(c.credId ? 'true' : 'false')+'" aria-label="Mở bằng vân tay / Face ID" data-act="'+(c.credId ? 'khoaTatSinhTrac' : 'khoaBatSinhTrac')+'"></button></div>';
   }
   h += '<div class="dm-btns"><button class="btn sm" data-act="khoaNgay">'+icon('lock')+' Khóa ngay</button>'
-    + '<details class="vn-mn dm-mn"><summary aria-label="Thêm thao tác">'+icon('dots')+'</summary><div class="vn-mn-l">'
-    + '<button type="button" data-act="khoaDatPin">Đổi mã PIN</button>'
-    + '<button type="button" data-act="khoaTat" class="dm-nguy">Tắt khóa</button></div></details></div>'
+    + '<button type="button" class="btn secondary sm dm-more" data-act="dmMoKhoa" aria-label="Thêm thao tác">'+icon('dots')+'</button></div>'
     + ghiChuGon('Đây là khóa màn hình: dữ liệu lưu trên máy (bản mở ngoại tuyến) không bị mã hóa. Quên mã PIN thì phải xóa dữ liệu trên máy này rồi đăng nhập Google lại — dữ liệu trên Drive không mất.', 'Lưu ý');
   return h + '</div>';
 }
@@ -250,6 +248,20 @@ function backupTenDep(name){
   if (m[4]) s += ' · ' + (BACKUP_NHAN[m[4]] || m[4]) + (m[5] ? ' (' + m[5] + ':' + m[6] + ':' + m[7] + ')' : '');
   return s;
 }
+// giờ lưu của 1 bản: dd/mm/yyyy hh:mm theo giờ máy; thiếu modifiedTime thì lấy ngày trong tên file
+function backupGio(f){
+  var d = f.modifiedTime ? new Date(f.modifiedTime) : null;
+  if (d && !isNaN(d.getTime()))
+    return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  var m = /(\d{4})-(\d{2})-(\d{2})/.exec(f.name);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : f.name;
+}
+// loại bản: tên không nhãn = tự động hằng ngày
+function backupLoai(name){
+  var m = /^chitieu-canhan-backup-\d{4}-\d{2}-\d{2}(?:-(.+?)(?:-\d{6})?)?\.json$/.exec(name);
+  if (!m || !m[1]) return 'Tự động';
+  return m[1] === 'thu-cong' ? 'Thủ công' : (BACKUP_NHAN[m[1]] || m[1]);
+}
 function backupCardHtml(){
   var h = '<div class="card dm-card">'+dmHead('Sao lưu dữ liệu')
     + '<div class="dm-sub">Tự lưu mỗi ngày · giữ '+BACKUP_GIU+' bản gần nhất</div>'
@@ -262,7 +274,7 @@ function backupCardHtml(){
       h += '<div class="empty">Chưa có bản sao lưu nào.</div>';
     } else {
       state.backupDs.forEach(function(f){
-        h += '<div class="dm-bk"><div><b>'+esc(backupTenDep(f.name))+'</b><small>'+(f.size ? Math.max(1, Math.round(num(f.size) / 1024)) + ' KB' : '—')+'</small></div>'
+        h += '<div class="dm-bk"><div><b>'+esc(backupGio(f))+'</b><small>'+esc(backupLoai(f.name))+' · '+(f.size ? Math.max(1, Math.round(num(f.size) / 1024)) + ' KB' : '—')+'</small></div>'
           + '<button class="btn sm secondary" data-act="bkKhoiPhuc" data-id="'+esc(f.id)+'" data-name="'+esc(f.name)+'"'+(state.backupBusy?' disabled':'')+'>Khôi phục</button></div>';
       });
     }
@@ -396,6 +408,13 @@ function mtSheetHtml(){
   return vnSheetKhung(ed ? 'Sửa mục tiêu' : 'Thêm mục tiêu tiết kiệm', h, ed ? 'Cập nhật' : 'Lưu', 'mtLuu', 'mtHuy');
 }
 
+function khoaMenuSheetHtml(){
+  return '<div class="qa-scrim" data-act="dmHuy"></div>'
+    + '<div class="qa-sheet vn-sheet" role="dialog" aria-modal="true" aria-label="Khóa app"><div class="qa-grab"></div>'
+    + '<div class="qa-head"><h3>Khóa app</h3><button type="button" class="qa-x" data-act="dmHuy" aria-label="Đóng">'+icon('x')+'</button></div>'
+    + '<div class="qa-body dm-menu"><button type="button" data-act="khoaDatPin">Đổi mã PIN</button>'
+    + '<button type="button" class="dm-nguy" data-act="khoaTat">Tắt khóa</button></div></div>';
+}
 function dmKhoa(){
   if (state.dkForm) return 'dk:' + (state.dkForm.id || '');
   if (state.mtForm) return 'mt:' + (state.mtForm.id || '');
@@ -417,7 +436,7 @@ function dmSheetVe(){
   root.id = 'dmSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : viSheetHtml(state.dmForm))));
+  root.innerHTML = state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -599,8 +618,10 @@ function handleDanhMucAction(act, el){
       state.data.mucTieu.splice(Math.min(mtXi, state.data.mucTieu.length), 0, mtXg);
       scheduleSave(); renderDanhMuc();
     } });
-  } else if (act === 'khoaDatPin'){ khoaDatPin().then(function(){ renderDanhMuc(); });
-  } else if (act === 'khoaTat'){ khoaTat().then(function(){ renderDanhMuc(); });
+  } else if (act === 'dmMoKhoa'){
+    state.dmForm = { loai:'khoa' }; renderDanhMuc();
+  } else if (act === 'khoaDatPin'){ state.dmForm = null; renderDanhMuc(); khoaDatPin().then(function(){ renderDanhMuc(); });
+  } else if (act === 'khoaTat'){ state.dmForm = null; renderDanhMuc(); khoaTat().then(function(){ renderDanhMuc(); });
   } else if (act === 'khoaBatSinhTrac'){ khoaBatSinhTrac().then(function(){ renderDanhMuc(); });
   } else if (act === 'khoaTatSinhTrac'){ khoaTatSinhTrac(); renderDanhMuc(); toast('Đã tắt mở khóa bằng vân tay / Face ID.');
   } else if (act === 'khoaNgay'){ khoaHien();
