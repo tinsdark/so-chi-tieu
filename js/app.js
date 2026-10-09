@@ -49,6 +49,7 @@ function renderAll(){
   qaSheetVe();                       // rời tab Sổ tay thì bảng ghi khoản tự đóng
   mpSheetVe();                       // rời Mô phỏng thì bảng thêm điều chỉnh tự đóng
   vnSheetVe();                       // rời Vay - Nợ thì form thêm/sửa khoản vay tự đóng
+  nhacHanSheetVe();                  // rời Sổ tay thì bảng sắp đến hạn tự đóng
   dmSheetVe();                       // rời Danh mục thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
   renderVayNoBadge();
   updateStickyOffsets();
@@ -205,7 +206,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
-document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleDanhMucInput(ev.target); });
+document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); });
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
@@ -223,6 +224,9 @@ function handleAction(act, el){
   if (act === 'capNhatApp'){ capNhatApp(); return; }
   if (handleSoTayAction(act, el)) return;
   if (handleNhapAction(act, el)) return;
+  if (handleNhanAction(act, el)) return;
+  if (handleNhacHanAction(act, el)) return;
+  if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;

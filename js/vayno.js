@@ -640,7 +640,7 @@ function vnVayCardHtml(v){
   var mo = state.vnDetailId === v.id;
   var h = '<div class="vn-c'+(xong ? ' xong' : '')+'" id="vn-vn-'+esc(v.id)+'">'
     + '<div class="vn-c-h"><b class="vn-c-t">'+esc(v.ten)+'</b>'+chip+'</div>'
-    + '<div class="vn-tags"><span class="vn-tag">'+LOAI_VAY_LABEL[v.loaiVay]+'</span><span class="vn-tag">'+HINH_THUC_LABEL[v.hinhThuc]+'</span></div>'
+    + '<div class="vn-tags"><span class="vn-tag">'+LOAI_VAY_LABEL[v.loaiVay]+'</span><span class="vn-tag">'+HINH_THUC_LABEL[v.hinhThuc]+'</span>'+(nguoiCuaKhoan(v) ? '<span class="vn-tag">'+icon('user')+' '+esc(nguoiCuaKhoan(v))+'</span>' : '')+'</div>'
     + '<div class="vn-lbl">Dư nợ còn lại</div><div class="vn-big m">'+fmt(duNo)+'</div>'
     + '<div class="vn-prog"><div class="dt-track sm'+(xong ? '' : ' no')+'"><i style="width:'+pct+'%"></i></div><span>'+td.daTraKy+'/'+td.tongKy+' kỳ</span></div>';
   if (!xong){
@@ -688,6 +688,7 @@ function vnChoVayCardHtml(c){
   var pct = num(c.soTien) > 0 ? Math.min(100, Math.round(num(c.daThu) / num(c.soTien) * 100)) : 0;
   return '<div class="vn-c'+(xong ? ' xong' : '')+'" id="vn-cv-'+esc(c.id)+'">'
     + '<div class="vn-c-h"><b class="vn-c-t">'+esc(c.ten)+'</b>'+chip+'</div>'
+    + (nguoiCuaKhoan(c) ? '<div class="vn-tags"><span class="vn-tag">'+icon('user')+' '+esc(nguoiCuaKhoan(c))+'</span></div>' : '')
     + '<div class="vn-3c"><div><div class="vn-lbl">Cho vay</div><b>'+vnSo(c.soTien)+'</b></div>'
     + '<div><div class="vn-lbl">Đã thu</div><b class="thu">'+vnSo(c.daThu)+'</b></div>'
     + '<div><div class="vn-lbl">Còn lại</div><b>'+vnSo(conLai)+'</b></div></div>'
@@ -707,6 +708,7 @@ function vnChoVayCardHtml(c){
 function vnChoVayHtml(){
   var ds = state.data.vayNo.choVay;
   var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
+  h += '<div class="vn-chia"><button type="button" class="btn sm secondary" data-act="vnChiaMo">Chia hóa đơn nhóm</button><span class="vn-sub">Mình trả hộ cả nhóm → tạo khoản cho vay từng người</span></div>';
   h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.', 'Ghi tiền thu về thế nào?');
   if (!ds.length) h += '<div class="empty-box">Chưa có khoản cho vay nào.<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div></div>';
   else {
@@ -812,7 +814,7 @@ function vnBangTheoDoiHtml(){
 
 function renderVayNo(){
   var root = document.getElementById('tabContent');
-  var trai = vnTongQuanHtml() + sapDenHanHtml(7) + vnVayHtml();
+  var trai = vnTongQuanHtml() + sapDenHanHtml(7) + nguoiCardHtml() + vnVayHtml();
   var phai = vnChoVayHtml() + vnBangTheoDoiHtml();
   root.innerHTML = '<div class="cot2"><div class="cot-trai">' + trai + '</div><div class="cot-phai">' + phai + '</div></div>';
   vnSheetVe();
@@ -841,7 +843,7 @@ if (typeof window !== 'undefined' && window.visualViewport){
 }
 function vnMoKhoaNen(){
   return !!(document.getElementById('qaSheetRoot') || document.getElementById('mpSheetRoot')
-    || document.getElementById('vnSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot'));
+    || document.getElementById('vnSheetRoot') || document.getElementById('hanSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot'));
 }
 
 function vnF(nhan, noiDung, ht, ghiChu){
@@ -873,6 +875,7 @@ function vayNoFormHtml(){
   var h = '';
   if (editing) h += '<div class="vn-note">'+icon('alert')+' Muốn sửa lịch sử trả nợ thì mở lịch trả của khoản vay (bấm "Xem lịch trả") rồi dùng "Hủy ghi nhận" / "Ghi nhận đã trả" — sửa ở đó mới đồng bộ được với Sổ tay.</div>';
   h += vnF('Tên / mô tả', '<input type="text" id="vn_vn_ten" value="'+esc(d.ten||'')+'" placeholder="VD: Vay mua xe">')
+    + nguoiOHtml('vn_vn_nguoi', d)
     + vnF('Loại vay', vnChipsHtml('vn_vn_loai', LOAI_VAY_LABEL, d.loaiVay))
     + vnF('Hình thức trả', vnChipsHtml('vn_vn_hinh', HINH_THUC_LABEL, d.hinhThuc))
     + '<div class="vn-2">'
@@ -900,6 +903,7 @@ function choVayFormHtml(){
   var editing = state.vnFormId ? state.data.vayNo.choVay.find(function(x){ return x.id===state.vnFormId; }) : null;
   var d = editing || { ten:'', soTien:'', ngayChoVay: todayStr(), ngayDuKienThu:'' };
   var h = vnF('Tên / mô tả', '<input type="text" id="vn_cv_ten" value="'+esc(d.ten||'')+'" placeholder="VD: Cho Minh vay">')
+    + nguoiOHtml('vn_cv_nguoi', d)
     + vnF('Số tiền cho vay', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_cv_soTien" value="'+veSo(d.soTien)+'" placeholder="0">')
     + '<div class="vn-2">'
     + vnF('Ngày cho vay', '<input type="date" id="vn_cv_ngay" value="'+(d.ngayChoVay||todayStr())+'">')
@@ -925,7 +929,7 @@ function vnSheetVe(){
   root.id = 'vnSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = state.vnFormKind === 'choVay' ? choVayFormHtml() : vayNoFormHtml();
+  root.innerHTML = state.vnFormKind === 'choVay' ? choVayFormHtml() : (state.vnFormKind === 'chia' ? chiaFormHtml() : vayNoFormHtml());
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -1154,6 +1158,7 @@ function handleVayNoAction(act, el){
     var objCV = {
       walletId: vnViTuForm('vn_cv_wallet', cvCu),
       ten: tenCV,
+      nguoi: nguoiDocO('vn_cv_nguoi'),
       soTien: numNonNeg(docSo(document.getElementById('vn_cv_soTien').value)),
       ngayChoVay: document.getElementById('vn_cv_ngay').value || todayStr(),
       ngayDuKienThu: document.getElementById('vn_cv_ngayThu').value || ''
@@ -1208,6 +1213,7 @@ function handleVayNoAction(act, el){
       : parseInt(ngayVayVN.slice(8,10),10);
     var objVN = {
       ten: tenVN,
+      nguoi: nguoiDocO('vn_vn_nguoi'),
       loaiVay: document.getElementById('vn_vn_loai').value,
       hinhThuc: hinh,
       soTienGoc: numNonNeg(docSo(document.getElementById('vn_vn_soTien').value)),
