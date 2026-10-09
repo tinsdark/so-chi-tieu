@@ -42,7 +42,8 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Tài khoản mới bắt đầu với số dư đầu kỳ 0 và ngày bắt đầu là hôm nay.
 - Đã bỏ tính năng "quy tắc tự phân loại" (làm rồi gỡ hẳn khỏi Danh mục, Ghi nhanh, Nhập từ file).
 - **Đợt thiết kế lại từng tab** (thiết kế bằng Claude Design, code và kiểm tra ở 320 / 375 / 1280px, sáng và tối): Sổ tay, Báo cáo, Dòng tiền (Thực tế & dự kiến + Mô phỏng), Vay - Nợ, Danh mục. Điểm chung: thẻ gọn thay cho bảng nhiều cột, bảng trượt từ đáy cho form, thu màu xanh / chi màu đỏ trầm / trả nợ màu hổ phách, tiền hiện đầy đủ không viết tắt.
-- Có 191 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
+- Có 193 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -144,6 +145,5 @@ Chưa có kế hoạch cố định. Một vài việc đã biết:
 
 - Chuyển nốt các hộp thoại xác nhận còn lại sang bảng trượt cho đồng bộ giao diện.
 - Cho tất toán một phần khoản cho vay (hiện chỉ bỏ toàn bộ phần còn lại).
-- Hiện tên / email tài khoản Google ở thẻ Tài khoản (app chưa lưu thông tin này).
 
 Phần này ghi lại khi có ý tưởng mới.

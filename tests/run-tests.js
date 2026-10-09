@@ -1676,6 +1676,17 @@ test('Đăng xuất không còn ở thanh đầu trang mà ở tab Danh mục', 
   ok(ctx.taiKhoanCardHtml().indexOf('data-act="dangXuat"') >= 0, 'thẻ Tài khoản có nút');
 });
 
+test('Thẻ Tài khoản: hiện tên + email Google nếu đã lưu, escape HTML; chưa có thì không hiện dòng đó', function(){
+  loadData(baseData());
+  ok(ctx.taiKhoanCardHtml().indexOf('Đang đăng nhập') < 0, 'chưa có thông tin thì không hiện');
+  var cu = ctx.localStorage;
+  ctx.localStorage = { getItem: function(k){ return k === ctx.TAI_KHOAN_KEY ? JSON.stringify({ ten:'Đạt <b>', email:'a@gmail.com' }) : null; }, setItem: function(){}, removeItem: function(){} };
+  try{
+    var h = ctx.taiKhoanCardHtml();
+    ok(h.indexOf('Đạt &lt;b&gt;') >= 0 && h.indexOf('a@gmail.com') >= 0, 'có tên (đã escape) và email');
+  }finally{ ctx.localStorage = cu; }
+});
+
 /* ==================================================================== */
 group('V2. Sau khi thử trên iPhone: xác nhận trong thẻ, chạm khoản nhảy tới khoản, Dòng tiền không cuộn lồng');
 
