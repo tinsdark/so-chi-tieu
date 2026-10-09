@@ -327,6 +327,7 @@ function catSheetHtml(f){
     + vnF('Màu <span class="mp-hint">(dùng ở biểu đồ)</span>',
         '<div class="dm-mau"><input type="color" id="dm_mau" value="'+mau+'" data-cur="'+mau+'" aria-label="Màu danh mục">'
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')
+    + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : vnF('Ngày '+(f.kind === 'thu' ? 'thu' : 'chi')+' hằng tháng <span class="mp-hint">(nhắc)</span>', '<input type="number" id="dm_ngay" min="1" max="31" inputmode="numeric" value="'+(catNgayHan(d) || '')+'" placeholder="Bỏ trống = không nhắc">', '', 'VD: Tiền nhà ngày 5, Lương ngày 20. Gần tới ngày, Sổ tay hiện "N khoản thu/chi sắp đến hạn" cho tới khi tháng đó có giao dịch ở danh mục này.'))
     + dmToggle('dm_nodk', 'Không tính dự kiến', 'Không đoán số cho tháng tương lai (khoản không đều đặn, không thể dự đoán).', d.khongDuTru)
     + dmToggle('dm_codinh', 'Cố định theo Hạn mức', 'Luôn dùng đúng Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa thay đổi).', d.coDinhChiTieu);
   if (c){
@@ -559,12 +560,16 @@ function handleDanhMucAction(act, el){
       khongDuTru: !!document.getElementById('dm_nodk').checked,
       coDinhChiTieu: !!document.getElementById('dm_codinh').checked
     };
+    var ngayEl = document.getElementById('dm_ngay');
     var mauMoi = mauEl && mauEl.getAttribute('data-reset') !== '1' && mauEl.value !== mauEl.getAttribute('data-cur') ? mauEl.value : null;
+    if (ngayEl){ var ngayN = Math.round(num(ngayEl.value)); cDoi.ngay = (ngayN >= 1 && ngayN <= 31) ? ngayN : 0; }
     if (cCu){
       Object.assign(cCu, cDoi);
+      if (!cCu.ngay) delete cCu.ngay;
       if (mauEl && mauEl.getAttribute('data-reset') === '1') cCu.mau = '';
       else if (mauMoi) cCu.mau = mauMoi;
     } else {
+      if (!cDoi.ngay) delete cDoi.ngay;
       cDoi.id = slugify(tenCat) + '_' + Date.now().toString(36);
       if (mauMoi) cDoi.mau = mauMoi;
       arrCat.push(cDoi);

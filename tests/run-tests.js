@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3188,7 +3188,6 @@ test('Lớp phủ toàn màn hình (.gate, .modal-back, nền) bám biến --vv-
 });
 
 /* ==================================================================== */
-/* ==================================================================== */
 group('Nhãn (tag) cho giao dịch');
 
 function nhanData(){
@@ -3311,6 +3310,51 @@ test('chiaGhi: phần mình thành khoản chi, mỗi người một khoản cho
   eq(ctx.chiTotal(d.journal['2026-10-10']) - ctx.entryRefSum(d.journal['2026-10-10'], 'chi', 'choVay'), kq.minh, 'phần chi của mình');
   ctx.chiaHoanTac(ket);
   eq(d.vayNo.choVay.length, 0); ok(!d.journal['2026-10-10'], 'ngày rỗng bị xóa'); eq(ctx.balanceAt('2026-10-10'), truoc);
+});
+
+/* ==================================================================== */
+group('Nhắc thu/chi theo ngày của danh mục');
+
+function hanData(ngayLuong, ngayNha, journal){
+  var d = baseData({ journal: journal || {} });
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'thuHoiChoVay', ten:'Thu hồi cho vay', chiTieu:0 }];
+  d.categories.chi = [{ id:'nha', ten:'Tiền nhà', chiTieu:0 }, { id:'traNo', ten:'Trả nợ', chiTieu:0 }];
+  if (ngayLuong) d.categories.thu[0].ngay = ngayLuong;
+  if (ngayNha) d.categories.chi[0].ngay = ngayNha;
+  d.categories.thu[1].ngay = 5; d.categories.chi[1].ngay = 5;     // danh mục hệ thống: bị bỏ qua
+  return loadData(d);
+}
+test('chưa tới 7 ngày thì chưa nhắc; trong 7 ngày thì nhắc đúng số ngày còn lại; danh mục hệ thống bị bỏ qua', function(){
+  hanData(20, 0);
+  eq(ctx.dsCatSapDenHan(7, '2026-10-10').length, 0, 'còn 10 ngày tới lương');
+  var ds = ctx.dsCatSapDenHan(7, '2026-10-14');
+  eq(ds.length, 1); eq(ds[0].id, 'luong'); eq(ds[0].kind, 'thu'); eq(ds[0].soNgay, 6); eq(ds[0].han, '2026-10-20');
+  eq(ctx.nhacHanNhan(0), 'Hôm nay'); eq(ctx.nhacHanNhan(1), 'Ngày mai'); eq(ctx.nhacHanNhan(-3), 'Quá hạn 3 ngày');
+});
+test('quá hạn mà tháng này chưa ghi thì nhắc quá hạn; ghi rồi thì hết nhắc', function(){
+  hanData(20, 5);
+  var ds = ctx.dsCatSapDenHan(7, '2026-10-08');
+  eq(ds.length, 1); eq(ds[0].id, 'nha'); eq(ds[0].soNgay, -3);
+  var j = { '2026-10-07': { thu: {}, chi: { nha: 3000000 }, ghiChu: '', refs: [], items: [{ iid:'x', kind:'chi', catId:'nha', soTien:3000000, ghiChu:'' }] } };
+  hanData(20, 5, j);
+  eq(ctx.dsCatSapDenHan(7, '2026-10-08').length, 0, 'đã ghi tiền nhà tháng 10');
+});
+test('đã ghi tháng này thì cuối tháng nhắc kỳ tháng sau; ngày 31 co về cuối tháng ngắn', function(){
+  var j = { '2026-10-07': { thu: {}, chi: { nha: 1 }, ghiChu: '', refs: [], items: [{ iid:'x', kind:'chi', catId:'nha', soTien:1, ghiChu:'' }] } };
+  hanData(null, 5, j);
+  var ds = ctx.dsCatSapDenHan(7, '2026-10-30');
+  eq(ds.length, 1); eq(ds[0].han, '2026-11-05'); eq(ds[0].soNgay, 6);
+  hanData(null, 31);
+  eq(ctx.dsCatSapDenHan(7, '2026-11-26')[0].han, '2026-11-30', 'tháng 11 chỉ có 30 ngày');
+});
+test('không đặt ngày thì không nhắc; bảng trượt vẽ được cả khi có và không có khoản', function(){
+  hanData(0, 0);
+  eq(ctx.dsCatSapDenHan(7, '2026-10-14').length, 0);
+  ok(ctx.nhacHanSheetHtml().indexOf('Không còn khoản nào') >= 0);
+  setToday('2026-10-14'); hanData(20, 0);
+  var h = ctx.nhacHanSheetHtml();
+  ok(h.indexOf('Lương') >= 0 && h.indexOf('hanGhi') >= 0 && h.indexOf('Còn 6 ngày') >= 0, 'có dòng Lương + nút Ghi');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */

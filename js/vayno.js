@@ -843,7 +843,7 @@ if (typeof window !== 'undefined' && window.visualViewport){
 }
 function vnMoKhoaNen(){
   return !!(document.getElementById('qaSheetRoot') || document.getElementById('mpSheetRoot')
-    || document.getElementById('vnSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot'));
+    || document.getElementById('vnSheetRoot') || document.getElementById('hanSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot'));
 }
 
 function vnF(nhan, noiDung, ht, ghiChu){

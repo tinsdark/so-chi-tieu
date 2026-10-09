@@ -68,6 +68,7 @@ var state = {
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
+  hanMo: false,           // bảng "Sắp đến hạn" (nhắc thu/chi theo ngày của danh mục) đang mở
   nguoiMo: null,          // tab Vay - Nợ: khóa người đang mở ở thẻ "Sổ nợ theo người"
   nhanMo: null,           // tab Báo cáo: khóa nhãn đang mở ở thẻ "Theo nhãn" (null = gấp hết)
   hmMoHet: false,         // tab Báo cáo: mở hết nhóm "Ổn" ở thẻ Hạn mức (mặc định chỉ hiện 3)
@@ -928,6 +929,8 @@ function monthKey(dateStr){ return dateStr.slice(0,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
 function monthLabel(mk){ var p=mk.split('-'); return 'Tháng ' + parseInt(p[1],10) + '/' + p[0]; }
 // "YYYY-MM-DD" -> "DD/MM/YYYY", dùng hiển thị ngày trả/ngày thu cụ thể
+// "YYYY-MM-DD" -> "DD/MM"
+function ngayNganVN(d){ return d.slice(8,10)+'/'+d.slice(5,7); }
 function ngayVN(d){ return d ? d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4) : ''; }
 function daysBetween(d1, d2){ return Math.round((new Date(d2) - new Date(d1)) / 86400000); }
 function slugify(s){

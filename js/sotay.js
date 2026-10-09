@@ -255,9 +255,11 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   var nDk = dinhKyDenHan(todayStr()).length;
   var nVn = danhSachSapDenHan(7).length;
+  var nHan = dsCatSapDenHan().length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
   var chips = '';
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
+  if (nHan) chips += '<button type="button" class="hero-chip" data-act="hanMo">'+icon('clock')+' '+nHan+' khoản thu/chi sắp đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';

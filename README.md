@@ -20,7 +20,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 
 ### Tính năng nền tảng
 
-- **Kỳ tài chính theo ngày lương.** `settings.ngayKy` (1 = tháng dương lịch, tối đa 28; nhập ở tab Danh mục, khối Số dư đầu kỳ). Ví dụ 20: kỳ "Tháng 9" là 20/9 → 19/10 (kỳ gọi tên theo tháng BẮT ĐẦU). Mọi chỗ gom theo tháng đi qua `monthKey()` (state.js) nên Dòng tiền, Báo cáo, hạn mức, dự trù, Mô phỏng, Bảng theo dõi đều theo kỳ; chỗ lặp từng ngày của kỳ dùng `kyTu / kyDen / kySoNgay / kyNgay / kyThuNgay`. Số dư theo ngày thật nên đổi ngày kỳ không làm đổi số dư. Lịch trả nợ giữ NGÀY TRẢ theo lịch (ngày trả hàng tháng), chỉ `mk` của từng kỳ đổi sang kỳ chứa ngày đó. Khoản định kỳ: ngày >= ngày bắt đầu kỳ nằm ở tháng đầu kỳ, nhỏ hơn thì sang tháng sau (`ngayDinhKyCuaKy`).
+- **Nhắc thu/chi theo ngày của danh mục.** Mỗi danh mục thu/chi (trừ danh mục hệ thống của Vay - Nợ) có ô "Ngày thu/chi hằng tháng" (`cat.ngay`, 1–31): Tiền nhà ngày 5, Lương ngày 20... Trong vòng 7 ngày trước hạn, thẻ tổng quan Sổ tay hiện chip "N khoản thu/chi sắp đến hạn"; bấm mở bảng trượt từ đáy (giống Ghi nhanh) liệt kê từng khoản, có nút **Ghi** mở Ghi nhanh với đúng danh mục đó. Hết nhắc khi tháng này đã có giao dịch ở danh mục đó (quá hạn mà chưa ghi thì nhắc "Quá hạn N ngày" suốt tháng); đã ghi rồi thì cuối tháng nhắc kỳ tháng sau. Chỉ nhắc trong app, chưa phải thông báo đẩy (xem 7.1). Code ở `js/nhachan.js`.
 - **Nhãn (tag) cho giao dịch.** Ô "Nhãn" ở Ghi nhanh (giữ nguyên sau mỗi lần ghi để ghi liền cả chuyến đi) và khi sửa một dòng; nhiều nhãn cách nhau bằng dấu phẩy. Lưu ở `it.nhan` (mảng chữ, không có nhãn thì không có trường), hai tên chỉ khác hoa/thường là một nhãn. Thẻ **Theo nhãn** ở Báo cáo: tổng chi / thu, số khoản, khoảng ngày, chạm để xem từng khoản, đổi tên / gộp, gỡ nhãn. Tìm ở Sổ tay cũng tìm theo nhãn. Nhãn không đổi số dư hay hạn mức.
 - **Sổ nợ theo người.** Mỗi khoản cho vay / vay có ô "Người" (`loan.nguoi`). Thẻ **Sổ nợ theo người** ở Vay - Nợ gom các khoản còn mở cùng một người để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Người).
 - **Chia hóa đơn nhóm.** Nút trong thẻ Cho vay: mình trả cả hóa đơn, nhập tổng và mỗi dòng một người (`Lan 150k` nếu không chia đều; người không ghi số chia đều phần còn lại cùng mình, lẻ đồng dồn về mình). Phần của mình thành một khoản chi ở Sổ tay, mỗi người khác thành một khoản cho vay (gắn `nguoi`), có Hoàn tác. Chưa có chiều ngược lại (người khác trả hộ, mình nợ họ).
@@ -50,7 +50,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 236 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 232 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -71,6 +71,7 @@ js/
   sotay.js          Tab Sổ tay (ghi nhanh, danh sách ngày, xuất Excel)
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
   nhan.js           Nhãn (tag) cho giao dịch + thẻ "Theo nhãn" ở Báo cáo
+  nhachan.js        Nhắc thu/chi theo ngày của danh mục + bảng "Sắp đến hạn"
   nguoi.js          Người trong Vay - Nợ: Sổ nợ theo người + Chia hóa đơn nhóm
   nhap.js           Nhập giao dịch từ CSV / Excel
   danhmuc.js        Tab Danh mục: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
@@ -155,9 +156,9 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 
 ### 7.1. Cần triển khai
 
-Đã làm: ngày bắt đầu kỳ (ngày lương), nhãn cho giao dịch, chia hóa đơn nhóm, sổ nợ theo người (xem mục 1). Còn lại:
+Đã làm: nhãn cho giao dịch, chia hóa đơn nhóm, sổ nợ theo người, nhắc thu/chi theo ngày của danh mục (xem mục 1). Còn lại:
 
-1. **Nhắc việc trên iPhone** cho kỳ trả nợ, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
+1. **Nhắc việc trên iPhone (thông báo ngoài app)** cho kỳ trả nợ, các khoản có ngày ở danh mục, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
    - **Xuất file `.ics`** rồi nhập vào Lịch iPhone, kèm báo thức nhắc trước hạn. Không cần server nhưng là ảnh chụp tại thời điểm xuất, dữ liệu đổi thì phải xuất lại. Cần thử: iOS có giữ báo thức trong file khi nhập không, và app mở từ màn hình chính có tải được file `.ics` để nhập không.
    - **Tạo sự kiện thẳng vào Google Calendar** qua đăng nhập Google sẵn có (tự cập nhật, đồng bộ sang Lịch iPhone nếu tài khoản Google đã thêm vào máy). Phải xin thêm quyền Lịch (quyền nhạy cảm hơn `drive.file` hiện tại, đổi màn hình đồng ý và `privacy.html`).
    - **Thông báo đẩy (Web Push)**: cần có server riêng, trái nguyên tắc "không server", không chọn.
