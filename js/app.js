@@ -226,6 +226,7 @@ function handleAction(act, el){
   if (handleNhapAction(act, el)) return;
   if (handleNhanAction(act, el)) return;
   if (handleNhacHanAction(act, el)) return;
+  if (handleLichAction(act, el)) return;
   if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
