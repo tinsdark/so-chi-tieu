@@ -16,6 +16,8 @@ function monthKeyAdd(mk, n){
   return y + '-' + pad2(m);
 }
 function loanIsActive(loan){ return loan.trangThai !== 'da_tra_het'; }
+// khoản cho vay đã xong (thu đủ, hoặc đã xóa nợ phần còn lại) -> vào mục "Đã xong", không hiện ở danh sách chính
+function choVayDaXong(c){ return !!c.tatToan || c.trangThai === 'da_thu_du' || conLaiPhaiThu(c) <= 0; }
 // số ngày của tháng mk (YYYY-MM)
 function daysInMonth(mk){ var p = mk.split('-'); return new Date(parseInt(p[0],10), parseInt(p[1],10), 0).getDate(); }
 // ghép tháng mk + "ngày trong tháng" (1-31) -> "YYYY-MM-DD", tự co về ngày cuối tháng
@@ -653,7 +655,7 @@ function vnVayHtml(){
 /* ---- cho vay ---- */
 function vnChoVayCardHtml(c){
   var conLai = conLaiPhaiThu(c), qh = soNgayQuaHan(c);
-  var xong = !!c.tatToan || c.trangThai === 'da_thu_du' || conLai <= 0;
+  var xong = choVayDaXong(c);
   var daBo = tongDaBo(c);
   var chip = c.tatToan
     ? vnChip('', 'Đã đóng' + (num(c.tatToan.soTien) > 0 ? ' (xóa nợ '+fmt(Math.round(c.tatToan.soTien))+')' : ''))
@@ -682,7 +684,15 @@ function vnChoVayHtml(){
   var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.', 'Ghi tiền thu về thế nào?');
   if (!ds.length) h += '<div class="empty-box">Chưa có khoản cho vay nào.<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div></div>';
-  else ds.forEach(function(c){ h += vnChoVayCardHtml(c); });
+  else {
+    var dangCV = ds.filter(function(c){ return !choVayDaXong(c); }), xongCV = ds.filter(choVayDaXong);
+    dangCV.forEach(function(c){ h += vnChoVayCardHtml(c); });
+    if (!dangCV.length) h += '<div class="vn-sub" style="margin:10px 0">Không còn khoản nào đang chờ thu.</div>';
+    if (xongCV.length){
+      h += '<button type="button" class="vn-more vn-xong-b" data-act="vnXongCV" aria-expanded="'+!!state.vnXongCV+'">Đã xong ('+xongCV.length+')'+icon('chev')+'</button>';
+      if (state.vnXongCV) xongCV.forEach(function(c){ h += vnChoVayCardHtml(c); });
+    }
+  }
   return h + '</div>';
 }
 
@@ -1038,6 +1048,9 @@ function handleVayNoAction(act, el){
     renderVayNo();
   } else if (act === 'vnXong'){
     state.vnXong = !state.vnXong;
+    renderVayNo();
+  } else if (act === 'vnXongCV'){
+    state.vnXongCV = !state.vnXongCV;
     renderVayNo();
   } else if (act === 'vnLichAll'){
     var idLA = el.getAttribute('data-id');
