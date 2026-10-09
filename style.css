@@ -1344,3 +1344,6 @@ button.dm-sw.on{background:var(--thu-solid)} button.dm-sw.on::after{transform:tr
   .dm-grid.dm-cap{column-count:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .dm-grid.dm-cap>.card{display:block;margin-bottom:0}
 }
+.vn-sheet .qa-seg{margin-top:12px}
+.vn-sheet .qa-seg button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.vn-sheet .qa-lbl+.qa-seg,.vn-f .qa-seg{margin-top:0}
