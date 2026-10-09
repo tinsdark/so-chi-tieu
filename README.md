@@ -10,11 +10,11 @@ Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn
 
 | Tab | Phím tắt | Nội dung |
 |---|---|---|
-| **Sổ tay** | `1` | Ghi giao dịch thu/chi theo ngày. Gồm: **Ghi nhanh** (số tiền, danh mục, ghi chú, 1 nút Lưu), **Nhập đầy đủ**, số dư theo từng ví, tìm kiếm / lọc, xuất Excel, nhập từ file CSV/Excel, vuốt ngày để sửa/xóa, hoàn tác khi xóa. |
-| **Dòng tiền** | `2` | Bảng thu/chi theo từng tháng cả năm (thực tế + dự kiến tương lai), phân tích chênh lệch so với hạn mức, và vùng **Mô phỏng** để thử số liệu mà không đụng dữ liệu thật. |
-| **Báo cáo** | `3` | Biểu đồ chi tiêu (Tổng quan / Danh mục / Xu hướng), theo dõi **hạn mức** từng danh mục, **mục tiêu tiết kiệm**, **tài sản ròng** theo tháng (tiền các ví + cho vay chưa thu − nợ gốc), so sánh tháng với cùng kỳ. |
-| **Vay - Nợ** | `4` | Quản lý khoản **cho vay** và khoản **vay phải trả**: ngân hàng / ví / bạn bè / người thân. Hình thức: trả 1 lần, không lãi, có lãi, trả cố định/tháng. Tự tính lịch trả nợ, tiến độ, tất toán sớm; ghi thu/trả thì tự hạch toán sang Sổ tay. |
-| **Danh mục** | `5` | Danh mục thu/chi (đổi tên, màu, kéo thả đổi thứ tự), hạn mức tháng, ví và ví mặc định, số dư đầu kỳ, **chốt số dư**. |
+| **Sổ tay** | `1` | Ghi giao dịch thu/chi theo ngày. Thẻ đầu là số dư (chọn tháng, đầu tháng / cuối tháng, thanh thu-chi). **Ghi nhanh**: thanh nổi phía trên thanh tab, chạm mở bảng trượt từ đáy (số tiền, danh mục, ví, ghi chú, 1 nút Lưu); **Nhập đầy đủ** cho ngày nhiều khoản. Số dư theo từng ví và chuyển tiền giữa các ví, nhắc **giao dịch định kỳ** đến hạn, tìm kiếm / lọc, xuất Excel, nhập từ file CSV/Excel, vuốt ngày để sửa/xóa, hoàn tác khi xóa. |
+| **Dòng tiền** | `2` | Hai chế độ. **Thực tế & dự kiến**: chọn tháng, Cân đối tháng (thiếu / dư), thanh Thu / Chi / Trả nợ, thu và chi theo danh mục chia nhóm "Cần chú ý" / "Ổn" (chạm một dòng để xem 4 số chi tiết, vượt hạn mức có chip "Vượt X"), dự kiến 24 tháng (tháng âm đầu tiên, đáy, tháng dương lại), bảng cả năm sau nút "Xem bảng cả năm". **Mô phỏng**: vùng nháp để thử số liệu mà không đụng dữ liệu thật, thêm điều chỉnh (thu/chi một lần, lặp lại mỗi tháng, **vay thêm** tự tính số trả và tổng lãi, trả hết khoản vay sớm), bật/tắt từng điều chỉnh, so sánh với dữ liệu gốc 6 / 12 / 24 / 36 tháng. |
+| **Báo cáo** | `3` | Thẻ đầu theo tháng, theo dõi **hạn mức** từng danh mục chi, **tài sản ròng** (tiền các ví + cho vay chưa thu − nợ gốc), **mục tiêu tiết kiệm** (tiến độ, cần để dành mỗi tháng bao nhiêu), biểu đồ chi tiêu (Tổng quan / Danh mục / Xu hướng), so sánh tháng với cùng kỳ. |
+| **Vay - Nợ** | `4` | **Cho vay** và **vay phải trả** (ngân hàng / ví / bạn bè / người thân). Hình thức trả: 1 lần, không lãi, có lãi, trả cố định/tháng, gốc đều lãi giảm dần. Thẻ tổng quan (còn nợ, cho vay chờ thu, nợ ròng, tháng này cần trả / đã trả, dự kiến hết nợ), thẻ "Sắp đến hạn / quá hạn", mỗi khoản là một thẻ với **lịch trả theo từng kỳ** (đã trả đủ / xong kỳ nhưng thiếu / trả dở / chưa trả), ghi nhận trả (trả một phần hoặc đóng kỳ), tất toán sớm, dòng tiền tích lũy 6 / 12 / 24 tháng. Ghi thu/trả tự hạch toán sang Sổ tay. Thêm/sửa khoản vay có khối xem trước số trả mỗi tháng, tổng lãi, tháng trả xong. |
+| **Danh mục** | `5` | Ba khối. **Danh mục**: thu / chi (tên, màu, hạn mức tháng, "Không tính dự kiến", "Cố định theo Hạn mức", kéo thả đổi thứ tự). **Tiền & kế hoạch**: số dư đầu kỳ, ví (mặc định, để dành), chốt số dư, giao dịch định kỳ (chỉ nhắc, không tự ghi), mục tiêu tiết kiệm (gắn ví hoặc tự gom). **Ứng dụng**: cài lên màn hình chính, sao lưu / khôi phục, khóa app, đăng xuất. |
 
 Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?` xem bảng phím tắt, `Esc` đóng hộp thoại.
 
@@ -22,10 +22,10 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 
 - **Đăng nhập Google, dữ liệu ở Drive của bạn.** Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
 - **Dùng khi mất mạng.** Có bản nháp và bản sao dữ liệu trong `localStorage`; có mạng lại thì tự đồng bộ. Service worker giữ khung app để mở được offline.
-- **Sao lưu hằng ngày** lên Drive, và tự sao lưu bản Drive hiện tại trước khi khôi phục bản nháp đè lên.
+- **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, xem danh sách và **khôi phục** một bản ngay trong tab Danh mục. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
-- **Giao diện** sáng/tối, tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột.
+- **Giao diện** sáng/tối, tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
 - **Biểu đồ tự vẽ bằng SVG**, không dùng thư viện biểu đồ, nên xem được cả khi offline.
 - Có trang [Chính sách quyền riêng tư](privacy.html).
 
@@ -41,7 +41,8 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Thêm: khóa PIN + sinh trắc, PWA/offline, sao lưu ngày, chuyển cảnh và cử chỉ.
 - Tài khoản mới bắt đầu với số dư đầu kỳ 0 và ngày bắt đầu là hôm nay.
 - Đã bỏ tính năng "quy tắc tự phân loại" (làm rồi gỡ hẳn khỏi Danh mục, Ghi nhanh, Nhập từ file).
-- Có 173 unit test cho phần logic thuần, đang pass hết.
+- **Đợt thiết kế lại từng tab** (thiết kế bằng Claude Design, code và kiểm tra ở 320 / 375 / 1280px, sáng và tối): Sổ tay, Báo cáo, Dòng tiền (Thực tế & dự kiến + Mô phỏng), Vay - Nợ, Danh mục. Điểm chung: thẻ gọn thay cho bảng nhiều cột, bảng trượt từ đáy cho form, thu màu xanh / chi màu đỏ trầm / trả nợ màu hổ phách, tiền hiện đầy đủ không viết tắt.
+- Có 191 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -58,13 +59,13 @@ js/
   ui.js             Toast, hộp thoại, chế độ tối
   lock.js           Khóa PIN + vân tay / Face ID
   drive-sync.js     Đăng nhập Google, đọc/ghi Drive, bản nháp, sao lưu
-  vayno.js          Tab Vay - Nợ + tính lịch trả nợ
+  vayno.js          Tab Vay - Nợ: tính lịch trả nợ, thẻ khoản vay / cho vay, lịch trả theo kỳ, bảng trượt thêm-sửa và ghi nhận trả
   sotay.js          Tab Sổ tay (ghi nhanh, danh sách ngày, xuất Excel)
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
   nhap.js           Nhập giao dịch từ CSV / Excel
-  danhmuc.js        Tab Danh mục
-  dongtien.js       Tab Dòng tiền
-  mophong.js        Vùng Mô phỏng
+  danhmuc.js        Tab Danh mục: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
+  dongtien.js       Tab Dòng tiền (Thực tế & dự kiến)
+  mophong.js        Chế độ Mô phỏng của Dòng tiền
   motion.js         Animation dùng chung
   app.js            Khởi động, render tổng, dispatcher sự kiện, phím tắt
 tests/run-tests.js  Unit test (Node, không cần cài gói nào)
@@ -117,6 +118,14 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - **Nhập hàng loạt luôn có bước xem trước**, dòng trùng mặc định bị bỏ qua nên nhập lại cùng 1 file không nhân đôi tiền.
 - Các danh mục sinh ra từ Vay - Nợ (nhận tiền vay, cho vay, trả nợ, thu hồi) không nhập tay ở Sổ tay, để khỏi tạo tiền mồ côi không gắn với khoản vay nào.
 
+### Quy ước giao diện
+
+- Màu: thu xanh, chi đỏ trầm, trả nợ / sắp đến hạn hổ phách. Chữ phần trăm để màu trung tính.
+- Tiền hiện đầy đủ (`4.769.960`), không viết tắt "tr" / "k" (trừ trục biểu đồ).
+- Danh sách dài dùng thẻ + nút "Xem thêm / Xem tất cả" thay cho bảng cuộn lồng nhau; dưới 375px bớt cột phụ.
+- Thêm / sửa qua bảng trượt: khung `.qa-sheet` (Sổ tay), `.vn-sheet` (Vay - Nợ, Danh mục). Bảng nằm ngoài `#tabContent` và giữ nguyên DOM khi vẽ lại trang, nên đồng bộ Drive không làm mất ô đang gõ.
+- Mỗi tab dài có tiền tố CSS riêng (`dt-` Dòng tiền, `mp-` Mô phỏng, `vn-` Vay - Nợ, `dm-` Danh mục, `bc-` Báo cáo).
+
 ---
 
 ## 6. Hạn chế cần biết
@@ -124,10 +133,17 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - Khóa PIN là khóa **màn hình**, không mã hóa dữ liệu trong `localStorage`. Ai mở được DevTools trên máy vẫn đọc được. Mục đích chỉ là người khác cầm máy đang mở app không xem được số tiền.
 - Quên PIN thì chỉ còn cách xóa khóa cùng dữ liệu lưu trên máy đó rồi đăng nhập Google lại (dữ liệu trên Drive vẫn còn).
 - Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`; quá hạn thì phải đăng nhập lại.
+- Vài hộp thoại xác nhận (xóa khoản vay, tất toán khoản cho vay, chốt số dư, khôi phục, đăng xuất) vẫn dùng hộp thoại chung kiểu cũ, chưa chuyển sang bảng trượt.
 - Cần mạng ở lần mở đầu để tải thư viện Google đăng nhập và SheetJS (từ `cdn.sheetjs.com`).
 
 ---
 
 ## 7. Hướng phát triển
 
-Chưa có kế hoạch cố định. Phần này ghi lại khi có ý tưởng mới.
+Chưa có kế hoạch cố định. Một vài việc đã biết:
+
+- Chuyển nốt các hộp thoại xác nhận còn lại sang bảng trượt cho đồng bộ giao diện.
+- Cho tất toán một phần khoản cho vay (hiện chỉ bỏ toàn bộ phần còn lại).
+- Hiện tên / email tài khoản Google ở thẻ Tài khoản (app chưa lưu thông tin này).
+
+Phần này ghi lại khi có ý tưởng mới.

@@ -99,16 +99,15 @@ function cfgCardHtml(){
 /* ---- Ví / nguồn tiền ---- */
 function viCardHtml(){
   var ws = state.data.wallets || [];
-  var tong = ws.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
   var h = '<div class="card dm-card k-wal">'+dmHead('Ví / nguồn tiền', '<button class="btn secondary sm" data-act="dmThemVi">+ Thêm ví</button>');
   ws.forEach(function(w){
     var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '');
     h += '<div class="dm-row" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
       + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
-      + '<span class="dm-v"><b>'+fmt(Math.round(num(w.soDuDauKy)))+'</b></span>'+dmGo()+'</div>';
+      + dmGo()+'</div>';
   });
-  return h + '<div class="dm-tong"><span>Tổng số dư đầu kỳ</span><b>'+fmt(Math.round(tong))+'</b></div>'
-    + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng tính từ "Ngày bắt đầu" ở trên. '
+  return h
+    + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng: số tiền có trong ví lúc bắt đầu dùng sổ (tính từ "Ngày bắt đầu" ở trên), KHÔNG phải số tiền ví đang có. Số dư hiện tại của từng ví xem ở tab Sổ tay; mở ví ở đây để sửa số đầu kỳ. '
     + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch hoặc đang gắn mục tiêu thì không xóa được, chỉ đổi tên. Tích <b>Để dành</b> cho ví quỹ/tiết kiệm: chi hoặc chuyển tiền ra khỏi ví đó sẽ được hỏi lại.', 'Ví / nguồn tiền hoạt động thế nào?')
     + '</div>';
 }
@@ -351,7 +350,7 @@ function viSheetHtml(f){
   var dung = w ? viDangDung(w.id) : 0;
   var khongXoa = !w || ws.length < 2 || dung > 0;
   var h = vnF('Tên ví', '<input type="text" id="dm_vi_ten" value="'+esc(d.ten)+'" placeholder="Tiền mặt, Vietcombank, Momo...">')
-    + vnF('Số dư đầu kỳ', dmMoney('dm_vi_du', d.soDuDauKy), '', 'Tính từ "Ngày bắt đầu". Được phép âm (thẻ tín dụng, nợ).')
+    + vnF('Số dư đầu kỳ <span class="mp-hint">(lúc bắt đầu dùng sổ)</span>', dmMoney('dm_vi_du', d.soDuDauKy), '', 'Đây KHÔNG phải số tiền ví đang có. Số dư hiện tại tự tính từ số đầu kỳ cộng các giao dịch, xem ở tab Sổ tay. Được phép âm (thẻ tín dụng, nợ).')
     + dmToggle('dm_vi_md', 'Ví mặc định', 'Điền sẵn khi nhập giao dịch, thêm khoản vay, khoản định kỳ mới.', laMd, laMd)
     + dmToggle('dm_vi_dd', 'Để dành', 'Ví quỹ / tiết kiệm: chi hoặc chuyển tiền ra khỏi ví này sẽ được hỏi lại trước khi ghi.', d.deDanh);
   if (w){
