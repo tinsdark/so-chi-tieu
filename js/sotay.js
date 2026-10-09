@@ -234,7 +234,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var h = '<div class="card hero">'
     + '<div class="hero-top"><div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+'</div>'+thangNavHtml(mk)+'</div>'
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
-    + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(kySoNgay(mk) - kyThuNgay(mk, todayStr()))+' ngày' : '')+'</div>'
+    + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(daysInMonth(mk) - parseInt(todayStr().slice(8, 10), 10))+' ngày' : '')+'</div>'
     // thanh chia theo tỷ lệ thu : chi của tháng, để nhìn một cái biết tháng này thu hay chi nhiều hơn
     + '<div class="hero-flow" aria-hidden="true"><i class="thu" style="flex:'+phanThu+'"></i><i class="chi" style="flex:'+(100 - phanThu)+'"></i></div>'
     + '<div class="hero-nums">'
@@ -286,7 +286,7 @@ function tongQuanSoSanhHtml(mk, tongChi, beforeLock){
 function viTheHtml(mk, beforeLock){
   var ws = state.data.wallets || [];
   if (ws.length < 2 || beforeLock) return '';
-  var cuoi = kyDen(mk), macDinh = viMacDinhId();
+  var cuoi = mk + '-31', macDinh = viMacDinhId();
   var dangGhi = walletById(state.qa.wallet) ? state.qa.wallet : viDienSan();
   return '<div class="vi-sec"><div class="vi-sec-head"><h3>Số dư theo ví</h3>'
     + '<button type="button" class="vi-chuyen" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></div>'
@@ -324,7 +324,7 @@ document.addEventListener('input', function(ev){
 // thanh chọn tháng dùng chung cho Sổ tay và Báo cáo (cùng state.soTayMonth)
 function thangNavHtml(mk){
   var monthOpts = soTayMonthList().map(function(m){
-    return '<option value="'+m+'"'+(m===mk?' selected':'')+'>'+monthLabel(m)+(kyKhoang(m) ? ' · '+kyKhoang(m) : '')+'</option>';
+    return '<option value="'+m+'"'+(m===mk?' selected':'')+'>'+monthLabel(m)+'</option>';
   }).join('');
   return '<div class="month-nav">'
     + '<button data-act="prevMonth" aria-label="Tháng trước">‹</button>'
@@ -383,7 +383,7 @@ function renderSoTay(){
     tongChi += chiTotal(e);
   });
   // tháng hoàn toàn trước mốc khóa sổ (ngayBatDau) thì không còn tính vào số dư nữa -> hiện "—"
-  var startMk = state.data.settings.ngayBatDau ? monthKey(state.data.settings.ngayBatDau) : '';
+  var startMk = (state.data.settings.ngayBatDau || '').slice(0,7);
   var beforeLock = startMk && mk < startMk;
   var duDauThang = beforeLock ? null : balanceBeforeMonth(mk);
   var duCuoiThang = beforeLock ? null : (duDauThang + tongThu - tongChi);
@@ -867,15 +867,15 @@ function catTenTheoId(kind, id){
 // số dư cuối ngày trong tháng mk. Tháng đang diễn ra chỉ vẽ tới hôm nay (sau đó
 // là đường phẳng vô nghĩa); tháng trước mốc khóa sổ thì không có số dư để vẽ.
 function balanceSeries(mk){
-  var startLock = state.data.settings.ngayBatDau ? monthKey(state.data.settings.ngayBatDau) : '';
+  var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
   if (startLock && mk < startLock) return { labels: [], vals: [] };
   var hom = todayStr();
-  var soNgay = kySoNgay(mk);
+  var soNgay = daysInMonth(mk);
   var labels = [], vals = [];
   for (var i = 1; i <= soNgay; i++){
-    var d = kyNgay(mk, i);
+    var d = mk + '-' + pad2(i);
     if (d > hom && mk === monthKey(hom)) break;
-    labels.push(d.slice(8, 10));
+    labels.push(pad2(i));
     vals.push(balanceAt(d));
   }
   return { labels: labels, vals: vals };

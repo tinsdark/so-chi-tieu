@@ -307,7 +307,7 @@ function dtDuKienHtml(rowsAll, selMk){
       + '<span class="l'+(r.bal < 0 ? ' xau' : '')+'">'+Math.round(r.bal).toLocaleString('vi-VN')+'</span></div>';
   });
   list += '</div>';
-  var fcM = forecastEligibleMonths(), startMk = monthKey(state.data.settings.ngayBatDau || todayStr());
+  var fcM = forecastEligibleMonths(), startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
   return '<div class="card bc-card vn-dt" id="dtDuKien"><h3 class="bc-h"><span>Dòng tiền tích lũy tương lai</span></h3>'
     + '<div class="mp-hz">'
     + [6, 12, 24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="dtHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
@@ -326,7 +326,7 @@ function dtDuKienHtml(rowsAll, selMk){
 /* ---- bảng cả năm (bản cũ, sau nút "Xem bảng cả năm") ---- */
 function dtBangNamHtml(){
   var year = state.dongTienYear;
-  var startMk = monthKey(state.data.settings.ngayBatDau || todayStr());
+  var startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
   var currentMk = monthKey(todayStr());
   var months = [];
   for (var m = 1; m <= 12; m++){
@@ -410,7 +410,7 @@ function dtBangNamHtml(){
 
 function renderDongTien(){
   var root = document.getElementById('tabContent');
-  var startMk = monthKey(state.data.settings.ngayBatDau || todayStr());
+  var startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
   var cur = monthKey(todayStr());
   var minMk = startMk, maxMk = monthKeyAdd(cur, DT_SO_THANG - 1);
   if (maxMk < minMk) maxMk = minMk;

@@ -3188,68 +3188,6 @@ test('Lớp phủ toàn màn hình (.gate, .modal-back, nền) bám biến --vv-
 });
 
 /* ==================================================================== */
-group('Kỳ tài chính theo ngày lương (settings.ngayKy)');
-
-function kyData(n, over){ var d = baseData(over); d.settings.ngayKy = n; return loadData(d); }
-
-test('ngayKy = 1 (mặc định): monthKey / kyTu / kyDen như tháng dương lịch', function(){
-  kyData(1);
-  eq(ctx.monthKey('2026-09-19'), '2026-09'); eq(ctx.monthKey('2026-09-20'), '2026-09');
-  eq(ctx.kyTu('2026-09'), '2026-09-01'); eq(ctx.kyDen('2026-09'), '2026-09-30'); eq(ctx.kySoNgay('2026-02'), 28);
-  eq(ctx.kyKhoang('2026-09'), '');
-});
-test('ngayKy = 20: giáp ranh 19 -> kỳ trước, 20 -> kỳ mới', function(){
-  kyData(20);
-  eq(ctx.monthKey('2026-09-19'), '2026-08'); eq(ctx.monthKey('2026-09-20'), '2026-09');
-  eq(ctx.monthKey('2026-10-19'), '2026-09'); eq(ctx.monthKey('2026-10-20'), '2026-10');
-  eq(ctx.monthKey('2027-01-05'), '2026-12', 'qua năm');
-  eq(ctx.kyTu('2026-09'), '2026-09-20'); eq(ctx.kyDen('2026-09'), '2026-10-19');
-  eq(ctx.kySoNgay('2026-09'), 30); eq(ctx.kyKhoang('2026-09'), '20/9 – 19/10');
-  eq(ctx.kyNgay('2026-09', 1), '2026-09-20'); eq(ctx.kyNgay('2026-09', 30), '2026-10-19');
-  eq(ctx.kyThuNgay('2026-09', '2026-10-05'), 16);
-});
-test('ngayKy sai (0, 29, chữ) về 1 khi nạp dữ liệu; thiếu cũng là 1', function(){
-  [0, 29, 'abc', null, undefined].forEach(function(v){ eq(kyData(v).settings.ngayKy, 1, String(v)); });
-  eq(kyData(25).settings.ngayKy, 25);
-});
-test('mọi ngày thuộc đúng 1 kỳ và các kỳ liền nhau không hở', function(){
-  kyData(20);
-  var seen = {}, d = new Date('2026-01-01T00:00:00');
-  for (var i = 0; i < 365; i++){
-    var ds = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
-    var mk = ctx.monthKey(ds);
-    ok(ds >= ctx.kyTu(mk) && ds <= ctx.kyDen(mk), ds + ' không nằm trong kỳ ' + mk);
-    d.setDate(d.getDate() + 1);
-  }
-});
-test('số dư đầu kỳ tính theo ngày bắt đầu kỳ; balanceAtEndOfMonth = đầu kỳ sau', function(){
-  var j = {}; j['2026-09-19'] = { thu: {luong: 100}, chi: {}, ghiChu: '', refs: [], items: [{iid:'a',kind:'thu',catId:'luong',soTien:100,ghiChu:''}] };
-  j['2026-09-20'] = { thu: {}, chi: {an: 30}, ghiChu: '', refs: [], items: [{iid:'b',kind:'chi',catId:'an',soTien:30,ghiChu:''}] };
-  kyData(20, { journal: j }); ctx.state.data.settings.ngayBatDau = '2026-01-01'; ctx.invalidateBalanceCache();
-  eq(ctx.balanceBeforeMonth('2026-09'), 100, 'đầu kỳ 9 gồm khoản 19/9');
-  eq(ctx.balanceAtEndOfMonth('2026-09'), 70);
-  eq(ctx.balanceBeforeMonth('2026-08'), 0);
-});
-test('định kỳ: ngày >= ngayKy ở tháng đầu kỳ, nhỏ hơn thì sang tháng sau', function(){
-  kyData(20);
-  eq(ctx.ngayDinhKyCuaKy('2026-09', 25), '2026-09-25'); eq(ctx.ngayDinhKyCuaKy('2026-09', 5), '2026-10-05');
-  eq(ctx.ngayDinhKyCuaKy('2026-01', 31), '2026-01-31'); eq(ctx.ngayDinhKyCuaKy('2026-01', 3), '2026-02-03');
-  kyData(1); eq(ctx.ngayDinhKyCuaKy('2026-09', 5), '2026-09-05');
-});
-test('lịch trả nợ: ngày trả giữ nguyên theo lịch, mk đổi sang kỳ chứa ngày đó', function(){
-  var loan = { hinhThuc:'tra_co_dinh', soTienGoc:3000, soTienTraThang:1000, soThangVay:3, ngayVay:'2026-09-25', ngayTraHangThang:5 };
-  kyData(1);  var a = ctx.tinhLichTraNo(loan);
-  kyData(20); var b = ctx.tinhLichTraNo(loan);
-  eq(a[0].ngayTra, '2026-10-05'); eq(b[0].ngayTra, a[0].ngayTra, 'ngày trả không đổi');
-  eq(a[0].mk, '2026-10'); eq(b[0].mk, '2026-09', '5/10 thuộc kỳ 20/9 -> 19/10');
-  eq(b[2].mk, '2026-11');
-});
-test('mô phỏng: khoản vay thêm trả đầu mỗi kỳ, kỳ trả đầu tiên là kỳ sau mkTu', function(){
-  kyData(20);
-  var r = ctx.mpTinhVay({ hinhThuc:'tra_co_dinh', soTien:3000, soThang:3, mkTu:'2026-09', traTay:1000 });
-  eq(r.hetMk, '2026-12');
-});
-
 /* ==================================================================== */
 group('Nhãn (tag) cho giao dịch');
 

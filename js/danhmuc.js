@@ -92,8 +92,7 @@ function cfgCardHtml(){
   return '<div class="card dm-card">'+dmHead('Số dư đầu kỳ')
     + dong('Ngày bắt đầu', s.ngayBatDau ? ngayVN(s.ngayBatDau) : '—')
     + dong('Tháng bắt đầu tính dự kiến', dmThangDM(s.thangBatDauDuTru))
-    + dong('Ngày bắt đầu kỳ (ngày lương)', ngayKy() === 1 ? 'Ngày 1 (tháng dương lịch)' : 'Ngày ' + ngayKy())
-    + ghiChuGon('"Tháng bắt đầu tính dự kiến" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị chốt số dư làm đổi.<br><b>Ngày bắt đầu kỳ</b>: mọi báo cáo "tháng" tính từ ngày này tới trước ngày này của tháng sau. Ví dụ ngày 20: kỳ Tháng 9 là 20/9 → 19/10 (kỳ gọi tên theo tháng bắt đầu). Để 1 là tháng dương lịch.', 'Số dư đầu kỳ dùng để làm gì?')
+    + ghiChuGon('"Tháng bắt đầu tính dự kiến" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị chốt số dư làm đổi.', 'Số dư đầu kỳ dùng để làm gì?')
     + '</div>';
 }
 
@@ -341,8 +340,7 @@ function catSheetHtml(f){
 function cfgSheetHtml(){
   var s = state.data.settings;
   var h = vnF('Ngày bắt đầu', '<input type="date" id="cfg_ngay" value="'+(s.ngayBatDau || '')+'">', '', 'Mốc tính số dư. Chốt số dư sẽ tự đẩy mốc này lên.')
-    + vnF('Tháng bắt đầu tính dự kiến', '<input type="month" id="cfg_duTru" value="'+(s.thangBatDauDuTru || '')+'">', '', 'Tháng ĐẦY ĐỦ đầu tiên dùng để tính trung bình gợi ý ở Dòng tiền.')
-    + vnF('Ngày bắt đầu kỳ (ngày lương)', '<input type="number" id="cfg_ngayKy" min="1" max="28" inputmode="numeric" value="'+ngayKy()+'">', '', '1 = tháng dương lịch. Nhận lương ngày 20 thì nhập 20: kỳ Tháng 9 là 20/9 → 19/10. Chỉ đổi cách gom theo tháng, không đổi số dư. Khoản định kỳ đã ghi / bỏ qua của kỳ cũ tính theo kỳ mới, nên đổi xong xem lại mục nhắc.');
+    + vnF('Tháng bắt đầu tính dự kiến', '<input type="month" id="cfg_duTru" value="'+(s.thangBatDauDuTru || '')+'">', '', 'Tháng ĐẦY ĐỦ đầu tiên dùng để tính trung bình gợi ý ở Dòng tiền.');
   return vnSheetKhung('Số dư đầu kỳ', h, 'Lưu', 'saveSettings', 'dmHuy');
 }
 
@@ -737,8 +735,6 @@ function handleDanhMucAction(act, el){
     } });
   } else if (act === 'saveSettings'){
     state.data.settings.ngayBatDau = document.getElementById('cfg_ngay').value;
-    var nk = Math.round(num(document.getElementById('cfg_ngayKy').value));
-    state.data.settings.ngayKy = (nk >= 2 && nk <= 28) ? nk : 1;
     var duTruVal = document.getElementById('cfg_duTru').value;
     if (duTruVal) state.data.settings.thangBatDauDuTru = duTruVal;
     state.dmForm = null;
@@ -750,7 +746,7 @@ function handleDanhMucAction(act, el){
     if (!mk3){ toast('Chọn tháng cần chốt số dư.', { loai:'warn' }); return true; }
     var p3 = mk3.split('-'); var ny = parseInt(p3[0],10), nm = parseInt(p3[1],10) + 1;
     if (nm > 12){ nm = 1; ny++; }
-    var newStart = kyTu(ny + '-' + pad2(nm));
+    var newStart = ny + '-' + pad2(nm) + '-01';
     // mốc chỉ được tiến lên: lùi mốc là tính lại các tháng đã khóa trên một số dư đầu kỳ của thời điểm sau -> số dư sai
     var startHienTai = state.data.settings.ngayBatDau || '';
     if (startHienTai && newStart <= startHienTai){
@@ -764,7 +760,7 @@ function handleDanhMucAction(act, el){
             + 'Ngày bắt đầu mới: '+newStart+'\n\n'
             + 'Dữ liệu Sổ tay cũ vẫn giữ nguyên, chỉ không tính vào số dư / Dòng tiền nữa.',
             { nguyHiem:true, chuOk:'Chốt số dư' })) return;
-      viChotSoDuDauKy(kyDen(mk3));     // chốt từng ví theo mốc CŨ, trước khi đổi ngayBatDau
+      viChotSoDuDauKy(mk3 + '-31');     // chốt từng ví theo mốc CŨ, trước khi đổi ngayBatDau
       state.data.settings.ngayBatDau = newStart;
       state.data.settings.soDuDauKy = newBal;
       scheduleSave();
