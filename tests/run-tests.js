@@ -3242,7 +3242,7 @@ test('nhãn sống sót qua sửa dòng (entryUpdateItem) và thẻ Báo cáo v�
 });
 
 /* ==================================================================== */
-group('Sổ nợ theo người + chia hóa đơn nhóm');
+group('Sổ nợ theo đối tượng + chia hóa đơn nhóm');
 ctx.docSo = uiCtx.docSo;     // bản thật (hiểu 150k, 1,5tr) thay cho bản giả lập của nhóm test cũ
 
 function nguoiData(){
@@ -3273,7 +3273,7 @@ test('nguoiDoiTen: đổi/gộp trên mọi khoản; nguoiCardHtml vẽ được
   eq(ctx.nguoiTongHop().filter(function(x){ return x.khoa === 'nguyễn minh'; }).length, 1);
   ok(ctx.nguoiCardHtml().indexOf('Nguyễn Minh') >= 0);
   loadData(baseData({ vayNo: { choVay: [{ id:'x', ten:'a', soTien:1, daThu:0, ngayChoVay:'2026-10-01', trangThai:'dang_cho' }], vayNoPhaiTra: [] } }));
-  ok(ctx.nguoiCardHtml().indexOf('Chưa gán người') >= 0);
+  ok(ctx.nguoiCardHtml().indexOf('Chưa gán đối tượng') >= 0);
   loadData(baseData()); eq(ctx.nguoiCardHtml(), '');
 });
 test('chiaParseDs: mỗi dòng một người, số tiền tùy chọn (k, tr, dấu chấm), tên nhiều chữ', function(){

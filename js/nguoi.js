@@ -5,7 +5,7 @@
    Mỗi khoản cho vay / vay có thêm loan.nguoi (tên người hoặc nơi vay, trống = chưa gán; khoản cũ không cần migration).
    Cùng một người nếu chỉ khác hoa/thường coi là một (so khớp theo nhanKhoa, nhan.js).
 
-   (1) Sổ nợ theo người CHỈ GOM ĐỂ XEM VÀ CỘNG TỔNG: số ròng "mình nợ A bao nhiêu / A nợ mình bao nhiêu". Từng khoản vẫn
+   (1) Sổ nợ theo đối tượng (người hoặc nơi vay) CHỈ GOM ĐỂ XEM VÀ CỘNG TỔNG: số ròng "mình nợ A bao nhiêu / A nợ mình bao nhiêu". Từng khoản vẫn
        giữ nguyên cách trả riêng (hình thức, lịch, kỳ, tất toán) và vẫn thao tác ở thẻ của khoản đó.
    (2) Chia hóa đơn: MÌNH trả cả hóa đơn, mỗi người khác nợ phần của họ. Phần của mình ghi thành 1 khoản chi ở Sổ tay,
        mỗi người khác thành 1 khoản CHO VAY (cùng đường ghi "Cho vay" như thêm khoản cho vay tay: tiền ra khỏi ví ngay).
@@ -63,19 +63,19 @@ function nguoiDatalistHtml(id){
   return '<datalist id="'+id+'">' + nguoiDsTen().map(function(t){ return '<option value="'+esc(t)+'">'; }).join('') + '</datalist>';
 }
 function nguoiOHtml(id, loan){
-  return vnF('Người <span class="mp-hint">(tùy chọn)</span>',
+  return vnF('Đối tượng <span class="mp-hint">(tùy chọn)</span>',
     '<input type="text" id="'+id+'" list="'+id+'_goiy" autocomplete="off" value="'+esc(nguoiCuaKhoan(loan))+'" placeholder="VD: Minh, hoặc tên ngân hàng">' + nguoiDatalistHtml(id + '_goiy'),
-    '', 'Gán cùng một người cho nhiều khoản để xem số ròng ở thẻ "Sổ nợ theo người". Từng khoản vẫn trả riêng.');
+    '', 'Gán cùng một đối tượng cho nhiều khoản để xem số ròng ở thẻ "Sổ nợ theo đối tượng". Từng khoản vẫn trả riêng.');
 }
 
-/* ---- thẻ "Sổ nợ theo người" ---- */
+/* ---- thẻ "Sổ nợ theo đối tượng" ---- */
 function nguoiCardHtml(){
   var vn = state.data.vayNo;
   if (!(vn.choVay || []).length && !(vn.vayNoPhaiTra || []).length) return '';
   var ds = nguoiTongHop();
-  var h = '<div class="card vn-ng"><h3 class="vn-h3">Sổ nợ theo người</h3>';
+  var h = '<div class="card vn-ng"><h3 class="vn-h3">Sổ nợ theo đối tượng</h3>';
   if (!ds.length){
-    return h + '<div class="vn-sub" style="margin-top:6px">Chưa gán người cho khoản nào. Mở một khoản, điền ô <b>Người</b> (cùng tên cho nhiều khoản) để xem số ròng với từng người.</div></div>';
+    return h + '<div class="vn-sub" style="margin-top:6px">Chưa gán đối tượng cho khoản nào. Mở một khoản, điền ô <b>Đối tượng</b> (cùng tên cho nhiều khoản) để xem số ròng với từng người.</div></div>';
   }
   ds.forEach(function(r){
     var mo = state.nguoiMo === r.khoa;
@@ -95,7 +95,7 @@ function nguoiCardHtml(){
     }
     h += '</div>';
   });
-  return h + ghiChuGon('Chỉ gom để xem và cộng tổng. Mỗi khoản vẫn có lịch trả, kỳ và tất toán riêng: bấm một khoản để nhảy tới thẻ của nó.', 'Sổ nợ theo người là gì?') + '</div>';
+  return h + ghiChuGon('Chỉ gom để xem và cộng tổng. Mỗi khoản vẫn có lịch trả, kỳ và tất toán riêng: bấm một khoản để nhảy tới thẻ của nó.', 'Sổ nợ theo đối tượng là gì?') + '</div>';
 }
 
 /* ---- chia hóa đơn nhóm ---- */
@@ -202,7 +202,7 @@ function handleNguoiAction(act, el){
   if (act === 'nguoiDoiTen'){
     var r = nguoiTongHop().filter(function(x){ return x.khoa === k; })[0];
     if (!r) return true;
-    hoiChu('Đổi tên người', 'Đổi tên trên mọi khoản của "' + r.ten + '". Nhập tên một người đã có để gộp.', 'Tên', r.ten).then(function(ten){
+    hoiChu('Đổi tên đối tượng', 'Đổi tên trên mọi khoản của "' + r.ten + '". Nhập tên một đối tượng đã có để gộp.', 'Tên', r.ten).then(function(ten){
       if (!ten || !nhanKhoa(ten)) return;
       nguoiDoiTen(k, ten);
       state.nguoiMo = nhanKhoa(ten);
