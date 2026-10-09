@@ -1438,7 +1438,8 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .vn-sheet textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:9px 12px;font-size:16px;background:var(--input-bg);color:var(--text);resize:vertical;min-height:84px}
 
 /* ---- Bảng "Sắp đến hạn" (han-): nhắc thu/chi theo ngày của danh mục ---- */
-.han-r{display:flex;align-items:center;gap:10px;padding:10px 0}
+.han-r{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:10px 0}
+.han-b{flex:1 0 100%;display:flex;gap:8px;justify-content:flex-end}
 .han-r+.han-r{border-top:1px solid var(--border)}
 .han-t{flex:1;min-width:0;display:flex;flex-direction:column}
 .han-t b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -3357,6 +3357,28 @@ test('không đặt ngày thì không nhắc; bảng trượt vẽ được cả
   setToday('2026-10-01');
 });
 
+test('Hoàn thành: tắt nhắc kỳ đó, không ghi giao dịch / số dư; tháng sau vẫn nhắc; hoàn tác được', function(){
+  hanData(20, 5);
+  var truoc = JSON.stringify(ctx.state.data.journal), bal = ctx.balanceAt('2026-10-31');
+  var ds = ctx.dsCatSapDenHan(7, '2026-10-08');
+  eq(ds.length, 1); eq(ds[0].mk, '2026-10');
+  ok(ctx.nhacHanHoanThanh('chi', 'nha', '2026-10'));
+  eq(ctx.dsCatSapDenHan(7, '2026-10-08').length, 0, 'hết nhắc');
+  eq(JSON.stringify(ctx.state.data.journal), truoc, 'không ghi giao dịch'); eq(ctx.balanceAt('2026-10-31'), bal, 'số dư không đổi');
+  eq(ctx.dsCatSapDenHan(7, '2026-11-01').length, 1, 'tháng 11 nhắc lại (còn 4 ngày)');
+  ctx.nhacHanHoanTac('chi', 'nha', '2026-10');
+  eq(ctx.dsCatSapDenHan(7, '2026-10-08').length, 1, 'hoàn tác -> nhắc lại'); ok(!('xong' in ctx.state.data.categories.chi[0]));
+});
+test('Hoàn thành kỳ tháng sau (nhắc cuối tháng) chỉ tắt kỳ tháng sau; chỉ giữ 6 tháng gần nhất', function(){
+  var j = { '2026-10-07': { thu: {}, chi: { nha: 1 }, ghiChu: '', refs: [], items: [{ iid:'x', kind:'chi', catId:'nha', soTien:1, ghiChu:'' }] } };
+  hanData(null, 5, j);
+  var d = ctx.dsCatSapDenHan(7, '2026-10-30'); eq(d.length, 1); eq(d[0].mk, '2026-11');
+  ctx.nhacHanHoanThanh('chi', 'nha', '2026-11');
+  eq(ctx.dsCatSapDenHan(7, '2026-10-30').length, 0);
+  ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'].forEach(function(m){ ctx.nhacHanHoanThanh('chi', 'nha', m); });
+  eq(ctx.state.data.categories.chi[0].xong.length, 6);
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
