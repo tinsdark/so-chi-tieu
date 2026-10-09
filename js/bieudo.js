@@ -144,6 +144,7 @@ function bdComboInner(o, ve){
   var bw = (W - P.l - P.r) / n;
   var y = function(v){ return P.t + (H - P.t - P.b) * (1 - (v - ax.mn) / (ax.mx - ax.mn)); };
   var sel = o.sel == null ? n - 1 : o.sel;
+  var hienNhan = o.thuaNhan ? bdNhanX(n) : null;      // nhiều tháng: chỉ in vài nhãn trục x cho khỏi chồng chữ
   var s = '<defs>' + bdGrad(o.id + 'b', 'chi', 1, .5) + bdGrad(o.id + 't', 'thu', 1, .5) + '</defs>';
   ax.ticks.forEach(function(t){
     s += '<line x1="'+P.l+'" x2="'+(W - P.r)+'" y1="'+y(t).toFixed(1)+'" y2="'+y(t).toFixed(1)+'" class="bd-grid'+(t === 0 ? ' zero' : '')+'"/>'
@@ -161,7 +162,7 @@ function bdComboInner(o, ve){
   for (var i = 0; i < n; i++){
     var cx = P.l + bw * i + bw / 2, w = Math.min(bw * .34, 13);
     s += cot(cx - w / 2 - 1, w, o.thu[i], 't', i, 0) + cot(cx + w / 2 + 1, w, o.chi[i], 'b', i, 1);
-    s += '<text x="'+cx.toFixed(1)+'" y="'+(H - 5)+'" text-anchor="middle"'+(i === sel ? ' class="bd-sel-t"' : '')+'>'+o.labels[i]+'</text>';
+    if (!hienNhan || hienNhan.indexOf(i) >= 0 || i === sel) s += '<text x="'+cx.toFixed(1)+'" y="'+(H - 5)+'" text-anchor="middle"'+(i === sel ? ' class="bd-sel-t"' : '')+'>'+o.labels[i]+'</text>';
     s += '<rect class="bd-hit" data-i="'+i+'" x="'+(cx - bw / 2).toFixed(1)+'" y="0" width="'+bw.toFixed(1)+'" height="'+H+'" fill="transparent"/>';
   }
   if (o.avg > 0){
@@ -170,7 +171,7 @@ function bdComboInner(o, ve){
   }
   // thẻ giá trị của tháng đang chọn, nằm phía trên vùng vẽ
   if (o.thu[sel] > 0 || o.chi[sel] > 0){
-    var money = o.money || bdTien, row = 'Thu ' + money(o.thu[sel]) + '  ·  Chi ' + money(o.chi[sel]);
+    var money = o.money || bdTien, row = (o.nhanThu || 'Thu') + ' ' + money(o.thu[sel]) + '  ·  ' + (o.nhanChi || 'Chi') + ' ' + money(o.chi[sel]);
     var tw = Math.min(W - P.l - P.r, Math.max(120, Math.round(row.length * 6.1) + 20)), th = 34;
     var cxs = P.l + bw * sel + bw / 2, tx = Math.min(Math.max(cxs - tw / 2, P.l), W - P.r - tw);
     s += '<g class="bd-tip"><rect x="'+tx.toFixed(1)+'" y="3" width="'+tw+'" height="'+th+'" rx="9"/>'

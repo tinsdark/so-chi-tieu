@@ -1193,7 +1193,7 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .vn-sub{font-size:12.5px;color:var(--muted);line-height:1.4}
 .vn-sub b{color:var(--text)}
 .vn-big{font-size:34px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.6px;overflow-wrap:anywhere}
-.vn-big.m{font-size:26px} .vn-big.am,.vn-bad,.vn-ml-r .l.am{color:var(--red)}
+.vn-big.m{font-size:26px} .vn-big.am,.vn-bad{color:var(--red)}
 .thu{color:var(--green)}
 .vn-h3{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .vn-tq{border-radius:20px;padding:16px}
@@ -1263,18 +1263,30 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .vn-mn-l button:active{background:var(--hover)}
 .vn-ghichu{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:10px}
 .vn-ghichu b{color:var(--text)}
-/* dòng tiền tích lũy */
+/* Bảng theo dõi: mỗi tháng 1 dòng, số nhỏ (đã) / số to (dự kiến), "Done" ở góc trên phải ô */
 .vn-dt .mp-hz{margin:6px 0 12px}
-.vn-ml{margin-top:10px}
-.vn-ml-h,.vn-ml-r{display:grid;grid-template-columns:minmax(52px,.8fr) 1fr 1fr 1.1fr;gap:6px;padding:9px 2px;font-size:13px;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
-.vn-ml-h{color:var(--muted);font-size:12px;font-weight:600}
-.vn-ml-h>span:nth-child(n+2),.vn-ml-r>span:nth-child(n+2){text-align:right}
-.vn-ml-r .t{color:var(--green)} .vn-ml-r .c{color:var(--red)} .vn-ml-r .l{font-weight:800}
-.vn-ml-r>span{white-space:nowrap}
-@media (max-width:399px){
-  .vn-ml-h,.vn-ml-r{grid-template-columns:minmax(50px,.8fr) 1fr 1.1fr}
-  .vn-ml-h>span:nth-child(2),.vn-ml-r .t{display:none}
-}
+.td{margin-top:4px;font-variant-numeric:tabular-nums}
+.td-h,.td-r{display:grid;grid-template-columns:minmax(46px,.6fr) 1.2fr 1.2fr;gap:6px;align-items:center;padding:8px 4px}
+.td-h{font-size:12px;font-weight:600;color:var(--muted);padding-bottom:5px}
+.td-h>span:nth-child(n+2){text-align:right}
+.td-r{border-top:1px solid var(--border);min-height:48px;cursor:pointer}
+.td-r.sel{background:var(--hover);border-radius:10px;border-top-color:transparent}
+.td-r.mo{border-bottom:none}
+.td-m{font-weight:700;font-size:13.5px;line-height:1.2}
+.td-m small{display:block;font-weight:600;font-size:10.5px;color:var(--muted)}
+.td-c{position:relative;display:block;text-align:right;min-width:0}
+.td-c.d{padding-top:14px}
+.td-c.rong{color:var(--muted)}
+.td-v small,.td-v i{display:inline-block;font-size:11px;color:var(--muted);white-space:nowrap}
+.td-v i{font-style:normal;margin:0 1px 0 0}
+.td-v b{display:inline-block;font-size:13.5px;font-weight:800;white-space:nowrap}
+.td-done{position:absolute;top:0;right:0;font-style:normal;font-size:10px;font-weight:800;line-height:1;letter-spacing:.2px;padding:3px 7px;border-radius:99px;background:var(--green);color:#fff}
+.td-ct{padding:2px 4px 8px;border-bottom:1px solid var(--border)}
+.td-it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 8px;margin-top:4px;background:var(--hover);border-radius:10px;font-size:13px}
+.td-it>span:first-child{min-width:0;overflow-wrap:anywhere;font-weight:600}
+.td-it>span:first-child small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.td-it u{text-decoration:none;color:var(--red);font-size:11px;font-weight:700}
+@media (max-width:359px){ .td-v b{font-size:12.5px} .td-v small,.td-v i{font-size:10px} }
 @media (max-width:374px){ .vn-3c b{font-size:13.5px} }
 /* bảng trượt: form + hộp thoại */
 .vn-sheet .qa-body input[type=text],.vn-sheet .qa-body input[type=number],.vn-sheet .qa-body input[type=date],.vn-sheet .qa-body select{width:100%;min-height:44px;border-radius:12px;font-size:16px}

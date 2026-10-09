@@ -40,7 +40,7 @@ var state = {
   soTayMonth: null,   // "YYYY-MM"
   dongTienYear: null,
   dtMk: null,             // tháng đang xem ở màn Dòng tiền (Thực tế & dự kiến); null = tháng hiện tại
-  dtMoDong: null, dtChiHet: false, dtDuKienHet: false, dtBangNam: false,
+  dtMoDong: null, dtChiHet: false, dtHorizon: 12, dtBangNam: false,
   dtThang: null,          // tháng đang xem ở tab Dòng tiền trên điện thoại (mỗi lần 1 tháng)
   editingDate: null,
   soTaySearch: '',

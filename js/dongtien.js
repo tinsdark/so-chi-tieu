@@ -1,7 +1,7 @@
 "use strict";
 /* ====================================================================
    dongtien.js — tab "Dòng tiền" (chế độ "Thực tế & dự kiến"): thẻ cân đối của 1 tháng,
-   thu / chi theo từng danh mục, dự kiến 24 tháng tới; bảng cả năm cũ nằm sau nút "Xem bảng cả năm".
+   thu / chi theo từng danh mục, dòng tiền tích lũy tương lai (6 / 12 / 24 tháng); bảng cả năm cũ nằm sau nút "Xem bảng cả năm".
    Cần state.js, vayno.js (tongTraNoThang, tongThuHoiThang) load trước.
    ==================================================================== */
 
@@ -140,7 +140,7 @@ function dtThangDuLieu(mk){
   d.tn = dtTraNoKy(mk);
   return d;
 }
-// cân đối + số dư lũy kế từng tháng, bắt đầu từ tháng hiện tại (cùng cách tính thẻ "Dòng tiền tích lũy tương lai" ở Vay - Nợ)
+// cân đối + số dư lũy kế từng tháng, bắt đầu từ tháng hiện tại
 function dtDuKienRows(n){
   var cur = monthKey(todayStr()), run = balanceBeforeMonth(cur), out = [];
   for (var i = 0; i < n; i++){
@@ -288,32 +288,19 @@ function dtChiCardHtml(d){
   return h + '</div>';
 }
 
-/* ---- dự kiến các tháng tới ---- */
-function dtDuKienHtml(rows, selMk){
-  var n = rows.length, cur = rows[0].mk;
-  var iAm = -1, iDay = 0, i;
-  for (i = 0; i < n; i++){ if (iAm < 0 && rows[i].bal < 0) iAm = i; if (rows[i].bal < rows[iDay].bal) iDay = i; }
-  var iDuong = -1;
-  if (iAm >= 0){ for (i = iAm + 1; i < n; i++){ if (rows[i].bal >= 0){ iDuong = i; break; } } }
-  var o = function(l, big, sub, cls){ return '<div class="dt-ti '+(cls || '')+'"><small>'+l+'</small><b>'+big+'</b><span>'+sub+'</span></div>'; };
-  var tiles = '<div class="dt-tiles">';
-  if (iAm < 0){
-    tiles += o('Số dư', 'Không âm', 'trong '+n+' tháng tới', 'tot')
-      + o('Thấp nhất', dtNhanThang(rows[iDay].mk), fmt(Math.round(rows[iDay].bal)))
-      + o('Cuối kỳ', dtNhanThang(rows[n - 1].mk), fmt(Math.round(rows[n - 1].bal)));
-  } else {
-    tiles += o('Âm từ', dtNhanThang(rows[iAm].mk), iAm === 0 ? 'tháng này' : 'sau '+iAm+' tháng', 'xau')
-      + o('Đáy', dtNhanThang(rows[iDay].mk), fmt(Math.round(rows[iDay].bal)), 'xau')
-      + (iDuong >= 0 ? o('Dương lại', dtNhanThang(rows[iDuong].mk), 'sau '+iDuong+' tháng', 'tot') : o('Dương lại', 'Chưa', 'trong '+n+' tháng', 'xau'));
-  }
-  tiles += '</div>';
-  var chart = '<div class="bd-box">' + bdLine({ W: 350, H: 190, labels: rows.map(function(r){ return dtNhanThang(r.mk); }),
+/* ---- Dòng tiền tích lũy tương lai (chọn 6 / 12 / 24 tháng; chi tiết hiện đủ số tháng đã chọn) ----
+   rows = dtDuKienRows(): cân đối + số dư lũy kế từng tháng từ tháng hiện tại. Chạm một dòng = chọn tháng đó cho thẻ ở đầu trang. */
+function dtDuKienHtml(rowsAll, selMk){
+  var horizon = state.dtHorizon || 12, rows = rowsAll.slice(0, horizon), n = rows.length, cur = rows[0].mk;
+  var cuoi = rows[n - 1], thap = rows.reduce(function(a, r){ return r.bal < a.bal ? r : a; }, rows[0]);
+  var iSel = rows.map(function(r){ return r.mk; }).indexOf(selMk);
+  if (iSel < 0) iSel = n - 1;
+  var nhanTruc = function(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + (mk.slice(0, 4) !== rows[0].mk.slice(0, 4) ? '/' + mk.slice(2, 4) : ''); };
+  var chart = '<div class="bd-box" style="margin-top:8px">' + bdLine({ W: 350, H: 190, labels: rows.map(function(r){ return nhanTruc(r.mk); }),
     series: [{ ten: 'Số dư', vals: rows.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
-    sel: Math.max(0, rows.map(function(r){ return r.mk; }).indexOf(selMk)),
-    tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế các tháng tới' }) + '</div>';
-  var hien = state.dtDuKienHet ? rows : rows.slice(0, 6);
+    sel: iSel, tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế các tháng tới' }) + '</div>';
   var list = '<div class="dt-ml"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Lũy kế</span></div>';
-  hien.forEach(function(r){
+  rows.forEach(function(r){
     list += '<div class="dt-ml-r'+(r.mk === selMk ? ' sel' : '')+'" data-act="dtChonThang" data-mk="'+r.mk+'" role="button" tabindex="0">'
       + '<span class="m">'+dtNhanThang(r.mk)+(r.mk > cur ? '*' : '')+'</span>'
       + '<span class="c '+(r.cb < 0 ? 'xau' : 'tot')+'">'+Math.round(r.cb).toLocaleString('vi-VN')+'</span>'
@@ -321,14 +308,18 @@ function dtDuKienHtml(rows, selMk){
   });
   list += '</div>';
   var fcM = forecastEligibleMonths(), startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
-  return '<div class="card bc-card" id="dtDuKien"><h3 class="bc-h"><span>Dự kiến các tháng tới</span><span class="bc-h-s">'+n+' tháng</span></h3>'
-    + tiles + chart + list
-    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số dư tính bằng ₫</span>'
-    + '<button type="button" class="dt-more in" data-act="dtDuKienHet">'+(state.dtDuKienHet ? 'Thu gọn' : 'Xem cả '+n+' tháng')+'</button></div>'
+  return '<div class="card bc-card vn-dt" id="dtDuKien"><h3 class="bc-h"><span>Dòng tiền tích lũy tương lai</span></h3>'
+    + '<div class="mp-hz">'
+    + [6, 12, 24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="dtHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
+    + '</div>'
+    + '<div class="vn-lbl">Tích lũy dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
+    + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
+    + chart + list
+    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số dư tính bằng ₫</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
       + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Danh mục')
-      + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. Số dư lũy kế từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý tính thế nào?')
+      + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. Số dư lũy kế từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý tính thế nào?')
     + '</div>';
 }
 
@@ -465,8 +456,8 @@ function handleDongTienAction(act, el){
     renderDongTien();
   } else if (act === 'dtChiHet'){
     state.dtChiHet = !state.dtChiHet; renderDongTien();
-  } else if (act === 'dtDuKienHet'){
-    state.dtDuKienHet = !state.dtDuKienHet; renderDongTien();
+  } else if (act === 'dtHorizon'){
+    state.dtHorizon = parseInt(el.getAttribute('data-h'), 10) || 12; renderDongTien();
   } else if (act === 'dtBangNam'){
     state.dtBangNam = !state.dtBangNam;
     if (state.dtBangNam) state.dongTienYear = parseInt((state.dtMk || monthKey(todayStr())).slice(0, 4), 10);
