@@ -1179,8 +1179,10 @@ function handleSoTayAction(act, el){
     if (refsDel.length){
       msgDel = 'Ngày này có '+refsDel.length+' giao dịch gắn với khoản vay, xóa sẽ hoàn tác luôn ở tab Vay - Nợ:\n'
         + refsDel.map(function(r){
+            var cvR = r.loai === 'thuHoiChoVay' && (state.data.vayNo.choVay||[]).find(function(x){ return x.id === r.loanId; });
             return '  • ' + (REF_LABEL[r.loai]||r.loai) + ' · ' + fmt(r.soTien)
-                 + (r.ky != null ? ' (kỳ '+(num(r.ky)+1)+' → về chưa trả)' : '');
+                 + (r.ky != null ? ' (kỳ '+(num(r.ky)+1)+' → về chưa trả)' : '')
+                 + (cvR ? ' → khoản "'+cvR.ten+'" lùi số đã thu' + (cvR.tatToan ? '; khoản đã tất toán nên sẽ MỞ LẠI và phần xóa nợ cũ bị bỏ, còn phải thu tính lại' : '') : '');
           }).join('\n');
     }
     var nhanD = d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4);

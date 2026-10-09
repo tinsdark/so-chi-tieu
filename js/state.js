@@ -604,7 +604,8 @@ function normalizeData(d){
   // khoản cho vay đã tất toán (bỏ phần không đòi được) -> không còn chờ thu
   d.vayNo.choVay.forEach(function(c){
     if (c.daThu == null) c.daThu = 0;
-    if (!Array.isArray(c.daBo)) c.daBo = [];   // các lần bỏ một phần (xem tongDaBo ở vayno.js)
+    // các lần xóa nợ một phần (xem tongDaBo ở vayno.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
+    c.daBo = Array.isArray(c.daBo) ? c.daBo.filter(function(x){ return x && num(x.soTien) > 0; }) : [];
     if (c.tatToan) c.trangThai = 'da_thu_du';
   });
   // ví / nguồn tiền: dữ liệu cũ chỉ có 1 số dư đầu kỳ -> thành 1 ví mang đúng số đó (tổng không đổi)

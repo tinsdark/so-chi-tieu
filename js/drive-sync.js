@@ -611,6 +611,9 @@ async function signIn(){
   gateMsg('Đang đăng nhập…');
   try{
     await requestToken(true);
+    // đăng nhập chủ động có thể là tài khoản Google khác -> bỏ thông tin cũ, lấy lại
+    try{ localStorage.removeItem(TAI_KHOAN_KEY); }catch(e){}
+    taiThongTinTaiKhoan();
     // từ ngoại tuyến đăng nhập lại: các sửa ngoại tuyến nằm trong nháp, checkLocalDraft sẽ hỏi khôi phục
     state.offline = false; state.dirty = false;
     showApp();
