@@ -22,6 +22,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 
 - **Nhắc thu/chi theo ngày của danh mục.** Mỗi danh mục thu/chi (trừ danh mục hệ thống của Vay - Nợ) có ô "Ngày thu/chi hằng tháng" (`cat.ngay`, 1–31): Tiền nhà ngày 5, Lương ngày 20... Trong vòng 7 ngày trước hạn, thẻ tổng quan Sổ tay hiện chip "N khoản thu/chi sắp đến hạn"; bấm mở bảng trượt từ đáy (giống Ghi nhanh) liệt kê từng khoản, có nút **Ghi** mở Ghi nhanh với đúng danh mục đó. Hết nhắc khi tháng này đã có giao dịch ở danh mục đó (quá hạn mà chưa ghi thì nhắc "Quá hạn N ngày" suốt tháng); đã ghi rồi thì cuối tháng nhắc kỳ tháng sau. Mỗi dòng trong bảng còn có nút **Hoàn thành**: chỉ tắt nhắc kỳ đó (lưu `cat.xong = ['YYYY-MM', ...]`, giữ 6 tháng gần nhất), KHÔNG ghi giao dịch hay đổi số dư; có Hoàn tác ở toast. Chỉ nhắc trong app, chưa phải thông báo đẩy (xem 7.1). Code ở `js/nhachan.js`.
 - **Nhãn (tag) cho giao dịch.** Ô "Nhãn" ở Ghi nhanh (giữ nguyên sau mỗi lần ghi để ghi liền cả chuyến đi) và khi sửa một dòng; nhiều nhãn cách nhau bằng dấu phẩy. Lưu ở `it.nhan` (mảng chữ, không có nhãn thì không có trường), hai tên chỉ khác hoa/thường là một nhãn. Thẻ **Theo nhãn** ở Báo cáo: tổng chi / thu, số khoản, khoảng ngày, chạm để xem từng khoản, đổi tên / gộp, gỡ nhãn. Tìm ở Sổ tay cũng tìm theo nhãn. Nhãn không đổi số dư hay hạn mức.
+- **Xuất nhắc việc ra Lịch (.ics).** Tab Danh mục → khối Ứng dụng → "Nhắc việc lên Lịch" → Xuất file .ics. Gồm (12 tháng tới, chỉ từ hôm nay): kỳ trả nợ chưa đóng, ngày dự kiến thu của khoản cho vay, danh mục có ngày thu/chi (bỏ tháng đã ghi / đã Hoàn thành), giao dịch định kỳ đang bật. Sự kiện cả ngày, mỗi cái có 2 báo thức (9:00 sáng hôm trước, 8:00 sáng đúng ngày). Là ảnh chụp lúc xuất, đổi dữ liệu thì xuất lại; mỗi sự kiện có UID cố định nên nhập lại không bị nhân đôi. Trên điện thoại có Web Share thì mở bảng chia sẻ, không thì tải file về. Code ở `js/lich.js`. File sinh ra đã được kiểm bằng thư viện đọc iCalendar; **việc iOS có giữ báo thức khi nhập, và PWA mở từ màn hình chính có giao file được không, chưa kiểm trên máy thật.**
 - **Sổ nợ theo đối tượng.** Mỗi khoản cho vay / vay có ô "Đối tượng" (người hoặc nơi vay, ví dụ Minh, Vietcombank) (`loan.nguoi`). Thẻ **Sổ nợ theo đối tượng** ở Vay - Nợ gom các khoản còn mở cùng một đối tượng để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Đối tượng).
 - **Chia hóa đơn nhóm.** Nút trong thẻ Cho vay: mình trả cả hóa đơn, nhập tổng và mỗi dòng một người (`Lan 150k` nếu không chia đều; người không ghi số chia đều phần còn lại cùng mình, lẻ đồng dồn về mình). Phần của mình thành một khoản chi ở Sổ tay, mỗi người khác thành một khoản cho vay (gắn `nguoi`), có Hoàn tác. Chưa có chiều ngược lại (người khác trả hộ, mình nợ họ).
 
@@ -50,7 +51,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 234 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 238 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -72,6 +73,7 @@ js/
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
   nhan.js           Nhãn (tag) cho giao dịch + thẻ "Theo nhãn" ở Báo cáo
   nhachan.js        Nhắc thu/chi theo ngày của danh mục + bảng "Sắp đến hạn"
+  lich.js           Xuất nhắc việc ra file .ics để nhập vào Lịch
   nguoi.js          Đối tượng trong Vay - Nợ: Sổ nợ theo đối tượng + Chia hóa đơn nhóm
   nhap.js           Nhập giao dịch từ CSV / Excel
   danhmuc.js        Tab Danh mục: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
@@ -158,7 +160,8 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 
 Đã làm: nhãn cho giao dịch, chia hóa đơn nhóm, sổ nợ theo đối tượng, nhắc thu/chi theo ngày của danh mục (xem mục 1). Còn lại:
 
-1. **Nhắc việc trên iPhone (thông báo ngoài app)** cho kỳ trả nợ, các khoản có ngày ở danh mục, ngày dự kiến thu và giao dịch định kỳ. Nhắc trong app đã có (chip "sắp đến hạn"). **Đã thử xuất `.ics` rồi bỏ**: thử trên iPhone không ổn nên gỡ hẳn. Còn lại để cân nhắc: cho kỳ trả nợ, các khoản có ngày ở danh mục, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
+1. **Nhắc việc trên iPhone (thông báo ngoài app)** — đã có xuất `.ics` (xem mục 1), còn chờ thử trên máy thật; hướng Google Calendar / Web Push chưa làm. Ghi chú cân nhắc ban đầu: cho kỳ trả nợ, các khoản có ngày ở danh mục, ngày dự kiến thu và giao dịch định kỳ (app chưa có thông báo nào). **Chưa chốt cách làm**, đang cân nhắc:
+   - **Xuất file `.ics`** rồi nhập vào Lịch iPhone, kèm báo thức nhắc trước hạn. Không cần server nhưng là ảnh chụp tại thời điểm xuất, dữ liệu đổi thì phải xuất lại. Cần thử: iOS có giữ báo thức trong file khi nhập không, và app mở từ màn hình chính có tải được file `.ics` để nhập không.
    - **Tạo sự kiện thẳng vào Google Calendar** qua đăng nhập Google sẵn có (tự cập nhật, đồng bộ sang Lịch iPhone nếu tài khoản Google đã thêm vào máy). Phải xin thêm quyền Lịch (quyền nhạy cảm hơn `drive.file` hiện tại, đổi màn hình đồng ý và `privacy.html`).
    - **Thông báo đẩy (Web Push)**: cần có server riêng, trái nguyên tắc "không server", không chọn.
 2. **Đường dẫn ghi nhanh** (ví dụ `?them=45000&ghichu=...`) kết hợp iPhone Shortcuts để tin nhắn ngân hàng mở app với số tiền và nội dung điền sẵn. Không cần AI hay server. **Cần nghiên cứu thêm trước khi làm:** Shortcuts có mở được PWA ổn trên máy dùng thật không, và cú pháp đọc nội dung tin nhắn của từng ngân hàng.

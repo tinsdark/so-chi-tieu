@@ -297,7 +297,7 @@ function renderDanhMuc(){
     + dmSec('Tiền &amp; kế hoạch') + '<div class="dm-grid">'
     + cfgCardHtml() + viCardHtml() + chotCardHtml() + dkCardHtml() + mtCardHtml() + '</div>'
     + dmSec('Ứng dụng') + '<div class="dm-grid">'
-    + caiAppCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div></div>';
+    + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div></div>';
   root.innerHTML = html;
   attachCatDragDrop();
   dmSheetVe();
