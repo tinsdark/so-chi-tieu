@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -2115,7 +2115,7 @@ test('Danh mục: hàng ví KHÔNG hiện số dư đầu kỳ (dễ nhầm vớ
   loadData(dataHaiVi());
   ctx.state.data.wallets[0].soDuDauKy = 1234567;
   var h = ctx.viCardHtml();
-  ok(!/1[.,]?234[.,]?567/.test(h), 'thẻ ví không hiện số tiền');
+  ok(!/1[.,]?234[.,]?567/.test(h.replace(/Trong sổ [0-9.,]+/g, '')), 'thẻ ví không hiện số dư ĐẦU KỲ (chỉ có thêm số dư hiện tại trong sổ, ghi rõ "Trong sổ")');
   ok(h.indexOf('Tổng số dư đầu kỳ') < 0, 'không còn dòng tổng');
   var sheet = ctx.viSheetHtml({ loai:'vi', id: ctx.state.data.wallets[0].id });
   ok(/id="dm_vi_du" value="1[.,]?234[.,]?567"/.test(sheet) && sheet.indexOf('KHÔNG phải số tiền ví đang có') >= 0, 'bảng sửa có số đầu kỳ và nhắc đây không phải số đang có');
@@ -3357,6 +3357,16 @@ test('không đặt ngày thì không nhắc; bảng trượt vẽ được cả
   setToday('2026-10-01');
 });
 
+test('renderSoTayBadge: hiện đúng số khoản sắp đến hạn, ẩn khi 0, không lỗi khi chưa có phần tử', function(){
+  var el = { textContent: '', style: { display: 'none' } }, goc = ctx.document.getElementById;
+  setToday('2026-10-14'); hanData(20, 0);
+  ctx.renderSoTayBadge();                                   // chưa có phần tử: không lỗi
+  ctx.document.getElementById = function(id){ return id === 'stBadge' ? el : null; };
+  try {
+    ctx.renderSoTayBadge(); eq(el.textContent, 1); eq(el.style.display, 'inline-block');
+    ctx.nhacHanHoanThanh('thu', 'luong', '2026-10'); ctx.renderSoTayBadge(); eq(el.style.display, 'none', 'hoàn thành -> ẩn');
+  } finally { ctx.document.getElementById = goc; setToday('2026-10-01'); }
+});
 test('Hoàn thành: tắt nhắc kỳ đó, không ghi giao dịch / số dư; tháng sau vẫn nhắc; hoàn tác được', function(){
   hanData(20, 5);
   var truoc = JSON.stringify(ctx.state.data.journal), bal = ctx.balanceAt('2026-10-31');
@@ -3435,6 +3445,96 @@ test('icsGap: dòng ≤ 75 byte UTF-8, không cắt giữa ký tự, ghép lại
   dong.forEach(function(l){ ok(Buffer.byteLength(l, 'utf8') <= 75, 'dòng > 75 byte: ' + Buffer.byteLength(l, 'utf8')); });
   eq(dong.map(function(l, i){ return i ? l.slice(1) : l; }).join(''), dai, 'ghép lại đúng');
   eq(ctx.icsGap('ngắn'), 'ngắn');
+});
+
+/* ==================================================================== */
+group('Đối soát số dư ví');
+
+function dsData(){
+  var j = {}; j['2026-10-02'] = { thu: { luong: 1000 }, chi: { an: 300 }, ghiChu: '', refs: [], items: [
+    { iid:'a', kind:'thu', catId:'luong', soTien:1000, ghiChu:'', walletId:'w1' }, { iid:'b', kind:'chi', catId:'an', soTien:300, ghiChu:'', walletId:'w1' }] };
+  var d = baseData({ journal: j });
+  d.wallets = [{ id:'w1', ten:'TechcomBank', soDuDauKy: 500 }, { id:'w2', ten:'Tiền mặt', soDuDauKy: 50 }];
+  return loadData(d);
+}
+test('doiSoatTinh: số trong sổ = đầu kỳ + thu − chi của ví; chênh = thật − sổ', function(){
+  dsData();
+  var t = ctx.doiSoatTinh('w1', 1300, '2026-10-05');
+  eq(t.soSo, 1200); eq(t.chenh, 100);
+  eq(ctx.doiSoatTinh('w2', 50, '2026-10-05').chenh, 0);
+  ok(ctx.doiSoatMoTa(100).text.indexOf('NHIỀU hơn') >= 0); ok(ctx.doiSoatMoTa(-100).text.indexOf('ÍT hơn') >= 0); ok(ctx.doiSoatMoTa(0.2).khop);
+});
+test('đối soát chỉ ghi nhận (không điều chỉnh): sổ không đổi, lịch sử có 1 bản; giữ tối đa 12 lần', function(){
+  dsData();
+  var truoc = JSON.stringify(ctx.state.data.journal);
+  var r = ctx.doiSoatGhi('w1', 1300, '2026-10-05', false);
+  eq(JSON.stringify(ctx.state.data.journal), truoc, 'journal không đổi'); eq(r.iid, null);
+  eq(ctx.walletById('w1').doiSoat.length, 1); eq(ctx.walletById('w1').doiSoat[0].chenh, 100); eq(ctx.walletById('w1').doiSoat[0].dieuChinh, false);
+  ok(ctx.doiSoatTrangThai(ctx.walletById('w1')).indexOf('lệch +100') >= 0);
+  for (var i = 0; i < 15; i++) ctx.doiSoatGhi('w1', 1200, '2026-10-05', false);
+  eq(ctx.walletById('w1').doiSoat.length, 12);
+  eq(ctx.doiSoatTrangThai(ctx.walletById('w2')), 'Chưa đối soát');
+});
+test('điều chỉnh: ví thật nhiều hơn -> khoản THU, ít hơn -> khoản CHI; số dư ví khớp số thật; tổng sổ đổi đúng chênh', function(){
+  dsData();
+  var tong0 = ctx.balanceAt('2026-10-05');
+  var r = ctx.doiSoatGhi('w1', 1300, '2026-10-05', true);
+  eq(ctx.soDuTheoVi('w1', '2026-10-05'), 1300, 'ví khớp'); eq(ctx.balanceAt('2026-10-05'), tong0 + 100);
+  var it = ctx.entryFindItem(ctx.state.data.journal['2026-10-05'], r.iid);
+  eq(it.kind, 'thu'); eq(it.catId, 'dieuChinh'); eq(it.dieuChinh, true); eq(it.walletId, 'w1');
+  ok(ctx.state.data.categories.thu.some(function(c){ return c.id === 'dieuChinh' && c.khongDuTru; }), 'danh mục tự tạo, không dự báo');
+  var r2 = ctx.doiSoatGhi('w1', 1000, '2026-10-06', true);
+  eq(ctx.soDuTheoVi('w1', '2026-10-06'), 1000);
+  eq(ctx.entryFindItem(ctx.state.data.journal['2026-10-06'], r2.iid).kind, 'chi');
+  eq(ctx.state.data.categories.thu.filter(function(c){ return c.id === 'dieuChinh'; }).length, 1, 'không tạo trùng danh mục');
+  ok(ctx.CAT_HE_THONG.thu.dieuChinh && ctx.CAT_HE_THONG.chi.dieuChinh, 'thuộc danh mục hệ thống (ẩn khỏi Ghi nhanh)');
+  ok(ctx.qaCats('chi').every(function(c){ return c.id !== 'dieuChinh'; }), 'Ghi nhanh không hiện');
+});
+test('khớp thì điều chỉnh không tạo khoản; hoàn tác gỡ khoản và bản ghi lịch sử', function(){
+  dsData();
+  var r0 = ctx.doiSoatGhi('w1', 1200, '2026-10-05', true);
+  eq(r0.iid, null, 'khớp: không có khoản'); ok(!ctx.state.data.journal['2026-10-05']);
+  var bal = ctx.balanceAt('2026-10-31');
+  var r = ctx.doiSoatGhi('w2', 80, '2026-10-05', true);
+  ok(r.iid); ctx.doiSoatHoanTac(r);
+  ok(!ctx.state.data.journal['2026-10-05'], 'ngày rỗng bị xóa'); eq(ctx.soDuTheoVi('w2', '2026-10-31'), 50);
+  eq(ctx.walletById('w2').doiSoat, undefined); eq(ctx.balanceAt('2026-10-31'), bal);
+  eq(ctx.doiSoatGhi('khongco', 1, '2026-10-05', true), null, 'ví không tồn tại');
+});
+test('ngày đối soát mặc định là ngày cuối tháng hiện tại (kể cả tháng 2, năm nhuận)', function(){
+  dsData();
+  setToday('2026-10-10'); eq(ctx.doiSoatNgayMacDinh(), '2026-10-31');
+  setToday('2026-02-03'); eq(ctx.doiSoatNgayMacDinh(), '2026-02-28');
+  setToday('2028-02-03'); eq(ctx.doiSoatNgayMacDinh(), '2028-02-29');
+  setToday('2026-10-31'); eq(ctx.doiSoatNgayMacDinh(), '2026-10-31');
+  setToday('2026-10-10');
+  var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });
+  ok(h.indexOf('id="ds_ngay" value="2026-10-31"') >= 0, 'ô ngày điền sẵn cuối tháng'); ok(h.indexOf('max=') < 0, 'không chặn ngày tương lai');
+  setToday('2026-10-01');
+});
+test('đối soát KHÔNG đụng số dư đầu kỳ (ví và sổ); ngày trước mốc bắt đầu thì không tạo điều chỉnh', function(){
+  dsData();
+  var d = ctx.state.data, w1 = d.wallets[0].soDuDauKy, w2 = d.wallets[1].soDuDauKy, dk = d.settings.soDuDauKy, bd = d.settings.ngayBatDau;
+  ctx.doiSoatGhi('w1', 1300, '2026-10-05', true); ctx.doiSoatGhi('w2', 80, '2026-10-05', false);
+  eq(d.wallets[0].soDuDauKy, w1); eq(d.wallets[1].soDuDauKy, w2); eq(d.settings.soDuDauKy, dk); eq(d.settings.ngayBatDau, bd);
+  dsData();
+  eq(ctx.doiSoatTruocMoc('2026-09-30'), true); eq(ctx.doiSoatTruocMoc('2026-10-01'), false);
+  var r = ctx.doiSoatGhi('w1', 9999, '2026-09-30', true);
+  eq(r.iid, null, 'trước mốc: không tạo khoản'); ok(!ctx.state.data.journal['2026-09-30']);
+});
+test('đổi số dư đầu kỳ của ví: số trong sổ dịch đúng bằng phần đổi; lịch sử đối soát cũ giữ nguyên số đã ghi', function(){
+  dsData();
+  ctx.doiSoatGhi('w1', 1300, '2026-10-05', false);
+  var truoc = JSON.stringify(ctx.walletById('w1').doiSoat);
+  ctx.walletById('w1').soDuDauKy += 100;
+  eq(ctx.doiSoatTinh('w1', 1300, '2026-10-05').soSo, 1300, 'sổ dịch +100'); eq(ctx.doiSoatTinh('w1', 1300, '2026-10-05').chenh, 0);
+  eq(JSON.stringify(ctx.walletById('w1').doiSoat), truoc, 'bản ghi cũ không bị tính lại');
+});
+test('bảng đối soát vẽ được; thẻ ví hiện số dư + trạng thái + nút Đối soát', function(){
+  dsData();
+  var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });
+  ok(h.indexOf('Đối soát ví TechcomBank') >= 0 && h.indexOf('ds_that') >= 0 && h.indexOf('dsGhi') >= 0 && h.indexOf('dsDieuChinh') >= 0);
+  ok(ctx.viCardHtml().indexOf('dmDoiSoat') >= 0 && ctx.viCardHtml().indexOf('Chưa đối soát') >= 0);
 });
 
 /* ==================================================================== */

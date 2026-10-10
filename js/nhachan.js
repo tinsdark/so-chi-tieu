@@ -58,6 +58,14 @@ function nhacHanHoanTac(kind, id, mk){
   c.xong = c.xong.filter(function(m){ return m !== mk; });
   if (!c.xong.length) delete c.xong;
 }
+// badge số trên tab "Sổ tay": số khoản thu/chi sắp đến hạn (cùng con số với chip ở thẻ tổng quan), thấy được dù đang ở tab khác
+function renderSoTayBadge(){
+  var el = document.getElementById('stBadge');
+  if (!el) return;
+  var n = (state.data && state.data.categories) ? dsCatSapDenHan().length : 0;
+  if (n > 0){ el.textContent = n; el.style.display = 'inline-block'; }
+  else { el.style.display = 'none'; }
+}
 function nhacHanNhan(so){
   return so < 0 ? 'Quá hạn ' + (-so) + ' ngày' : (so === 0 ? 'Hôm nay' : (so === 1 ? 'Ngày mai' : 'Còn ' + so + ' ngày'));
 }

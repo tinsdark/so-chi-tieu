@@ -101,9 +101,13 @@ function viCardHtml(){
   var ws = state.data.wallets || [];
   var h = '<div class="card dm-card k-wal">'+dmHead('Ví / nguồn tiền', '<button class="btn secondary sm" data-act="dmThemVi">+ Thêm ví</button>');
   ws.forEach(function(w){
+    var dsCuoi = doiSoatCuoi(w), dsLech = dsCuoi && Math.abs(dsCuoi.chenh) >= 0.5 && !dsCuoi.dieuChinh;
     var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '');
     h += '<div class="dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
-      + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
+      + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')
+      +   '<span class="dm-s">Trong sổ '+fmt(Math.round(soDuTheoVi(w.id, doiSoatNgayMacDinh())))+'</span>'
+      +   '<span class="dm-s'+(dsLech ? ' ds-lech' : '')+'">'+doiSoatTrangThai(w)+'</span></span>'
+      + '<button type="button" class="btn secondary sm" data-act="dmDoiSoat" data-id="'+esc(w.id)+'" aria-label="Đối soát ví '+esc(w.ten)+'">Đối soát</button>'
       + dmGo()+'</div>';
   });
   return h
@@ -442,7 +446,7 @@ function dmSheetVe(){
   root.id = 'dmSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
+  root.innerHTML = (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -450,6 +454,7 @@ function dmSheetVe(){
 }
 // đổi màu bằng tay thì thôi cờ "về màu mặc định"
 function handleDanhMucInput(el){
+  if (handleDoiSoatInput(el)) return true;
   if (el && el.id === 'dm_mau'){ el.removeAttribute('data-reset'); return true; }
   return false;
 }
@@ -718,7 +723,7 @@ function handleDanhMucAction(act, el){
     if (viTri < 0) return true;
     // (comment trên đúng với danh mục TRỐNG; danh mục đã có tiền thì xóa là làm tiền biến khỏi form sửa/Dòng tiền)
     if (CAT_HE_THONG[kind2] && CAT_HE_THONG[kind2][cid]){
-      toast('"'+catTen(kind2, cid)+'" là danh mục của tab Vay - Nợ, không xóa được.', { loai:'warn' });
+      toast('"'+catTen(kind2, cid)+'" là danh mục hệ thống (Vay - Nợ / Điều chỉnh số dư), không xóa được.', { loai:'warn' });
       return true;
     }
     var nNgayCoTien = catDangCoTien(kind2, cid);
@@ -779,6 +784,7 @@ function handleDanhMucAction(act, el){
 }
 
 function handleDanhMucChange(el){
+  if (handleDoiSoatInput(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
   if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
