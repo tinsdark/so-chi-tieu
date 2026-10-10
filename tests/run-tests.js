@@ -3501,6 +3501,17 @@ test('khớp thì điều chỉnh không tạo khoản; hoàn tác gỡ khoản 
   eq(ctx.walletById('w2').doiSoat, undefined); eq(ctx.balanceAt('2026-10-31'), bal);
   eq(ctx.doiSoatGhi('khongco', 1, '2026-10-05', true), null, 'ví không tồn tại');
 });
+test('ngày đối soát mặc định là ngày cuối tháng hiện tại (kể cả tháng 2, năm nhuận)', function(){
+  dsData();
+  setToday('2026-10-10'); eq(ctx.doiSoatNgayMacDinh(), '2026-10-31');
+  setToday('2026-02-03'); eq(ctx.doiSoatNgayMacDinh(), '2026-02-28');
+  setToday('2028-02-03'); eq(ctx.doiSoatNgayMacDinh(), '2028-02-29');
+  setToday('2026-10-31'); eq(ctx.doiSoatNgayMacDinh(), '2026-10-31');
+  setToday('2026-10-10');
+  var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });
+  ok(h.indexOf('id="ds_ngay" value="2026-10-31"') >= 0, 'ô ngày điền sẵn cuối tháng'); ok(h.indexOf('max=') < 0, 'không chặn ngày tương lai');
+  setToday('2026-10-01');
+});
 test('bảng đối soát vẽ được; thẻ ví hiện số dư + trạng thái + nút Đối soát', function(){
   dsData();
   var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });

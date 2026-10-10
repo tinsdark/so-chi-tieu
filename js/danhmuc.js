@@ -105,7 +105,8 @@ function viCardHtml(){
     var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '');
     h += '<div class="dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
       + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')
-      +   '<span class="dm-s'+(dsLech ? ' ds-lech' : '')+'">Trong sổ '+fmt(Math.round(soDuTheoVi(w.id, todayStr())))+' · '+doiSoatTrangThai(w)+'</span></span>'
+      +   '<span class="dm-s">Trong sổ '+fmt(Math.round(soDuTheoVi(w.id, doiSoatNgayMacDinh())))+'</span>'
+      +   '<span class="dm-s'+(dsLech ? ' ds-lech' : '')+'">'+doiSoatTrangThai(w)+'</span></span>'
       + '<button type="button" class="btn secondary sm" data-act="dmDoiSoat" data-id="'+esc(w.id)+'" aria-label="Đối soát ví '+esc(w.ten)+'">Đối soát</button>'
       + dmGo()+'</div>';
   });

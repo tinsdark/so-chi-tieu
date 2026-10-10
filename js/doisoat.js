@@ -14,6 +14,11 @@
 var DS_DANH_MUC = 'dieuChinh';
 var DS_LICH_SU = 12;
 
+// ngày đối soát mặc định: NGÀY CUỐI THÁNG của tháng hiện tại (đối soát chốt tháng)
+function doiSoatNgayMacDinh(){
+  var mk = monthKey(todayStr());
+  return mk + '-' + pad2(daysInMonth(mk));
+}
 // số dư trong sổ của ví tới hết ngày; chenh = số thật − số trong sổ (>0: ví thật nhiều hơn sổ)
 function doiSoatTinh(walletId, soThat, ngay){
   var soSo = soDuTheoVi(walletId, ngay || todayStr());
@@ -69,10 +74,10 @@ function doiSoatTrangThai(w){
 function doiSoatSheetHtml(f){
   var w = walletById(f.id);
   if (!w) return '';
-  var hom = todayStr(), ls = (Array.isArray(w.doiSoat) ? w.doiSoat : []).slice(-3).reverse();
-  var h = '<div class="vn-sub">Số trong sổ tới <span id="ds_ngayNhan">hôm nay</span>: <b id="ds_soSo">'+fmt(Math.round(soDuTheoVi(w.id, hom)))+'</b></div>'
+  var mac = doiSoatNgayMacDinh(), ls = (Array.isArray(w.doiSoat) ? w.doiSoat : []).slice(-3).reverse();
+  var h = '<div class="vn-sub">Số trong sổ tới <span id="ds_ngayNhan">'+(mac === todayStr() ? 'hôm nay' : ngayVN(mac))+'</span>: <b id="ds_soSo">'+fmt(Math.round(soDuTheoVi(w.id, mac)))+'</b></div>'
     + vnF('Số dư thật <span class="mp-hint">(nhìn ở app ngân hàng, hoặc đếm tiền mặt)</span>', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="ds_that" placeholder="0">')
-    + vnF('Ngày đối soát', '<input type="date" id="ds_ngay" value="'+hom+'" max="'+hom+'">')
+    + vnF('Ngày đối soát', '<input type="date" id="ds_ngay" value="'+mac+'">', '', 'Mặc định là ngày cuối tháng.')
     + '<div class="vn-tom" id="ds_tom">Nhập số dư thật để so với sổ.</div>'
     + '<button type="button" class="btn secondary ds-dc" id="ds_dc" data-act="dsDieuChinh" hidden></button>';
   if (ls.length){
@@ -86,12 +91,12 @@ function doiSoatSheetHtml(f){
 function doiSoatDocForm(){
   var g = function(id){ var e = document.getElementById(id); return e ? e.value : ''; };
   if (!String(g('ds_that')).trim()) return null;
-  return { soThat: docSo(g('ds_that')), ngay: g('ds_ngay') || todayStr() };
+  return { soThat: docSo(g('ds_that')), ngay: g('ds_ngay') || doiSoatNgayMacDinh() };
 }
 function doiSoatCapNhat(){
   var f = state.dmForm, tom = document.getElementById('ds_tom');
   if (!f || f.loai !== 'doisoat' || !tom) return;
-  var ngay = (document.getElementById('ds_ngay') || {}).value || todayStr();
+  var ngay = (document.getElementById('ds_ngay') || {}).value || doiSoatNgayMacDinh();
   var soSo = soDuTheoVi(f.id, ngay);
   var e1 = document.getElementById('ds_soSo'); if (e1) e1.textContent = fmt(Math.round(soSo));
   var e2 = document.getElementById('ds_ngayNhan'); if (e2) e2.textContent = ngay === todayStr() ? 'hôm nay' : ngayVN(ngay);
