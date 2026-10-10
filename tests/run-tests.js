@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3377,64 +3377,6 @@ test('Hoàn thành kỳ tháng sau (nhắc cuối tháng) chỉ tắt kỳ thán
   eq(ctx.dsCatSapDenHan(7, '2026-10-30').length, 0);
   ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'].forEach(function(m){ ctx.nhacHanHoanThanh('chi', 'nha', m); });
   eq(ctx.state.data.categories.chi[0].xong.length, 6);
-});
-
-/* ==================================================================== */
-group('Xuất nhắc việc ra file .ics');
-
-function lichData(){
-  var d = baseData({ vayNo: {
-    choVay: [{ id:'cv1', ten:'Cho Minh vay', soTien:500000, daThu:0, ngayChoVay:'2026-10-01', ngayDuKienThu:'2026-10-20', trangThai:'dang_cho' },
-             { id:'cv2', ten:'Đã xong', soTien:100, daThu:100, ngayChoVay:'2026-09-01', ngayDuKienThu:'2026-10-25', trangThai:'da_thu_du' }],
-    vayNoPhaiTra: [{ id:'vn1', ten:'Vay xe, trả góp; "A"', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:3000000, soThangVay:3, ngayVay:'2026-10-01', ngayTraHangThang:5, traNo:[], trangThai:'dang_vay' }] } });
-  d.categories.thu = [{ id:'luong', ten:'Tiền lương', chiTieu:0, ngay: 20 }];
-  d.categories.chi = [{ id:'nha', ten:'Tiền nhà', chiTieu:0, ngay: 31 }];
-  d.dinhKy = [{ id:'dk1', ten:'Tiền net', kind:'chi', catId:'nha', soTien:200000, ngay:10, bat:true, bo:['2026-11'] },
-              { id:'dk2', ten:'Tắt', kind:'chi', catId:'nha', soTien:1, ngay:10, bat:false, bo:[] }];
-  return loadData(d);
-}
-test('lichSuKien: gom kỳ trả nợ, thu nợ, danh mục có ngày, định kỳ; chỉ từ hôm nay; bỏ khoản đã xong / đã tắt / tháng bỏ qua', function(){
-  lichData();
-  var ds = ctx.lichSuKien('2026-10-09'), ten = ds.map(function(e){ return e.tieuDe; });
-  ok(ten.indexOf('Thu nợ: Cho Minh vay') >= 0, 'thu nợ'); ok(ten.indexOf('Thu nợ: Đã xong') < 0, 'khoản đã xong');
-  eq(ten.filter(function(t){ return t.indexOf('Trả nợ:') === 0; }).length, 3, '3 kỳ trả nợ (5/11, 5/12, 5/1)');
-  ok(ten.indexOf('Thu: Tiền lương') >= 0 && ten.indexOf('Chi: Tiền nhà') >= 0, 'danh mục có ngày');
-  ok(ten.indexOf('Định kỳ: Tắt') < 0, 'định kỳ đã tắt');
-  eq(ds.filter(function(e){ return e.uid === 'dk-dk1-2026-11'; }).length, 0, 'tháng 11 đã bỏ qua');
-  ok(ds.every(function(e){ return e.ngay >= '2026-10-09'; }), 'không có sự kiện quá khứ');
-  var nha = ds.filter(function(e){ return e.uid === 'dm-chi-nha-2026-11'; })[0];
-  eq(nha.ngay, '2026-11-30', 'ngày 31 co về cuối tháng 11');
-  var uids = {}; ds.forEach(function(e){ ok(!uids[e.uid], 'UID trùng: ' + e.uid); uids[e.uid] = 1; });
-  for (var i = 1; i < ds.length; i++) ok(ds[i - 1].ngay <= ds[i].ngay, 'sắp theo ngày');
-});
-test('lichSuKien: tháng này đã có giao dịch / bấm Hoàn thành thì bỏ sự kiện của tháng đó', function(){
-  var d = lichData();
-  d.journal['2026-10-02'] = { thu: { luong: 1 }, chi: {}, ghiChu: '', refs: [], items: [{ iid:'q', kind:'thu', catId:'luong', soTien:1, ghiChu:'' }] };
-  ctx.nhacHanHoanThanh('chi', 'nha', '2026-10');
-  var uids = ctx.lichSuKien('2026-10-01').map(function(e){ return e.uid; });
-  ok(uids.indexOf('dm-thu-luong-2026-10') < 0, 'lương tháng 10 đã ghi'); ok(uids.indexOf('dm-thu-luong-2026-11') >= 0, 'tháng 11 vẫn có');
-  ok(uids.indexOf('dm-chi-nha-2026-10') < 0, 'tiền nhà tháng 10 đã hoàn thành');
-});
-test('lichIcs: cấu trúc VCALENDAR/VEVENT, CRLF, cả ngày (DTEND = hôm sau), 2 báo thức, escape , ; \\ xuống dòng', function(){
-  lichData();
-  var ics = ctx.lichIcs(ctx.lichSuKien('2026-10-09'), new Date(Date.UTC(2026, 9, 9, 3, 4, 5)));
-  ok(ics.indexOf('BEGIN:VCALENDAR\r\n') === 0 && /END:VCALENDAR\r\n$/.test(ics), 'khung');
-  ok(ics.indexOf('\n') === ics.indexOf('\r\n') + 1, 'CRLF');
-  ok(ics.indexOf('DTSTAMP:20261009T030405Z') > 0, 'DTSTAMP');
-  var nv = ics.split('BEGIN:VEVENT').length - 1, kt = ics.split('END:VEVENT').length - 1, al = ics.split('BEGIN:VALARM').length - 1;
-  eq(nv, kt); eq(al, nv * 2, '2 báo thức mỗi sự kiện');
-  ok(ics.indexOf('DTSTART;VALUE=DATE:20261120\r\nDTEND;VALUE=DATE:20261121') > 0 || ics.indexOf('DTSTART;VALUE=DATE:20261105\r\nDTEND;VALUE=DATE:20261106') > 0, 'DTEND hôm sau');
-  ok(ics.indexOf('Vay xe\\, trả góp\; "A"') >= 0, 'escape dấu phẩy, chấm phẩy');
-  eq(ctx.icsEsc('a\\b\nc'), 'a\\\\b\\nc');
-  eq(ctx.icsNgaySau('2026-12-31'), '20270101'); eq(ctx.icsNgaySau('2026-02-28'), '20260301');
-});
-test('icsGap: dòng ≤ 75 byte UTF-8, không cắt giữa ký tự, ghép lại đúng nguyên văn', function(){
-  var dai = 'SUMMARY:' + new Array(40).join('Trả nợ góp ');
-  var kq = ctx.icsGap(dai), dong = kq.split('\r\n');
-  ok(dong.length > 1, 'có gập');
-  dong.forEach(function(l){ ok(Buffer.byteLength(l, 'utf8') <= 75, 'dòng > 75 byte: ' + Buffer.byteLength(l, 'utf8')); });
-  eq(dong.map(function(l, i){ return i ? l.slice(1) : l; }).join(''), dai, 'ghép lại đúng');
-  eq(ctx.icsGap('ngắn'), 'ngắn');
 });
 
 /* ==================================================================== */
