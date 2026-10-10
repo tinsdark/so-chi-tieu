@@ -3512,6 +3512,24 @@ test('ngày đối soát mặc định là ngày cuối tháng hiện tại (k�
   ok(h.indexOf('id="ds_ngay" value="2026-10-31"') >= 0, 'ô ngày điền sẵn cuối tháng'); ok(h.indexOf('max=') < 0, 'không chặn ngày tương lai');
   setToday('2026-10-01');
 });
+test('đối soát KHÔNG đụng số dư đầu kỳ (ví và sổ); ngày trước mốc bắt đầu thì không tạo điều chỉnh', function(){
+  dsData();
+  var d = ctx.state.data, w1 = d.wallets[0].soDuDauKy, w2 = d.wallets[1].soDuDauKy, dk = d.settings.soDuDauKy, bd = d.settings.ngayBatDau;
+  ctx.doiSoatGhi('w1', 1300, '2026-10-05', true); ctx.doiSoatGhi('w2', 80, '2026-10-05', false);
+  eq(d.wallets[0].soDuDauKy, w1); eq(d.wallets[1].soDuDauKy, w2); eq(d.settings.soDuDauKy, dk); eq(d.settings.ngayBatDau, bd);
+  dsData();
+  eq(ctx.doiSoatTruocMoc('2026-09-30'), true); eq(ctx.doiSoatTruocMoc('2026-10-01'), false);
+  var r = ctx.doiSoatGhi('w1', 9999, '2026-09-30', true);
+  eq(r.iid, null, 'trước mốc: không tạo khoản'); ok(!ctx.state.data.journal['2026-09-30']);
+});
+test('đổi số dư đầu kỳ của ví: số trong sổ dịch đúng bằng phần đổi; lịch sử đối soát cũ giữ nguyên số đã ghi', function(){
+  dsData();
+  ctx.doiSoatGhi('w1', 1300, '2026-10-05', false);
+  var truoc = JSON.stringify(ctx.walletById('w1').doiSoat);
+  ctx.walletById('w1').soDuDauKy += 100;
+  eq(ctx.doiSoatTinh('w1', 1300, '2026-10-05').soSo, 1300, 'sổ dịch +100'); eq(ctx.doiSoatTinh('w1', 1300, '2026-10-05').chenh, 0);
+  eq(JSON.stringify(ctx.walletById('w1').doiSoat), truoc, 'bản ghi cũ không bị tính lại');
+});
 test('bảng đối soát vẽ được; thẻ ví hiện số dư + trạng thái + nút Đối soát', function(){
   dsData();
   var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });

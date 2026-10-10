@@ -35,6 +35,8 @@ function doiSoatDanhMuc(kind){
   if (!arr.some(function(c){ return c.id === DS_DANH_MUC; })) arr.push({ id: DS_DANH_MUC, ten: 'Điều chỉnh số dư', chiTieu: 0, khongDuTru: true });
   return DS_DANH_MUC;
 }
+// ngày trước "Ngày bắt đầu" (mốc số dư đầu kỳ) không còn tính vào số dư: khoản điều chỉnh ở đó sẽ KHÔNG có tác dụng
+function doiSoatTruocMoc(ngay){ var st = state.data.settings.ngayBatDau || ''; return !!(st && ngay < st); }
 // ghi nhận 1 lần đối soát. dieuChinh = true: tạo khoản điều chỉnh cho đủ chênh lệch.
 // Trả { ban (bản ghi lịch sử), date, iid } để hoàn tác; null nếu ví không tồn tại.
 function doiSoatGhi(walletId, soThat, ngay, dieuChinh){
@@ -42,7 +44,7 @@ function doiSoatGhi(walletId, soThat, ngay, dieuChinh){
   if (!w) return null;
   ngay = ngay || todayStr();
   var t = doiSoatTinh(walletId, soThat, ngay), iid = null;
-  if (dieuChinh && Math.abs(t.chenh) >= 0.5){
+  if (dieuChinh && Math.abs(t.chenh) >= 0.5 && !doiSoatTruocMoc(ngay)){
     var kind = t.chenh > 0 ? 'thu' : 'chi';
     var it = entryAddItem(ngay, kind, doiSoatDanhMuc(kind), Math.abs(t.chenh), 'Điều chỉnh số dư ' + w.ten + ' (đối soát)', walletId);
     if (it){ it.dieuChinh = true; iid = it.iid; }
@@ -118,6 +120,10 @@ function handleDoiSoatAction(act, el){
   var d = doiSoatDocForm();
   if (!d){ toast('Nhập số dư thật.', { loai: 'warn' }); return true; }
   var w = walletById(f.id), t = doiSoatTinh(f.id, d.soThat, d.ngay);
+  if (act === 'dsDieuChinh' && doiSoatTruocMoc(d.ngay)){
+    toast('Ngày ' + ngayVN(d.ngay) + ' nằm trước ngày bắt đầu sổ (' + ngayVN(state.data.settings.ngayBatDau) + '), khoản điều chỉnh ở đó không tính vào số dư. Chọn ngày từ mốc bắt đầu trở đi, hoặc sửa số dư đầu kỳ của ví.', { loai: 'warn' });
+    return true;
+  }
   var xong = function(dieuChinh){
     var r = doiSoatGhi(f.id, d.soThat, d.ngay, dieuChinh);
     if (!r) return;
