@@ -232,6 +232,7 @@ function handleAction(act, el){
   if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
+  if (handleDoiSoatAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
   if (handleMoPhongAction(act, el)) return;
 }
