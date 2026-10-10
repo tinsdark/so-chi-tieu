@@ -52,6 +52,7 @@ function renderAll(){
   nhacHanSheetVe();                  // rời Sổ tay thì bảng sắp đến hạn tự đóng
   dmSheetVe();                       // rời Danh mục thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
   renderVayNoBadge();
+  renderSoTayBadge();
   updateStickyOffsets();
 }
 
@@ -95,6 +96,7 @@ document.addEventListener('click', function(ev){
     // <a href="#"> mà không chặn mặc định thì trình duyệt nhảy về "#" = kéo lên đầu trang
     if (t.tagName === 'A') ev.preventDefault();
     handleAction(act, t, ev);
+    renderSoTayBadge();            // đổi ngày nhắc ở danh mục / bấm Hoàn thành / ghi giao dịch: số trên tab Sổ tay theo kịp
     return;
   }
   var tabBtn = ev.target.closest('.tab');

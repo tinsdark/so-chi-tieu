@@ -3357,6 +3357,16 @@ test('không đặt ngày thì không nhắc; bảng trượt vẽ được cả
   setToday('2026-10-01');
 });
 
+test('renderSoTayBadge: hiện đúng số khoản sắp đến hạn, ẩn khi 0, không lỗi khi chưa có phần tử', function(){
+  var el = { textContent: '', style: { display: 'none' } }, goc = ctx.document.getElementById;
+  setToday('2026-10-14'); hanData(20, 0);
+  ctx.renderSoTayBadge();                                   // chưa có phần tử: không lỗi
+  ctx.document.getElementById = function(id){ return id === 'stBadge' ? el : null; };
+  try {
+    ctx.renderSoTayBadge(); eq(el.textContent, 1); eq(el.style.display, 'inline-block');
+    ctx.nhacHanHoanThanh('thu', 'luong', '2026-10'); ctx.renderSoTayBadge(); eq(el.style.display, 'none', 'hoàn thành -> ẩn');
+  } finally { ctx.document.getElementById = goc; setToday('2026-10-01'); }
+});
 test('Hoàn thành: tắt nhắc kỳ đó, không ghi giao dịch / số dư; tháng sau vẫn nhắc; hoàn tác được', function(){
   hanData(20, 5);
   var truoc = JSON.stringify(ctx.state.data.journal), bal = ctx.balanceAt('2026-10-31');
