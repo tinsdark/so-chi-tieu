@@ -81,7 +81,8 @@ function categoryCardHtml(kind, title, cats){
   return h + ghiChuGon('Hạn mức là số tiền dự định thu / chi mỗi tháng của danh mục, dùng cho thanh tiến độ ở Báo cáo và dự kiến ở Dòng tiền. '
     + '<b>Không tính dự kiến</b>: không đoán số cho tháng tương lai (khoản không đều đặn). '
     + '<b>Cố định theo Hạn mức</b>: luôn dùng đúng hạn mức cho tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa đổi). '
-    + 'Kéo ⠿ để đổi thứ tự (hoặc mở danh mục rồi bấm Lên / Xuống).', 'Hạn mức và dự kiến hoạt động thế nào?') + '</div>';
+    + 'Kéo ⠿ để đổi thứ tự (hoặc mở danh mục rồi bấm Lên / Xuống).'
+    + dmHanMucViDu(kind, cats), 'Hạn mức và dự kiến hoạt động thế nào?') + '</div>';
 }
 
 function cfgCardHtml(){
@@ -93,8 +94,41 @@ function cfgCardHtml(){
   return '<div class="card dm-card">'+dmHead('Số dư đầu kỳ')
     + dong('Ngày bắt đầu', s.ngayBatDau ? ngayVN(s.ngayBatDau) : '—')
     + dong('Tháng bắt đầu tính dự kiến', dmThangDM(s.thangBatDauDuTru))
-    + ghiChuGon('"Tháng bắt đầu tính dự kiến" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị chốt số dư làm đổi.', 'Số dư đầu kỳ dùng để làm gì?')
+    + ghiChuGon('"Tháng bắt đầu tính dự kiến" là tháng ĐẦY ĐỦ đầu tiên được dùng để tính TB gợi ý ở tab Dòng tiền. Tháng lẻ lúc mới bắt đầu dùng app (ghi từ giữa tháng) nên bỏ qua, nếu không TB sẽ bị kéo xuống sai. Mốc này KHÔNG bị chốt số dư làm đổi.' + dmTbViDu(), 'Số dư đầu kỳ dùng để làm gì?')
     + '</div>';
+}
+
+// ví dụ bằng số thật cho ghi chú Hạn mức: danh mục đầu tiên có hạn mức (tháng này đã dùng bao nhiêu, và gợi ý tháng sau theo 2 cách)
+function dmHanMucViDu(kind, cats){
+  var c = (cats || []).filter(function(x){ return num(x.chiTieu) > 0 && !x.khongDuTru; })[0];
+  if (!c) return '';
+  var mk = monthKey(todayStr()), da = actualCatInMonth(kind, c.id, mk), hm = num(c.chiTieu), tb = gtTrungBinh(kind, c.id), ds = [];
+  ds.push({ ten: esc(c.ten) + ' tháng ' + parseInt(mk.slice(5, 7), 10), ct: 'Hạn mức dùng cho thanh tiến độ: đã ' + (kind === 'thu' ? 'thu' : 'chi') + ' ÷ hạn mức.',
+    pt: soGt(da) + ' ÷ ' + soGt(hm) + ' = ' + Math.round(da / hm * 100) + '%, ' + (da > hm ? 'vượt ' + soGt(da - hm) : 'còn ' + ptCong([hm, -da], hm - da)) });
+  ds.push({ ten: 'Gợi ý tháng sau của ' + esc(c.ten), ct: 'Mặc định lấy trung bình các tháng đã hoàn chỉnh gần nhất; bật "Cố định theo Hạn mức" thì lấy đúng hạn mức.',
+    pt: (tb ? 'trung bình ' + tb.thang + ': ' + tb.pt : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức') + ' · cố định theo hạn mức: ' + soGt(hm) });
+  return gtViDu(ds);
+}
+
+// ví dụ bằng số thật cho ghi chú Ví: số dư đầu kỳ -> số trong sổ của ví đầu tiên, và tổng các ví = số đầu kỳ của sổ
+function dmViViDu(){
+  var ws = state.data.wallets || [], w = ws[0];
+  if (!w) return '';
+  var nay = soDuTheoVi(w.id, todayStr());
+  var ds = [{ ten: 'Số trong sổ của ví ' + esc(w.ten), ct: 'Số dư đầu kỳ + (thu − chi + tiền nhận − tiền chuyển đi) từ Ngày bắt đầu tới hôm nay.',
+    pt: ptCong([w.soDuDauKy, nay - num(w.soDuDauKy)], nay) }];
+  if (ws.length > 1) ds.push({ ten: 'Số dư đầu kỳ của cả sổ', ct: 'Cộng số dư đầu kỳ của các ví.',
+    pt: ws.map(function(x){ return esc(x.ten) + ' ' + soGt(x.soDuDauKy); }).join(' + ') + ' = ' + soGt(state.data.settings.soDuDauKy) });
+  return gtViDu(ds);
+}
+// ví dụ: các tháng đã hoàn chỉnh được dùng để tính trung bình gợi ý, cho danh mục chi đầu tiên có số liệu
+function dmTbViDu(){
+  var ms = forecastEligibleMonths();
+  var ds = [{ ten: 'Các tháng được dùng', ct: 'Từ "Tháng bắt đầu tính dự kiến" tới tháng liền trước tháng này.',
+    pt: ms.length ? ms.slice(-3).map(function(m){ return monthLabel(m); }).join(', ') + (ms.length > 3 ? ' (lấy 3 tháng gần nhất trong ' + ms.length + ' tháng)' : '') : 'chưa có tháng nào hoàn chỉnh → gợi ý dùng hạn mức' }];
+  var c = (state.data.categories.chi || []).filter(function(x){ return !CAT_HE_THONG.chi[x.id] && !x.khongDuTru && !x.coDinhChiTieu && gtTrungBinh('chi', x.id) && gtTrungBinh('chi', x.id).tb > 0; })[0];
+  if (c){ var t = gtTrungBinh('chi', c.id); ds.push({ ten: 'Gợi ý tháng này của ' + esc(c.ten), ct: 'Trung bình các tháng trên; tháng không phát sinh tính là 0.', pt: t.pt }); }
+  return gtViDu(ds);
 }
 
 /* ---- Ví / nguồn tiền ---- */
@@ -113,13 +147,31 @@ function viCardHtml(){
   });
   return h
     + ghiChuGon('Mỗi ví (tiền mặt, từng tài khoản ngân hàng, ví điện tử...) có số dư đầu kỳ riêng: số tiền có trong ví lúc bắt đầu dùng sổ (tính từ "Ngày bắt đầu" ở trên), KHÔNG phải số tiền ví đang có. Số dư hiện tại của từng ví xem ở tab Sổ tay; mở ví ở đây để sửa số đầu kỳ. '
-    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch hoặc đang gắn mục tiêu thì không xóa được, chỉ đổi tên. Tích <b>Để dành</b> cho ví quỹ/tiết kiệm: chi hoặc chuyển tiền ra khỏi ví đó sẽ được hỏi lại.', 'Ví / nguồn tiền hoạt động thế nào?')
+    + 'Tổng các ví chính là số dư đầu kỳ của cả sổ. Ví đã có giao dịch hoặc đang gắn mục tiêu thì không xóa được, chỉ đổi tên. Tích <b>Để dành</b> cho ví quỹ/tiết kiệm: chi hoặc chuyển tiền ra khỏi ví đó sẽ được hỏi lại.' + dmViViDu(), 'Ví / nguồn tiền hoạt động thế nào?')
     + '</div>';
 }
 // ví mặc định: chỉ ví được chọn có hiệu lực; không đụng gì tới dòng/khoản đã ghi
 function viDatMacDinh(id){
   state.data.settings.viMacDinh = id;
   state.qa.wallet = '';       // thẻ Ghi nhanh quay về ví mặc định mới
+}
+
+// ví dụ bằng số thật cho ghi chú Định kỳ: khoản đầu tiên, tháng này đã ghi chưa, đến hạn ngày nào
+function dmDinhKyViDu(){
+  var k = (state.data.dinhKy || []).filter(function(x){ return x.bat && num(x.soTien) > 0; })[0];
+  if (!k) return '';
+  var mk = monthKey(todayStr()), han = ngayTraCuaKy(mk, k.ngay), da = dinhKyDaGhi(k, mk);
+  return gtViDu([{ ten: esc(k.ten), ct: 'Tới ngày mà tháng đó chưa ghi thì nhắc; số tiền điền sẵn khi bấm "Ghi vào Sổ tay".',
+    pt: soGt(k.soTien) + ' · ngày ' + k.ngay + ' hằng tháng · tháng ' + parseInt(mk.slice(5, 7), 10) + ': hạn ' + ngayNganVN(han) + ', ' + (da ? 'đã ghi' : 'chưa ghi' + (todayStr() >= han ? ' → đang nhắc' : ' → chưa tới hạn')) }]);
+}
+// ví dụ bằng số thật cho ghi chú Mục tiêu: mục tiêu đầu tiên còn thiếu bao nhiêu và cần để dành mỗi tháng bao nhiêu
+function dmMucTieuViDu(){
+  var g = (state.data.mucTieu || [])[0];
+  if (!g) return '';
+  var t = mucTieuTienDo(g, todayStr());
+  var pt = 'đã gom ' + soGt(t.da) + ' (' + (t.theoVi ? 'số dư ví ' + esc(viTen(g.walletId)) : 'gom tay') + ') · ' + ptCong([t.dich, -t.da], t.conThieu);
+  if (t.canMoiThang != null) pt += ' · ' + soGt(t.conThieu) + ' ÷ ' + t.soThangCon + ' tháng còn lại = ' + soGt(t.canMoiThang) + ' mỗi tháng';
+  return gtViDu([{ ten: esc(g.ten), ct: 'Còn thiếu = số cần có − đã gom; cần để dành mỗi tháng = còn thiếu ÷ số tháng còn lại tới hạn (tính cả tháng này).', pt: pt }]);
 }
 
 /* ---- Mục tiêu tiết kiệm: khai báo (tiến độ hiện ở tab Báo cáo, logic ở state.js) ---- */
@@ -139,7 +191,7 @@ function mtCardHtml(){
   });
   return h + ghiChuGon('Đặt số tiền cần có và hạn chót, tab Báo cáo hiện còn thiếu bao nhiêu và cần để dành mỗi tháng bao nhiêu.'
     + (coVi ? ' <b>Gắn một ví</b> (ví để dành riêng) thì số đã gom tự bằng số dư ví đó, chuyển tiền sang ví bằng "Chuyển ví" ở Sổ tay. Không gắn thì tự bấm "+ Gom thêm" ở tab Báo cáo.' : ' Tạo thêm ví ở mục "Ví / nguồn tiền" để gắn mục tiêu vào một ví.')
-    + ' Mục tiêu chỉ để theo dõi, không ghi thu/chi và không đổi số dư.', 'Tiến độ được tính thế nào?') + '</div>';
+    + ' Mục tiêu chỉ để theo dõi, không ghi thu/chi và không đổi số dư.' + dmMucTieuViDu(), 'Tiến độ được tính thế nào?') + '</div>';
 }
 
 /* ---- Giao dịch định kỳ: khai báo mẫu (nhắc ở Sổ tay, logic ở state.js) ----
@@ -164,7 +216,7 @@ function dkCardHtml(){
       + '<span class="dm-main"><b class="dm-n">'+esc(k.ten)+'</b><span class="dm-s">'+(thu ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · <span style="white-space:nowrap">ngày '+k.ngay+'</span></span></span>'
       + '<span class="dm-v"><b class="'+(thu ? 'thu' : 'chi')+'">'+(thu ? '+' : '−')+fmt(Math.round(k.soTien))+'</b></span>'+dmGo()+'</div>';
   });
-  return h + ghiChuGon('Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.', 'Giao dịch định kỳ hoạt động thế nào?') + '</div>';
+  return h + ghiChuGon('Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.' + dmDinhKyViDu(), 'Giao dịch định kỳ hoạt động thế nào?') + '</div>';
 }
 
 /* ---- Chốt số dư ---- */
@@ -177,7 +229,8 @@ function chotCardHtml(){
     + '<b id="dm_khoa_l">'+monthLabel(mk)+'</b><button type="button" data-act="dmKhoaThang" data-d="1" aria-label="Tháng sau">›</button>'
     + '<input type="hidden" id="cfg_khoa" value="'+mk+'"></div>'
     + '<button class="btn sm" data-act="lockMonth">Chốt số dư</button></div>'
-    + ghiChuGon('Chốt số dư đến hết tháng chọn bên trên, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.', 'Chốt số dư là gì?')
+    + ghiChuGon('Chốt số dư đến hết tháng chọn bên trên, dùng làm số dư đầu kỳ mới. Dữ liệu Sổ tay các tháng trước đó vẫn giữ nguyên để xem lại, chỉ không cộng vào số dư/Dòng tiền nữa.' + gtViDu([{ ten: 'Chốt đến hết ' + monthLabel(mk), ct: 'Số dư tổng hết tháng đó trở thành số dư đầu kỳ mới; Ngày bắt đầu chuyển sang ngày 1 tháng sau.',
+      pt: 'số dư hết ' + monthLabel(mk).toLowerCase() + ': ' + soGt(balanceAtEndOfMonth(mk)) + ' → số dư đầu kỳ mới · ngày bắt đầu mới ' + ngayVN(monthKeyAdd(mk, 1) + '-01') }]), 'Chốt số dư là gì?')
     + '</div>';
 }
 
@@ -290,6 +343,7 @@ function backupCardHtml(){
     }
   }
   return h + ghiChuGon('Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
+    + gtViDu([ds ? { ten: 'Hiện có', ct: 'Số bản sao lưu đang giữ trên Drive / số bản tối đa.', pt: ds.length + ' / ' + BACKUP_GIU + ' bản' } : null]) + ' '
     + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?') + '</div>';
 }
 

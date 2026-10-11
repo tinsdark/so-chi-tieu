@@ -455,6 +455,45 @@ function ghiChuGon(noiDung, nhan){
   return '<details class="giai-thich"><summary>ⓘ '+(nhan || 'Giải thích')+'</summary><div>'+noiDung+'</div></details>';
 }
 
+/* GIẢI THÍCH CÓ SỐ THẬT: mỗi con số quan trọng được giải thích bằng 2 phần — cách tính bằng chữ, và PHÉP TÍNH bằng chính số trên màn hình
+   (VD "80.000 − 1.212.600 = −1.132.600"), để người dùng tự đối chiếu. Dùng:
+     giaiThichSo([ { ten:'Dư thật', ct:'Thu nhập − Chi tiêu', pt: ptCong([thu, -chi], thu - chi) }, ... ], 'Cách tính các số này')
+   soGt: số nguyên có dấu chấm ngăn nghìn, âm ghi "−". ptCong: các số hạng có dấu cộng / trừ rồi "= kết quả" (số hạng 0 ở sau bị bỏ). */
+function soGt(n){ var r = Math.round(Number(n) || 0); return (r < 0 ? '−' : '') + Math.abs(r).toLocaleString('vi-VN'); }
+function ptCong(ds, kq){
+  var s = '';
+  ds.forEach(function(v, i){
+    var r = Math.round(Number(v) || 0);
+    if (i === 0) s += soGt(r);
+    else if (r !== 0) s += (r < 0 ? ' − ' : ' + ') + Math.abs(r).toLocaleString('vi-VN');
+  });
+  return s + ' = ' + soGt(kq);
+}
+function gtDong(x){
+  return '<div class="gt-d"><b>'+x.ten+'</b>' + (x.ct ? '<span class="gt-ct">'+x.ct+'</span>' : '') + '<span class="gt-pt">'+x.pt+'</span></div>';
+}
+// tổng của 2 số: chỉ viết phép cộng khi cả hai khác 0 (tránh "50.000.000 = 50.000.000")
+function ptTong2(a, b){ return Math.round(b) === 0 ? soGt(a) : (Math.round(a) === 0 ? soGt(b) : ptCong([a, b], a + b)); }
+function giaiThichSo(ds, nhan){
+  var dong = ds.filter(function(x){ return x; }).map(gtDong).join('');
+  return dong ? ghiChuGon(dong, nhan || 'Cách tính') : '';
+}
+// VÍ DỤ BẰNG SỐ THẬT cho các ghi chú giải thích khái niệm (tab Danh mục, Dòng tiền): lời giải thích chung + "Với số của bạn: ..."
+// (ds rỗng thì chỉ có lời giải thích chung). Cách dùng: ghiChuGon(noiDung + gtViDu([ {ten, ct, pt} ]), nhan)
+function gtViDu(ds){
+  var d = ds.filter(function(x){ return x; });
+  return d.length ? '<div class="gt-vd"><div class="gt-vd-h">Với số của bạn</div>' + d.map(gtDong).join('') + '</div>' : '';
+}
+// số gợi ý tháng tới của 1 danh mục = trung bình các tháng ĐÃ HOÀN CHỈNH gần nhất (tối đa 3), viết thành phép tính; null nếu chưa có tháng nào
+function gtTrungBinh(kind, catId){
+  var months = forecastEligibleMonths().slice(-3);
+  if (!months.length) return null;
+  var vals = months.map(function(mk){ return actualCatInMonth(kind, catId, mk); }), tong = 0;
+  vals.forEach(function(v){ tong += v; });
+  return { thang: months.map(function(m){ return 'T' + parseInt(m.slice(5, 7), 10); }).join(', '),
+           pt: '(' + vals.map(soGt).join(' + ') + ') ÷ ' + vals.length + ' = ' + soGt(tong / vals.length), tb: tong / vals.length };
+}
+
 /* ====================================================================
    BỘ ICON — nét mảnh 1.8px, tô bằng currentColor (đổi màu theo chữ, sáng/tối đều đúng).
    Thay cho emoji: emoji mỗi máy một kiểu, màu chói và là dấu hiệu "app làm bằng máy" dễ thấy nhất.

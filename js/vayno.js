@@ -567,7 +567,20 @@ function vnTongQuanHtml(){
     h += '<div class="vn-th"><div class="vn-sub">'+monthLabel(curMk)+' không có kỳ nào phải trả.</div></div>';
   }
   if (hetMk) h += '<div class="vn-het">'+icon('clock')+'<span>Dự kiến hết nợ: <b>'+vnMkDai(hetMk)+'</b></span></div>';
-  return h + '</div>';
+  return h + vnTongQuanGiaiThichHtml(vays.filter(loanIsActive), tongNo, phaiThu, rong, can, da, curMk) + '</div>';
+}
+// cách tính các số ở thẻ đầu Vay - Nợ, có phép tính bằng số thật (giaiThichSo ở state.js)
+function vnTongQuanGiaiThichHtml(vays, tongNo, phaiThu, rong, can, da, curMk){
+  var ds = [], noGoc = 0, today = todayStr();
+  vays.forEach(function(v){ noGoc += noGocTaiNgay(v, today); });
+  if (vays.length) ds.push({ ten: 'Còn nợ', ct: 'Tổng các kỳ chưa đóng của từng khoản, GỒM lãi các kỳ chưa tới hạn, đã trừ phần trả dở của kỳ đang trả.',
+    pt: vays.map(function(v){ return esc(v.ten) + ' ' + soGt(soTienConLaiPhaiTra(v)); }).join(' + ') + ' = ' + soGt(tongNo) });
+  if (vays.length) ds.push({ ten: 'Còn nợ so với nợ gốc ở Tài sản ròng', ct: 'Tài sản ròng (tab Báo cáo) chỉ trừ NỢ GỐC, chưa tính lãi chưa tới hạn; chênh lệch xấp xỉ phần lãi đó.',
+    pt: soGt(tongNo) + ' − ' + soGt(noGoc) + ' ≈ ' + soGt(tongNo - noGoc) + ' (lãi chưa tới hạn)' });
+  if (can > 0) ds.push({ ten: monthLabel(curMk) + ' cần trả', ct: 'Các kỳ đến hạn tới hết tháng này, cộng kỳ quá hạn chưa đóng của các tháng trước. "Đã trả" là tiền thật đã ghi cho các kỳ đó.',
+    pt: 'cần ' + soGt(can) + ' − đã trả ' + soGt(da) + ' = còn ' + soGt(Math.max(0, can - da)) });
+  if (Math.abs(rong) >= 1 || phaiThu > 0) ds.push({ ten: rong >= 0 ? 'Nợ ròng' : 'Có ròng', ct: 'Còn nợ − cho vay chờ thu.', pt: ptCong([tongNo, -phaiThu], rong) });
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 
 // thẻ nhắc hạn ở đầu tab, gộp cả Cho vay + Vay-Nợ phải trả
@@ -732,7 +745,9 @@ function vnChoVayHtml(){
   var ds = state.data.vayNo.choVay;
   var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
   h += '<div class="vn-chia"><button type="button" class="btn sm secondary" data-act="vnChiaMo">Chia hóa đơn nhóm</button><span class="vn-sub">Mình trả hộ cả nhóm → tạo khoản cho vay từng người</span></div>';
-  h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.', 'Ghi tiền thu về thế nào?');
+  var c0 = ds.filter(function(x){ return !choVayDaXong(x); })[0];
+  h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.'
+    + (c0 ? gtViDu([{ ten: esc(c0.ten), ct: 'Còn phải thu = số cho vay − đã thu − đã xóa nợ.', pt: ptCong([c0.soTien, -num(c0.daThu), -tongDaBo(c0)], conLaiPhaiThu(c0)) }]) : ''), 'Ghi tiền thu về thế nào?');
   if (!ds.length) h += '<div class="empty-box">Chưa có khoản cho vay nào.<div><button class="btn" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></div></div>';
   else {
     var dangCV = ds.filter(function(c){ return !choVayDaXong(c); }), xongCV = ds.filter(choVayDaXong);

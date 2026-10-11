@@ -95,7 +95,10 @@ function nguoiCardHtml(){
     }
     h += '</div>';
   });
-  return h + ghiChuGon('Chỉ gom để xem và cộng tổng. Mỗi khoản vẫn có lịch trả, kỳ và tất toán riêng: bấm một khoản để nhảy tới thẻ của nó.', 'Sổ nợ theo đối tượng là gì?') + '</div>';
+  var r0 = ds[0], vd = '';
+  if (r0) vd = gtViDu([{ ten: esc(r0.ten) + (r0.khoan.length > 1 ? ' (' + r0.khoan.length + ' khoản)' : ''), ct: 'Số ròng = phải thu − phải trả, cộng từ các khoản còn mở của cùng một đối tượng.',
+    pt: r0.khoan.map(function(k){ return (k.loai === 'vay' ? '−' : '+') + soGt(k.conLai); }).join(' ') + ' → phải thu ' + soGt(r0.phaiThu) + ' − phải trả ' + soGt(r0.phaiTra) + ' = ' + (r0.rong >= 0 ? 'họ nợ mình ' : 'mình nợ họ ') + soGt(Math.abs(r0.rong)) }]);
+  return h + ghiChuGon('Chỉ gom để xem và cộng tổng. Mỗi khoản vẫn có lịch trả, kỳ và tất toán riêng: bấm một khoản để nhảy tới thẻ của nó.' + vd, 'Sổ nợ theo đối tượng là gì?') + '</div>';
 }
 
 /* ---- chia hóa đơn nhóm ---- */

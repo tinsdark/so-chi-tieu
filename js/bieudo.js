@@ -561,6 +561,12 @@ function bdXuHuongHtml(mk){
     h += '<div class="bd-kpi" style="margin-top:12px"><div><small>Tiết kiệm TB/tháng</small><b>'+bdTien(tongTK / dung.length)+'</b><em class="muted">'+khoang+' · thu trừ chi</em></div>'
       + '<div><small>Tỉ lệ tiết kiệm</small><b>'+(tl != null ? tl + '%' : '—')+'</b>'
       + (tl != null ? '<span class="kbar"><i style="width:'+Math.max(0, Math.min(100, tl))+'%"></i></span>' : '<em class="muted">chưa có thu</em>')+'</div></div>';
+    // cách tính 2 số trên, kèm số từng tháng (thu nhập − chi tiêu thật, không gồm vay nợ)
+    h += giaiThichSo([
+      { ten: 'Tiết kiệm TB/tháng', ct: 'Trung bình (thu nhập − chi tiêu) của các tháng đã trọn' + khoang + ', không gồm vay nợ.',
+        pt: '(' + dung.map(function(mm){ return 'T' + mm + ' ' + soGt(thu[mm - 1] - chi[mm - 1]); }).join(' + ') + ') ÷ ' + dung.length + ' = ' + soGt(tongTK / dung.length) },
+      tl != null ? { ten: 'Tỉ lệ tiết kiệm', ct: 'Tổng tiết kiệm ÷ tổng thu nhập của các tháng đó.', pt: soGt(tongTK) + ' ÷ ' + soGt(tongThuNam) + ' = ' + tl + '%' } : null
+    ], 'Cách tính các số này');
   }
   // số dư cuối tháng, tối đa 10 tháng gần nhất tính tới tháng đang xem
   var ml = [], mv = [], mm2 = mk;
@@ -677,7 +683,23 @@ function baoCaoDauHtml(mk){
   var chips = '';
   if (nVuot) chips += '<button type="button" class="bc-chip red" data-act="tqCuon" data-to="cardHanMuc"><i></i>'+nVuot+' danh mục vượt <span aria-hidden="true">›</span></button>';
   if (nQuaHan) chips += '<button type="button" class="bc-chip amber" data-act="tqCuon" data-to="cardMucTieu"><i></i>'+nQuaHan+' mục tiêu quá hạn <span aria-hidden="true">›</span></button>';
-  return h + (chips ? '<div class="bc-chips">'+chips+'</div>' : '') + '</div>';
+  return h + (chips ? '<div class="bc-chips">'+chips+'</div>' : '') + bcDauGiaiThichHtml(mk, cur, rows, cap, daHM, nhip, dang) + '</div>';
+}
+// cách tính các số ở thẻ đầu Báo cáo, mỗi dòng có phép tính bằng số thật (giaiThichSo ở state.js)
+function bcDauGiaiThichHtml(mk, cur, rows, cap, daHM, nhip, dang){
+  var ds = [], rieng = cur.vayNo.traNo + cur.vayNo.choVay;
+  ds.push({ ten: 'Đã chi tháng này', ct: 'Chi tiêu thật = tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
+    pt: ptCong([cur.tongChi, -rieng, -num(cur.theoCat.dieuChinh)], cur.tongChiThat) });
+  if (cap > 0){
+    ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',
+      pt: soGt(daHM) + ' ÷ ' + soGt(cap) + ' = ' + Math.round(daHM / cap * 100) + '%, ' + (daHM > cap ? 'vượt ' + soGt(daHM - cap) : 'còn ' + ptCong([cap, -daHM], cap - daHM)) });
+    if (dang && nhip.ngayQua >= 3 && cur.tongChiHN > 0){
+      var u = bdUocTinhChiHangNgay(mk, nhip.ngayQua), conLai = nhip.soNgay - nhip.ngayQua, moiNgay = conLai > 0 ? (u.tong - u.daChi) / conLai : 0;
+      ds.push({ ten: 'Giữ nhịp này, cuối tháng chi hằng ngày khoảng', ct: 'Đã chi hằng ngày + nhịp 1 ngày thường × số ngày còn lại (mỗi ngày bị chặn trần ở 3 lần trung vị để một lần mua lớn không bị nhân lên cả tháng).',
+        pt: soGt(u.daChi) + ' + ' + soGt(moiNgay) + ' × ' + conLai + ' = ' + soGt(u.tong) + '; so với hạn mức ' + soGt(cap) + ' → ' + (u.tong > cap ? 'vượt ' + soGt(u.tong - cap) : 'còn dư ' + soGt(cap - u.tong)) });
+    }
+  }
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 
 // thẻ Tài sản ròng: số cuối tháng đang xem, chênh lệch so với 12 tháng trước, bảng thành phần, đường tối đa 12 tháng
@@ -710,8 +732,11 @@ function taiSanRongCardHtml(mk){
     h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Tài sản ròng', vals: mv, cls: cur.rong < 0 ? 'chi' : 'thu', fill: true }],
       tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Tài sản ròng cuối tháng' }) + '</div>';
   }
-  h += ghiChuGon('Tài sản ròng = tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). '
-    + 'Khoản đã tất toán không còn tính từ ngày tất toán.', 'Tính thế nào?');
+  h += giaiThichSo([
+    { ten: 'Tài sản ròng', ct: 'Tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). Khoản đã tất toán không còn tính từ ngày tất toán.',
+      pt: ptCong([cur.tien, cur.phaiThu, -cur.no], cur.rong) },
+    { ten: 'Tiền các ví', ct: 'Số dư đầu kỳ + tổng thu − tổng chi (gồm cả tiền vay và trả nợ vì tiền thật có ra vào ví) tới cuối tháng.', pt: soGt(cur.tien) }
+  ], 'Tính thế nào?');
   return h + '</div>';
 }
 

@@ -36,7 +36,7 @@ function tnNgayThang(homNay){
     var e = state.data.journal[mk + '-' + pad2(d)], chi = 0;
     if (e) Object.keys(hn.bien).forEach(function(id){ chi += num((e.chi || {})[id]); });
     var muc = Math.max(0, hn.cap - da) / (N - d + 1), ok = chi <= muc + 0.5;
-    ngay.push({ d: d, chi: chi, muc: muc, ok: ok });
+    ngay.push({ d: d, chi: chi, muc: muc, ok: ok, da: da });
     if (d < den && ok) soOk++;
     da += chi;
   }
@@ -44,7 +44,7 @@ function tnNgayThang(homNay){
   for (var j = den - 2; j >= 0 && ngay[j].ok; j--) chuoi++;
   var daTruoc = da - ngay[den - 1].chi;
   return { mk: mk, cap: hn.cap, soNgay: N, den: den, ngay: ngay, chuoi: chuoi, soOk: soOk, soQua: den - 1,
-           deu: hn.cap * (den - 1) / N - daTruoc };
+           deu: hn.cap * (den - 1) / N - daTruoc, daTruoc: daTruoc, nhipDeu: hn.cap * (den - 1) / N };
 }
 
 /* ---- 3: tiền 30 ngày tới ----
@@ -181,7 +181,23 @@ function tnHomNayHtml(t, tm){
     + '<div><small>So với nhịp đều</small><b class="'+(dauThang ? '' : (t.deu >= 0 ? 'thu' : 'chi'))+'">'+(dauThang ? '—' : (t.deu >= 0 ? 'dư ' : 'vượt ')+fmt(Math.round(Math.abs(t.deu))))+'</b>'
     +   '<span>'+(dauThang ? 'ngày đầu tháng' : 'tới hết hôm qua')+'</span></div>'
     + '</div>';
-  return h + '</div>';
+  return h + tnHomNayGiaiThichHtml(t, tm) + '</div>';
+}
+// cách tính 3 số của thẻ Hôm nay, có phép tính bằng số thật (giaiThichSo ở state.js)
+function tnHomNayGiaiThichHtml(t, tm){
+  var ds = [], dauThang = t.soQua === 0;
+  ds.push({ ten: 'Hôm nay còn tiêu được', ct: '(Hạn mức hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay) = mức mỗi ngày; trừ phần đã tiêu hôm nay.',
+    pt: tm.het ? 'đã chi hằng ngày ' + soGt(tm.daTruoc + tm.daHomNay) + ' ≥ hạn mức ' + soGt(tm.cap) + ' → hết hạn mức'
+      : '(' + soGt(tm.cap) + ' − ' + soGt(tm.daTruoc) + ') ÷ ' + tm.soNgay + ' = ' + soGt(tm.muc) + '/ngày; ' + soGt(tm.muc) + ' − ' + soGt(tm.daHomNay) + ' = ' + soGt(tm.honNayCon) });
+  if (!dauThang){
+    var vuot = null;
+    for (var j = t.den - 2; j >= 0; j--){ if (!t.ngay[j].ok){ vuot = t.ngay[j]; break; } }
+    ds.push({ ten: 'Chuỗi trong mức', ct: 'Số ngày liên tiếp, tính lùi từ hôm qua, mà chi hằng ngày không vượt mức của ngày đó. Hôm nay chưa hết ngày nên chưa tính.',
+      pt: t.chuoi + ' ngày' + (vuot ? ' · ngày vượt gần nhất: ' + ngayNganVN(t.mk + '-' + pad2(vuot.d)) + ' (chi ' + soGt(vuot.chi) + ' > mức ' + soGt(vuot.muc) + ')' : ' · chưa có ngày nào vượt mức từ đầu tháng') });
+    ds.push({ ten: 'So với nhịp đều', ct: 'Hạn mức × (số ngày đã qua ÷ số ngày của tháng) = số được phép chi nếu chi đều mỗi ngày; so với số đã chi tới hết hôm qua.',
+      pt: soGt(t.cap) + ' × ' + t.soQua + '/' + t.soNgay + ' = ' + soGt(t.nhipDeu) + '; đã chi ' + soGt(t.daTruoc) + ' → ' + (t.deu >= 0 ? 'dư ' : 'vượt ') + soGt(Math.abs(t.deu)) });
+  }
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 function tnLichThangHtml(t){
   if (!t) return '';
@@ -202,7 +218,9 @@ function tnLichThangHtml(t){
   h += '<div class="tn-ct"><span>'+tnThu(ngay)+' '+ngayNganVN(ngay)+(sel === t.den ? ' · hôm nay' : '')+'</span>'
     + '<span>Chi <b>'+fmt(Math.round(s.chi))+'</b> / mức '+fmt(Math.round(s.muc))
     + (sel === t.den ? '' : (chenh >= -0.5 ? ' · <b class="thu">trong mức</b>' : ' · <b class="chi">vượt '+fmt(Math.round(-chenh))+'</b>')) + '</span></div>'
-    + '<div class="tn-leg"><span><i class="ok"></i>Trong mức</span><span><i class="vuot"></i>Vượt mức</span><span><i class="nay"></i>Hôm nay</span></div>';
+    + '<div class="tn-leg"><span><i class="ok"></i>Trong mức</span><span><i class="vuot"></i>Vượt mức</span><span><i class="nay"></i>Hôm nay</span></div>'
+    + giaiThichSo([{ ten: 'Mức của ngày ' + sel, ct: 'Hạn mức còn lại đầu ngày ÷ số ngày còn lại (tính cả ngày đó). Ngày "trong mức" khi chi hằng ngày hôm đó không vượt mức; không chi gì cũng là trong mức.',
+      pt: '(' + soGt(t.cap) + ' − ' + soGt(s.da) + ') ÷ ' + (t.soNgay - sel + 1) + ' = ' + soGt(s.muc) + '; chi ' + soGt(s.chi) + (s.chi <= s.muc + 0.5 ? ' ≤ mức → trong mức' : ' > mức → vượt ' + soGt(s.chi - s.muc)) }], 'Cách tính ngày này');
   return h + '</div>';
 }
 function tnLichTienHtml(L){
@@ -227,11 +245,30 @@ function tnLichTienHtml(L){
     if (coViec.length > gioiHan) h += '<button type="button" class="dt-more" data-act="tnHet">'+(hienHet ? 'Thu gọn' : 'Xem thêm '+(coViec.length - gioiHan)+' ngày')+'</button>';
   }
   if (L.ghiChu.length) h += '<div class="dt-ghichu">'+L.ghiChu.map(esc).join('<br>')+'</div>';
-  h += ghiChuGon('Bắt đầu từ tổng số dư các ví hết hôm nay (gồm ví để dành, đã trừ dư nợ thẻ). Mỗi ngày trừ chi hằng ngày '
-    + (L.theoNhip ? 'theo nhịp chi thực tế tháng này ('+fmt(Math.round(L.mucNgay))+'/ngày, vì chưa đặt hạn mức)' : 'theo mức '+fmt(Math.round(L.mucNgay))+'/ngày (tháng sau: hạn mức ÷ số ngày)')
-    + '. Cộng / trừ thêm: khoản thu có ngày (lương...), trả nợ theo lịch (kỳ quá hạn tính vào hôm nay), khoản cố định theo định kỳ hoặc "Ngày chi hằng tháng" '
-    + '(chưa có ngày thì tính vào hôm nay / ngày 1 tháng sau), thu hồi cho vay đúng hẹn, khoản đã ghi trước. Thanh toán thẻ là chuyển giữa các ví nên không đổi tổng.', 'Tính thế nào?');
+  h += tnLichTienGiaiThichHtml(L);
   return h + '</div>';
+}
+
+// cách tính lịch tiền 30 ngày, kèm phép tính bằng số thật cho ngày cuối kỳ và ngày thấp nhất
+function tnLichTienGiaiThichHtml(L){
+  var vao = 0, ra = 0, chi = 0, vaoT = 0, raT = 0, chiT = 0, iT = L.ngay.indexOf(L.thap);
+  L.ngay.forEach(function(r, i){ vao += r.tongVao; ra += r.tongRa; chi += r.chiNgay; if (i <= iT){ vaoT += r.tongVao; raT += r.tongRa; chiT += r.chiNgay; } });
+  var cuoi = L.ngay[L.ngay.length - 1];
+  // chi hằng ngày: hôm nay + các đoạn ngày liền nhau cùng mức (tháng này, tháng sau)
+  var g = [], giaTri = null;
+  L.ngay.slice(1).forEach(function(r){
+    var v = Math.round(r.chiNgay);
+    if (g.length && g[g.length - 1].v === v) g[g.length - 1].n++; else g.push({ n: 1, v: v });
+  });
+  var ptChi = soGt(L.ngay[0].chiNgay) + ' (hôm nay)' + g.map(function(x){ return ' + ' + x.n + ' ngày × ' + soGt(x.v); }).join('') + ' = ' + soGt(chi);
+  return giaiThichSo([
+    { ten: 'Số dư ngày cuối (' + ngayNganVN(cuoi.ngay) + ')', ct: 'Tổng số dư các ví hết hôm nay (gồm ví để dành, đã trừ dư nợ thẻ) + khoản thu có ngày − khoản chi có ngày − chi hằng ngày.',
+      pt: ptCong([L.dau, vao, -ra, -chi], cuoi.cuoi) },
+    { ten: 'Ngày thấp nhất (' + ngayNganVN(L.thap.ngay) + ')', ct: 'Cùng phép tính, cộng dồn tới ngày đó.', pt: ptCong([L.dau, vaoT, -raT, -chiT], L.thap.cuoi) },
+    { ten: 'Chi hằng ngày', ct: L.theoNhip ? 'Theo nhịp chi thực tế tháng này vì chưa đặt hạn mức: hôm nay = nhịp − đã tiêu hôm nay.' : 'Hôm nay = phần còn tiêu được; các ngày còn lại của tháng = mức mỗi ngày; tháng sau = hạn mức ÷ số ngày của tháng đó.', pt: ptChi },
+    { ten: 'Khoản thu / chi có ngày', ct: 'Lương và khoản thu có ngày (ngày đã qua mà chưa ghi thì không tính), trả nợ theo lịch (kỳ quá hạn tính vào hôm nay), khoản cố định theo định kỳ hoặc "Ngày chi hằng tháng" (chưa có ngày thì tính vào hôm nay / ngày 1 tháng sau), thu hồi cho vay đúng hẹn, khoản đã ghi trước. Thanh toán thẻ là chuyển giữa các ví nên không đổi tổng.',
+      pt: 'vào ' + soGt(vao) + ' · ra ' + soGt(ra) }
+  ], 'Tính thế nào?');
 }
 
 function renderTheoNgay(){

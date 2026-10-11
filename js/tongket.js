@@ -72,7 +72,23 @@ function tongKetCardHtml(mk){
       dRong != null && Math.abs(dRong) >= 1 ? (dRong > 0 ? '↑ ' : '↓ ') + bdTien(Math.abs(dRong)) + ' so với tháng trước' : '', r.rong < 0 ? 'chi' : '');
   }
   if (r.tang) h += tkDong('Tăng mạnh nhất', esc(r.tang.ten), '+' + bdTien(r.tang.d) + ' so với tháng ' + parseInt(r.prevMk.slice(5, 7), 10) + ' (chi hằng ngày)');
-  return h + '</div>';
+  return h + tkGiaiThichHtml(r) + '</div>';
+}
+// cách tính từng dòng của thẻ, có phép tính bằng số thật của tháng đó (giaiThichSo ở state.js)
+function tkGiaiThichHtml(r){
+  var ds = [], cl = r.thu - r.chi;
+  ds.push({ ten: 'Dư thật', ct: 'Thu nhập − chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([r.thu, -r.chi], cl) });
+  if (r.cap > 0) ds.push({ ten: 'Chi hằng ngày', ct: 'Chi của các danh mục tiêu hằng ngày so với tổng hạn mức của chúng. Một ngày "trong mức" khi chi hôm đó không vượt (hạn mức còn lại đầu ngày ÷ số ngày còn lại).',
+    pt: soGt(r.hangNgay) + ' ÷ ' + soGt(r.cap) + ' = ' + Math.round(r.hangNgay / r.cap * 100) + '%' + (r.ngayOk != null ? '; ' + r.ngayOk + '/' + r.soNgay + ' ngày trong mức' : '') });
+  if (r.coDinh > 0.5) ds.push({ ten: 'Chi cố định', ct: 'Chi tiêu − chi hằng ngày.', pt: ptCong([r.chi, -r.hangNgay], r.coDinh) });
+  if (r.traNo > 0.5 || r.no > 0.5 || r.vayNo.vay > 0.5){
+    ds.push({ ten: 'Trả nợ (tính riêng)', ct: 'Tổng các lần trả nợ trong tháng (gồm tất toán). Nợ gốc còn lại tính từ lịch vay tới cuối tháng.',
+      pt: 'trả ' + soGt(r.traNo) + (r.vayNo.vay > 0.5 ? ' · vay thêm ' + soGt(r.vayNo.vay) : '') + ' · nợ gốc cuối tháng ' + soGt(r.no) + (r.noTruoc != null ? ' (đầu tháng ' + soGt(r.noTruoc) + ')' : '') });
+  }
+  if (r.rong != null) ds.push({ ten: 'Tài sản ròng cuối tháng', ct: 'Tiền các ví + cho vay chưa thu − nợ gốc còn lại.',
+    pt: soGt(r.rong) + (r.rongTruoc != null ? ' (tháng trước ' + soGt(r.rongTruoc) + ' → ' + (r.rong - r.rongTruoc >= 0 ? '+' : '−') + soGt(Math.abs(r.rong - r.rongTruoc)) + ')' : '') });
+  if (r.tang) ds.push({ ten: 'Tăng mạnh nhất', ct: 'Danh mục chi hằng ngày có mức tăng lớn nhất so với tháng trước.', pt: soGt(r.tang.v) + ' − ' + soGt(r.tang.v - r.tang.d) + ' = +' + soGt(r.tang.d) });
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 
 // tháng cần gợi ý ở Sổ tay: tháng trước, trong N ngày đầu tháng, và tháng đó có tổng kết; '' nếu không

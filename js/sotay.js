@@ -246,6 +246,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
     + '</div>'
     // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
     + '<div class="hero-cl"><span>Dư thật</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>'
+    + '<div class="hero-ct">= thu nhập '+soGt(tongThu)+' − chi tiêu '+soGt(tongChi)+'</div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
@@ -258,6 +259,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   }
   if (laThangNay && !beforeLock) h += tieuMoiNgayHtml(todayStr());
   h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
+  if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay);
   var nDk = dinhKyDenHan(todayStr()).length;
   var nVn = danhSachSapDenHan(7).length;
   var nHan = dsCatSapDenHan().length;
@@ -272,6 +274,34 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
+}
+
+/* Cách tính các số ở thẻ đầu Sổ tay, mỗi dòng có PHÉP TÍNH BẰNG SỐ THẬT của tháng đang xem (giaiThichSo ở state.js).
+   ct = bdThang(mk). Số dư: đầu tháng + dư thật + vay nợ ròng (+ điều chỉnh số dư nếu có) = số dư cuối, khớp số dư ví. */
+function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay){
+  var vn = ct.vayNo, vao = vn.vay + vn.thuHoi, ra = vn.traNo + vn.choVay, rongNo = vao - ra;
+  var dcThu = num(ct.theoCatThu.dieuChinh), dcChi = num(ct.theoCat.dieuChinh), dc = dcThu - dcChi;
+  var duThat = ct.tongThuThat - ct.tongChiThat, ds = [];
+  ds.push({ ten: 'Dư thật', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
+  ds.push({ ten: 'Thu nhập', ct: 'Tổng thu − nhận vay − thu hồi cho vay − điều chỉnh số dư.',
+    pt: ptCong([ct.tongThu, -vao, -dcThu], ct.tongThuThat) });
+  ds.push({ ten: 'Chi tiêu', ct: 'Tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
+    pt: ptCong([ct.tongChi, -ra, -dcChi], ct.tongChiThat) });
+  if (vao + ra > 0.5) ds.push({ ten: 'Vay nợ (tính riêng)', ct: 'Vào (nhận vay + thu hồi cho vay) − ra (trả nợ + cho vay).',
+    pt: 'vào ' + ptTong2(vn.vay, vn.thuHoi) + ' · ra ' + ptTong2(vn.traNo, vn.choVay) + ' · ' + ptCong([vao, -ra], rongNo) });
+  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Dư thật + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '') + '.',
+    pt: ptCong([duDau, duThat, rongNo, dc], duCuoi) });
+  if (tongCap > 0) ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',
+    pt: soGt(tongDa) + ' ÷ ' + soGt(tongCap) + ' = ' + Math.round(tongDa / tongCap * 100) + '%, ' + (tongDa > tongCap ? 'vượt ' + soGt(tongDa - tongCap) : 'còn ' + ptCong([tongCap, -tongDa], tongCap - tongDa)) });
+  var t = laThangNay ? tieuMoiNgay(todayStr()) : null;
+  if (t){
+    ds.push({ ten: 'Hôm nay còn tiêu được', ct: '(Hạn mức − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay.',
+      pt: t.het ? 'đã chi hằng ngày ' + soGt(t.daTruoc + t.daHomNay) + ' ≥ hạn mức ' + soGt(t.cap) + ' → hết hạn mức'
+        : '(' + soGt(t.cap) + ' − ' + soGt(t.daTruoc) + ') ÷ ' + t.soNgay + ' = ' + soGt(t.muc) + '/ngày; ' + soGt(t.muc) + ' − ' + soGt(t.daHomNay) + ' = ' + soGt(t.honNayCon) });
+    if (t.coDinhCon > 0) ds.push({ ten: 'Khoản cố định còn phải ra', ct: 'Hạn mức chưa chi của khoản cố định, định kỳ chưa ghi, kỳ trả nợ chưa đóng. Không trừ vào mức tiêu mỗi ngày.',
+      pt: t.coDinh.map(function(x){ return x.ten + ' ' + soGt(x.con); }).join(' + ') + ' = ' + soGt(t.coDinhCon) });
+  }
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 
 // 1 dòng đọc nhanh dưới số dư: chi tháng này so với tháng trước (đang chạy dở thì CÙNG KỲ: ngày 1 -> hôm nay).
@@ -716,8 +746,14 @@ function mucTieuCardHtml(){
       + '<div class="mt-f"><span class="mt-note'+(t.quaHan ? ' over' : (t.xong ? ' ok' : ''))+'">'+note+'</span>'
       + ((t.theoVi || t.xong) ? '' : '<button type="button" class="btn secondary sm" data-act="mtGom" data-id="'+esc(g.id)+'">+ Gom thêm</button>') + '</div></div>';
   });
+  var gt = gs.map(function(g){
+    var t = mucTieuTienDo(g, hom);
+    var pt = 'đã gom ' + soGt(t.da) + ' (' + (t.theoVi ? 'số dư ví ' + esc(viTen(g.walletId)) : 'gom tay') + ') · còn thiếu ' + ptCong([t.dich, -t.da], t.conThieu);
+    if (t.canMoiThang != null) pt += ' · ' + soGt(t.conThieu) + ' ÷ ' + t.soThangCon + ' tháng = ' + soGt(t.canMoiThang) + ' mỗi tháng';
+    return { ten: esc(g.ten), ct: t.canMoiThang != null ? 'Còn thiếu ÷ số tháng còn lại tới hạn (tính cả tháng này).' : '', pt: pt };
+  });
   return '<div class="card bc-card" id="cardMucTieu"><h3 class="bc-h"><span>Mục tiêu tiết kiệm</span><span class="bc-h-s">'+fmt(Math.round(tongDa))+' đã gom</span></h3>'
-    + '<div class="mt-list">' + h + '</div></div>';
+    + '<div class="mt-list">' + h + '</div>' + giaiThichSo(gt, 'Cách tính các số này') + '</div>';
 }
 
 /* ====================================================================
