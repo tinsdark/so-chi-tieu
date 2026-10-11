@@ -1168,7 +1168,7 @@ function handleSoTayAction(act, el){
   el = el || {};      // phím N / Enter ở ô tiền gọi handleAction(..., null): không có phần tử bấm
   if (handleBieuDoAction(act, el)) return true;
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
-    var canhBao = [canhBaoViAm(act, el), canhBaoBatThuong(act, el)].filter(Boolean).join('\n\n');
+    var canhBao = [canhBaoViAm(act, el), canhBaoBatThuong(act, el), canhBaoLoiHua(act, el)].filter(Boolean).join('\n\n');
     if (canhBao){
       xacNhan('Kiểm tra trước khi ghi', canhBao + '\n\nVẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
         .then(function(ok){ if (ok){ el._daBaoAm = true; try{ handleSoTayAction(act, el); }finally{ el._daBaoAm = false; } } });

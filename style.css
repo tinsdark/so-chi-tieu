@@ -1557,3 +1557,13 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .cc-tag.ok{color:var(--green)}.cc-tag.warn{color:var(--amber)}.cc-tag.bad{color:var(--red)}
 .cc-it-b{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .cc-nhin{margin-top:12px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+
+/* ---- Công cụ: Giờ công, Lời hứa ---- */
+.gc-hero{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 0 2px}
+.gc-hero span{color:var(--muted);font-size:13.5px}.gc-hero b{font-size:22px}
+.gc-kq{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--hover);font-weight:600;font-size:14px}
+.gc-ds{margin-top:4px}
+.gc-cfg{margin-top:14px}.gc-cfg summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--muted);padding:4px 0}
+.lh-cau{font-style:italic;color:var(--muted);font-size:13px;margin:4px 0}
+.cc-it.lh-pha{border-color:var(--red)}.cc-it.lh-giu{border-color:var(--green)}
+.cc-it[role=button]{cursor:pointer}

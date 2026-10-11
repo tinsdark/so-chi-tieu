@@ -702,6 +702,19 @@ function normalizeData(d){
     if (!/^\d{4}-\d{2}-\d{2}$/.test(m.ngayThem || '')) m.ngayThem = todayStr();
     m.ngayXong = /^\d{4}-\d{2}-\d{2}$/.test(m.ngayXong || '') ? m.ngayXong : '';
   });
+  // lời hứa (xem loihua.js): giữ dòng có danh mục + ngày hợp lệ; cài đặt giờ công (giocong.js) ép về số
+  var reNgay = /^\d{4}-\d{2}-\d{2}$/;
+  d.loiHua = (Array.isArray(d.loiHua) ? d.loiHua : []).filter(function(h){ return h && h.catId && reNgay.test(h.tuNgay || '') && reNgay.test(h.denNgay || '') && h.denNgay >= h.tuNgay; });
+  d.loiHua.forEach(function(h){
+    if (!h.id) h.id = 'lh_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    h.kieu = h.kieu === 'tien' ? 'tien' : 'lan';
+    h.gioiHan = numNonNeg(h.gioiHan); if (h.kieu === 'lan') h.gioiHan = Math.round(h.gioiHan);
+    h.cau = String(h.cau || '').trim().slice(0, 120) || 'Mình đã hứa với bản thân.';
+    if (!reNgay.test(h.ngayTao || '')) h.ngayTao = h.tuNgay;
+  });
+  if (d.settings.gioCong && typeof d.settings.gioCong === 'object'){
+    d.settings.gioCong = { thuNhapThang: numNonNeg(d.settings.gioCong.thuNhapThang), gioThang: Math.min(400, Math.round(numNonNeg(d.settings.gioCong.gioThang))) };
+  } else delete d.settings.gioCong;
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
     if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

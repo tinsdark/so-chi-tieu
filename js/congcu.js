@@ -1,6 +1,7 @@
 "use strict";
 /* ====================================================================
-   congcu.js — tab CÔNG CỤ (phím 5). Hiện có thẻ "Muốn mua" (gộp "Mua được không?" và danh sách món muốn mua).
+   congcu.js — tab CÔNG CỤ (phím 5): thẻ "Muốn mua" (gộp "Mua được không?" và danh sách món muốn mua), cộng thêm thẻ Giờ công (giocong.js)
+   và Lời hứa (loihua.js); 2 file đó phải load SAU file này.
    Cần state.js, ui.js, vayno.js, sotay.js, danhmuc.js, theongay.js load trước (dùng tnLichTien, tieuMoiNgay, mucTieuTienDo, dkCatOptions).
 
    MUỐN MUA. Hỏi "mua món này được không" TRƯỚC khi tiêu. Nhập tên + giá (+ trả góp) -> app chèn khoản chi đó vào lịch tiền
@@ -19,7 +20,7 @@
 var MM_SO_NGAY = 60;
 var MM_CHO_MAC_DINH = 7;
 state.cc = state.cc || { ten: '', gia: '', vi: '', thang: '', lai: '', giu: '', kq: false, xem: '' };
-state.ccForm = state.ccForm || null;      // bảng "Mua rồi": { id }
+state.ccForm = state.ccForm || null;      // bảng đang mở ở tab Công cụ: { loai: 'mm' (Mua rồi) | 'lh' (lời hứa), id }
 
 /* ---- tính toán thuần ---- */
 // tiền góp mỗi tháng (lãi dư nợ giảm dần, thang <= 1 = trả đủ một lần)
@@ -205,12 +206,13 @@ function mmCardHtml(){
 }
 function renderCongCu(){
   var root = document.getElementById('tabContent');
-  root.innerHTML = '<div class="dm-page"><div class="dm-grid">' + mmCardHtml() + '</div></div>';
+  root.innerHTML = '<div class="dm-page"><div class="dm-grid">' + mmCardHtml() + gcCardHtml() + lhCardHtml() + '</div></div>';
   ccSheetVe();
 }
 
 /* ---- bảng "Mua rồi" ---- */
 function ccSheetHtml(){
+  if (state.ccForm.loai === 'lh') return lhSheetHtml(state.ccForm.id);
   var m = (state.data.muonMua || []).filter(function(x){ return x.id === state.ccForm.id; })[0];
   if (!m) return '';
   var tienGhi = mmKeHoachTra(num(m.soTien), m.thang, m.lai, todayStr())[0].soTien;
@@ -224,7 +226,7 @@ function ccSheetHtml(){
 function ccSheetVe(){
   if (typeof document === 'undefined' || !document.body || !document.createElement) return;
   if (state.tab !== 'congcu' && state.ccForm) state.ccForm = null;
-  var root = document.getElementById('ccSheetRoot'), khoa = state.ccForm ? 'cc:' + state.ccForm.id : '';
+  var root = document.getElementById('ccSheetRoot'), khoa = state.ccForm ? 'cc:' + state.ccForm.loai + ':' + state.ccForm.id : '';
   if (root && root.getAttribute('data-key') === khoa) return;
   if (root && root.parentNode) root.parentNode.removeChild(root);
   if (!khoa){
@@ -247,7 +249,7 @@ function handleCongCuInput(el){
   if (!el || !el.id || el.id.indexOf('cc_') !== 0) return false;
   var map = { cc_ten: 'ten', cc_gia: 'gia', cc_vi: 'vi', cc_thang: 'thang', cc_lai: 'lai', cc_giu: 'giu' };
   if (map[el.id]){ state.cc[map[el.id]] = el.value; state.cc.kq = false; }
-  return false;       // không chặn các handler khác (định dạng ô tiền)
+  return handleGioCongInput(el);       // không chặn các handler khác (định dạng ô tiền)
 }
 function mmGhiNhanTuForm(){
   var f = mmDocForm();
@@ -291,11 +293,11 @@ function handleCongCuAction(act, el){
     toast('Đã xóa "' + xoa.ten + '".', { hoanTac: function(){ ds.splice(Math.min(xi, ds.length), 0, xoa); scheduleSave(); renderCongCu(); } });
   } else if (act === 'mmMuaRoi'){
     if (!tim(idOf())) return true;
-    state.ccForm = { id: idOf() }; ccSheetVe();
+    state.ccForm = { loai: 'mm', id: idOf() }; ccSheetVe();
   } else if (act === 'mmHuy'){
     state.ccForm = null; ccSheetVe();
   } else if (act === 'mmMuaLuu'){
-    var mm = tim(state.ccForm && state.ccForm.id); if (!mm) return true;
+    var mm = tim(state.ccForm && state.ccForm.loai === 'mm' && state.ccForm.id); if (!mm) return true;
     var tien = numNonNeg(docSo((document.getElementById('cc_m_tien') || {}).value));
     var ngay = (document.getElementById('cc_m_ngay') || {}).value || todayStr();
     var cat = ((document.getElementById('cc_m_cat') || {}).value || '').split('|');
@@ -317,7 +319,7 @@ function handleCongCuAction(act, el){
       mm.tt = 'cho'; mm.ngayXong = '';
       scheduleSave(); renderCongCu();
     } });
-  } else return false;
+  } else return handleGioCongAction(act, el) || handleLoiHuaAction(act, el);
   return true;
 }
 document.addEventListener('keydown', function(ev){
