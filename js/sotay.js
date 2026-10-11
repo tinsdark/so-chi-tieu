@@ -223,6 +223,8 @@ function qaDongSheet(){
    Chỉ ĐỌC dữ liệu, không ghi gì. Số liệu giống các thẻ bên dưới (hanMucThangRows, dinhKyDenHan,
    danhSachSapDenHan) nên không có con số thứ hai nào để lệch.
    ==================================================================== */
+// số tiền không đuôi ₫: 3 số hàng chục triệu nằm chung 1 hàng trên điện thoại thì tràn nếu còn ₫
+var soGon = function(v){ return fmt(Math.round(v)).replace(' ₫', ''); };
 function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   var laThangNay = (mk === monthKey(todayStr()));
   // THU CHI THẬT: thu nhập / chi tiêu thường xuyên, tách VAY NỢ ra dòng riêng (bdThang ở bieudo.js). tongThuTat / tongChiTat là
@@ -232,21 +234,21 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   var rows = hanMucThangRows(mk).filter(function(r){ return !r.coDinh; });      // khoản cố định không vào thanh hạn mức / chip vượt
   var tongDa = 0, tongCap = 0;
   rows.forEach(function(r){ tongDa += r.da; tongCap += r.cap; });
-  var chenh = tongThu - tongChi, tongLuong = tongThu + tongChi;
-  var phanThu = tongLuong > 0 ? Math.round(tongThu / tongLuong * 100) : 50;
+  var chenh = tongThu - tongChi;
   var h = '<div class="card hero">'
     + '<div class="hero-top"><div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+'</div>'+thangNavHtml(mk)+'</div>'
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
     + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(daysInMonth(mk) - parseInt(todayStr().slice(8, 10), 10))+' ngày' : '')+'</div>'
-    // thanh chia theo tỷ lệ thu : chi của tháng, để nhìn một cái biết tháng này thu hay chi nhiều hơn
-    + '<div class="hero-flow" aria-hidden="true"><i class="thu" style="flex:'+phanThu+'"></i><i class="chi" style="flex:'+(100 - phanThu)+'"></i></div>'
+    // số dư từng ví ngay dưới số dư tổng: mở app là thấy, không phải cuộn
+    + viTheHtml(mk, beforeLock)
+    // thu nhập / chi tiêu / dư thật chung 1 hàng
     + '<div class="hero-nums">'
-    +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
-    +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+soGon(tongThu)+'</div></div>'
+    +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+soGon(tongChi)+'</div></div>'
+    +   '<div><div class="l">Dư thật</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
     + '</div>'
-    // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
-    + '<div class="hero-cl"><span>Dư thật</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
+  if (laThangNay && !beforeLock) h += tieuMoiNgayHtml(todayStr());
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
@@ -256,7 +258,6 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
-  if (laThangNay && !beforeLock) h += tieuMoiNgayHtml(todayStr());
   h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay);
   var nDk = dinhKyDenHan(todayStr()).length;
@@ -448,7 +449,6 @@ function renderSoTay(){
 
   // Sổ tay chỉ giữ việc hằng ngày: tổng quan -> ghi nhanh -> việc cần làm -> danh sách giao dịch.
   // Hạn mức, mục tiêu, biểu đồ nằm ở tab Báo cáo (renderBaoCao, bieudo.js).
-  html += viTheHtml(mk, beforeLock);
   html += viSoDuCardHtml(mk);
   html += dinhKyDenHanHtml();
 
@@ -970,14 +970,11 @@ function tieuMoiNgayHtml(homNay){
   var vuotNgay = !t.het && t.honNayCon < 0;
   var nhan = t.het ? 'Hạn mức tiêu hằng ngày đã hết' : (vuotNgay ? 'Hôm nay đã vượt mức' : 'Hôm nay còn tiêu được');
   var so = t.het ? (t.vuot > 0 ? 'vượt ' + fmt(Math.round(t.vuot)) : fmt(0)) : fmt(Math.round(Math.abs(t.honNayCon)));
-  var h = '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span><span>'+so+'</span></div>'
-    + '<div class="hero-bud-sub">' + (t.het ? '' : 'Mức '+fmt(Math.round(t.muc))+'/ngày · ') + 'còn '+t.soNgay+' ngày (tính cả hôm nay) · hôm nay đã tiêu '+fmt(Math.round(t.daHomNay))+'</div>';
-  if (t.coDinhCon > 0){
-    h += '<div class="hero-bud-sub">Khoản cố định còn phải ra '+fmt(Math.round(t.coDinhCon))+' ('
-      + t.coDinh.slice(0, 3).map(function(x){ return esc(x.ten); }).join(', ') + (t.coDinh.length > 3 ? '...' : '')
-      + ') — không tính vào mức trên</div>';
-  }
-  return h + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>';
+  var phu = (t.het ? '' : 'Mức '+fmt(Math.round(t.muc))+'/ngày · ') + 'còn '+t.soNgay+' ngày'
+    + (t.coDinhCon > 0 ? ' · cố định còn phải ra <b>'+fmt(Math.round(t.coDinhCon))+'</b>' : '');
+  return '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span>'
+    + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>'
+    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div></div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);

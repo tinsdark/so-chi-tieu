@@ -349,15 +349,10 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .hero .month-nav select{border:none;background:none;font-size:14px;padding:5px 2px;min-width:0;cursor:pointer}
 .hero-val{font-size:38px;font-weight:800;line-height:1.15;margin:2px 0;font-variant-numeric:tabular-nums;letter-spacing:-.6px}
 .hero-sub{font-size:12px;color:var(--muted)}
-.hero-flow{display:flex;gap:4px;height:7px;margin:14px 0 10px}
-.hero-flow>i{display:block;min-width:6px;border-radius:99px}
-.hero-flow>i.thu{background:var(--thu-solid)} .hero-flow>i.chi{background:var(--chi-solid)}
-.hero-nums{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+.hero-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 .hero-nums .l{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
-.hero-nums .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hero-cl{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
-.hero-cl b{font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hero-cl b.duong{color:var(--green)} .hero-cl b.am{color:var(--red)}
+.hero-nums .v.duong{color:var(--green)} .hero-nums .v.am{color:var(--red)}
+.hero-nums .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hero-nums .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .hero-nums .dot.thu{background:var(--thu-solid)} .hero-nums .dot.chi{background:var(--chi-solid)}
 .hero-bud{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
@@ -367,6 +362,11 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
 .hero-bar>i.warn{background:var(--amber)}
 .hero-bar>i.over{background:var(--red)}
 .hero-bud-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.hero-bud-sub b{color:var(--text)}
+.hero-day-so{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.hero-day .hero-link{margin-top:0}
+.hero-day+.hero-bud{margin-top:8px;padding-top:0;border-top:0}
+.hero .vi-sec{margin:12px 0 0}
 .hero-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .hero-chip{background:var(--hover);border:1px solid var(--border);color:var(--primary-d);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600}
 .hero-ok{font-size:12px;color:var(--muted);margin-top:12px}
