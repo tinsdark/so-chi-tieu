@@ -107,8 +107,8 @@ function ghiNhanhHtml(){
     + '<div class="qa-head"><h3>Ghi khoản mới</h3><button type="button" class="qa-x" data-act="qaDong" aria-label="Đóng">'+icon('x')+'</button></div>'
     + '<div class="qa-body">'
     + '<div class="qa-seg" role="group" aria-label="Loại giao dịch">'
-    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-up')+' Khoản chi</button>'
-    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-down')+' Khoản thu</button>'
+    +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-down')+' Khoản chi</button>'
+    +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-up')+' Khoản thu</button>'
     + '</div>'
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'">'
     // phím nhanh: điện thoại bàn phím số không có + / 000
@@ -471,7 +471,7 @@ function renderSoTay(){
   html += '</div>';
   // THU và CHI là 2 khối riêng (màu + viền + tiêu đề), nhưng vẫn CÙNG 1 form / 1 nút Lưu:
   // saveEntry là đường lưu duy nhất, tách thành 2 form là dựng đường lưu thứ hai.
-  html += '<div class="form-sec thu"><div class="form-sec-head">'+icon('arrow-down')+' Khoản thu</div>';
+  html += '<div class="form-sec thu"><div class="form-sec-head">'+icon('arrow-up')+' Khoản thu</div>';
   html += '<div class="form-row">';
   if (!thuCats.length){
     html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
@@ -495,7 +495,7 @@ function renderSoTay(){
     html += '</div>';
   });
   html += '</div></div>';     // đóng form-row + khối THU
-  html += '<div class="form-sec chi"><div class="form-sec-head">'+icon('arrow-up')+' Khoản chi</div>';
+  html += '<div class="form-sec chi"><div class="form-sec-head">'+icon('arrow-down')+' Khoản chi</div>';
   html += '<div class="form-row">';
   if (!cats.length){
     html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
@@ -736,8 +736,8 @@ function locTongKetHtml(displayDates, hasRange, mk){
 function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
   var h = '<div class="dl"><div class="dl-bar"><h3>Chi tiết theo ngày</h3><div class="dl-tools">'
     + '<button type="button" class="icon-btn'+((state.soTayLocMo || filterActive) ? ' on' : '')+'" data-act="stLocMo" title="Tìm kiếm và lọc" aria-label="Tìm kiếm và lọc" aria-expanded="'+!!(state.soTayLocMo || filterActive)+'">'+icon('search')+'</button>'
-    + '<button type="button" class="icon-btn" data-act="exportExcel" title="Xuất Excel" aria-label="Xuất Excel">'+icon('download')+'</button>'
-    + '<button type="button" class="icon-btn" data-act="impMo" title="Nhập từ file" aria-label="Nhập từ file">'+icon('upload')+'</button>'
+    + '<button type="button" class="icon-btn" data-act="exportExcel" title="Xuất Excel" aria-label="Xuất Excel">'+icon('upload')+'</button>'
+    + '<button type="button" class="icon-btn" data-act="impMo" title="Nhập từ file" aria-label="Nhập từ file">'+icon('download')+'</button>'
     + '</div></div>';
   if (state.soTayLocMo || filterActive){
     h += '<div class="search-row">'
