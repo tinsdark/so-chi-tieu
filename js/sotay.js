@@ -808,7 +808,7 @@ function dinhKyDenHanHtml(){
       + '<div class="dk-main"><div class="dk-ten">'+esc(k.ten)
         + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(k)))+'</span>' : '') + '</div>'
         + '<div class="dk-sub">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · hạn '+ngayVN(x.han).slice(0, 5)+'</div></div>'
-      + '<div class="dk-tien" style="color:var(--'+(k.kind === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(k.soTien))+'</div>'
+      + '<input type="text" inputmode="numeric" autocomplete="off" class="money dk-in '+k.kind+'" id="dk_tien_'+esc(k.id)+'" value="'+fmt(Math.round(k.soTien)).replace(/[^\d.]/g, '')+'" aria-label="Số tiền thật của kỳ này (đang điền sẵn số mẫu)">'
       + '<div class="dk-btn"><button class="btn sm" data-act="dkGhi" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'">Ghi vào Sổ tay</button>'
       + '<button class="btn secondary sm" data-act="dkBo" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'" title="Không ghi khoản này trong tháng này">Bỏ qua</button></div>'
       + '</div>';
@@ -1444,9 +1444,13 @@ function handleSoTayAction(act, el){
       } });
       return true;
     }
-    // ví sắp âm / vượt lời hứa thì hỏi như Ghi nhanh (số tiền cố định nên bỏ luật "bất thường")
-    if (chayNeuDongY(canhBaoKhoan({ kind: dkS.kind, catId: dkS.catId, tien: dkS.soTien, ngay: ngayTraCuaKy(dkMk, dkS.ngay), ghiChu: dkS.ghiChu || dkS.ten, viId: viCuaItem(dkS), batThuong: false }), act, el, handleSoTayAction)) return true;
-    var kq = dinhKyGhi(dkS, dkMk, todayStr());
+    // số tiền mẫu chỉ là gợi ý: ghi theo số trong ô (người dùng sửa được), không đổi mẫu
+    var dkTien = numNonNeg(docSo((document.getElementById('dk_tien_' + dkS.id) || {}).value));
+    if (!(dkTien > 0)) dkTien = dkS.soTien;
+    if (dkTien <= 0){ toast('Nhập số tiền lớn hơn 0.', { loai:'warn' }); return true; }
+    // ví sắp âm / vượt lời hứa thì hỏi như Ghi nhanh (người dùng tự gõ số tiền nên giữ luật "bất thường" tắt như cũ: số mẫu to là bình thường)
+    if (chayNeuDongY(canhBaoKhoan({ kind: dkS.kind, catId: dkS.catId, tien: dkTien, ngay: ngayTraCuaKy(dkMk, dkS.ngay), ghiChu: dkS.ghiChu || dkS.ten, viId: viCuaItem(dkS), batThuong: false }), act, el, handleSoTayAction)) return true;
+    var kq = dinhKyGhi(dkS, dkMk, todayStr(), dkTien);
     if (!kq){ toast('Không ghi được khoản này (kiểm tra danh mục / số tiền).', { loai:'err' }); return true; }
     scheduleSave();
     renderSoTay();

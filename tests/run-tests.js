@@ -1052,6 +1052,18 @@ test('dinhKyGhi: tạo đúng dòng, mang dkId, cộng đúng tiền, hết nh�
   eq(ctx.dinhKyDenHan('2026-11-06').filter(function(x){ return x.dk.id === 'k1'; }).length, 1, 'tháng sau nhắc lại');
 });
 
+test('dinhKyGhi: số tiền thật của kỳ này (nếu khác mẫu) được ghi, mẫu không đổi; thẻ Sổ tay có ô điền sẵn số mẫu', function(){
+  loadData(dataDinhKy());
+  var dk = ctx.state.data.dinhKy[0];
+  setToday('2026-10-07');
+  var o = ctx.dinhKyDenHanHtml();
+  ok(o.indexOf('id="dk_tien_k1"') > 0 && o.indexOf('value="10.000.000"') > 0, 'ô tiền điền sẵn số mẫu');
+  var r = ctx.dinhKyGhi(dk, '2026-10', '2026-10-07', 9400000);
+  var e = ctx.state.data.journal[r.date];
+  eq(e.thu.luong, 9400000, 'ghi đúng số thật'); ok(e.ghiChu.indexOf('9.400.000') > 0, 'ghi chú ngày mang số thật');
+  eq(dk.soTien, 10000000, 'số tiền mẫu giữ nguyên');
+  setToday('2026-10-01');
+});
 test('dinhKyGhi: ngày đến hạn trước mốc khóa sổ thì ghi vào hôm nay', function(){
   var d = dataDinhKy(); d.settings.ngayBatDau = '2026-10-10';
   loadData(d);
@@ -1335,6 +1347,16 @@ function voiDom(els, lists, fn){
   ctx.document.querySelectorAll = function(sel){ return (lists && lists[sel]) || []; };
   try{ return fn(); } finally { ctx.document.getElementById = g0; ctx.document.querySelectorAll = q0; }
 }
+test('Định kỳ: bấm "Ghi vào Sổ tay" lấy số tiền trong ô (sửa được), ô trống / 0 thì dùng số mẫu', function(){
+  loadData(dataDinhKy()); setToday('2026-10-07');
+  var dk = ctx.state.data.dinhKy[0], el = function(){ return elAct({ 'data-id': 'k1', 'data-mk': '2026-10' }); };
+  voiDom({ dk_tien_k1: { value: '9.400.000' } }, {}, function(){ ctx.handleSoTayAction('dkGhi', el()); });
+  eq(ctx.state.data.journal['2026-10-05'].thu.luong, 9400000, 'ghi theo số trong ô'); eq(dk.soTien, 10000000, 'mẫu không đổi');
+  ctx.dinhKyHoanTac({ date: '2026-10-05', iid: ctx.entryItems(ctx.state.data.journal['2026-10-05'])[0].iid, note: ctx.state.data.journal['2026-10-05'].ghiChu });
+  voiDom({ dk_tien_k1: { value: '' } }, {}, function(){ ctx.handleSoTayAction('dkGhi', el()); });
+  eq(ctx.state.data.journal['2026-10-05'].thu.luong, 10000000, 'ô trống thì dùng số mẫu');
+  setToday('2026-10-01');
+});
 function oNhap(cat, value, lock){
   return { value: value, getAttribute: function(a){ return a === 'data-cat' ? cat : (a === 'data-lock' ? String(lock || 0) : null); } };
 }
@@ -4802,6 +4824,18 @@ test('chuông: mở chuông KHÔNG làm số giảm; bấm vào mục mới gi�
   ok(ctx.cbDongHtml(ds[0], 0).indexOf('cb-r xem') > 0, 'hiển thị mờ hơn');
   ok(Object.keys(ctx.state.data.settings.thongBaoXem).length === 1, 'lưu vào settings.thongBaoXem (đi lên Drive)');
   ctx.chuyenTab = cu; setToday('2026-10-01');
+});
+test('chuông: khoản vừa là danh mục có ngày vừa là định kỳ cùng ngày thì chỉ nhắc MỘT lần khi đến hạn', function(){
+  hanData(0, 20);
+  var d = ctx.state.data;
+  d.dinhKy = [{ id: 'dkNha', ten: 'Tiền nhà', kind: 'chi', catId: 'nha', soTien: 1400000, ngay: 20, bat: true, bo: [] },
+              { id: 'dkDien', ten: 'Tiền điện nước', kind: 'chi', catId: 'nha', soTien: 554000, ngay: 11, bat: true, bo: [] }];
+  var dem = function(h){ return ctx.cbTatCa(h).filter(function(x){ return x.loai === 'dk' || x.loai === 'cat'; }).map(function(x){ return x.loai + ':' + x.tieu; }); };
+  eq(dem('2026-10-15').join(','), 'dk:Tiền điện nước,cat:Tiền nhà', 'trước hạn: Tiền nhà chỉ có lời nhắc sớm của danh mục (định kỳ ngày 20 chưa đến); điện nước ngày 11 đã đến hạn');
+  eq(dem('2026-10-20').join(','), 'dk:Tiền điện nước,dk:Tiền nhà', 'đến hạn: định kỳ thay thế, KHÔNG còn nhắc lần hai từ danh mục; "điện nước" cùng danh mục nhưng ngày 11 vẫn nhắc riêng');
+  d.dinhKy[0].bo = ['2026-10']; d.dinhKy[1].bo = ['2026-10'];
+  eq(dem('2026-10-20').join(','), 'cat:Tiền nhà', 'định kỳ đã bỏ qua tháng này thì danh mục nhắc lại như cũ (không mất lời nhắc)');
+  setToday('2026-10-01');
 });
 test('chuông: sắp đến hạn -> đến hạn là THÔNG BÁO MỚI (số đỏ tăng lại); xong thì mất khỏi chuông', function(){
   setToday('2026-10-14'); hanData(20, 0);

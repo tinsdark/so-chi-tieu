@@ -49,7 +49,11 @@ function cbTatCa(homNay){
            tien: fmt(Math.round(x.dk.soTien)), dich: { loai: 'dk' } });
   });
   // 2. khoản thu / chi theo ngày của danh mục
+  // cùng một khoản (cùng loại, danh mục và ngày hạn) đã có thông báo định kỳ ở trên thì không nhắc lần hai: định kỳ có số tiền và nút Ghi nên giữ cái đó
+  var daCoDk = {};
+  dinhKyDenHan(homNay).forEach(function(x){ daCoDk[x.dk.kind + '|' + x.dk.catId + '|' + x.han] = 1; });
   dsCatSapDenHan(undefined, homNay).forEach(function(x){
+    if (daCoDk[x.kind + '|' + x.id + '|' + x.han]) return;
     var g = giaiDoan(x.han);
     them({ loai: 'cat', key: 'cat:' + x.kind + ':' + x.id + ':' + x.mk + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.han, tieu: x.ten,
            phu: (x.kind === 'thu' ? 'Thu' : 'Chi') + ' · ' + cbNhan(x.soNgay) + ' (hạn ' + ngayNganVN(x.han) + ')', dich: { loai: 'cat', kind: x.kind, id: x.id, mk: x.mk }, coXong: true });
