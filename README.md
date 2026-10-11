@@ -103,7 +103,7 @@ js/
   danhmuc.js        Tab Cài đặt: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
   dongtien.js       Tab Dòng tiền (Theo tháng) + thanh chọn 3 chế độ
   theongay.js       Dòng tiền · Theo ngày: hôm nay, từng ngày tháng này, tiền 30 ngày tới
-  congcu.js         Tab Công cụ (phím 5): thẻ Muốn mua / Mua được không + bảng trượt dùng chung
+  congcu.js         Tab Công cụ (phím 5): màn tổng hợp, Muốn mua / Mua được không, bảng trượt dùng chung
   giocong.js        Giờ công (trang trong tab Công cụ): đổi tiền ra giờ đi làm
   loihua.js         Lời hứa (trang trong tab Công cụ) + nhắc khi khoản chi làm vượt lời hứa
   somung.js         Sổ mừng và quà (trang trong tab Công cụ)
