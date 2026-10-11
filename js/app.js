@@ -50,21 +50,10 @@ function renderAll(){
   qaSheetVe();                       // rời tab Sổ tay thì bảng ghi khoản tự đóng
   mpSheetVe();                       // rời Mô phỏng thì bảng thêm điều chỉnh tự đóng
   vnSheetVe();                       // rời Vay - Nợ thì form thêm/sửa khoản vay tự đóng
-  nhacHanSheetVe();                  // rời Sổ tay thì bảng sắp đến hạn tự đóng
   ccSheetVe();                       // rời Công cụ thì bảng "Mua rồi" tự đóng
   dmSheetVe();                       // rời Cài đặt thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
-  renderVayNoBadge();
-  renderSoTayBadge();
+  cbCapNhatNut();                    // số đỏ trên chuông thông báo
   updateStickyOffsets();
-}
-
-// badge số trên tab nav "Vay - Nợ": đếm khoản sắp/đã tới hạn, thấy được dù đang ở tab khác
-function renderVayNoBadge(){
-  var el = document.getElementById('vnBadge');
-  if (!el) return;
-  var n = (state.data && state.data.vayNo) ? vnBadgeCount(7) : 0;
-  if (n > 0){ el.textContent = n; el.style.display = 'inline-block'; }
-  else { el.style.display = 'none'; }
 }
 
 function updateStickyOffsets(){
@@ -98,7 +87,7 @@ document.addEventListener('click', function(ev){
     // <a href="#"> mà không chặn mặc định thì trình duyệt nhảy về "#" = kéo lên đầu trang
     if (t.tagName === 'A') ev.preventDefault();
     handleAction(act, t, ev);
-    renderSoTayBadge();            // đổi ngày nhắc ở danh mục / bấm Hoàn thành / ghi giao dịch: số trên tab Sổ tay theo kịp
+    cbCapNhatNut();                // ghi giao dịch / hoàn thành / thanh toán: số đỏ trên chuông theo kịp
     return;
   }
   var tabBtn = ev.target.closest('.tab');
@@ -227,7 +216,7 @@ function handleAction(act, el){
   if (handleSoTayAction(act, el)) return;
   if (handleNhapAction(act, el)) return;
   if (handleNhanAction(act, el)) return;
-  if (handleNhacHanAction(act, el)) return;
+  if (handleChuongAction(act, el)) return;
   if (handleLichAction(act, el)) return;
   if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;

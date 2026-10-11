@@ -68,7 +68,6 @@ var state = {
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
-  hanMo: false,           // bảng "Sắp đến hạn" (nhắc thu/chi theo ngày của danh mục) đang mở
   nguoiMo: null,          // tab Vay - Nợ: khóa người đang mở ở thẻ "Sổ nợ theo đối tượng"
   nhanMo: null,           // tab Báo cáo: khóa nhãn đang mở ở thẻ "Theo nhãn" (null = gấp hết)
   hmMoHet: false,         // tab Báo cáo: mở hết nhóm "Ổn" ở thẻ Hạn mức (mặc định chỉ hiện 3)
@@ -743,6 +742,12 @@ function normalizeData(d){
     x.tt = (x.tt === 'het' && reNgay.test(x.ngayHet || '')) ? 'het' : 'dung';
     if (x.tt === 'het'){ x.giaBan = numNonNeg(x.giaBan); } else { x.ngayHet = ''; x.giaBan = 0; }
   });
+  // thông báo đã xem (chuong.js): { khóa: 'YYYY-MM-DD' }, bỏ giá trị hỏng
+  if (d.settings.thongBaoXem && typeof d.settings.thongBaoXem === 'object' && !Array.isArray(d.settings.thongBaoXem)){
+    var xem = {};
+    Object.keys(d.settings.thongBaoXem).forEach(function(k){ if (/^\d{4}-\d{2}-\d{2}$/.test(d.settings.thongBaoXem[k] || '')) xem[k] = d.settings.thongBaoXem[k]; });
+    d.settings.thongBaoXem = xem;
+  } else delete d.settings.thongBaoXem;
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
     if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

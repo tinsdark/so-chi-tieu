@@ -260,22 +260,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   }
   h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay);
-  var nDk = dinhKyDenHan(todayStr()).length;
-  var nVn = danhSachSapDenHan(7).length;
-  var nHan = dsCatSapDenHan().length;
-  var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var nThe = theSapDenHan().length, mkTk = tkGoiY(), viThieu = laThangNay ? tnViSapThieu(todayStr(), TN_SO_NGAY) : [];
-  var chips = '';
-  if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
-  if (nHan) chips += '<button type="button" class="hero-chip" data-act="hanMo">'+icon('clock')+' '+nHan+' khoản thu/chi sắp đến hạn</button>';
-  if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
-  if (mkTk && laThangNay) chips += '<button type="button" class="hero-chip" data-act="goTongKet" data-mk="'+mkTk+'">'+icon('pie')+' Tổng kết tháng '+parseInt(mkTk.slice(5, 7), 10)+' <span aria-hidden="true">›</span></button>';
-  viThieu.slice(0, 2).forEach(function(x){
-    chips += '<button type="button" class="hero-chip" data-act="goViThieu" data-id="'+esc(x.w.id)+'">'+icon('alert')+' Ví '+esc(x.w.ten)+' có thể thiếu tiền từ '+ngayNganVN(x.L.am.ngay)+'</button>';
-  });
-  if (nThe) chips += '<button type="button" class="hero-chip" data-act="goDanhMuc">'+icon('clock')+' '+nThe+' thẻ sắp đến hạn thanh toán</button>';
-  if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
-  h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
+  // lời nhắc (định kỳ, thu/chi theo ngày, vay/nợ, thẻ, ví thiếu tiền, vượt hạn mức, tổng kết tháng) nằm ở CHUÔNG ở header (chuong.js)
   return h + '</div>';
 }
 
