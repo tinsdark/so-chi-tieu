@@ -504,6 +504,10 @@ var ICON_PATHS = {
   'book': "<path d=\"M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5z\"/><path d=\"M5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3\"/><path d=\"M9 7h6\"/>",
   'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
   'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
+  'cart': "<circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/>",
+  'flag': "<path d=\"M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z\"/><path d=\"M4 22v-7\"/>",
+  'gift': "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13\"/><path d=\"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\"/><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5\"/>",
+  'package': "<path d=\"M7.5 4.3l9 5.2\"/><path d=\"M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z\"/><path d=\"M3.3 7L12 12l8.7-5\"/><path d=\"M12 22V12\"/>",
   'wrench': "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>",
   'sliders': "<path d=\"M4 7h9\"/><path d=\"M17 7h3\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><path d=\"M4 17h3\"/><path d=\"M11 17h9\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
   'backspace': "<path d=\"M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z\"/><path d=\"M13 9.5l5 5\"/><path d=\"M18 9.5l-5 5\"/>",
@@ -717,6 +721,28 @@ function normalizeData(d){
   if (d.settings.gioCong && typeof d.settings.gioCong === 'object'){
     d.settings.gioCong = { thuNhapThang: numNonNeg(d.settings.gioCong.thuNhapThang), gioThang: Math.min(400, Math.round(numNonNeg(d.settings.gioCong.gioThang))) };
   } else delete d.settings.gioCong;
+  // sổ mừng và quà (somung.js), sổ đồ đạc (dodac.js): bỏ dòng hỏng, ép kiểu
+  d.quaTang = (Array.isArray(d.quaTang) ? d.quaTang : []).filter(function(q){ return q && String(q.nguoi || '').trim() && num(q.soTien) > 0 && reNgay.test(q.ngay || ''); });
+  d.quaTang.forEach(function(q){
+    if (!q.id) q.id = 'qt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    q.nguoi = String(q.nguoi).replace(/\s+/g, ' ').trim().slice(0, 60); q.soTien = num(q.soTien);
+    q.chieu = q.chieu === 'nhan' ? 'nhan' : 'cho';
+    // dịp từng là khóa cố định (cuoi / hieu / sinhnhat / tet / khac): đổi sang chữ; giờ là ô tự gõ
+    var dipCu = { cuoi: 'Cưới', hieu: 'Hiếu', sinhnhat: 'Sinh nhật', tet: 'Tết / mừng tuổi', khac: '' };
+    q.dip = Object.prototype.hasOwnProperty.call(dipCu, q.dip) ? dipCu[q.dip] : String(q.dip || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    q.ghiChu = String(q.ghiChu || '').slice(0, 120); q.ghiSo = /^\d{4}-\d{2}-\d{2}\|.+/.test(q.ghiSo || '') ? q.ghiSo : '';
+  });
+  d.doDac = (Array.isArray(d.doDac) ? d.doDac : []).filter(function(x){ return x && String(x.ten || '').trim() && num(x.gia) > 0; });
+  d.doDac.forEach(function(x){
+    if (!x.id) x.id = 'dd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    x.ten = String(x.ten).trim().slice(0, 80); x.gia = num(x.gia);
+    if (!reNgay.test(x.ngayMua || '')) x.ngayMua = todayStr();
+    x.soNam = (num(x.soNam) > 0 && num(x.soNam) <= 50) ? num(x.soNam) : 3;
+    x.baoHanhDen = reNgay.test(x.baoHanhDen || '') ? x.baoHanhDen : '';
+    x.ghiChu = String(x.ghiChu || '').slice(0, 120);
+    x.tt = (x.tt === 'het' && reNgay.test(x.ngayHet || '')) ? 'het' : 'dung';
+    if (x.tt === 'het'){ x.giaBan = numNonNeg(x.giaBan); } else { x.ngayHet = ''; x.giaBan = 0; }
+  });
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
     if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

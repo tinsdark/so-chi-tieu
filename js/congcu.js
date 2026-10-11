@@ -20,6 +20,7 @@
 var MM_SO_NGAY = 60;
 var MM_CHO_MAC_DINH = 7;
 state.cc = state.cc || { ten: '', gia: '', vi: '', thang: '', lai: '', giu: '', kq: false, xem: '' };
+state.ccTrang = state.ccTrang || '';      // '' = màn tổng hợp, còn lại là khóa của trang đang mở (xem CC_TRANG)
 state.ccForm = state.ccForm || null;      // bảng đang mở ở tab Công cụ: { loai: 'mm' (Mua rồi) | 'lh' (lời hứa), id }
 
 /* ---- tính toán thuần ---- */
@@ -165,8 +166,8 @@ function mmFormHtml(){
     + vnF('Món định mua', '<input type="text" id="cc_ten" value="' + esc(c.ten) + '" placeholder="VD: Điện thoại">')
     + '<div class="vn-2">' + vnF('Giá', dmMoney('cc_gia', c.gia))
     + (nhieuVi ? vnF('Trả từ ví', '<select id="cc_vi">' + viOptionsHtml(c.vi || viMacDinhId()) + '</select>') : '') + '</div>'
-    + '<div class="vn-2">' + vnF('Trả góp <span class="mp-hint">(số tháng, bỏ trống = trả đủ)</span>', '<input type="number" id="cc_thang" min="0" inputmode="numeric" value="' + esc(c.thang) + '" placeholder="0">')
-    + vnF('Lãi %/năm <span class="mp-hint">(góp 0% = 0)</span>', '<input type="number" id="cc_lai" min="0" step="0.1" inputmode="decimal" value="' + esc(c.lai) + '" placeholder="0">') + '</div>'
+    + '<div class="vn-2">' + vnF('Trả góp (tháng)', '<input type="number" id="cc_thang" min="0" inputmode="numeric" value="' + esc(c.thang) + '" placeholder="Bỏ trống = trả đủ">')
+    + vnF('Lãi %/năm', '<input type="number" id="cc_lai" min="0" step="0.1" inputmode="decimal" value="' + esc(c.lai) + '" placeholder="0 = góp 0%">') + '</div>'
     + vnF('Muốn giữ lại tối thiểu <span class="mp-hint">(không để số dư xuống dưới)</span>', dmMoney('cc_giu', c.giu))
     + '<div class="cc-btns"><button type="button" class="btn" data-act="mmKiemTra">Kiểm tra</button>'
     + (c.kq ? '<button type="button" class="btn secondary" data-act="mmLuu">Lưu vào danh sách</button>' : '') + '</div></div>';
@@ -204,15 +205,55 @@ function mmCardHtml(){
   return h + ghiChuGon('Kết luận dựa trên SỐ DƯ: lịch tiền ' + MM_SO_NGAY + ' ngày tới của tổng các ví (lương, trả nợ, khoản cố định, chi hằng ngày theo mức) trừ khoản mua. '
     + 'Món lưu lại sẽ tự tính lại mỗi lần mở tab. App không ghi gì vào Sổ tay cho tới khi bạn bấm "Mua rồi". Dự báo xa hơn 30 ngày kém chắc hơn.', 'Tính thế nào?') + '</div>';
 }
+/* ---- màn tổng hợp: mỗi công cụ / sổ một ô có dòng trạng thái, bấm vào mở trang riêng ---- */
+var CC_TRANG = [
+  { key: 'muonmua', nhom: 'Quyết định', ten: 'Muốn mua', icon: 'cart', tomTat: function(){ return mmTomTat(); }, trang: function(){ return mmCardHtml(); } },
+  { key: 'giocong', nhom: 'Quyết định', ten: 'Giờ công', icon: 'clock', tomTat: function(){ return gcTomTat(); }, trang: function(){ return gcCardHtml(); } },
+  { key: 'loihua', nhom: 'Quyết định', ten: 'Lời hứa', icon: 'flag', tomTat: function(){ return lhTomTat(); }, trang: function(){ return lhCardHtml(); } },
+  { key: 'sommung', nhom: 'Sổ', ten: 'Sổ mừng và quà', icon: 'gift', tomTat: function(){ return smTomTat(); }, trang: function(){ return smPageHtml(); } },
+  { key: 'dodac', nhom: 'Sổ', ten: 'Sổ đồ đạc', icon: 'package', tomTat: function(){ return ddTomTat(); }, trang: function(){ return ddPageHtml(); } }
+];
+function ccHubHtml(){
+  var h = '<div class="dm-page">', nhom = '';
+  CC_TRANG.forEach(function(t){
+    if (t.nhom !== nhom){ if (nhom) h += '</div>'; nhom = t.nhom; h += dmSec(nhom) + '<div class="card dm-card cc-hub">'; }
+    var s = t.tomTat();
+    h += '<button type="button" class="cc-tile" data-act="ccMo" data-trang="' + t.key + '"><span class="cc-tile-i">' + icon(t.icon) + '</span>'
+      + '<span class="cc-tile-b"><b>' + t.ten + '</b><small' + (s.canh ? ' class="canh"' : '') + '>' + esc(s.chu) + '</small></span>' + dmGo() + '</button>';
+  });
+  return h + '</div></div>';
+}
 function renderCongCu(){
   var root = document.getElementById('tabContent');
-  root.innerHTML = '<div class="dm-page"><div class="dm-grid">' + mmCardHtml() + gcCardHtml() + lhCardHtml() + '</div></div>';
+  var t = CC_TRANG.filter(function(x){ return x.key === state.ccTrang; })[0];
+  if (!t){ state.ccTrang = ''; root.innerHTML = ccHubHtml(); }
+  else root.innerHTML = '<div class="dm-page"><button type="button" class="cc-back" data-act="ccVe">' + icon('chev', 'cc-back-i') + ' Công cụ</button><div class="dm-grid">' + t.trang() + '</div></div>';
   ccSheetVe();
+}
+// dòng trạng thái của ô trên màn tổng hợp: { chu, canh (true = cần chú ý) }
+function mmTomTat(){
+  var hom = todayStr(), ds = (state.data.muonMua || []).filter(function(m){ return m.tt === 'cho'; });
+  if (!ds.length) return { chu: 'Hỏi trước khi tiêu: mua được chưa, khi nào an toàn' };
+  var den = ds.filter(function(m){ return mmDenHanCho(m, hom); }).length;
+  return { chu: ds.length + ' món đang chờ' + (den ? ' · ' + den + ' món đủ thời gian chờ, hỏi lại' : ''), canh: den > 0 };
+}
+function gcTomTat(){
+  var c = gcCauHinh(todayStr());
+  return c.giaGio > 0 ? { chu: '1 giờ làm việc ≈ ' + fmt(Math.round(c.giaGio)) } : { chu: 'Chưa có thu nhập để quy đổi' };
+}
+function lhTomTat(){
+  var hom = todayStr(), ds = state.data.loiHua || [];
+  if (!ds.length) return { chu: 'Tự hứa với mình có thời hạn' };
+  var t = ds.map(function(h){ return lhTrangThai(h, hom).trang; });
+  var dang = t.filter(function(x){ return x === 'dang'; }).length, pha = t.filter(function(x){ return x === 'pha'; }).length;
+  return { chu: (dang ? dang + ' đang giữ' : 'Không có lời hứa đang chạy') + (pha ? ' · ' + pha + ' đã phá' : ''), canh: pha > 0 && dang === 0 };
 }
 
 /* ---- bảng "Mua rồi" ---- */
 function ccSheetHtml(){
   if (state.ccForm.loai === 'lh') return lhSheetHtml(state.ccForm.id);
+  if (state.ccForm.loai === 'sm') return smSheetHtml(state.ccForm.id);
+  if (state.ccForm.loai === 'dd') return ddSheetHtml(state.ccForm.id);
   var m = (state.data.muonMua || []).filter(function(x){ return x.id === state.ccForm.id; })[0];
   if (!m) return '';
   var tienGhi = mmKeHoachTra(num(m.soTien), m.thang, m.lai, todayStr())[0].soTien;
@@ -220,7 +261,10 @@ function ccSheetHtml(){
     + vnF('Ngày', '<input type="date" id="cc_m_ngay" value="' + todayStr() + '">')
     + vnF('Danh mục chi', '<select id="cc_m_cat">' + dkCatOptions('chi', '') + '</select>')
     + ((state.data.wallets || []).length > 1 ? vnF('Ví', '<select id="cc_m_vi">' + viOptionsHtml(m.viId || viMacDinhId()) + '</select>') : '')
-    + vnF('Ghi chú', '<input type="text" id="cc_m_note" value="' + esc(m.ten) + '">');
+    + vnF('Ghi chú', '<input type="text" id="cc_m_note" value="' + esc(m.ten) + '">')
+    + dmToggle('cc_m_dodac', 'Thêm vào Sổ đồ đạc', 'Theo dõi chi phí mỗi ngày dùng và hạn bảo hành của món này.', false)
+    + '<div class="vn-2">' + vnF('Dùng (năm)', '<input type="number" id="cc_m_nam" min="0.1" max="50" step="0.5" inputmode="decimal" placeholder="' + DD_NAM_MAC_DINH + '">')
+    + vnF('Bảo hành (tháng)', '<input type="number" id="cc_m_bh" min="0" max="120" inputmode="numeric" placeholder="0">') + '</div>';
   return vnSheetKhung('Mua rồi: ' + esc(m.ten), h, 'Ghi vào Sổ tay', 'mmMuaLuu', 'mmHuy');
 }
 function ccSheetVe(){
@@ -246,10 +290,12 @@ function ccSheetVe(){
 
 /* ---- sự kiện ---- */
 function handleCongCuInput(el){
-  if (!el || !el.id || el.id.indexOf('cc_') !== 0) return false;
+  if (!el || !el.id) return false;
+  handleGioCongInput(el); handleSoMungInput(el);       // ô tính nhanh Giờ công (gc_gia), ô tìm Sổ mừng (sm_tim): vẽ lại riêng vùng kết quả
+  if (el.id.indexOf('cc_') !== 0) return false;
   var map = { cc_ten: 'ten', cc_gia: 'gia', cc_vi: 'vi', cc_thang: 'thang', cc_lai: 'lai', cc_giu: 'giu' };
   if (map[el.id]){ state.cc[map[el.id]] = el.value; state.cc.kq = false; }
-  return handleGioCongInput(el);       // không chặn các handler khác (định dạng ô tiền)
+  return false;       // không chặn các handler khác (định dạng ô tiền)
 }
 function mmGhiNhanTuForm(){
   var f = mmDocForm();
@@ -262,7 +308,11 @@ function handleCongCuAction(act, el){
   var ds = state.data.muonMua = state.data.muonMua || [];
   var idOf = function(){ return el.getAttribute && el.getAttribute('data-id'); };
   var tim = function(id){ return ds.filter(function(x){ return x.id === id; })[0]; };
-  if (act === 'mmKiemTra'){
+  if (act === 'ccMo'){
+    state.ccTrang = el.getAttribute('data-trang') || ''; renderCongCu(); window.scrollTo(0, 0);
+  } else if (act === 'ccVe'){
+    state.ccTrang = ''; state.ccForm = null; renderCongCu(); window.scrollTo(0, 0);
+  } else if (act === 'mmKiemTra'){
     var f = mmDocForm();
     if (f.soTien <= 0){ toast('Nhập giá lớn hơn 0.', { loai: 'warn' }); return true; }
     state.cc.kq = true; renderCongCu();
@@ -311,15 +361,22 @@ function handleCongCuAction(act, el){
     e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + gc : gc;
     it.gc = gc;
     mm.tt = 'mua'; mm.ngayXong = ngay;
+    var dd = null;
+    if ((document.getElementById('cc_m_dodac') || {}).checked){
+      var bhThang = Math.max(0, Math.round(num((document.getElementById('cc_m_bh') || {}).value)));
+      dd = ddThem({ ten: mm.ten, gia: mm.soTien, ngayMua: ngay, soNam: num((document.getElementById('cc_m_nam') || {}).value),
+                    baoHanhDen: bhThang ? ngayTraCuaKy(monthKeyAdd(monthKey(ngay), bhThang), parseInt(ngay.slice(8, 10), 10)) : '' });
+    }
     state.ccForm = null; scheduleSave(); renderCongCu();
-    toast('Đã ghi chi ' + catTen('chi', cat[1]) + ' ' + fmt(Math.round(tien)) + ' (' + ngayNganVN(ngay) + ') vào Sổ tay.', { hoanTac: function(){
+    toast('Đã ghi chi ' + catTen('chi', cat[1]) + ' ' + fmt(Math.round(tien)) + ' (' + ngayNganVN(ngay) + ') vào Sổ tay' + (dd ? ' và Sổ đồ đạc.' : '.'), { hoanTac: function(){
       var ee = state.data.journal[ngay];
       if (ee) journalRemoveNote(ee, gc);
       entryDeleteItem(ngay, it.iid);
       mm.tt = 'cho'; mm.ngayXong = '';
+      if (dd){ var di = state.data.doDac.indexOf(dd); if (di >= 0) state.data.doDac.splice(di, 1); }
       scheduleSave(); renderCongCu();
     } });
-  } else return handleGioCongAction(act, el) || handleLoiHuaAction(act, el);
+  } else return handleGioCongAction(act, el) || handleLoiHuaAction(act, el) || handleSoMungAction(act, el) || handleDoDacAction(act, el);
   return true;
 }
 document.addEventListener('keydown', function(ev){

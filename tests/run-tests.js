@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js', 'somung.js', 'dodac.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -4534,6 +4534,159 @@ test('normalizeData lời hứa: cho phép chỉ từ khóa (không danh mục),
     { catId: 'an', kieu: 'lan', gioiHan: 3, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'cũ chưa có từ khóa' }]; });
   var ds = ctx.state.data.loiHua;
   eq(ds.length, 2); eq(ds[0].tuKhoa, 'cà phê', 'gộp khoảng trắng'); eq(ds[0].catId, ''); eq(ds[1].tuKhoa, '', 'lời hứa cũ giữ nguyên, không có từ khóa');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('Công cụ: màn tổng hợp, Sổ mừng và quà, Sổ đồ đạc');
+
+function dataSoMung(over){
+  var d = baseData({ settings: { soDuDauKy: 5000000, ngayBatDau: '2024-01-01', thangBatDauDuTru: '2024-01' } });
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 0 }, { id: 'qua', ten: 'Quà mừng', chiTieu: 0 }];
+  d.quaTang = [
+    { id: 'q1', nguoi: 'Anh Minh', dip: 'cuoi', chieu: 'nhan', soTien: 1000000, ngay: '2024-05-01', ghiChu: '' },
+    { id: 'q2', nguoi: 'anh minh', dip: 'sinhnhat', chieu: 'cho', soTien: 200000, ngay: '2025-03-10', ghiChu: 'sinh nhật con' },
+    { id: 'q3', nguoi: 'Chị Lan', dip: 'hieu', chieu: 'nhan', soTien: 500000, ngay: '2026-02-01', ghiChu: '' },
+    { id: 'q4', nguoi: 'Hùng', dip: 'cuoi', chieu: 'cho', soTien: 500000, ngay: '2026-04-01', ghiChu: '' },
+    { id: 'q5', nguoi: 'Tú', dip: 'cuoi', chieu: 'cho', soTien: 300000, ngay: '2026-05-01', ghiChu: '' },
+    { id: 'q6', nguoi: 'Bảo', dip: 'cuoi', chieu: 'cho', soTien: 400000, ngay: '2026-06-01', ghiChu: '' }];
+  if (over) over(d);
+  setToday('2026-10-11'); return loadData(d);
+}
+test('smNguoi / smCoDiCoLai: gom "Anh Minh" và "anh minh" thành một người; nhận chưa đáp / cho chưa nhận', function(){
+  dataSoMung();
+  var ng = ctx.smNguoi(), minh = ng.filter(function(r){ return r.khoa === 'anh minh'; })[0];
+  eq(ng.length, 5, 'Minh, Lan, Hùng, Tú, Bảo'); eq(minh.nhan, 1000000); eq(minh.cho, 200000); eq(ctx.smCoDiCoLai(minh), '', 'cả hai bên đã có');
+  var lan = ng.filter(function(r){ return r.khoa === 'chi lan'; })[0], hung = ng.filter(function(r){ return r.khoa === 'hung'; })[0];
+  eq(ctx.smCoDiCoLai(lan), 'nhanChuaDap', 'Lan mừng mình, mình chưa mừng lại'); eq(ctx.smCoDiCoLai(hung), 'choChuaNhan');
+  eq(ng[0].khoa, 'bao', 'người gần nhất lên đầu');
+});
+test('smGoiY / smTongNam / smLoc', function(){
+  dataSoMung();
+  var gy = ctx.smGoiY(); eq(gy.length, 1, 'chỉ dịp Cưới đủ 3 khoản'); eq(gy[0].ten, 'Cưới'); eq(gy[0].tien, 400000, 'trung vị 500k, 300k, 400k'); eq(gy[0].n, 3);
+  var t = ctx.smTongNam('2026'); eq(t.cho, 1200000); eq(t.nCho, 3); eq(t.nhan, 500000); eq(t.nNhan, 1);
+  eq(ctx.smLoc('minh').length, 2, 'tìm không dấu'); eq(ctx.smLoc('CƯỚI').length, 4, 'tìm theo tên dịp, hoa thường + dấu'); eq(ctx.smLoc('sinh nhat con').length, 1, 'tìm trong ghi chú'); eq(ctx.smLoc('').length, 6);
+  setToday('2026-10-01');
+});
+test('smPageHtml / smDsHtml: hiện người chưa mừng lại, tóm tắt người khi tìm đúng tên', function(){
+  dataSoMung();
+  var h = ctx.smPageHtml();
+  ok(h.indexOf('Họ đã mừng bạn, bạn chưa mừng lại') > 0 && h.indexOf('Chị Lan') > 0, 'có đi có lại'); ok(h.indexOf('Năm 2026 · bạn mừng') > 0 && h.indexOf('1.200.000') > 0, 'tổng năm nay');
+  var d = ctx.smDsHtml('Anh Minh');
+  ok(d.indexOf('Bạn mừng 200.000') > 0 && d.indexOf('họ mừng bạn 1.000.000') > 0, 'tóm tắt người'); ok(d.indexOf('chưa mừng lại') < 0, 'Minh đã cân');
+  ok(ctx.smDsHtml('Lan').indexOf('Họ đã mừng bạn, bạn chưa mừng lại') > 0, 'Lan: nhắc');
+  eq(ctx.smTomTat().canh, true); ok(ctx.smTomTat().chu.indexOf('1 người chưa mừng lại') > 0, ctx.smTomTat().chu);
+  setToday('2026-10-01');
+});
+test('smLuu: mặc định không đụng Sổ tay; chọn "Có" thì ghi thành chi (bạn mừng) hoặc thu (họ mừng bạn)', function(){
+  dataSoMung(function(d){ d.quaTang = []; });
+  var root = { innerHTML: '' }, fm = function(over){ return Object.assign({ tabContent: root, sm_nguoi: { value: 'Cô Hoa' }, sm_chieu: { value: 'cho' }, sm_dip: { value: 'Cưới' }, sm_tien: { value: '500000' },
+    sm_ngay: { value: '2026-10-05' }, sm_note: { value: 'cưới con' }, sm_ghi: { value: 'khong' }, sm_cat: { value: 'chi|qua' }, sm_vi: { value: '' } }, over || {}); };
+  var so0 = ctx.balanceAt('2026-10-31'); ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm(), null, function(){ ok(ctx.handleSoMungAction('smLuu', {}), 'xử lý'); });
+  eq(ctx.state.data.quaTang.length, 1); eq(ctx.state.data.quaTang[0].ghiSo, ''); eq(ctx.balanceAt('2026-10-31'), so0, 'không đổi số dư'); eq(Object.keys(ctx.state.data.journal).length, 0, 'không đụng Sổ tay');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Bác Tư' }, sm_tien: { value: '300000' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  var q = ctx.state.data.quaTang[1], e = ctx.state.data.journal['2026-10-05'];
+  ok(/^2026-10-05\|/.test(q.ghiSo), 'có ghiSo'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000, 'số dư giảm đúng khoản đã ghi'); eq(e.items.length, 1); eq(e.items[0].catId, 'qua'); ok(e.ghiChu.indexOf('Mừng Bác Tư (Cưới)') >= 0);
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_ghi: { value: 'co' }, sm_cat: { value: '' }, sm_nguoi: { value: 'X' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  eq(ctx.state.data.quaTang.length, 2, 'bật ghi mà chưa chọn danh mục thì không lưu');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  eq(ctx.state.data.quaTang.length, 2, 'bật ghi mà chưa chọn danh mục thì không lưu');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Dì Bảy' }, sm_cat: { value: 'chi|qua' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  eq(ctx.state.data.quaTang.length, 2, 'họ mừng bạn mà chọn nhầm danh mục chi thì không lưu (phải là danh mục thu)');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Dì Bảy' }, sm_tien: { value: '200000' }, sm_cat: { value: 'thu|luong' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  var thu = ctx.state.data.quaTang[2], e2 = ctx.state.data.journal['2026-10-05'];
+  ok(/^2026-10-05\|/.test(thu.ghiSo), 'họ mừng bạn + chọn Có: ghi thành khoản THU'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000 + 200000, 'số dư tăng 200.000');
+  ok(e2.items.some(function(i){ return i.kind === 'thu' && i.catId === 'luong' && i.soTien === 200000; })); ok(e2.ghiChu.indexOf('Dì Bảy mừng (Cưới)') >= 0);
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'khong' }, sm_nguoi: { value: 'Chú Sáu' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  eq(ctx.state.data.quaTang[3].ghiSo, '', 'chọn Không thì không ghi'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000 + 200000);
+  setToday('2026-10-01');
+});
+test('Dịp là ô tự gõ: gom "cuoi" và "Cưới" thành một dịp, khoản không ghi dịp vẫn lưu được, dữ liệu cũ (khóa cố định) đổi sang chữ', function(){
+  var n = dataSoMung(function(d){ d.quaTang = [
+    { nguoi: 'A', dip: 'cuoi', chieu: 'cho', soTien: 100000, ngay: '2026-01-01' }, { nguoi: 'B', dip: ' Cưới ', chieu: 'cho', soTien: 300000, ngay: '2026-02-01' },
+    { nguoi: 'C', dip: 'CƯỚI', chieu: 'cho', soTien: 200000, ngay: '2026-03-01' }, { nguoi: 'D', dip: '', chieu: 'cho', soTien: 900000, ngay: '2026-04-01' },
+    { nguoi: 'E', dip: 'khac', chieu: 'cho', soTien: 700000, ngay: '2026-05-01' }, { nguoi: 'F', dip: 'Thôi nôi', chieu: 'cho', soTien: 400000, ngay: '2026-06-01' }]; });
+  eq(n.quaTang[0].dip, 'Cưới', 'khóa cũ "cuoi" thành chữ'); eq(n.quaTang[4].dip, '', 'khóa cũ "khac" thành không ghi dịp'); eq(n.quaTang[1].dip, 'Cưới', 'cắt khoảng trắng');
+  var gy = ctx.smGoiY(); eq(gy.length, 1); eq(gy[0].n, 3, '"cuoi", "Cưới", "CƯỚI" là một dịp'); eq(gy[0].tien, 200000); eq(gy[0].ten, 'CƯỚI', 'tên hiển thị theo lần gõ gần nhất');
+  var g = ctx.smDipGoiY(); eq(g[0], 'Thôi nôi', 'dịp mới dùng gần nhất lên đầu'); ok(g.indexOf('Hiếu') > 0 && g.filter(function(x){ return ctx.lhChuanHoa(x) === 'cuoi'; }).length === 1, 'có gợi ý mặc định, không trùng');
+  ok(ctx.smSheetHtml('').indexOf('<input type="text" id="sm_dip"') > 0 && ctx.smSheetHtml('').indexOf('<select id="sm_dip"') < 0, 'ô Dịp là ô gõ, không phải danh sách chọn');
+  ok(ctx.smDongHtml(n.quaTang[3]).indexOf('dm-s">01/04/2026') > 0 && ctx.smDongHtml(n.quaTang[3]).indexOf('Khác') < 0, 'không ghi dịp thì không hiện chữ Khác');
+  eq(ctx.smLoc('thoi noi').length, 1, 'tìm theo dịp không dấu');
+  setToday('2026-10-01');
+});
+test('ddTinh: chi phí mỗi ngày, dự kiến, giá trị còn lại, bảo hành', function(){
+  dataSoMung(function(d){ d.doDac = [
+    { id: 'd1', ten: 'Điện thoại', gia: 21900000, ngayMua: '2026-04-14', soNam: 3, baoHanhDen: '2026-10-20', ghiChu: '', tt: 'dung' },
+    { id: 'd2', ten: 'Máy giặt', gia: 10000000, ngayMua: '2024-10-11', soNam: 5, baoHanhDen: '2026-09-01', ghiChu: '', tt: 'dung' },
+    { id: 'd3', ten: 'Xe cũ', gia: 30000000, ngayMua: '2025-10-11', soNam: 5, baoHanhDen: '', tt: 'het', ngayHet: '2026-10-11', giaBan: 12000000 }]; });
+  var d = ctx.state.data.doDac, t = ctx.ddTinh(d[0], '2026-10-11');
+  eq(t.ngayDung, 181, '14/04 → 11/10 = 180 ngày + 1'); near(t.cpNgay, 21900000 / 181, 0.01); eq(t.tongNgay, 1095); near(t.cpDuKien, 21900000 / 1095, 0.01); eq(t.cpDuKien, 20000);
+  near(t.conGiaTri, 21900000 * (1 - 181 / 1095), 1); eq(t.baoHanh, 'sap'); eq(t.baoHanhCon, 9);
+  eq(ctx.ddTinh(d[1], '2026-10-11').baoHanh, 'het');
+  var x = ctx.ddTinh(d[2], '2026-10-11'); eq(x.ngayDung, 366); near(x.cpNgay, 18000000 / 366, 0.01, 'trừ tiền bán lại'); eq(x.conGiaTri, 12000000);
+  eq(ctx.ddThoiGian(12), '12 ngày'); eq(ctx.ddThoiGian(150), '5 tháng'); eq(ctx.ddThoiGian(430), '1 năm 2 tháng');
+  var h = ctx.ddPageHtml();
+  ok(h.indexOf('Điện thoại') > 0 && h.indexOf('Bảo hành còn 9 ngày') > 0 && h.indexOf('Hết bảo hành') > 0 && h.indexOf('Không dùng nữa') > 0, 'trang đủ phần');
+  ok(h.indexOf('21.900.000 ÷ 1095 = 20.000') > 0, 'cách tính bằng số thật'); eq(kiemPhepCong(h).loi.join(' | '), '');
+  eq(ctx.ddTomTat().canh, true); ok(ctx.ddTomTat().chu.indexOf('2 món đang dùng') >= 0 && ctx.ddTomTat().chu.indexOf('1 món sắp hết bảo hành') > 0, ctx.ddTomTat().chu);
+  setToday('2026-10-01');
+});
+test('normalizeData: quaTang và doDac bỏ dòng hỏng, ép kiểu, mặc định', function(){
+  var n = dataSoMung(function(d){
+    d.quaTang = [{ nguoi: ' A  B ', soTien: '100000', ngay: '2026-01-01', dip: '???' }, { nguoi: '', soTien: 5, ngay: '2026-01-01' }, { nguoi: 'C', soTien: 0, ngay: '2026-01-01' }, { nguoi: 'D', soTien: 5, ngay: 'xấu' }, null];
+    d.doDac = [{ ten: 'Tủ lạnh', gia: '8000000', ngayMua: '2026-01-01', soNam: 999, tt: 'het' }, { ten: '', gia: 5 }, { ten: 'Rẻ', gia: 0 }]; });
+  eq(n.quaTang.length, 1); eq(n.quaTang[0].nguoi, 'A B'); eq(n.quaTang[0].dip, '???', 'dịp là chữ tự gõ, giữ nguyên'); eq(n.quaTang[0].chieu, 'cho'); eq(n.quaTang[0].soTien, 100000);
+  eq(n.doDac.length, 1); eq(n.doDac[0].soNam, 3, 'số năm ngoài 0..50 về mặc định'); eq(n.doDac[0].tt, 'dung', 'tt het mà không có ngày thôi dùng thì về đang dùng');
+  eq(loadData(baseData()).quaTang.length, 0); eq(loadData(baseData()).doDac.length, 0);
+  setToday('2026-10-01');
+});
+test('màn tổng hợp Công cụ: đủ 5 ô chia nhóm, bấm mở trang, quay lại; trang nào cũng dựng được', function(){
+  dataSoMung(function(d){ d.muonMua = [{ id: 'm1', ten: 'Tai nghe', soTien: 300000, ngayThem: '2026-10-01', soNgayCho: 7, tt: 'cho' }]; });
+  var h = ctx.ccHubHtml();
+  ['Muốn mua', 'Giờ công', 'Lời hứa', 'Sổ mừng và quà', 'Sổ đồ đạc'].forEach(function(t){ ok(h.indexOf('<b>' + t + '</b>') > 0, 'có ô ' + t); });
+  ok(h.indexOf('Quyết định') > 0 && h.indexOf('>Sổ<') > 0, 'hai nhóm'); ok(h.indexOf('1 món đang chờ · 1 món đủ thời gian chờ, hỏi lại') > 0, 'trạng thái Muốn mua');
+  var root = { innerHTML: '' }, tr = ctx.window.scrollTo; ctx.window.scrollTo = function(){};
+  voiDom({ tabContent: root }, null, function(){
+    ctx.CC_TRANG.forEach(function(t){
+      ctx.state.ccTrang = ''; ctx.handleCongCuAction('ccMo', elAct({ 'data-trang': t.key }));
+      eq(ctx.state.ccTrang, t.key); ok(root.innerHTML.indexOf('data-act="ccVe"') > 0 && root.innerHTML.length > 400, 'trang ' + t.key + ' dựng được, có nút quay lại');
+      ctx.handleCongCuAction('ccVe', {}); eq(ctx.state.ccTrang, ''); ok(root.innerHTML.indexOf('data-act="ccMo"') > 0, 'về màn tổng hợp');
+    });
+  });
+  ctx.window.scrollTo = tr; ctx.state.ccTrang = '';
+  setToday('2026-10-01');
+});
+test('Mua rồi + công tắc "Thêm vào Sổ đồ đạc": ghi chi, thêm món (giá đầy đủ, bảo hành theo tháng), hoàn tác gỡ cả hai', function(){
+  dataSoMung(function(d){ d.muonMua = [{ id: 'm1', ten: 'Tai nghe', soTien: 900000, viId: '', thang: 0, lai: 0, giu: 0, ngayThem: '2026-10-01', soNgayCho: 7, tt: 'cho' }]; d.doDac = []; });
+  var root = { innerHTML: '' }, so0 = ctx.balanceAt('2026-10-31'); ctx.state.ccForm = { loai: 'mm', id: 'm1' };
+  var tt = [];
+  var toast0 = ctx.toast; ctx.toast = function(m, o){ tt.push(o); };
+  voiDom({ tabContent: root, cc_m_tien: { value: '900000' }, cc_m_ngay: { value: '2026-10-11' }, cc_m_cat: { value: 'chi|qua' }, cc_m_vi: { value: '' }, cc_m_note: { value: 'Tai nghe' },
+           cc_m_dodac: { checked: true }, cc_m_nam: { value: '2' }, cc_m_bh: { value: '12' } }, null, function(){ ctx.handleCongCuAction('mmMuaLuu', {}); });
+  ctx.toast = toast0;
+  eq(ctx.balanceAt('2026-10-31'), so0 - 900000); eq(ctx.state.data.muonMua[0].tt, 'mua');
+  var dd = ctx.state.data.doDac[0]; eq(ctx.state.data.doDac.length, 1); eq(dd.ten, 'Tai nghe'); eq(dd.gia, 900000); eq(dd.soNam, 2); eq(dd.baoHanhDen, '2027-10-11', 'bảo hành 12 tháng');
+  voiDom({ tabContent: root }, null, function(){ tt[tt.length - 1].hoanTac(); });
+  eq(ctx.balanceAt('2026-10-31'), so0); eq(ctx.state.data.doDac.length, 0, 'hoàn tác gỡ cả món khỏi Sổ đồ đạc'); eq(ctx.state.data.muonMua[0].tt, 'cho');
+  setToday('2026-10-01');
+});
+
+test('ô nhập sống: gõ giá ở Giờ công và gõ tên ở Sổ mừng cập nhật vùng kết quả (qua handleCongCuInput)', function(){
+  dataSoMung(function(d){ d.settings.gioCong = { thuNhapThang: 17600000, gioThang: 176 }; });
+  ctx.state.gc = { gia: '' }; ctx.state.sm = { tim: '' };
+  var kq = { textContent: '' }, ds = { innerHTML: '' };
+  voiDom({ gcKq: kq, smDs: ds }, null, function(){
+    ctx.handleCongCuInput({ id: 'gc_gia', value: '250000' });
+    ctx.handleCongCuInput({ id: 'sm_tim', value: 'lan' });
+  });
+  eq(ctx.state.gc.gia, '250000'); eq(kq.textContent, '250.000 ₫ ≈ 2 giờ 30 phút đi làm', 'Giờ công tính ngay');
+  eq(ctx.state.sm.tim, 'lan'); ok(ds.innerHTML.indexOf('Chị Lan') > 0 && ds.innerHTML.indexOf('Anh Minh') < 0 && ds.innerHTML.indexOf('Hùng') < 0, 'Sổ mừng lọc theo tên, bỏ các dòng không khớp');
   setToday('2026-10-01');
 });
 
