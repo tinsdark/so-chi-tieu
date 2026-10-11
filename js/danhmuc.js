@@ -590,6 +590,10 @@ function handleDanhMucAction(act, el){
     [].forEach.call(el.parentNode.querySelectorAll('button'), function(b){ b.classList.toggle('on', b === el); });
     if (fS === 'dk_kind'){
       var sC = document.getElementById('dk_cat'); if (sC) sC.innerHTML = dkCatOptions(vS, '');   // chỉ hiện danh mục đúng loại Thu / Chi
+    } else if (fS === 'sm_chieu'){
+      var sK = document.getElementById('sm_cat'); if (sK) sK.innerHTML = dkCatOptions(vS === 'nhan' ? 'thu' : 'chi', '');       // Sổ mừng: họ mừng bạn -> khoản thu, bạn mừng -> khoản chi
+    } else if (fS === 'sm_ghi'){
+      var fGh = document.getElementById('sm_ghi_f'); if (fGh) fGh.hidden = vS !== 'co';
     } else if (fS === 'mt_nguon'){
       var fV2 = document.getElementById('mt_vi_f'), fG = document.getElementById('mt_gom_f');
       if (fV2) fV2.hidden = vS !== 'vi';

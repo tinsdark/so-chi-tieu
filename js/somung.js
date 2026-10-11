@@ -6,8 +6,9 @@
    - Gom theo NGƯỜI bằng tên đã bỏ dấu / hoa thường ("anh minh" = "Anh Minh"). Không có danh bạ riêng: danh sách người là những tên đang dùng.
    - "Có đi có lại": họ mừng mình mà mình chưa mừng lại (nhan > 0, cho = 0), hoặc ngược lại.
    - Gợi ý mức mừng: trung vị các khoản "cho" cùng dịp, khi đã có ít nhất 3 khoản.
-   - Mặc định sổ này CHỈ ghi nhớ, KHÔNG đụng Sổ tay hay số dư (nhiều khoản mừng bằng tiền mặt). Khoản "cho" có công tắc "Ghi vào Sổ tay như khoản chi":
-     bật thì tạo thêm 1 dòng chi thật (ghiSo = 'ngày|iid' để biết đã ghi); xóa dòng ở sổ này KHÔNG xóa dòng chi ở Sổ tay.
+   - Mặc định sổ này CHỈ ghi nhớ, KHÔNG đụng Sổ tay hay số dư (nhiều khoản mừng bằng tiền mặt). Mỗi khoản có lựa chọn "Ghi vào Sổ tay? Không / Có":
+     chọn Có thì tạo thêm 1 dòng thật ở Sổ tay (bạn mừng = khoản chi, họ mừng bạn = khoản thu; ghiSo = 'ngày|iid' để biết đã ghi);
+     xóa dòng ở sổ này KHÔNG xóa dòng ở Sổ tay.
    Cần state.js, loihua.js (lhChuanHoa), danhmuc.js (dmSeg, dmMoney, dmToggle, dkCatOptions, dmSec), vayno.js (vnF, vnSheetKhung), congcu.js load trước.
    ==================================================================== */
 
@@ -124,9 +125,10 @@ function smSheetHtml(id){
   if (ed && ed.ghiSo){
     h += '<div class="vn-note">' + icon('check') + ' Khoản này đã ghi vào Sổ tay ngày ' + ngayVN(ed.ghiSo.split('|')[0]) + '. Xóa ở đây không xóa khoản chi bên Sổ tay.</div>';
   } else {
-    h += dmToggle('sm_ghi', 'Ghi vào Sổ tay như khoản chi', 'Chỉ áp dụng khi bạn mừng. Mặc định tắt: tiền mừng mặt hay không đi qua ví.', false)
-      + vnF('Danh mục chi <span class="mp-hint">(khi bật công tắc trên)</span>', '<select id="sm_cat">' + dkCatOptions('chi', '') + '</select>')
-      + ((state.data.wallets || []).length > 1 ? vnF('Ví', '<select id="sm_vi">' + viOptionsHtml(viMacDinhId()) + '</select>') : '');
+    h += vnF('Ghi vào Sổ tay?', dmSeg('sm_ghi', 'khong', [['khong', 'Không, chỉ nhớ'], ['co', 'Có, ghi vào Sổ tay']]),
+        '', 'Bạn mừng thì ghi thành khoản chi, họ mừng bạn thì ghi thành khoản thu. Chọn "Không" nếu là tiền mặt không qua ví: số dư không đổi.')
+      + '<div id="sm_ghi_f" hidden>' + vnF('Danh mục', '<select id="sm_cat">' + dkCatOptions(d.chieu === 'nhan' ? 'thu' : 'chi', '') + '</select>')
+      + ((state.data.wallets || []).length > 1 ? vnF('Ví', '<select id="sm_vi">' + viOptionsHtml(viMacDinhId()) + '</select>') : '') + '</div>';
   }
   if (ed) h += '<button type="button" class="btn danger dm-xoa" data-act="smXoa" data-id="' + esc(ed.id) + '">' + icon('trash') + ' Xóa khoản này</button>';
   return vnSheetKhung(ed ? 'Sửa khoản mừng' : 'Thêm khoản mừng', h, ed ? 'Cập nhật' : 'Lưu', 'smLuu', 'mmHuy');
@@ -155,17 +157,17 @@ function handleSoMungAction(act, el){
     var tien = numNonNeg(docSo((document.getElementById('sm_tien') || {}).value));
     var ngay = (document.getElementById('sm_ngay') || {}).value || '';
     var note = ((document.getElementById('sm_note') || {}).value || '').trim().slice(0, 120);
-    var ghi = !!(document.getElementById('sm_ghi') || {}).checked && chieu === 'cho';
+    var ghi = (document.getElementById('sm_ghi') || {}).value === 'co', loaiGhi = chieu === 'nhan' ? 'thu' : 'chi';
     var cat = ((document.getElementById('sm_cat') || {}).value || '').split('|');
     if (!nguoi){ toast('Nhập tên người.', { loai: 'warn' }); return true; }
     if (tien <= 0){ toast('Nhập số tiền.', { loai: 'warn' }); return true; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ngay)){ toast('Chọn ngày.', { loai: 'warn' }); return true; }
-    if (ghi && (cat.length !== 2 || !cat[1])){ toast('Chọn danh mục chi để ghi vào Sổ tay.', { loai: 'warn' }); return true; }
+    if (ghi && (cat.length !== 2 || !cat[1] || cat[0] !== loaiGhi)){ toast('Chọn danh mục ' + (loaiGhi === 'thu' ? 'thu' : 'chi') + ' để ghi vào Sổ tay.', { loai: 'warn' }); return true; }
     var cu = ds.filter(function(x){ return x.id === (state.ccForm && state.ccForm.id); })[0], ghiSo = '', it = null;
     if (ghi){
       var vi = (document.getElementById('sm_vi') || {}).value || '';
-      var gc = 'Mừng ' + nguoi + ' (' + SM_DIP[dip] + ')';
-      it = entryAddItem(ngay, 'chi', cat[1], tien, gc, vi);
+      var gc = (chieu === 'nhan' ? nguoi + ' mừng (' : 'Mừng ' + nguoi + ' (') + SM_DIP[dip] + ')';
+      it = entryAddItem(ngay, loaiGhi, cat[1], tien, gc, vi);
       if (!it){ toast('Không ghi được vào Sổ tay.', { loai: 'err' }); return true; }
       var gcN = gc + ' ' + fmt(Math.round(tien)), e = state.data.journal[ngay];
       e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + gcN : gcN; it.gc = gcN;
@@ -176,7 +178,7 @@ function handleSoMungAction(act, el){
     if (cu){ Object.assign(cu, o); if (ghiSo) cu.ghiSo = ghiSo; }
     else { moi = Object.assign({ id: 'qt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ghiSo: ghiSo }, o); ds.push(moi); }
     state.ccForm = null; scheduleSave(); renderCongCu();
-    toast((chieu === 'nhan' ? 'Đã ghi: ' + nguoi + ' mừng bạn ' : 'Đã ghi: bạn mừng ' + nguoi + ' ') + fmt(Math.round(tien)) + (it ? ' (cũng ghi vào Sổ tay).' : '.'),
+    toast((chieu === 'nhan' ? 'Đã ghi: ' + nguoi + ' mừng bạn ' : 'Đã ghi: bạn mừng ' + nguoi + ' ') + fmt(Math.round(tien)) + (it ? ' (cũng ghi vào Sổ tay như khoản ' + (loaiGhi === 'thu' ? 'thu' : 'chi') + ').' : '.'),
       moi ? { hoanTac: function(){
         var i = ds.indexOf(moi); if (i >= 0) ds.splice(i, 1);
         if (it){ var ee = state.data.journal[ngay]; if (ee) journalRemoveNote(ee, it.gc); entryDeleteItem(ngay, it.iid); }

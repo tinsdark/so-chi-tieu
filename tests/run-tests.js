@@ -4578,23 +4578,33 @@ test('smPageHtml / smDsHtml: hiện người chưa mừng lại, tóm tắt ngư
   eq(ctx.smTomTat().canh, true); ok(ctx.smTomTat().chu.indexOf('1 người chưa mừng lại') > 0, ctx.smTomTat().chu);
   setToday('2026-10-01');
 });
-test('smLuu: ghi nhớ không đụng Sổ tay; bật công tắc thì tạo thêm dòng chi và hoàn tác gỡ cả hai', function(){
+test('smLuu: mặc định không đụng Sổ tay; chọn "Có" thì ghi thành chi (bạn mừng) hoặc thu (họ mừng bạn)', function(){
   dataSoMung(function(d){ d.quaTang = []; });
   var root = { innerHTML: '' }, fm = function(over){ return Object.assign({ tabContent: root, sm_nguoi: { value: 'Cô Hoa' }, sm_chieu: { value: 'cho' }, sm_dip: { value: 'cuoi' }, sm_tien: { value: '500000' },
-    sm_ngay: { value: '2026-10-05' }, sm_note: { value: 'cưới con' }, sm_ghi: { checked: false }, sm_cat: { value: 'chi|qua' }, sm_vi: { value: '' } }, over || {}); };
+    sm_ngay: { value: '2026-10-05' }, sm_note: { value: 'cưới con' }, sm_ghi: { value: 'khong' }, sm_cat: { value: 'chi|qua' }, sm_vi: { value: '' } }, over || {}); };
   var so0 = ctx.balanceAt('2026-10-31'); ctx.state.ccForm = { loai: 'sm', id: '' };
   voiDom(fm(), null, function(){ ok(ctx.handleSoMungAction('smLuu', {}), 'xử lý'); });
   eq(ctx.state.data.quaTang.length, 1); eq(ctx.state.data.quaTang[0].ghiSo, ''); eq(ctx.balanceAt('2026-10-31'), so0, 'không đổi số dư'); eq(Object.keys(ctx.state.data.journal).length, 0, 'không đụng Sổ tay');
   ctx.state.ccForm = { loai: 'sm', id: '' };
-  voiDom(fm({ sm_ghi: { checked: true }, sm_nguoi: { value: 'Bác Tư' }, sm_tien: { value: '300000' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  voiDom(fm({ sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Bác Tư' }, sm_tien: { value: '300000' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
   var q = ctx.state.data.quaTang[1], e = ctx.state.data.journal['2026-10-05'];
   ok(/^2026-10-05\|/.test(q.ghiSo), 'có ghiSo'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000, 'số dư giảm đúng khoản đã ghi'); eq(e.items.length, 1); eq(e.items[0].catId, 'qua'); ok(e.ghiChu.indexOf('Mừng Bác Tư (Cưới)') >= 0);
   ctx.state.ccForm = { loai: 'sm', id: '' };
-  voiDom(fm({ sm_ghi: { checked: true }, sm_cat: { value: '' }, sm_nguoi: { value: 'X' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  voiDom(fm({ sm_ghi: { value: 'co' }, sm_cat: { value: '' }, sm_nguoi: { value: 'X' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
   eq(ctx.state.data.quaTang.length, 2, 'bật ghi mà chưa chọn danh mục thì không lưu');
   ctx.state.ccForm = { loai: 'sm', id: '' };
-  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { checked: true }, sm_nguoi: { value: 'Dì Bảy' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
-  eq(ctx.state.data.quaTang[2].ghiSo, '', 'họ mừng mình thì công tắc ghi chi không có tác dụng'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000);
+  eq(ctx.state.data.quaTang.length, 2, 'bật ghi mà chưa chọn danh mục thì không lưu');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Dì Bảy' }, sm_cat: { value: 'chi|qua' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  eq(ctx.state.data.quaTang.length, 2, 'họ mừng bạn mà chọn nhầm danh mục chi thì không lưu (phải là danh mục thu)');
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'co' }, sm_nguoi: { value: 'Dì Bảy' }, sm_tien: { value: '200000' }, sm_cat: { value: 'thu|luong' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  var thu = ctx.state.data.quaTang[2], e2 = ctx.state.data.journal['2026-10-05'];
+  ok(/^2026-10-05\|/.test(thu.ghiSo), 'họ mừng bạn + chọn Có: ghi thành khoản THU'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000 + 200000, 'số dư tăng 200.000');
+  ok(e2.items.some(function(i){ return i.kind === 'thu' && i.catId === 'luong' && i.soTien === 200000; })); ok(e2.ghiChu.indexOf('Dì Bảy mừng (Cưới)') >= 0);
+  ctx.state.ccForm = { loai: 'sm', id: '' };
+  voiDom(fm({ sm_chieu: { value: 'nhan' }, sm_ghi: { value: 'khong' }, sm_nguoi: { value: 'Chú Sáu' } }), null, function(){ ctx.handleSoMungAction('smLuu', {}); });
+  eq(ctx.state.data.quaTang[3].ghiSo, '', 'chọn Không thì không ghi'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000 + 200000);
   setToday('2026-10-01');
 });
 test('ddTinh: chi phí mỗi ngày, dự kiến, giá trị còn lại, bảo hành', function(){
