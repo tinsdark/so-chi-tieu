@@ -102,10 +102,10 @@ function viCardHtml(){
   var h = '<div class="card dm-card k-wal">'+dmHead('Ví / nguồn tiền', '<button class="btn secondary sm" data-act="dmThemVi">+ Thêm ví</button>');
   ws.forEach(function(w){
     var dsCuoi = doiSoatCuoi(w), dsLech = dsCuoi && Math.abs(dsCuoi.chenh) >= 0.5 && !dsCuoi.dieuChinh;
-    var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '');
+    var chips = (w.id === viMacDinhId() ? '<span class="dm-chip md">Mặc định</span>' : '') + (w.deDanh ? '<span class="dm-chip md">Để dành</span>' : '') + (viLaThe(w) ? '<span class="dm-chip md">Thẻ tín dụng</span>' : '');
     h += '<div class="dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaVi" data-id="'+esc(w.id)+'" aria-label="Sửa ví '+esc(w.ten)+'">'
       + '<span class="dm-main"><b class="dm-n">'+esc(w.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')
-      +   '<span class="dm-s">Trong sổ '+fmt(Math.round(soDuTheoVi(w.id, doiSoatNgayMacDinh())))+'</span>'
+      +   (viLaThe(w) ? theDongHtml(w) : '<span class="dm-s">Trong sổ '+fmt(Math.round(soDuTheoVi(w.id, doiSoatNgayMacDinh())))+'</span>')
       +   '<span class="dm-s'+(dsLech ? ' ds-lech' : '')+'">'+doiSoatTrangThai(w)+'</span></span>'
       + '<button type="button" class="btn secondary sm" data-act="dmDoiSoat" data-id="'+esc(w.id)+'" aria-label="Đối soát ví '+esc(w.ten)+'">Đối soát</button>'
       + dmGo()+'</div>';
@@ -359,7 +359,8 @@ function viSheetHtml(f){
   var h = vnF('Tên ví', '<input type="text" id="dm_vi_ten" value="'+esc(d.ten)+'" placeholder="Tiền mặt, Vietcombank, Momo...">')
     + vnF('Số dư đầu kỳ <span class="mp-hint">(lúc bắt đầu dùng sổ)</span>', dmMoney('dm_vi_du', d.soDuDauKy), '', 'Đây KHÔNG phải số tiền ví đang có. Số dư hiện tại tự tính từ số đầu kỳ cộng các giao dịch, xem ở tab Sổ tay. Được phép âm (thẻ tín dụng, nợ).')
     + dmToggle('dm_vi_md', 'Ví mặc định', 'Điền sẵn khi nhập giao dịch, thêm khoản vay, khoản định kỳ mới.', laMd, laMd)
-    + dmToggle('dm_vi_dd', 'Để dành', 'Ví quỹ / tiết kiệm: chi hoặc chuyển tiền ra khỏi ví này sẽ được hỏi lại trước khi ghi.', d.deDanh);
+    + dmToggle('dm_vi_dd', 'Để dành', 'Ví quỹ / tiết kiệm: chi hoặc chuyển tiền ra khỏi ví này sẽ được hỏi lại trước khi ghi.', d.deDanh)
+    + theFormHtml(w);
   if (w){
     h += '<button type="button" class="btn danger dm-xoa" data-act="viXoa" data-id="'+esc(w.id)+'"'+(khongXoa ? ' disabled' : '')+'>'+icon('trash')+' Xóa ví</button>'
       + (khongXoa ? '<div class="vn-hint">'+(dung > 0 ? 'Ví đang có '+dung+' giao dịch/khoản liên quan nên không xóa được, chỉ đổi tên.' : 'Phải còn ít nhất 1 ví.')+'</div>' : '');
@@ -446,7 +447,7 @@ function dmSheetVe(){
   root.id = 'dmSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
+  root.innerHTML = (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : (state.dmForm && state.dmForm.loai === 'thanhtoanthe') ? theTraSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -593,9 +594,14 @@ function handleDanhMucAction(act, el){
     var duVi = docSo(document.getElementById('dm_vi_du').value);      // số dư đầu kỳ được phép âm
     var ddVi = !!document.getElementById('dm_vi_dd').checked;
     var mdVi = !!document.getElementById('dm_vi_md').checked;
+    var wMoi = { ten: tenVi, soDuDauKy: duVi, deDanh: ddVi };
+    var loiThe = theDocForm(wMoi);
+    if (loiThe){ toast(loiThe, { loai:'err' }); return true; }
     var wLuu = wCu;
-    if (wCu){ wCu.ten = tenVi; wCu.soDuDauKy = duVi; wCu.deDanh = ddVi; }
-    else { wLuu = { id: 'w_' + slugify(tenVi) + '_' + Date.now().toString(36), ten: tenVi, soDuDauKy: duVi, deDanh: ddVi }; state.data.wallets.push(wLuu); }
+    if (wCu){
+      ['the', 'hanMucThe', 'ngaySaoKe', 'ngayTraThe'].forEach(function(k){ delete wCu[k]; });
+      Object.assign(wCu, wMoi);
+    } else { wLuu = Object.assign({ id: 'w_' + slugify(tenVi) + '_' + Date.now().toString(36) }, wMoi); state.data.wallets.push(wLuu); }
     state.data.settings.soDuDauKy = state.data.wallets.reduce(function(s, w){ return s + num(w.soDuDauKy); }, 0);
     if (mdVi && wLuu.id !== viMacDinhId()){ viDatMacDinh(wLuu.id); toast('Đã đặt "'+tenVi+'" làm tài khoản mặc định.'); }
     else toast('Đã lưu ví "'+tenVi+'".');
@@ -785,6 +791,7 @@ function handleDanhMucAction(act, el){
 
 function handleDanhMucChange(el){
   if (handleDoiSoatInput(el)) return true;
+  if (handleTheChange(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
   if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });

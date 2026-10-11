@@ -619,6 +619,16 @@ function normalizeData(d){
   d.wallets.forEach(function(w){
     w.soDuDauKy = num(w.soDuDauKy);
     w.deDanh = !!w.deDanh;
+    // ví loại thẻ tín dụng / trả sau (xem thetindung.js): chỉ ví thẻ mới mang các trường này
+    if (w.the){
+      w.the = true;
+      w.hanMucThe = numNonNeg(w.hanMucThe);
+      w.ngaySaoKe = Math.max(1, Math.min(31, Math.round(num(w.ngaySaoKe)) || 1));
+      w.ngayTraThe = Math.max(1, Math.min(31, Math.round(num(w.ngayTraThe)) || 1));
+      w.deDanh = false;
+    } else {
+      delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe;
+    }
     if (!w.ten) w.ten = 'Ví';
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   });
@@ -664,7 +674,8 @@ function normalizeData(d){
 
 /* ====================================================================
    VÍ / NGUỒN TIỀN
-   - wallets[] = [{id, ten, soDuDauKy}]: số dư đầu kỳ từng ví, cộng lại = settings.soDuDauKy.
+   - wallets[] = [{id, ten, soDuDauKy}]: số dư đầu kỳ từng ví, cộng lại = settings.soDuDauKy. Ví thẻ tín dụng / trả sau
+     có thêm the:true, hanMucThe, ngaySaoKe, ngayTraThe (xem thetindung.js): vẫn là ví thường, số dư âm = dư nợ.
    - Mỗi dòng nhập tay (items[]) mang walletId. Phần do khoản vay sinh ra (refs[])
      đi theo ví của khoản vay (loan.walletId) — đổi ví khoản vay là đổi cho cả lịch sử.
    - chuyenVi[] = [{id, ngay, tuVi, denVi, soTien, ghiChu}] nằm NGOÀI journal: chuyển
@@ -750,6 +761,12 @@ function viCanhBaoAm(walletId, delta, d){
   d = d || state.data;
   var w = walletById(walletId, d) || walletById(viMacDinhId(d), d);
   if (!w || !(delta < 0)) return '';
+  // ví thẻ tín dụng: ÂM là bình thường (đang nợ thẻ), chỉ cảnh báo khi dư nợ vượt hạn mức thẻ
+  if (w.the){
+    var bal = soDuTheoVi(w.id, '9999-12-31', d), noTruoc = Math.max(0, -bal), noSau = Math.max(0, -(bal + delta));
+    if (!(num(w.hanMucThe) > 0) || noSau <= num(w.hanMucThe) || noSau <= noTruoc) return '';
+    return 'Thẻ "' + w.ten + '" có hạn mức ' + fmt(Math.round(w.hanMucThe)) + ', sau khoản này dư nợ sẽ là ' + fmt(Math.round(noSau)) + ' (vượt ' + fmt(Math.round(noSau - w.hanMucThe)) + ').';
+  }
   // ví để dành: lấy tiền ra là hỏi lại, kể cả khi ví vẫn đủ tiền
   if (w.deDanh){
     var mt = (d.mucTieu || []).filter(function(g){ return g.walletId === w.id; }).map(function(g){ return g.ten; });

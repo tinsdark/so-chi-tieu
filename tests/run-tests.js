@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3535,6 +3535,191 @@ test('bảng đối soát vẽ được; thẻ ví hiện số dư + trạng th�
   var h = ctx.doiSoatSheetHtml({ loai: 'doisoat', id: 'w1' });
   ok(h.indexOf('Đối soát ví TechcomBank') >= 0 && h.indexOf('ds_that') >= 0 && h.indexOf('dsGhi') >= 0 && h.indexOf('dsDieuChinh') >= 0);
   ok(ctx.viCardHtml().indexOf('dmDoiSoat') >= 0 && ctx.viCardHtml().indexOf('Chưa đối soát') >= 0);
+});
+
+/* ==================================================================== */
+group('Thẻ tín dụng / ví trả sau (thetindung.js)');
+
+// Techcom 10tr (tài khoản) + thẻ VPBank (hạn mức 20tr, sao kê ngày 25, hạn trả ngày 15). Hôm nay 10/10/2026.
+function theData(chiThe, chuyen){
+  var j = {};
+  (chiThe || []).forEach(function(c, i){
+    j[c[0]] = j[c[0]] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] };
+    j[c[0]].chi.an = (j[c[0]].chi.an || 0) + c[1];
+    j[c[0]].items.push({ iid: 'i' + i, kind: 'chi', catId: 'an', soTien: c[1], ghiChu: '', walletId: 'wt' });
+  });
+  var d = baseData({ journal: j });
+  d.settings.ngayBatDau = '2026-09-01'; d.settings.thangBatDauDuTru = '2026-09';
+  d.wallets = [{ id: 'w1', ten: 'Techcom', soDuDauKy: 10000000 },
+               { id: 'wt', ten: 'Thẻ VPBank', soDuDauKy: 0, the: true, hanMucThe: 20000000, ngaySaoKe: 25, ngayTraThe: 15 }];
+  d.chuyenVi = chuyen || [];
+  setToday('2026-10-10');
+  return loadData(d);
+}
+function chuyenThe(ngay, tien){ return { id: 'ct' + ngay, ngay: ngay, tuVi: 'w1', denVi: 'wt', soTien: tien, ghiChu: '' }; }
+
+test('normalizeData: ví thẻ giữ cấu hình đã chuẩn hóa, ví thường không có trường thẻ, ví thẻ không "để dành"', function(){
+  var d = theData();
+  d.wallets[1].ngaySaoKe = 99; d.wallets[1].ngayTraThe = 'x'; d.wallets[1].hanMucThe = -5; d.wallets[1].deDanh = true;
+  d.wallets[0].hanMucThe = 123; d.wallets[0].ngaySaoKe = 5;
+  ctx.normalizeData(d);
+  eq(d.wallets[1].ngaySaoKe, 31); eq(d.wallets[1].ngayTraThe, 1); eq(d.wallets[1].hanMucThe, 0); eq(d.wallets[1].deDanh, false);
+  eq(d.wallets[0].hanMucThe, undefined); eq(d.wallets[0].ngaySaoKe, undefined); eq(d.wallets[0].the, undefined);
+});
+test('theNgaySaoKe / theHanTra: hạn trả là lần đầu ngày đó xuất hiện SAU ngày sao kê; ngày 31 co về cuối tháng ngắn', function(){
+  var w = { ngaySaoKe: 25, ngayTraThe: 15 };
+  eq(ctx.theNgaySaoKe(w, '2026-10-10'), '2026-09-25'); eq(ctx.theNgaySaoKe(w, '2026-10-25'), '2026-10-25'); eq(ctx.theNgaySaoKe(w, '2026-01-10'), '2025-12-25');
+  eq(ctx.theHanTra(w, '2026-09-25'), '2026-10-15', 'sao kê 25, hạn 15 -> tháng sau');
+  eq(ctx.theHanTra({ ngayTraThe: 25 }, '2026-10-05'), '2026-10-25', 'sao kê 5, hạn 25 -> cùng tháng');
+  eq(ctx.theHanTra({ ngayTraThe: 20 }, '2026-10-20'), '2026-11-20', 'trùng ngày sao kê -> tháng sau');
+  eq(ctx.theNgaySaoKe({ ngaySaoKe: 31 }, '2026-03-05'), '2026-02-28');
+});
+test('quẹt thẻ làm ví thẻ âm + tổng số dư giảm ngay; sao kê chỉ tính phần chi tới ngày sao kê', function(){
+  theData([['2026-09-20', 3000000], ['2026-09-28', 2000000]]);
+  eq(ctx.soDuTheoVi('wt', '2026-10-10'), -5000000); eq(ctx.balanceAt('2026-10-10'), 5000000, '10tr - 5tr nợ thẻ');
+  var t = ctx.theTinh(ctx.walletById('wt'), '2026-10-10');
+  eq(t.duNo, 5000000); eq(t.soSaoKe, 3000000, 'sao kê 25/9 chỉ có khoản 20/9'); eq(t.han, '2026-10-15'); eq(t.soNgay, 5);
+  eq(t.conPhaiTra, 3000000); eq(t.khaDung, 15000000);
+});
+test('thanh toán thẻ = chuyển ví: giảm còn phải trả, KHÔNG đổi tổng số dư, KHÔNG thành chi tháng', function(){
+  theData([['2026-09-20', 3000000], ['2026-09-28', 2000000]]);
+  var truoc = ctx.balanceAt('2026-10-10'), chiThang = ctx.actualCatMonthAll('chi', '2026-10');
+  ctx.chuyenViThem('2026-10-05', 'w1', 'wt', 1000000, 'trả thẻ'); ctx.invalidateBalanceCache();
+  var t = ctx.theTinh(ctx.walletById('wt'), '2026-10-10');
+  eq(t.daTra, 1000000); eq(t.conPhaiTra, 2000000); eq(t.duNo, 4000000);
+  eq(ctx.balanceAt('2026-10-10'), truoc, 'tổng số dư không đổi'); eq(ctx.actualCatMonthAll('chi', '2026-10'), chiThang, 'không thành chi');
+  ctx.chuyenViThem('2026-10-06', 'w1', 'wt', 2000000, ''); ctx.invalidateBalanceCache();
+  eq(ctx.theTinh(ctx.walletById('wt'), '2026-10-10').conPhaiTra, 0, 'trả đủ sao kê'); eq(ctx.theTinh(ctx.walletById('wt'), '2026-10-10').duNo, 2000000, 'còn nợ phần quẹt sau sao kê');
+});
+test('trả TRƯỚC ngày sao kê không bị trừ hai lần; trả dư không làm còn phải trả âm; còn phải trả không vượt dư nợ', function(){
+  theData([['2026-09-20', 3000000]], [chuyenThe('2026-09-22', 1000000)]);
+  var t = ctx.theTinh(ctx.walletById('wt'), '2026-10-10');
+  eq(t.soSaoKe, 2000000, 'dư nợ chốt đã trừ lần trả 22/9'); eq(t.daTra, 0); eq(t.conPhaiTra, 2000000);
+  theData([['2026-09-20', 3000000]], [chuyenThe('2026-10-02', 5000000)]);
+  t = ctx.theTinh(ctx.walletById('wt'), '2026-10-10'); eq(t.conPhaiTra, 0); eq(t.duNo, 0, 'trả dư: không còn nợ');
+});
+test('theSapDenHan: chỉ thẻ còn phải trả và trong vòng 7 ngày; quá hạn vẫn hiện (soNgay âm); trả đủ thì hết', function(){
+  theData([['2026-09-20', 3000000]]);
+  eq(ctx.theSapDenHan('2026-10-10').length, 1, 'hạn 15/10, còn 5 ngày');
+  eq(ctx.theSapDenHan('2026-10-01').length, 0, 'còn 14 ngày: chưa nhắc');
+  var qua = ctx.theSapDenHan('2026-10-20'); eq(qua.length, 1); eq(qua[0].t.soNgay, -5, 'quá hạn 5 ngày');
+  ctx.chuyenViThem('2026-10-12', 'w1', 'wt', 3000000, ''); ctx.invalidateBalanceCache();
+  eq(ctx.theSapDenHan('2026-10-13').length, 0, 'trả đủ rồi');
+  theData([]); eq(ctx.theSapDenHan('2026-10-10').length, 0, 'thẻ không có nợ');
+});
+test('viCanhBaoAm: thẻ âm là bình thường, chỉ cảnh báo khi vượt hạn mức; ví thường vẫn cảnh báo khi sắp âm', function(){
+  theData([['2026-09-20', 3000000]]);
+  eq(ctx.viCanhBaoAm('wt', -1000000), '', 'thẻ đang nợ, tiêu thêm trong hạn mức');
+  ok(ctx.viCanhBaoAm('wt', -18000000).indexOf('vượt') >= 0, 'dư nợ 21tr > hạn mức 20tr');
+  eq(ctx.viCanhBaoAm('wt', 1000000), '', 'tiền vào không cảnh báo');
+  ok(ctx.viCanhBaoAm('w1', -15000000).indexOf('âm') >= 0, 'ví thường: vẫn báo sắp âm');
+  ctx.walletById('wt').hanMucThe = 0; eq(ctx.viCanhBaoAm('wt', -99000000), '', 'chưa đặt hạn mức thì không cảnh báo');
+});
+test('giao diện thẻ: dòng ở thẻ Ví có Dư nợ / sao kê / nút Thanh toán; bảng thanh toán chỉ cho chọn ví không phải thẻ', function(){
+  theData([['2026-09-20', 3000000]]);
+  var h = ctx.viCardHtml();
+  ok(h.indexOf('Thẻ tín dụng') >= 0 && h.indexOf('Dư nợ') >= 0 && h.indexOf('data-act="theTra"') >= 0 && h.indexOf('còn phải trả') >= 0, 'thẻ ví');
+  var s = ctx.theTraSheetHtml({ loai: 'thanhtoanthe', id: 'wt' });
+  ok(s.indexOf('theTraLuu') >= 0 && s.indexOf('value="Techcom"') < 0 && s.indexOf('>Techcom<') >= 0 && s.indexOf('>Thẻ VPBank<') < 0, 'chỉ ví thường trong ô "Trả từ ví"');
+  ok(s.indexOf('3.000.000') >= 0, 'điền sẵn số còn phải trả');
+  var f = ctx.viSheetHtml({ loai: 'vi', id: 'wt' });
+  ok(f.indexOf('dm_vi_the') >= 0 && f.indexOf('dm_vi_sk') >= 0 && f.indexOf('id="dm_vi_the_f" hidden') < 0, 'form ví thẻ mở sẵn khối cấu hình');
+  ok(ctx.viSheetHtml({ loai: 'vi', id: 'w1' }).indexOf('id="dm_vi_the_f" hidden') >= 0, 'ví thường ẩn khối cấu hình');
+  ok(ctx.viTheHtml('2026-10', false).indexOf('Thẻ · dư nợ') >= 0, 'dải thẻ ở Sổ tay ghi nhãn dư nợ');
+});
+test('theDocForm: bật thẻ phải có ngày hợp lệ; tắt thẻ xóa mọi trường thẻ', function(){
+  var vals = { dm_vi_hm: '20.000.000', dm_vi_sk: '25', dm_vi_ht: '15' }, bat = true, cu = ctx.document.getElementById;
+  ctx.document.getElementById = function(id){ return id === 'dm_vi_the' ? { checked: bat } : (id in vals ? { value: vals[id] } : null); };
+  try{
+    var w = {};
+    eq(ctx.theDocForm(w), ''); eq(w.the, true); eq(w.hanMucThe, 20000000); eq(w.ngaySaoKe, 25); eq(w.ngayTraThe, 15);
+    vals.dm_vi_ht = '40'; ok(ctx.theDocForm({}) !== '', 'ngày ngoài 1-31 bị chặn');
+    bat = false; eq(ctx.theDocForm(w), ''); eq(w.the, undefined); eq(w.hanMucThe, undefined);
+  } finally { ctx.document.getElementById = cu; }
+});
+
+/* ==================================================================== */
+group('Mức tiêu mỗi ngày (tieuMoiNgay, sotay.js)');
+
+// 10/10/2026 (tháng 31 ngày -> còn 22 ngày tính cả hôm nay).
+// Tiêu hằng ngày: Ăn (2,6tr) + Xăng (0,9tr) = 3,5tr. Cố định: Tiền nhà (cờ cố định), Điện (có ngày chi), Net (có định kỳ).
+function tnData(chi, over){
+  var j = {};
+  (chi || []).forEach(function(c, i){
+    j[c[0]] = j[c[0]] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] };
+    j[c[0]].chi[c[1]] = (j[c[0]].chi[c[1]] || 0) + c[2];
+    j[c[0]].items.push({ iid: 'k' + i, kind: 'chi', catId: c[1], soTien: c[2], ghiChu: '', walletId: 'w_chinh' });
+  });
+  var d = baseData({ journal: j });
+  d.settings.ngayBatDau = '2026-09-01'; d.settings.thangBatDauDuTru = '2026-09';
+  d.categories.chi = [
+    { id: 'an', ten: 'Ăn uống', chiTieu: 2600000 }, { id: 'xang', ten: 'Xăng', chiTieu: 900000 },
+    { id: 'nha', ten: 'Tiền nhà', chiTieu: 5000000, coDinhChiTieu: true },
+    { id: 'dien', ten: 'Điện', chiTieu: 1000000, ngay: 5 },
+    { id: 'net', ten: 'Net', chiTieu: 300000 },
+    { id: 'choi', ten: 'Vui chơi', chiTieu: 0 }
+  ];
+  d.dinhKy = [{ id: 'dk1', ten: 'Net', kind: 'chi', catId: 'net', soTien: 300000, ngay: 12, bat: true, bo: [] }];
+  if (over) over(d);
+  setToday('2026-10-10');
+  return loadData(d);
+}
+var TN_CHI = [['2026-10-05', 'an', 1000000], ['2026-10-08', 'xang', 300000], ['2026-10-05', 'nha', 5000000], ['2026-10-10', 'an', 30000]];
+
+test('mức/ngày = (tổng hạn mức tiêu hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại; "còn tiêu được" trừ phần đã tiêu hôm nay', function(){
+  tnData(TN_CHI);
+  var t = ctx.tieuMoiNgay('2026-10-10');
+  eq(t.cap, 3500000, 'chỉ Ăn + Xăng'); eq(t.daTruoc, 1300000); eq(t.daHomNay, 30000); eq(t.soNgay, 22);
+  near(t.muc, 100000, 0.01); near(t.honNayCon, 70000, 0.01); eq(t.het, false);
+});
+test('khoản cố định KHÔNG vào mức hằng ngày (dù đã chi hay chưa) và hiện riêng ở "còn phải ra", không cộng đôi', function(){
+  tnData(TN_CHI);
+  var t = ctx.tieuMoiNgay('2026-10-10'), a = JSON.stringify(t.coDinh.map(function(x){ return [x.ten, x.con]; }));
+  eq(t.cap, 3500000, 'nhà / điện / net không nằm trong hạn mức hằng ngày');
+  eq(t.coDinhCon, 1300000, 'điện 1tr chưa chi + net 0,3tr (hạn mức và định kỳ là CÙNG khoản, chỉ tính 1 lần); nhà đã chi nên 0');
+  eq(a, JSON.stringify([['Điện', 1000000], ['Net', 300000]]));
+  tnData(TN_CHI.concat([['2026-10-06', 'dien', 400000]]));
+  eq(ctx.tieuMoiNgay('2026-10-10').coDinhCon, 900000, 'điện đã chi 0,4tr -> còn 0,6tr');
+  eq(ctx.tieuMoiNgay('2026-10-10').cap, 3500000, 'chi cố định không đụng mức hằng ngày');
+});
+test('trả nợ biết trước chưa đóng vào "còn phải ra", không vào mức hằng ngày', function(){
+  tnData(TN_CHI, function(d){
+    d.vayNo.vayNoPhaiTra = [{ id: 'v1', ten: 'Vay xe', loaiVay: 'ngan_hang', hinhThuc: 'khong_lai', soTienGoc: 6000000, soThangVay: 6, ngayVay: '2026-09-15', ngayTraHangThang: 20, walletId: 'w_chinh', traNo: [], trangThai: 'dang_vay' }];
+  });
+  var t = ctx.tieuMoiNgay('2026-10-10');
+  eq(t.cap, 3500000); ok(t.coDinhCon > 1300000, 'có thêm kỳ trả nợ tháng này: ' + t.coDinhCon);
+  ok(t.coDinh.some(function(x){ return x.ten === 'Trả nợ'; }));
+});
+test('khoản ghi trước cho ngày SAU hôm nay chưa tiêu nên không trừ; mức không đổi trong ngày khi tiêu thêm', function(){
+  tnData(TN_CHI.concat([['2026-10-20', 'an', 500000]]));
+  eq(ctx.tieuMoiNgay('2026-10-10').daTruoc, 1300000);
+  var m1 = ctx.tieuMoiNgay('2026-10-10').muc;
+  tnData(TN_CHI.concat([['2026-10-10', 'xang', 70000]]));
+  var t = ctx.tieuMoiNgay('2026-10-10');
+  near(t.muc, m1, 0.01, 'tiêu thêm hôm nay không làm mức/ngày tụt'); near(t.honNayCon, 0, 0.01);
+  tnData(TN_CHI.concat([['2026-10-10', 'xang', 120000]]));
+  ok(ctx.tieuMoiNgay('2026-10-10').honNayCon < 0, 'vượt mức hôm nay'); ok(ctx.tieuMoiNgayHtml('2026-10-10').indexOf('Hôm nay đã vượt mức') >= 0);
+});
+test('hết hạn mức tiêu hằng ngày: báo vượt; ngày cuối tháng chia cho 1 ngày', function(){
+  tnData(TN_CHI.concat([['2026-10-09', 'an', 3000000]]));
+  var t = ctx.tieuMoiNgay('2026-10-10');
+  eq(t.het, true); eq(t.muc, 0); eq(t.vuot, 4330000 - 3500000);
+  ok(ctx.tieuMoiNgayHtml('2026-10-10').indexOf('đã hết') >= 0);
+  tnData(TN_CHI); setToday('2026-10-31');
+  eq(ctx.tieuMoiNgay('2026-10-31').soNgay, 1);
+  setToday('2026-10-01');
+});
+test('không có hạn mức hằng ngày nào -> không hiện (null / rỗng), thay vì đoán số', function(){
+  tnData(TN_CHI, function(d){ d.categories.chi.forEach(function(c){ if (c.id === 'an' || c.id === 'xang') c.chiTieu = 0; }); });
+  eq(ctx.tieuMoiNgay('2026-10-10'), null); eq(ctx.tieuMoiNgayHtml('2026-10-10'), '');
+  tnData(TN_CHI, function(d){ d.categories.chi[0].khongDuTru = true; d.categories.chi[1].khongDuTru = true; });
+  eq(ctx.tieuMoiNgay('2026-10-10'), null, 'Không tính dự kiến bị loại');
+});
+test('thẻ tổng quan Sổ tay: tháng này có khối "Hôm nay còn tiêu được"; tháng khác thì không', function(){
+  tnData(TN_CHI);
+  var h = ctx.tongQuanHtml('2026-10', 0, 0, 0, 0, false);
+  ok(h.indexOf('Hôm nay còn tiêu được') >= 0 && h.indexOf('Khoản cố định còn phải ra') >= 0, 'tháng hiện tại');
+  ok(ctx.tongQuanHtml('2026-09', 0, 0, 0, 0, false).indexOf('Hôm nay còn tiêu được') < 0, 'tháng cũ');
 });
 
 /* ==================================================================== */

@@ -252,15 +252,18 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
+  if (laThangNay && !beforeLock) h += tieuMoiNgayHtml(todayStr());
   h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   var nDk = dinhKyDenHan(todayStr()).length;
   var nVn = danhSachSapDenHan(7).length;
   var nHan = dsCatSapDenHan().length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
+  var nThe = theSapDenHan().length;
   var chips = '';
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
   if (nHan) chips += '<button type="button" class="hero-chip" data-act="hanMo">'+icon('clock')+' '+nHan+' khoản thu/chi sắp đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
+  if (nThe) chips += '<button type="button" class="hero-chip" data-act="goDanhMuc">'+icon('clock')+' '+nThe+' thẻ sắp đến hạn thanh toán</button>';
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
   return h + '</div>';
@@ -293,11 +296,11 @@ function viTheHtml(mk, beforeLock){
   return '<div class="vi-sec"><div class="vi-sec-head"><h3>Số dư theo ví</h3>'
     + '<button type="button" class="vi-chuyen" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></div>'
     + '<div class="vi-scroll">' + ws.map(function(w, i){
-        var b = soDuTheoVi(w.id, cuoi), on = (w.id === dangGhi);
+        var b = soDuTheoVi(w.id, cuoi), on = (w.id === dangGhi), laThe = viLaThe(w);
         return '<button type="button" class="vi-the vc'+(i % 4)+(on ? ' on' : '')+'" data-act="viCardChon" data-id="'+esc(w.id)+'" aria-pressed="'+on+'">'
           + '<span class="vi-the-top"><span class="vi-the-ten">'+esc(w.ten)+'</span>'+(on ? '<span class="vi-the-tag">Đang ghi</span>' : '')+'</span>'
-          + '<span class="vi-the-sub">'+(w.id === macDinh ? 'Mặc định' : 'Số dư')+'</span>'
-          + '<span class="vi-the-so'+(b < 0 ? ' am' : '')+'">'+fmt(Math.round(b))+'</span></button>';
+          + '<span class="vi-the-sub">'+(laThe ? (b > 0 ? 'Thẻ · dư có' : 'Thẻ · dư nợ') : (w.id === macDinh ? 'Mặc định' : 'Số dư'))+'</span>'
+          + '<span class="vi-the-so'+(b < 0 ? ' am' : '')+'">'+fmt(Math.round(laThe ? Math.abs(b) : b))+'</span></button>';
       }).join('') + '</div></div>';
 }
 
@@ -796,6 +799,68 @@ function hanMucThangRows(mk){
 }
 // mức: 'ok' < 80% · 'warn' 80–100% · 'over' > 100%
 function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok'); }
+
+/* ====================================================================
+   MỨC TIÊU MỖI NGÀY — "hôm nay còn tiêu được bao nhiêu", ở thẻ tổng quan Sổ tay (chỉ THÁNG HIỆN TẠI).
+   Chỉ tính phần TIÊU HẰNG NGÀY: hạn mức các danh mục chi mà người dùng CHƯA khai là khoản cố định.
+   Khoản cố định (tiền nhà, trả nợ, điện nước...) ra theo ngày và số tiền biết trước nên KHÔNG đưa vào mức này, nếu không
+   chúng ăn hết hạn mức và con số mỗi ngày thành vô nghĩa; chúng được tính riêng ở dòng "còn phải ra" (coDinhCon).
+   Danh mục được coi là CỐ ĐỊNH nếu app đã có cách khai nó là khoản theo lịch: cờ "Cố định theo Hạn mức", có "Ngày chi hằng
+   tháng", hoặc có giao dịch định kỳ đang bật. Danh mục hệ thống (Cho vay, Trả nợ...) và "Không tính dự kiến" không vào.
+   Công thức: mức/ngày = (tổng hạn mức tiêu hằng ngày − đã chi TRƯỚC hôm nay) ÷ số ngày còn lại tính cả hôm nay.
+   Dùng số đầu ngày nên cả ngày không đổi; tiêu bao nhiêu hôm nay chỉ làm "còn tiêu được" giảm. Danh mục không đặt hạn mức
+   không có trong con số (giống thẻ "Chi theo hạn mức"). Chỉ ĐỌC dữ liệu. null = không có gì để tính.
+   ==================================================================== */
+function catChiCoDinh(c){
+  return !!(c.coDinhChiTieu || catNgayHan(c)
+    || (state.data.dinhKy || []).some(function(k){ return k.bat && k.kind === 'chi' && k.catId === c.id; }));
+}
+function tieuMoiNgay(homNay){
+  homNay = homNay || todayStr();
+  var mk = monthKey(homNay), he = CAT_HE_THONG.chi || {}, bien = {}, cap = 0, coDinh = [];
+  (state.data.categories.chi || []).forEach(function(c){
+    var hm = num(c.chiTieu);
+    if (c.khongDuTru || he[c.id]) return;
+    if (catChiCoDinh(c)){
+      // còn phải ra = phần hạn mức chưa chi, hoặc khoản định kỳ chưa ghi nếu lớn hơn (không cộng cả hai: cùng một khoản)
+      var con = Math.max(Math.max(0, hm - actualCatInMonth('chi', c.id, mk)), dinhKyChuaGhiThang(mk, 'chi', c.id));
+      if (con > 0) coDinh.push({ ten: c.ten, con: con });
+      return;
+    }
+    if (hm > 0){ bien[c.id] = true; cap += hm; }
+  });
+  if (cap <= 0) return null;
+  var daTruoc = 0, daHomNay = 0;
+  Object.keys(state.data.journal).forEach(function(d){
+    if (monthKey(d) !== mk || d > homNay) return;      // khoản ghi trước cho ngày sau hôm nay chưa tiêu
+    var chi = state.data.journal[d].chi || {};
+    Object.keys(bien).forEach(function(id){ if (d === homNay) daHomNay += num(chi[id]); else daTruoc += num(chi[id]); });
+  });
+  var soNgay = daysInMonth(mk) - parseInt(homNay.slice(8, 10), 10) + 1;
+  var con = cap - daTruoc, muc = Math.max(0, con) / soNgay;
+  var traNo = bietTruocChuaGhi('chi', 'traNo', mk);
+  if (traNo > 0) coDinh.push({ ten: (catTen('chi', 'traNo').charAt(0) === '(' ? 'Trả nợ' : catTen('chi', 'traNo')), con: traNo });
+  var tong = 0; coDinh.forEach(function(x){ tong += x.con; });
+  coDinh.sort(function(a, b){ return b.con - a.con; });
+  return { cap: cap, daTruoc: daTruoc, daHomNay: daHomNay, soNgay: soNgay, muc: muc,
+           honNayCon: muc - daHomNay, het: daTruoc + daHomNay >= cap, vuot: Math.max(0, daTruoc + daHomNay - cap),
+           coDinhCon: tong, coDinh: coDinh };
+}
+function tieuMoiNgayHtml(homNay){
+  var t = tieuMoiNgay(homNay);
+  if (!t) return '';
+  var vuotNgay = !t.het && t.honNayCon < 0;
+  var nhan = t.het ? 'Hạn mức tiêu hằng ngày đã hết' : (vuotNgay ? 'Hôm nay đã vượt mức' : 'Hôm nay còn tiêu được');
+  var so = t.het ? (t.vuot > 0 ? 'vượt ' + fmt(Math.round(t.vuot)) : fmt(0)) : fmt(Math.round(Math.abs(t.honNayCon)));
+  var h = '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span><span>'+so+'</span></div>'
+    + '<div class="hero-bud-sub">' + (t.het ? '' : 'Mức '+fmt(Math.round(t.muc))+'/ngày · ') + 'còn '+t.soNgay+' ngày (tính cả hôm nay) · hôm nay đã tiêu '+fmt(Math.round(t.daHomNay))+'</div>';
+  if (t.coDinhCon > 0){
+    h += '<div class="hero-bud-sub">Khoản cố định còn phải ra '+fmt(Math.round(t.coDinhCon))+' ('
+      + t.coDinh.slice(0, 3).map(function(x){ return esc(x.ten); }).join(', ') + (t.coDinh.length > 3 ? '...' : '')
+      + ') — không tính vào mức trên</div>';
+  }
+  return h + '</div>';
+}
 function hanMucThangHtml(mk){
   var rows = hanMucThangRows(mk);
   if (!rows.length) return '';
@@ -1374,6 +1439,8 @@ function handleSoTayAction(act, el){
       renderSoTay();
       toast('Đã hoàn tác.');
     } });
+  } else if (act === 'goDanhMuc'){
+    chuyenTab('danhmuc');
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';
     document.querySelectorAll('.tab').forEach(function(t){
