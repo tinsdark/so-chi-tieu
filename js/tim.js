@@ -189,20 +189,20 @@ function timDong(sel){
   var o = document.querySelector(sel);
   return o ? (o.closest && o.closest('.dl-row, .cc-it, .dm-row, .vn-c') || o) : null;
 }
-function timDich(sel, fallback, lan){
+function timDich(sel, fallback, lan, dau){
   lan = lan || 0;
   var o = typeof document !== 'undefined' ? timDong(sel) : null;
   if (o){
-    if (o.scrollIntoView) o.scrollIntoView({ block: 'center' });
+    if (o.scrollIntoView) o.scrollIntoView({ block: dau ? 'start' : 'center' });
     o.classList.remove('tim-nhay'); void o.offsetWidth; o.classList.add('tim-nhay');
     setTimeout(function(){ o.classList.remove('tim-nhay'); }, 2600);
     return;
   }
-  if (lan < 8) setTimeout(function(){ timDich(sel, fallback, lan + 1); }, 90);
+  if (lan < 8) setTimeout(function(){ timDich(sel, fallback, lan + 1, dau); }, 90);
   else if (fallback) fallback();
 }
 function timDi(r){
-  var q = String(state.tim.q || '').trim(), dich = null, fb = null;
+  var q = String(state.tim.q || '').trim(), dich = null, fb = null, dau = false;
   state.tim.mo = false; timVe();
   var tab = null, sau = null, lh = function(a, id){ return '[data-act="' + a + '"][data-id="' + String(id).replace(/"/g, '') + '"]'; };
   if (r.loai === 'trang'){
@@ -211,7 +211,7 @@ function timDi(r){
   } else if (r.loai === 'lenh'){
     tab = 'sotay'; sau = function(){ state.qa.kind = r.kind; handleAction('qaMo', null); };
   } else if (r.loai === 'gdTat'){
-    state.soTaySearch = q; state.soTayFrom = ''; state.soTayTo = ''; state.soTayCat = ''; state.soTayLocMo = true; tab = 'sotay';
+    state.soTaySearch = q; state.soTayFrom = ''; state.soTayTo = ''; state.soTayCat = ''; state.soTayLocMo = true; tab = 'sotay'; dich = '.dl-bar'; dau = true;     // kéo xuống tận "Chi tiết theo ngày", không dừng ở đầu Sổ tay
   } else if (r.loai === 'dm'){ state.dmForm = { loai: 'cat', kind: r.kind, id: r.id }; tab = 'danhmuc'; }
   else if (r.loai === 'vi'){ state.dmForm = { loai: 'vi', id: r.id }; tab = 'danhmuc'; }
   else if (r.loai === 'mt'){ state.mtForm = { id: r.id }; tab = 'danhmuc'; }
@@ -230,7 +230,7 @@ function timDi(r){
   if (tab === 'danhmuc'){ var f = state.dkForm ? { loai: 'dk' } : (state.mtForm ? { loai: 'mt' } : state.dmForm); if (f) state.dmTab = dmTabCua(f.loai); }
   chuyenTab(tab);
   if (sau) setTimeout(sau, 350);       // chờ chuyển tab xong mới mở bảng
-  if (dich) setTimeout(function(){ timDich(dich, fb); }, 120);
+  if (dich) setTimeout(function(){ timDich(dich, fb, 0, dau); }, 120);
   else if (typeof window !== 'undefined' && window.scrollTo) window.scrollTo(0, 0);
 }
 
