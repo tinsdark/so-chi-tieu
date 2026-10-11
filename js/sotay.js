@@ -1065,44 +1065,7 @@ function balanceSeries(mk){
   return { labels: labels, vals: vals };
 }
 /* ---- Sổ tay: handlers ---- */
-// Cảnh báo ví sắp âm trước khi ghi (chỉ cảnh báo, bấm Đồng ý vẫn ghi). Trả câu cảnh báo hoặc ''.
-function canhBaoViAm(act, el){
-  var d = state.data;
-  if (act === 'qaSave'){
-    if (state.qa.kind === 'thu') return '';
-    var t = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
-    var v = (document.getElementById('qa_wallet') || {}).value || state.viChon;
-    return viCanhBaoAm(v, -t);
-  }
-  if (act === 'viChuyenLuu'){
-    var tu = (document.getElementById('vi_tu') || {}).value;
-    var den = (document.getElementById('vi_den') || {}).value;
-    if (tu === den) return '';
-    return viCanhBaoAm(tu, -numNonNeg(docSo((document.getElementById('vi_tien') || {}).value)));
-  }
-  if (act === 'stSaveItem'){
-    var kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
-    var tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
-    var vi = (document.getElementById('st_it_wallet') || {}).value || '';
-    var viId = walletById(vi) ? vi : viMacDinhId();
-    var moi = (kc[0] === 'chi' ? -tien : (kc[0] === 'thu' ? tien : 0));
-    var cu = 0, iid = el.getAttribute && el.getAttribute('data-iid');
-    if (iid){
-      entryItems(d.journal[el.getAttribute('data-date')]).forEach(function(it){
-        if (it.iid === iid && viCuaItem(it) === viId) cu = (it.kind === 'chi' ? -1 : 1) * num(it.soTien);
-      });
-    }
-    return viCanhBaoAm(viId, moi - cu);
-  }
-  if (act === 'saveEntry' && !state.editingDate){
-    var tong = 0;
-    document.querySelectorAll('.f_chi').forEach(function(inp){ tong += numNonNeg(docSo(inp.value)); });
-    var vf = (document.getElementById('f_wallet') || {}).value || viMacDinhId();
-    return viCanhBaoAm(vf, -tong);
-  }
-  return '';
-}
-
+// Cảnh báo trước khi ghi (ví sắp âm, khoản chi bất thường, vượt lời hứa) nằm ở canhbao.js (canhBaoGhi / canhBaoKhoan).
 /* ---- Cảnh báo khoản chi bất thường (bắt gõ thừa số 0) ----
    So số tiền sắp ghi với các khoản chi cùng danh mục trong 6 tháng qua. Chỉ cảnh báo khi đủ dữ liệu (>= 5 khoản) VÀ
    số mới lớn hơn 3 lần trung vị VÀ lớn hơn mọi khoản đã ghi (khoản lớn lâu lâu mới có, như đồ điện tử, không bị coi là gõ nhầm)
@@ -1124,33 +1087,11 @@ function chiBatThuong(catId, tien, boIid, homNay){
   if (m <= 0 || tien <= m * 3 || tien <= ds[ds.length - 1]) return null;
   return { m: m, max: ds[ds.length - 1], n: ds.length };
 }
-function canhBaoBatThuong(act, el){
-  var kc, tien, boIid = '';
-  if (act === 'qaSave'){
-    if (state.qa.kind === 'thu') return '';
-    kc = ['chi', qaCatChon('chi')];
-    tien = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
-  } else if (act === 'stSaveItem'){
-    kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
-    tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
-    boIid = (el.getAttribute && el.getAttribute('data-iid')) || '';
-    if (boIid){      // sửa mà không đổi số tiền thì không nhắc lại
-      var cu = entryItems(state.data.journal[el.getAttribute('data-date')]).filter(function(it){ return it.iid === boIid; })[0];
-      if (cu && num(cu.soTien) === tien) return '';
-    }
-  } else return '';
-  if (kc[0] !== 'chi') return '';
-  var r = chiBatThuong(kc[1], tien);
-  if (!r) return '';
-  return 'Khoản chi ' + catTen('chi', kc[1]) + ' ' + fmt(Math.round(tien)) + ' lớn gấp ' + Math.round(tien / r.m) + ' lần mức thường thấy '
-    + '(trung vị ' + fmt(Math.round(r.m)) + ', cao nhất từng ghi ' + fmt(Math.round(r.max)) + ', tính trên ' + r.n + ' khoản trong 6 tháng qua). Có gõ thừa số 0 không?';
-}
-
 function handleSoTayAction(act, el){
   el = el || {};      // phím N / Enter ở ô tiền gọi handleAction(..., null): không có phần tử bấm
   if (handleBieuDoAction(act, el)) return true;
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
-    var canhBao = [canhBaoViAm(act, el), canhBaoBatThuong(act, el), canhBaoLoiHua(act, el)].filter(Boolean).join('\n\n');
+    var canhBao = canhBaoGhi(act, el);
     if (canhBao){
       xacNhan('Kiểm tra trước khi ghi', canhBao + '\n\nVẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
         .then(function(ok){ if (ok){ el._daBaoAm = true; try{ handleSoTayAction(act, el); }finally{ el._daBaoAm = false; } } });
@@ -1503,6 +1444,8 @@ function handleSoTayAction(act, el){
       } });
       return true;
     }
+    // ví sắp âm / vượt lời hứa thì hỏi như Ghi nhanh (số tiền cố định nên bỏ luật "bất thường")
+    if (chayNeuDongY(canhBaoKhoan({ kind: dkS.kind, catId: dkS.catId, tien: dkS.soTien, ngay: ngayTraCuaKy(dkMk, dkS.ngay), ghiChu: dkS.ghiChu || dkS.ten, viId: viCuaItem(dkS), batThuong: false }), act, el, handleSoTayAction)) return true;
     var kq = dinhKyGhi(dkS, dkMk, todayStr());
     if (!kq){ toast('Không ghi được khoản này (kiểm tra danh mục / số tiền).', { loai:'err' }); return true; }
     scheduleSave();

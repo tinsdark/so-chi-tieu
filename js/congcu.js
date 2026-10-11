@@ -360,6 +360,8 @@ function handleCongCuAction(act, el){
     var note = ((document.getElementById('cc_m_note') || {}).value || '').trim() || mm.ten;
     if (tien <= 0){ toast('Nhập số tiền.', { loai: 'warn' }); return true; }
     if (cat.length !== 2 || !cat[1]){ toast('Chọn danh mục chi.', { loai: 'warn' }); return true; }
+    // ví sắp âm / vượt lời hứa thì hỏi xác nhận như Ghi nhanh (luật "bất thường" tắt: món lớn là chuyện bình thường ở đây)
+    if (chayNeuDongY(canhBaoKhoan({ kind: 'chi', catId: cat[1], tien: tien, ngay: ngay, ghiChu: note, viId: vi, batThuong: false }), act, el, handleCongCuAction)) return true;
     var it = entryAddItem(ngay, 'chi', cat[1], tien, note, vi);
     if (!it){ toast('Không ghi được khoản này.', { loai: 'err' }); return true; }
     var gc = note + ' ' + fmt(Math.round(tien)), e = state.data.journal[ngay];
