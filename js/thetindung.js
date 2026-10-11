@@ -108,7 +108,10 @@ function theTraSheetHtml(f){
     + vnF('Trả từ ví', '<select id="tt_tu">'+nguon.map(function(x){ return '<option value="'+esc(x.id)+'"'+(x.id === tuMd ? ' selected' : '')+'>'+esc(x.ten)+'</option>'; }).join('')+'</select>')
     + vnF('Số tiền', dmMoney('tt_tien', Math.round(t.conPhaiTra > 0 ? t.conPhaiTra : 0)), '', 'Điền sẵn số còn phải trả của kỳ sao kê. Muốn trả tối thiểu hoặc trả hết dư nợ thì sửa số.')
     + vnF('Ngày', '<input type="date" id="tt_ngay" value="'+todayStr()+'">')
-    + '<div class="vn-hint">Thanh toán thẻ là CHUYỂN giữa các ví: không tính là chi (khoản quẹt thẻ đã tính vào chi lúc mua), không đổi tổng số dư.</div>';
+    + '<div class="vn-hint">Thanh toán thẻ là CHUYỂN giữa các ví: không tính là chi (khoản quẹt thẻ đã tính vào chi lúc mua), không đổi tổng số dư.</div>'
+    + giaiThichSo([{ ten: 'Còn phải trả', ct: 'Dư nợ chốt ngày sao kê − tiền đã chuyển vào thẻ sau ngày đó (không vượt dư nợ hiện tại).',
+        pt: ptCong([t.soSaoKe, -t.daTra], Math.max(0, t.soSaoKe - t.daTra)) + (t.conPhaiTra < t.soSaoKe - t.daTra ? ' → tối đa bằng dư nợ hiện tại ' + soGt(t.duNo) : '') },
+      { ten: 'Dư nợ hiện tại', ct: 'Số dư ví thẻ đang âm bao nhiêu (quẹt thẻ là chi ghi vào ví thẻ).', pt: 'số dư ví ' + soGt(soDuTheoVi(w.id, todayStr())) + (soDuTheoVi(w.id, todayStr()) < 0 ? ' → dư nợ ' + soGt(t.duNo) : ' → không còn nợ') }], 'Cách tính các số này');
   return vnSheetKhung('Thanh toán thẻ ' + esc(w.ten), h, 'Thanh toán', 'theTraLuu', 'dmHuy');
 }
 

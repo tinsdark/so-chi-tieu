@@ -141,7 +141,8 @@ function dtThangDuLieu(mk){
   var hn = d.chi.filter(function(r){ return !r.coDinh; }), cd = d.chi.filter(function(r){ return r.coDinh; });
   d.chiActHN = tong(hn, 'act'); d.chiPlanHN = tong(hn, 'plan');
   d.chiActCD = tong(cd, 'act'); d.chiPlanCD = tong(cd, 'plan');
-  d.cb = tongThuThangCard(mk) - tongChiThangCard(mk);
+  d.thuDK = tongThuThangCard(mk); d.chiDK = tongChiThangCard(mk);      // thu / chi DỰ KIẾN cả tháng (gồm vay nợ: đây là dòng tiền thật)
+  d.cb = d.thuDK - d.chiDK;
   d.tn = dtTraNoKy(mk);
   return d;
 }
@@ -223,7 +224,20 @@ function dtDauHtml(d, bal, startMk, maxMk){
     h += dtThanhHtml({ kind:'no', ten:'Trả nợ', act:tn.act, plan:tn.plan, nhanPlan:'',
       phu: d.tn.n ? 'Đến hạn '+d.tn.n+' khoản · gần nhất '+dtNgay(d.tn.gan) : 'Theo lịch Vay - Nợ' });
   }
-  return h + dtGiaiThichHtml(d) + '</div>';
+  return h + dtGiaiThichHtml(d) + dtCanDoiGiaiThichHtml(d, bal) + '</div>';
+}
+// cách tính Cân đối và số dư lũy kế, có phép tính bằng số thật (giaiThichSo ở state.js)
+function dtCanDoiGiaiThichHtml(d, bal){
+  var ds = [], thucChi = actualCatMonthAll('chi', d.mk), thucThu = actualCatMonthAll('thu', d.mk), chuaGhi = d.chiDK - thucChi, thuChua = d.thuDK - thucThu;
+  ds.push({ ten: 'Cân đối', ct: 'Thu − chi ' + (d.tuong ? 'gợi ý' : 'dự kiến cả tháng') + ', tính cả vay nợ và trả nợ vì đây là dòng tiền thật (khác "Dư thật" ở Sổ tay: thu nhập − chi tiêu, chưa tính vay nợ).',
+    pt: ptCong([d.thuDK, -d.chiDK], d.cb) });
+  if (d.nay || d.qua){
+    ds.push({ ten: 'Chi dự kiến', ct: 'Đã chi thật trong tháng + khoản biết trước mà chưa ghi (kỳ trả nợ chưa đóng, định kỳ chưa ghi, danh mục "Cố định theo Hạn mức" chưa chi).',
+      pt: ptCong([thucChi, chuaGhi], d.chiDK) });
+    ds.push({ ten: 'Thu dự kiến', ct: 'Đã thu thật trong tháng + khoản biết trước mà chưa ghi (định kỳ thu, thu hồi cho vay theo lịch).', pt: ptCong([thucThu, thuChua], d.thuDK) });
+  }
+  if (bal != null) ds.push({ ten: 'Số dư lũy kế', ct: 'Số dư các ví đầu tháng + cân đối của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
+  return giaiThichSo(ds, 'Cách tính các số này');
 }
 
 /* ---- thu nhập / chi theo danh mục ---- */
@@ -334,7 +348,7 @@ function dtDuKienHtml(rowsAll, selMk){
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
       + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Danh mục')
-      + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. Số dư lũy kế từ tháng hiện tại trở đi đã cộng cả số dự báo.', 'Số gợi ý tính thế nào?')
+      + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. Số dư lũy kế từ tháng hiện tại trở đi đã cộng cả số dự báo.' + (typeof dmTbViDu === 'function' ? dmTbViDu() : ''), 'Số gợi ý tính thế nào?')
     + '</div>';
 }
 
