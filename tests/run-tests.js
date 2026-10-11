@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3929,6 +3929,68 @@ test('ẩn số tiền: che số tiền, giữ ngày / % / số ngày; fmt() KH�
   eq(a('Tháng 10/2026 · 29% · còn 21 ngày · 14:08 · Kỳ 3'), 'Tháng 10/2026 · 29% · còn 21 ngày · 14:08 · Kỳ 3');
   eq(a('Tiền nhà · 2 khoản'), 'Tiền nhà · 2 khoản');
   eq(ctx.fmt(1234000), '1.234.000 ₫', 'fmt giữ nguyên');
+});
+
+/* ==================================================================== */
+group('Tổng kết tháng (tongket.js)');
+
+// Tháng 9: Ăn 600k. Tháng 10: Ăn 580k (đi qua tndData), Tiền nhà 3,5tr, lương 14tr. Vay 6tr không lãi, kỳ 1 = 10/10 (chưa trả).
+// Hôm nay 03/11: tháng 10 đã kết thúc.
+function tkData(over){
+  tndData(5000000, function(d){
+    d.journal['2026-09-15'] = { thu: {}, chi: { an: 600000 }, ghiChu: '', refs: [], items: [{ iid: 'p1', kind: 'chi', catId: 'an', soTien: 600000, ghiChu: '', walletId: 'w_chinh' }] };
+    d.journal['2026-10-12'] = { thu: {}, chi: { me: 2000000, an: 700000 }, ghiChu: '', refs: [], items: [
+      { iid: 'q1', kind: 'chi', catId: 'me', soTien: 2000000, ghiChu: '', walletId: 'w_chinh' }, { iid: 'q2', kind: 'chi', catId: 'an', soTien: 700000, ghiChu: '', walletId: 'w_chinh' }] };
+    if (over) over(d);
+  });
+  setToday('2026-11-03');
+  return ctx.state.data;
+}
+
+test('tongKetThang: thu / chi, chi hằng ngày vs cố định, ngày trong mức, danh mục tăng mạnh nhất', function(){
+  tkData();
+  var r = ctx.tongKetThang('2026-10');
+  eq(r.thu, 14000000);
+  eq(r.hangNgay, 200000 + 50000 + 300000 + 30000 + 700000, 'Ăn cả tháng = 1.280.000 (580k + 700k)');
+  eq(r.coDinh, 3500000 + 2000000, 'Tiền nhà + Gửi mẹ');
+  eq(r.chi, r.hangNgay + r.coDinh, 'tổng chi = hằng ngày + cố định');
+  eq(r.cap, 3100000);
+  eq(r.soNgay, 31); ok(r.ngayOk > 0 && r.ngayOk < 31, 'có ngày vượt mức: ' + r.ngayOk);
+  eq(r.tang.id, 'an'); eq(r.tang.d, 1280000 - 600000, 'Ăn tăng so với tháng 9'); eq(r.prevMk, '2026-09');
+});
+test('tongKetThang: nợ gốc giảm / tài sản ròng đổi so với tháng trước; tháng chưa kết thúc / trước mốc / không giao dịch thì null', function(){
+  tkData();
+  var r = ctx.tongKetThang('2026-10');
+  eq(r.no, 6000000, 'nợ gốc còn lại'); eq(r.noTruoc, 6000000, 'tháng 9 chưa trả kỳ nào');
+  eq(r.rong - r.rongTruoc, ctx.taiSanRongThang('2026-10').rong - ctx.taiSanRongThang('2026-09').rong);
+  eq(ctx.tongKetThang('2026-11'), null, 'tháng hiện tại chưa kết thúc');
+  eq(ctx.tongKetThang('2026-08'), null, 'trước mốc bắt đầu sổ (01/09)');
+  eq(ctx.tongKetThang('2026-12'), null, 'tháng tương lai');
+  tkData(function(d){ d.journal = {}; });
+  eq(ctx.tongKetThang('2026-10'), null, 'không có giao dịch');
+});
+test('tongKetCardHtml: đủ các dòng, tháng chưa kết thúc thì rỗng; chưa đặt hạn mức hằng ngày thì nói rõ', function(){
+  tkData();
+  var h = ctx.tongKetCardHtml('2026-10');
+  ok(h.indexOf('id="cardTongKet"') > 0 && h.indexOf('Tổng kết tháng 10/2026') > 0, 'tiêu đề');
+  ok(h.indexOf('Thu − Chi') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
+  ok(h.indexOf('Trả nợ') > 0 && h.indexOf('Tài sản ròng cuối tháng') > 0 && h.indexOf('Tăng mạnh nhất') > 0 && h.indexOf('Ăn') > 0, 'nợ, tài sản ròng, danh mục tăng');
+  eq(ctx.tongKetCardHtml('2026-11'), '');
+  tkData(function(d){ d.categories.chi[0].chiTieu = 0; });
+  var k = ctx.tongKetCardHtml('2026-10');
+  ok(k.indexOf('chưa đặt hạn mức') > 0 && k.indexOf('ngày trong mức') < 0, 'không hạn mức: không đếm ngày trong mức');
+});
+test('Sổ tay: chip "Tổng kết tháng" chỉ trong 7 ngày đầu tháng và khi tháng trước có tổng kết; Báo cáo có thẻ ở tháng đã qua', function(){
+  tkData();
+  eq(ctx.tkGoiY('2026-11-03'), '2026-10'); eq(ctx.tkGoiY('2026-11-07'), '2026-10'); eq(ctx.tkGoiY('2026-11-08'), '', 'sau ngày 7');
+  var h = ctx.tongQuanHtml('2026-11', 0, 0, 0, 0, false);
+  ok(h.indexOf('data-act="goTongKet" data-mk="2026-10"') > 0 && h.indexOf('Tổng kết tháng 10') > 0, 'chip ở tháng hiện tại');
+  setToday('2026-11-20'); ok(ctx.tongQuanHtml('2026-11', 0, 0, 0, 0, false).indexOf('goTongKet') < 0, 'giữa tháng: không có chip');
+  tkData(function(d){ d.journal = {}; }); eq(ctx.tkGoiY('2026-11-03'), '', 'tháng trước không có giao dịch');
+  tkData();
+  var st = fs.readFileSync(path.join(__dirname, '..', 'js', 'bieudo.js'), 'utf8'), r = st.slice(st.indexOf('function renderBaoCao'));
+  ok(r.indexOf('baoCaoDauHtml(mk)') < r.indexOf('tongKetCardHtml(mk)') && r.indexOf('tongKetCardHtml(mk)') < r.indexOf('hanMucThangHtml(mk)'), 'thứ tự: thẻ đầu, tổng kết, hạn mức');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */

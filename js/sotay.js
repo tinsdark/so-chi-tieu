@@ -258,11 +258,12 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var nVn = danhSachSapDenHan(7).length;
   var nHan = dsCatSapDenHan().length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var nThe = theSapDenHan().length;
+  var nThe = theSapDenHan().length, mkTk = tkGoiY();
   var chips = '';
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
   if (nHan) chips += '<button type="button" class="hero-chip" data-act="hanMo">'+icon('clock')+' '+nHan+' khoản thu/chi sắp đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
+  if (mkTk && laThangNay) chips += '<button type="button" class="hero-chip" data-act="goTongKet" data-mk="'+mkTk+'">'+icon('pie')+' Tổng kết tháng '+parseInt(mkTk.slice(5, 7), 10)+' <span aria-hidden="true">›</span></button>';
   if (nThe) chips += '<button type="button" class="hero-chip" data-act="goDanhMuc">'+icon('clock')+' '+nThe+' thẻ sắp đến hạn thanh toán</button>';
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
@@ -1475,6 +1476,13 @@ function handleSoTayAction(act, el){
       renderSoTay();
       toast('Đã hoàn tác.');
     } });
+  } else if (act === 'goTongKet'){
+    state.soTayMonth = el.getAttribute('data-mk') || state.soTayMonth;
+    chuyenTab('baocao');
+    setTimeout(function(){
+      var dichTK = document.getElementById('cardTongKet');
+      if (dichTK && dichTK.scrollIntoView) dichTK.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 320);
   } else if (act === 'goDanhMuc'){
     chuyenTab('danhmuc');
   } else if (act === 'goTheoNgay'){
