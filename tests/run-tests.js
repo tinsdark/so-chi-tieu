@@ -4111,7 +4111,8 @@ function kiemPhepCong(html){
 test('Sổ tay thẻ đầu: dòng "= thu nhập − chi tiêu" + mục Cách tính có phép tính ĐÚNG và khớp số dư', function(){
   tcData(); setToday('2026-10-11');
   var h = ctx.tongQuanHtml('2026-10', 51600000, 33140000, 0, 18460000, false);
-  ok(h.indexOf('= thu nhập 1.000.000 − chi tiêu 1.200.000') > 0, 'dòng giải thích hiện sẵn dưới Dư thật');
+  ok(h.indexOf('hero-ct') < 0 && h.indexOf('= thu nhập') < 0, 'không có dòng giải thích hiện sẵn: chỉ hiện khi bấm "Cách tính các số này"');
+  ok(h.indexOf('<details class="giai-thich"><summary>ⓘ Cách tính các số này</summary>') > 0 && h.indexOf('<details class="giai-thich" open') < 0, 'mục giải thích gập sẵn');
   ok(h.indexOf('1.000.000 − 1.200.000 = −200.000') > 0, 'Dư thật = −200.000');
   ok(h.indexOf('51.600.000 − 50.500.000 − 100.000 = 1.000.000') > 0, 'Thu nhập = tổng thu − vay − điều chỉnh');
   ok(h.indexOf('33.140.000 − 31.900.000 − 40.000 = 1.200.000') > 0, 'Chi tiêu = tổng chi − nợ − điều chỉnh');

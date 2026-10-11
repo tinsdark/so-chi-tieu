@@ -246,7 +246,6 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
     + '</div>'
     // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
     + '<div class="hero-cl"><span>Dư thật</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>'
-    + '<div class="hero-ct">= thu nhập '+soGt(tongThu)+' − chi tiêu '+soGt(tongChi)+'</div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
