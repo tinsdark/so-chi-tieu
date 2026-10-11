@@ -1497,3 +1497,11 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .tn-ev-r{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:2px 0}
 .tn-ev-r span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .tn-ev-r b{font-variant-numeric:tabular-nums;white-space:nowrap} .tn-ev-r b.thu{color:var(--green)} .tn-ev-r b.chi{color:var(--red)}
+
+/* ---- Tổng kết tháng (tongket.js), tiền tố tk- ---- */
+.tk-r{padding:9px 0;border-top:1px solid var(--border)}
+.tk-r:first-of-type{border-top:none;padding-top:0}
+.tk-r1{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px}
+.tk-r1>span{color:var(--muted);font-weight:600}
+.tk-r1>b{font-size:15px;font-variant-numeric:tabular-nums;text-align:right} .tk-r1>b.thu{color:var(--green)} .tk-r1>b.chi{color:var(--red)}
+.tk-r2{margin-top:2px;font-size:12px;color:var(--muted)}

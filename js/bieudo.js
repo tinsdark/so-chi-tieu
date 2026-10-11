@@ -700,8 +700,9 @@ function renderBaoCao(){
   var root = document.getElementById('tabContent');
   if (!state.soTayMonth) state.soTayMonth = monthKey(todayStr());
   var mk = state.soTayMonth;
-  // thứ tự: thẻ đầu (có thanh tháng) -> hạn mức -> tài sản ròng -> mục tiêu | biểu đồ (màn rộng: 2 cột)
+  // thứ tự: thẻ đầu (có thanh tháng) -> tổng kết (tháng đã qua) -> hạn mức -> tài sản ròng -> mục tiêu | biểu đồ (màn rộng: 2 cột)
   var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);
+  html += tongKetCardHtml(mk);              // chỉ có ở tháng đã kết thúc (tongket.js)
   var hm = hanMucThangHtml(mk);
   html += hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
     + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
