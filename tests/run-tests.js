@@ -4500,6 +4500,43 @@ test('lhCardHtml + normalizeData: thẻ hiện câu hứa, tiến độ, đã gi
   setToday('2026-10-01');
 });
 
+test('lhKhop / từ khóa: không phân biệt hoa thường và dấu, khớp theo từ nguyên, nhiều từ là "hoặc"', function(){
+  var h = { catId: '', tuKhoa: 'trà sữa, Gong Cha' };
+  ok(ctx.lhKhop(h, 'an', 'Trà sữa size L 45k'), 'có dấu'); ok(ctx.lhKhop(h, 'an', 'TRA SUA matcha'), 'không dấu, hoa'); ok(ctx.lhKhop(h, 'xang', 'gong cha chiều'), 'từ thứ hai');
+  ok(!ctx.lhKhop(h, 'an', 'Cơm tấm'), 'không chứa'); ok(!ctx.lhKhop(h, 'an', ''), 'ghi chú trống thì không khớp');
+  ok(!ctx.lhKhop({ catId: '', tuKhoa: 'an' }, 'an', 'bánh mì'), '"an" không khớp "bánh" (khớp theo từ nguyên)'); ok(ctx.lhKhop({ catId: '', tuKhoa: 'an' }, 'an', 'Ăn trưa'), '"an" khớp "Ăn"');
+  ok(ctx.lhKhop({ catId: '', tuKhoa: 'đá' }, 'an', 'Cà phê đá'), 'đ -> d');
+  ok(ctx.lhKhop({ catId: 'an', tuKhoa: '' }, 'an', ''), 'chỉ danh mục: không cần ghi chú'); ok(!ctx.lhKhop({ catId: 'an', tuKhoa: '' }, 'xang', 'x'), 'sai danh mục');
+  ok(!ctx.lhKhop({ catId: 'an', tuKhoa: 'trà sữa' }, 'xang', 'trà sữa'), 'có cả danh mục lẫn từ khóa: phải khớp cả hai');
+  ok(!ctx.lhKhop({ catId: '', tuKhoa: '' }, 'an', 'x'), 'không có danh mục lẫn từ khóa thì không khớp gì');
+});
+test('lời hứa theo từ khóa: đếm đúng dòng, nhắc đúng, nằm chung danh mục Ăn vẫn tách được', function(){
+  dataLoiHua(function(d){
+    d.journal = {};
+    var add = function(ng, i, v, gc){ d.journal[ng] = d.journal[ng] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; d.journal[ng].chi.an = (d.journal[ng].chi.an || 0) + v;
+      d.journal[ng].items.push({ iid: 'k' + i, kind: 'chi', catId: 'an', soTien: v, ghiChu: gc, walletId: 'w_chinh' }); };
+    add('2026-10-02', 1, 45000, 'Trà sữa Gong Cha'); add('2026-10-03', 2, 60000, 'Cơm tấm'); add('2026-10-05', 3, 40000, 'tra sua');
+    d.loiHua = [{ id: 'k1', catId: '', tuKhoa: 'trà sữa', kieu: 'lan', gioiHan: 2, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'Hết nghiện trà sữa' }];
+  });
+  var h = ctx.state.data.loiHua[0], t = ctx.lhTrangThai(h, '2026-10-11');
+  eq(t.n, 2, 'chỉ 2 dòng trà sữa, "Cơm tấm" cùng danh mục Ăn không tính'); eq(t.tong, 85000); eq(t.trang, 'dang');
+  var r = ctx.lhViPham('an', 45000, '2026-10-12', '', '2026-10-11', 'Trà sữa Phúc Long');
+  eq(r.length, 1); ok(r[0].indexOf('Hết nghiện trà sữa') > 0 && r[0].indexOf('lần thứ 3') > 0 && r[0].indexOf('"trà sữa"') > 0, r[0]);
+  eq(ctx.lhViPham('an', 45000, '2026-10-12', '', '2026-10-11', 'Cơm gà').length, 0, 'ghi chú không có từ khóa thì không nhắc');
+  eq(ctx.lhViPham('an', 45000, '2026-10-12', '', '2026-10-11', '').length, 0, 'ghi chú trống thì không nhắc');
+  eq(ctx.lhQuyTac(h), '"trà sữa": tối đa 2 lần'); ok(ctx.lhCardHtml().indexOf('&quot;trà sữa&quot;') > 0 || ctx.lhCardHtml().indexOf('"trà sữa": tối đa 2 lần') > 0, 'thẻ ghi rõ từ khóa');
+  setToday('2026-10-01');
+});
+test('normalizeData lời hứa: cho phép chỉ từ khóa (không danh mục), bỏ dòng thiếu cả hai', function(){
+  dataLoiHua(function(d){ d.loiHua = [
+    { catId: '', tuKhoa: ' cà   phê ', kieu: 'lan', gioiHan: 3, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'x' },
+    { catId: '', tuKhoa: ' , ; ', kieu: 'lan', gioiHan: 3, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'x' },
+    { catId: 'an', kieu: 'lan', gioiHan: 3, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'cũ chưa có từ khóa' }]; });
+  var ds = ctx.state.data.loiHua;
+  eq(ds.length, 2); eq(ds[0].tuKhoa, 'cà phê', 'gộp khoảng trắng'); eq(ds[0].catId, ''); eq(ds[1].tuKhoa, '', 'lời hứa cũ giữ nguyên, không có từ khóa');
+  setToday('2026-10-01');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

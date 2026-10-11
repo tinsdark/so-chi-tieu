@@ -1,7 +1,10 @@
 "use strict";
 /* ====================================================================
    loihua.js — thẻ LỜI HỨA ở tab Công cụ: cam kết có thời hạn với chính mình, khác hạn mức (hạn mức chỉ là số mềm báo "vượt").
-   loiHua[] = [{ id, catId (danh mục chi), kieu: 'lan' | 'tien', gioiHan (số lần | số tiền; 0 = không chi), tuNgay, denNgay, cau, ngayTao }]
+   loiHua[] = [{ id, catId (danh mục chi, '' = mọi danh mục chi), tuKhoa (từ khóa trong GHI CHÚ của dòng chi, '' = không lọc), kieu: 'lan' | 'tien',
+     gioiHan (số lần | số tiền; 0 = không chi), tuNgay, denNgay, cau, ngayTao }]. Phải có danh mục HOẶC từ khóa.
+   Từ khóa: nhiều từ cách nhau dấu phẩy / chấm phẩy (khớp một trong các từ), không phân biệt hoa thường và dấu tiếng Việt ("tra sua" khớp "Trà sữa"),
+   khớp theo TỪ nguyên ("an" không khớp "banh"). Chỉ xét ghi chú của chính dòng chi (không xét nhãn).
    - 'lan': tối đa N dòng chi ở danh mục đó trong khoảng ngày; 'tien': tổng tiền chi tối đa X.
    - Trạng thái TÍNH TỪ SỔ TAY, không lưu: chưa bắt đầu / đang giữ (ngày thứ N) / đã phá (ngày dòng chi làm vượt) / đã giữ lời (hết hạn mà chưa vượt).
      Sửa hay xóa dòng chi ở Sổ tay thì trạng thái tự đổi theo, không có số liệu thứ hai để lệch.
@@ -15,13 +18,34 @@ function lhSoNgay(a, b){      // số ngày từ a đến b (cùng 'YYYY-MM-DD')
   var pa = a.split('-'), pb = b.split('-');
   return Math.round((Date.UTC(+pb[0], +pb[1] - 1, +pb[2]) - Date.UTC(+pa[0], +pa[1] - 1, +pa[2])) / 86400000);
 }
-// các dòng chi của danh mục trong khoảng ngày, theo thứ tự ngày; boIid = dòng đang sửa (không tính)
+// bỏ dấu, hạ chữ thường, gộp khoảng trắng: "Trà  Sữa" -> "tra sua"
+function lhChuanHoa(s){
+  return String(s == null ? '' : s).toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+function lhTuKhoaDs(tuKhoa){
+  return String(tuKhoa || '').split(/[,;]/).map(lhChuanHoa).filter(Boolean);
+}
+// dòng chi (danh mục + ghi chú) có thuộc lời hứa h không
+function lhKhop(h, catId, ghiChu){
+  if (h.catId && h.catId !== catId) return false;
+  var ds = lhTuKhoaDs(h.tuKhoa);
+  if (!ds.length) return !!h.catId;
+  var gc = ' ' + lhChuanHoa(ghiChu).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  return ds.some(function(k){ return gc.indexOf(' ' + k.replace(/[^a-z0-9]+/g, ' ') + ' ') >= 0; });
+}
+// tên đối tượng của lời hứa trong câu chữ: Trà sữa / "trà sữa" trong Ăn uống / "trà sữa" (mọi danh mục)
+function lhDoiTuong(h){
+  var cat = h.catId ? catTen('chi', h.catId) : '';
+  if (h.tuKhoa) return '"' + h.tuKhoa + '"' + (cat ? ' (' + cat + ')' : '');
+  return cat;
+}
+// các dòng chi thuộc lời hứa trong khoảng ngày, theo thứ tự ngày; boIid = dòng đang sửa (không tính)
 function lhDongChi(h, boIid){
   var out = [];
   Object.keys(state.data.journal).sort().forEach(function(ngay){
     if (ngay < h.tuNgay || ngay > h.denNgay) return;
     entryItems(state.data.journal[ngay]).forEach(function(it){
-      if (it.kind === 'chi' && it.catId === h.catId && it.iid !== boIid && num(it.soTien) > 0) out.push({ ngay: ngay, iid: it.iid, soTien: num(it.soTien) });
+      if (it.kind === 'chi' && it.iid !== boIid && num(it.soTien) > 0 && lhKhop(h, it.catId, it.ghiChu)) out.push({ ngay: ngay, iid: it.iid, soTien: num(it.soTien) });
     });
   });
   return out;
@@ -46,26 +70,26 @@ function lhTrangThai(h, homNay, boIid){
            ngayGiu: trang === 'chua' ? 0 : Math.min(tongNgay, lhSoNgay(h.tuNgay, homNay) + 1) };
 }
 function lhQuyTac(h){
-  var ten = catTen('chi', h.catId);
+  var ten = lhDoiTuong(h) || 'Mọi khoản chi';
   if (h.kieu === 'tien') return h.gioiHan > 0 ? ten + ': tối đa ' + fmt(Math.round(h.gioiHan)) : ten + ': không chi';
   return h.gioiHan > 0 ? ten + ': tối đa ' + Math.round(h.gioiHan) + ' lần' : ten + ': không chi';
 }
 /* khoản chi (danh mục, số tiền, ngày) sắp ghi có làm vượt lời hứa nào chưa bị phá không: trả mảng câu nhắc */
-function lhViPham(catId, tien, ngay, boIid, homNay){
+function lhViPham(catId, tien, ngay, boIid, homNay, ghiChu){
   var out = [];
   (state.data.loiHua || []).forEach(function(h){
-    if (h.catId !== catId || ngay < h.tuNgay || ngay > h.denNgay || tien <= 0) return;
+    if (!lhKhop(h, catId, ghiChu) || ngay < h.tuNgay || ngay > h.denNgay || tien <= 0) return;
     var t = lhTrangThai(h, homNay, boIid);
     if (t.trang === 'pha') return;
     var dau = 'Bạn đã hứa: "' + h.cau + '". ';
     if (h.kieu === 'tien'){
       if (t.tong + tien <= h.gioiHan + 0.5) return;
-      out.push(dau + (h.gioiHan > 0 ? 'Tổng chi ' + catTen('chi', catId) + ' sẽ thành ' + fmt(Math.round(t.tong + tien)) + ', vượt mức đã hứa ' + fmt(Math.round(h.gioiHan)) + ' (hết ' + ngayNganVN(h.denNgay) + ').'
-        : 'Bạn hứa không chi ' + catTen('chi', catId) + ' tới hết ' + ngayNganVN(h.denNgay) + '.'));
+      out.push(dau + (h.gioiHan > 0 ? 'Tổng chi ' + lhDoiTuong(h) + ' sẽ thành ' + fmt(Math.round(t.tong + tien)) + ', vượt mức đã hứa ' + fmt(Math.round(h.gioiHan)) + ' (hết ' + ngayNganVN(h.denNgay) + ').'
+        : 'Bạn hứa không chi ' + lhDoiTuong(h) + ' tới hết ' + ngayNganVN(h.denNgay) + '.'));
     } else {
       if (t.n + 1 <= h.gioiHan) return;
-      out.push(dau + (h.gioiHan > 0 ? 'Đây sẽ là lần thứ ' + (t.n + 1) + ' chi ' + catTen('chi', catId) + ' (hứa tối đa ' + Math.round(h.gioiHan) + ' lần, hết ' + ngayNganVN(h.denNgay) + ').'
-        : 'Bạn hứa không chi ' + catTen('chi', catId) + ' tới hết ' + ngayNganVN(h.denNgay) + '.'));
+      out.push(dau + (h.gioiHan > 0 ? 'Đây sẽ là lần thứ ' + (t.n + 1) + ' chi ' + lhDoiTuong(h) + ' (hứa tối đa ' + Math.round(h.gioiHan) + ' lần, hết ' + ngayNganVN(h.denNgay) + ').'
+        : 'Bạn hứa không chi ' + lhDoiTuong(h) + ' tới hết ' + ngayNganVN(h.denNgay) + '.'));
     }
   });
   return out;
@@ -73,25 +97,27 @@ function lhViPham(catId, tien, ngay, boIid, homNay){
 // nối vào hộp "Kiểm tra trước khi ghi" ở sotay.js; chỉ xét khoản CHI
 function canhBaoLoiHua(act, el){
   if (!(state.data.loiHua || []).length) return '';
-  var catId, tien, ngay, boIid = '';
+  var catId, tien, ngay, boIid = '', ghiChu = '';
   if (act === 'qaSave'){
     if (state.qa.kind === 'thu') return '';
     catId = qaCatChon('chi');
     tien = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
     ngay = (document.getElementById('qa_date') || {}).value || todayStr();
+    ghiChu = (document.getElementById('qa_note') || {}).value || '';
   } else if (act === 'stSaveItem'){
     var kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
     if (kc[0] !== 'chi') return '';
     catId = kc[1];
     tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
     ngay = (el.getAttribute && el.getAttribute('data-date')) || todayStr();
+    ghiChu = (document.getElementById('st_it_note') || {}).value || '';
     boIid = (el.getAttribute && el.getAttribute('data-iid')) || '';
-    if (boIid){      // sửa mà không đổi danh mục / số tiền thì không nhắc lại
+    if (boIid){      // sửa mà không đổi danh mục / số tiền / ghi chú thì không nhắc lại
       var cu = entryItems(state.data.journal[ngay]).filter(function(it){ return it.iid === boIid; })[0];
-      if (cu && cu.catId === catId && num(cu.soTien) === tien) return '';
+      if (cu && cu.catId === catId && num(cu.soTien) === tien && String(cu.ghiChu || '') === ghiChu) return '';
     }
   } else return '';
-  return lhViPham(catId, tien, ngay, boIid).join('\n\n');
+  return lhViPham(catId, tien, ngay, boIid, undefined, ghiChu).join('\n\n');
 }
 
 /* ---- giao diện ---- */
@@ -131,11 +157,18 @@ function lhCardHtml(){
   }
   return h + '</div>';
 }
+function lhCatOptions(sel){
+  return '<option value="">Mọi danh mục chi</option>' + (state.data.categories.chi || []).filter(function(c){ return !DK_CAT_LOAI[c.id]; }).map(function(c){
+    return '<option value="' + esc(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + esc(c.ten) + '</option>';
+  }).join('');
+}
 function lhSheetHtml(id){
   var ds = state.data.loiHua || [], ed = id ? ds.filter(function(x){ return x.id === id; })[0] : null;
   var hom = todayStr(), cuoiThang = monthKey(hom) + '-' + pad2(daysInMonth(monthKey(hom)));
-  var d = ed || { catId: '', kieu: 'lan', gioiHan: '', tuNgay: hom, denNgay: cuoiThang, cau: '' };
-  var h = vnF('Danh mục chi', '<select id="lh_cat">' + dkCatOptions('chi', d.catId ? 'chi|' + d.catId : '') + '</select>')
+  var d = ed || { catId: '', tuKhoa: '', kieu: 'lan', gioiHan: '', tuNgay: hom, denNgay: cuoiThang, cau: '' };
+  var h = vnF('Danh mục chi', '<select id="lh_cat">' + lhCatOptions(d.catId) + '</select>')
+    + vnF('Từ khóa trong ghi chú <span class="mp-hint">(tùy chọn)</span>', '<input type="text" id="lh_tukhoa" maxlength="60" value="' + esc(d.tuKhoa || '') + '" placeholder="VD: trà sữa, gongcha">',
+        '', 'Chỉ tính các khoản chi có ghi chú chứa từ khóa này. Nhiều từ cách nhau dấu phẩy; không phân biệt hoa thường và dấu ("tra sua" khớp "Trà sữa"). Bỏ trống = tính mọi khoản của danh mục.')
     + vnF('Giới hạn theo', dmSeg('lh_kieu', d.kieu === 'tien' ? 'tien' : 'lan', [['lan', 'Số lần'], ['tien', 'Số tiền']]))
     + vnF('Tối đa <span class="mp-hint">(bỏ trống hoặc 0 = không chi)</span>', dmMoney('lh_gioiHan', d.gioiHan, '0'))
     + '<div class="vn-2">' + vnF('Từ ngày', '<input type="date" id="lh_tu" value="' + esc(d.tuNgay) + '">')
@@ -154,15 +187,16 @@ function handleLoiHuaAction(act, el){
   if (act === 'lhThem'){ state.ccForm = { loai: 'lh', id: '' }; ccSheetVe(); }
   else if (act === 'lhSua'){ state.ccForm = { loai: 'lh', id: idOf() }; ccSheetVe(); }
   else if (act === 'lhLuu'){
-    var cat = ((document.getElementById('lh_cat') || {}).value || '').split('|');
+    var catId = (document.getElementById('lh_cat') || {}).value || '';
+    var tuKhoa = ((document.getElementById('lh_tukhoa') || {}).value || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     var tu = (document.getElementById('lh_tu') || {}).value, den = (document.getElementById('lh_den') || {}).value;
     var kieu = (document.getElementById('lh_kieu') || {}).value === 'tien' ? 'tien' : 'lan';
     var gh = numNonNeg(docSo((document.getElementById('lh_gioiHan') || {}).value));
     var cau = ((document.getElementById('lh_cau') || {}).value || '').trim();
-    if (cat.length !== 2 || !cat[1]){ toast('Chọn danh mục chi.', { loai: 'warn' }); return true; }
+    if (!catId && !lhTuKhoaDs(tuKhoa).length){ toast('Chọn một danh mục chi hoặc nhập từ khóa trong ghi chú.', { loai: 'warn' }); return true; }
     if (!tu || !den || den < tu){ toast('Ngày kết thúc phải sau ngày bắt đầu.', { loai: 'warn' }); return true; }
     if (!cau){ toast('Viết một câu hứa để app nhắc lại cho bạn.', { loai: 'warn' }); return true; }
-    var o = { catId: cat[1], kieu: kieu, gioiHan: kieu === 'lan' ? Math.round(gh) : gh, tuNgay: tu, denNgay: den, cau: cau };
+    var o = { catId: catId, tuKhoa: tuKhoa, kieu: kieu, gioiHan: kieu === 'lan' ? Math.round(gh) : gh, tuNgay: tu, denNgay: den, cau: cau };
     var cu = ds.filter(function(x){ return x.id === (state.ccForm && state.ccForm.id); })[0];
     if (cu) Object.assign(cu, o);
     else ds.push(Object.assign({ id: 'lh_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ngayTao: todayStr() }, o));
