@@ -1521,3 +1521,5 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 
 .gt-vd{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)}
 .gt-vd-h{font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:6px}
+
+.dt-tag.vay{background:var(--warn-bg);color:var(--warn-tx)}

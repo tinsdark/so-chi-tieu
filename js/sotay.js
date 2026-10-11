@@ -640,6 +640,11 @@ function dlDongHtml(date, it){
           + '<button type="button" class="btn secondary sm nguy" data-act="stDelItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('trash')+' Xóa</button></div>' : '')
     + '</div>';
 }
+// ghi chú của khoản do Vay - Nợ sinh ra thường bắt đầu bằng đúng nhãn ("Tất toán: Vay xe"): bỏ phần trùng để không hiện "Tất toán — Tất toán: Vay xe"
+function dlGhiChuRef(r){
+  var nhan = REF_LABEL[r.loai] || '', n = String(r.note || '');
+  return nhan && n.indexOf(nhan + ':') === 0 ? n.slice(nhan.length + 1).replace(/^\s+/, '') || n : n;
+}
 function dlRefHtml(r){
   var m = REF_MAP[r.loai];
   if (!m) return '';
@@ -647,7 +652,7 @@ function dlRefHtml(r){
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaRef(r))) : '';
   return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">'
     + '<span class="dl-dot" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true"></span>'
-    + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(r.note) : '')+'</span>'
+    + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(dlGhiChuRef(r)) : '')+'</span>'
     +   '<span class="dl-t2">'+esc(ten)+vi+' · '+icon('lock')+' Vay-Nợ</span></span>'
     + '<span class="dl-amt '+m.kind+'">'+dlSoTien(m.kind, r.soTien)+'</span>'
     + '</div></div>';

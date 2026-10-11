@@ -4167,6 +4167,43 @@ test('Hạn mức / Số dư đầu kỳ ở tab Danh mục: ví dụ trung bìn
 });
 
 /* ==================================================================== */
+group('Dòng tiền Theo tháng: tách vay nợ khỏi Thu nhập / Chi');
+
+test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, cho vay, điều chỉnh; vay nợ ở d.vayThem...; Cân đối vẫn là dòng tiền thật', function(){
+  tcData(); setToday('2026-10-11');
+  var d = ctx.dtThangDuLieu('2026-10');
+  eq(d.thuAct, 1000000, 'thu nhập = lương, không có vay 50tr'); eq(d.thuPlan, 0, 'chưa đặt kế hoạch thu');
+  ok(d.thu.every(function(r){ return !ctx.CAT_HE_THONG.thu[r.id]; }) && d.chi.every(function(r){ return !ctx.CAT_HE_THONG.chi[r.id]; }), 'không có danh mục hệ thống trong thẻ');
+  eq(d.chiAct, 1200000, 'chi = ăn + nhà (cho vay 2tr và điều chỉnh không tính)'); eq(d.chiActCD, 800000, 'chi cố định chỉ có Nhà, không có Cho vay');
+  eq(d.vayThem, 50000000); eq(d.thuHoi, 500000); eq(d.choVay, 2000000);
+  eq(d.cb, d.thuDK - d.chiDK, 'cân đối vẫn tính cả vay nợ'); ok(d.cb > 18000000, 'cân đối là dòng tiền thật: ' + d.cb);
+  setToday('2026-10-01');
+});
+test('dtDauHtml: Thu không còn "vượt kế hoạch 457%"; có dòng Vay nợ riêng; Cân đối ghi "gồm vay thêm" và nhãn "Dư nhờ vay"', function(){
+  tcData(); setToday('2026-10-11');
+  ctx.state.data.categories.thu[0].chiTieu = 1000000;                       // kế hoạch thu = lương 1tr
+  var d = ctx.dtThangDuLieu('2026-10'), h = ctx.dtDauHtml(d, 18460000, '2026-09', '2026-12');
+  var ngoai = h.replace(/<details class="giai-thich">[\s\S]*?<\/details>/g, '');         // vùng hiển thị, bỏ mục gập giải thích
+  ok(ngoai.indexOf('Vượt kế hoạch') < 0 && ngoai.indexOf('457') < 0 && ngoai.indexOf('51.600.000') < 0, 'thu bar không còn gồm tiền vay');
+  ok(h.indexOf('1.000.000 ₫</b> / 1.000.000 ₫ kế hoạch') > 0, 'thu nhập 1tr / kế hoạch 1tr');
+  ok(h.indexOf('class="bd-vn"') > 0 && h.indexOf('vay thêm') > 0 && h.indexOf('+50.000.000') > 0 && h.indexOf('thu hồi cho vay') > 0 && h.indexOf('cho vay') > 0, 'dòng Vay nợ tính riêng');
+  ok(h.indexOf('Dư nhờ vay') > 0, 'cân đối dương nhờ vay: ' + h.slice(h.indexOf('dt-tag'), h.indexOf('dt-tag') + 80));
+  ok(h.indexOf('gồm vay thêm') > 0 && h.indexOf('không tính vay: −') > 0, 'ghi rõ không vay thì thiếu bao nhiêu');
+  ok(h.indexOf('nhờ vay thêm 50.000.000 ₫; không có khoản vay thì thiếu 31.540.000 ₫') > 0, 'câu tóm tắt nói rõ nhờ vay');
+  ok(h.indexOf('18.460.000 − 50.000.000 = −31.540.000') > 0, 'giải thích có phép tính "không tính vay thêm"');
+  eq(kiemPhepCong(h).loi.join(' | '), '');
+  setToday('2026-10-01');
+});
+test('Sổ tay: tiêu đề khoản do Vay - Nợ sinh ra không lặp nhãn ("Tất toán — Tất toán: Vay xe" -> "Tất toán — Vay xe")', function(){
+  eq(ctx.dlGhiChuRef({ loai: 'tatToan', note: 'Tất toán: Vay xe' }), 'Vay xe');
+  eq(ctx.dlGhiChuRef({ loai: 'traNo', note: 'Trả nợ: Shopee' }), 'Shopee');
+  eq(ctx.dlGhiChuRef({ loai: 'traNo', note: 'Kỳ 3 của Shopee' }), 'Kỳ 3 của Shopee', 'ghi chú khác giữ nguyên');
+  eq(ctx.dlGhiChuRef({ loai: 'nhanTienVay', note: '' }), '');
+  var h = ctx.dlRefHtml({ loai: 'tatToan', soTien: 21603205, note: 'Tất toán: Vay xe' });
+  ok(h.indexOf('Tất toán — Vay xe') > 0 && h.indexOf('Tất toán — Tất toán') < 0, h);
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

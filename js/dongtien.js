@@ -116,7 +116,7 @@ function dtTraNoKy(mk){
    "Trả nợ" tách riêng ra d.traNo (có thanh riêng ở thẻ đầu), không nằm trong d.chi. */
 function dtThangDuLieu(mk){
   var cur = monthKey(todayStr()), tuong = mk > cur, qua = mk < cur, nhip = bcNhip(mk);
-  var d = { mk: mk, tuong: tuong, qua: qua, nay: mk === cur, nhip: nhip, thu: [], chi: [], traNo: null };
+  var d = { mk: mk, tuong: tuong, qua: qua, nay: mk === cur, nhip: nhip, thu: [], chi: [], traNo: null, heThong: {} };
   ['thu', 'chi'].forEach(function(kind){
     state.data.categories[kind].forEach(function(c){
       var base = c.khongDuTru ? 0 : num(c.chiTieu);
@@ -131,7 +131,11 @@ function dtThangDuLieu(mk){
         else proj = nhip.tyLe >= 0.2 ? act / nhip.tyLe : Math.max(act, base);
       }
       var r = { kind: kind, id: c.id, ten: c.ten, act: act, plan: plan, proj: proj, base: base, lich: lich, coDinh: kind === 'chi' && catChiLaCoDinh(c) };
-      if (kind === 'chi' && c.id === 'traNo') d.traNo = r; else d[kind].push(r);
+      // VAY NỢ tách khỏi thu nhập / chi: Trả nợ có thanh riêng (d.traNo); Nhận vay, Thu hồi / Cho vay, Điều chỉnh số dư không nằm trong
+      // các thẻ Thu nhập / Chi (d.heThong) mà hiện ở dòng "Vay nợ" riêng. Cân đối (d.cb) vẫn là DÒNG TIỀN thật, gồm cả vay nợ.
+      if (kind === 'chi' && c.id === 'traNo') d.traNo = r;
+      else if (CAT_HE_THONG[kind][c.id]) d.heThong[kind + ':' + c.id] = r;
+      else d[kind].push(r);
     });
   });
   var tong = function(arr, f){ var s = 0; arr.forEach(function(r){ s += r[f]; }); return s; };
@@ -143,6 +147,9 @@ function dtThangDuLieu(mk){
   d.chiActCD = tong(cd, 'act'); d.chiPlanCD = tong(cd, 'plan');
   d.thuDK = tongThuThangCard(mk); d.chiDK = tongChiThangCard(mk);      // thu / chi DỰ KIẾN cả tháng (gồm vay nợ: đây là dòng tiền thật)
   d.cb = d.thuDK - d.chiDK;
+  var hs = function(k){ return d.heThong[k] ? d.heThong[k].act : 0; };
+  d.vayThem = hs('thu:nhanTienVay'); d.thuHoi = hs('thu:thuHoiChoVay'); d.choVay = hs('chi:choVay');
+  d.thuHoiKH = d.heThong['thu:thuHoiChoVay'] ? d.heThong['thu:thuHoiChoVay'].plan : 0;
   d.tn = dtTraNoKy(mk);
   return d;
 }
@@ -189,7 +196,7 @@ function dtGiaiThichHtml(d){
   if (d.tuong){
     cau.push('Tháng chưa tới: số liệu là gợi ý theo hạn mức, lịch trả nợ và trung bình các tháng đã hoàn chỉnh.');
   } else if (d.qua){
-    cau.push('Tháng đã qua: thu '+fmt(d.thuAct)+', chi '+fmt(d.chiAct + (d.traNo ? d.traNo.act : 0))+'.');
+    cau.push('Tháng đã qua: thu nhập '+fmt(d.thuAct)+', chi '+fmt(d.chiAct + (d.traNo ? d.traNo.act : 0))+' (gồm trả nợ)'+(d.vayThem > 0.5 ? ', vay thêm '+fmt(d.vayThem) : '')+'.');
   } else if (d.chiPlanHN > 0){
     var p = d.chiActHN / d.chiPlanHN, t = d.nhip.tyLe, vs = p < t - 0.05 ? 'dưới nhịp' : (p > t + 0.05 ? 'vượt nhịp' : 'đúng nhịp');
     cau.push('Chi hằng ngày đang '+vs+' ('+Math.round(p * 100)+'% hạn mức sau '+Math.round(t * 100)+'% số ngày).');
@@ -200,7 +207,8 @@ function dtGiaiThichHtml(d){
   } else if (am && !d.qua){
     cau.push('Tháng '+(d.tuong ? 'dự kiến' : 'đang')+' âm '+fmt(-d.cb)+': chi cao hơn thu.');
   } else if (!am && !d.qua){
-    cau.push('Tháng '+(d.tuong ? 'dự kiến' : 'đang')+' dư '+fmt(d.cb)+'.');
+    cau.push('Tháng '+(d.tuong ? 'dự kiến' : 'đang')+' dư '+fmt(d.cb)
+      + (d.vayThem > 0.5 && d.cb - d.vayThem < 0 ? ' nhờ vay thêm '+fmt(d.vayThem)+'; không có khoản vay thì thiếu '+fmt(d.vayThem - d.cb) : '') + '.');
   }
   return '<div class="dt-gt '+(am ? 'am' : 'du')+'">'+cau.join(' ')+'</div>';
 }
@@ -209,11 +217,12 @@ function dtDauHtml(d, bal, startMk, maxMk){
   var h = '<div class="card hero bc-hero dt-hero" id="dtDau"><div class="hero-top"><div class="hero-lbl">Cân đối '+(d.nay ? 'tháng này' : monthLabel(mk).toLowerCase())+(d.tuong ? ' (dự kiến)' : '')+'</div>'
     + dtThangNavHtml(mk, startMk, maxMk) + '</div>'
     + '<div class="bc-val"><span class="bc-v dt-cb '+(cb < 0 ? 'am' : 'du')+'">'+fmt(cb)+'</span>'
-    + (cb !== 0 ? '<span class="dt-tag '+(cb < 0 ? 'am' : 'du')+'">'+(cb < 0 ? 'Thiếu' : 'Dư')+'</span>' : '') + '</div>'
-    + '<div class="bc-pace-n dt-sub">'+(d.tuong ? 'dự kiến' : (d.qua ? 'cả tháng' : 'dự kiến cuối tháng'))+(bal != null ? ' · số dư lũy kế '+fmt(Math.round(bal)) : '')+'</div>';
+    + (cb !== 0 ? (cb > 0 && cb - d.vayThem < 0 ? '<span class="dt-tag vay">Dư nhờ vay</span>' : '<span class="dt-tag '+(cb < 0 ? 'am' : 'du')+'">'+(cb < 0 ? 'Thiếu' : 'Dư')+'</span>') : '') + '</div>'
+    + '<div class="bc-pace-n dt-sub">'+(d.tuong ? 'dự kiến' : (d.qua ? 'cả tháng' : 'dự kiến cuối tháng'))+(bal != null ? ' · số dư lũy kế '+fmt(Math.round(bal)) : '')+'</div>'
+    + (d.vayThem > 0.5 ? '<div class="bc-pace-n dt-sub">gồm vay thêm '+fmt(Math.round(d.vayThem))+' · không tính vay: '+(cb - d.vayThem < 0 ? '−' : '+')+fmt(Math.abs(Math.round(cb - d.vayThem)))+'</div>' : '');
   var nhanThu = d.tuong ? 'gợi ý' : 'kế hoạch';
   h += dtThanhHtml({ kind:'thu', ten:'Thu', act:d.thuAct, plan:d.thuPlan, nhanPlan:nhanThu,
-    phu: d.thuPlan > 0 ? (d.thuAct >= d.thuPlan ? 'Vượt kế hoạch '+fmt(d.thuAct - d.thuPlan) : 'Còn thiếu '+fmt(d.thuPlan - d.thuAct)+' so với kế hoạch') : 'Chưa đặt kế hoạch thu' });
+    phu: d.thuPlan > 0 ? (d.thuAct >= d.thuPlan ? (d.thuAct - d.thuPlan >= 1 ? 'Vượt kế hoạch '+fmt(d.thuAct - d.thuPlan) : 'Đủ kế hoạch') : 'Còn thiếu '+fmt(d.thuPlan - d.thuAct)+' so với kế hoạch') : 'Chưa đặt kế hoạch thu' });
   h += dtThanhHtml({ kind:'chi', ten:'Chi hằng ngày', act:d.chiActHN, plan:d.chiPlanHN, nhanPlan:'hạn mức', tick: d.nay ? d.nhip.tyLe : null,
     phu: d.nay ? 'Đã qua '+d.nhip.ngayQua+'/'+d.nhip.soNgay+' ngày' : (d.tuong ? 'Gợi ý cả tháng' : 'Cả tháng') });
   if (d.chiActCD > 0 || d.chiPlanCD > 0){
@@ -224,7 +233,15 @@ function dtDauHtml(d, bal, startMk, maxMk){
     h += dtThanhHtml({ kind:'no', ten:'Trả nợ', act:tn.act, plan:tn.plan, nhanPlan:'',
       phu: d.tn.n ? 'Đến hạn '+d.tn.n+' khoản · gần nhất '+dtNgay(d.tn.gan) : 'Theo lịch Vay - Nợ' });
   }
-  return h + dtGiaiThichHtml(d) + dtCanDoiGiaiThichHtml(d, bal) + '</div>';
+  return h + dtVayNoDongHtml(d) + dtGiaiThichHtml(d) + dtCanDoiGiaiThichHtml(d, bal) + '</div>';
+}
+// dòng VAY NỢ của tháng (tính riêng, không nằm trong Thu / Chi): vay thêm, thu hồi cho vay (kèm kế hoạch), cho vay
+function dtVayNoDongHtml(d){
+  var p = [];
+  if (d.vayThem > 0.5) p.push('vay thêm <b class="thu">+' + fmt(Math.round(d.vayThem)) + '</b>');
+  if (d.thuHoi > 0.5 || d.thuHoiKH > 0.5) p.push('thu hồi cho vay <b class="thu">+' + fmt(Math.round(d.thuHoi)) + '</b>' + (d.thuHoiKH > d.thuHoi + 0.5 ? ' / ' + fmt(Math.round(d.thuHoiKH)) + ' dự kiến' : ''));
+  if (d.choVay > 0.5) p.push('cho vay <b class="chi">−' + fmt(Math.round(d.choVay)) + '</b>');
+  return p.length ? '<div class="bd-vn"><span>Vay nợ <small>(tính riêng)</small></span><span>' + p.join(' · ') + '</span></div>' : '';
 }
 // cách tính Cân đối và số dư lũy kế, có phép tính bằng số thật (giaiThichSo ở state.js)
 function dtCanDoiGiaiThichHtml(d, bal){
@@ -236,6 +253,7 @@ function dtCanDoiGiaiThichHtml(d, bal){
       pt: ptCong([thucChi, chuaGhi], d.chiDK) });
     ds.push({ ten: 'Thu dự kiến', ct: 'Đã thu thật trong tháng + khoản biết trước mà chưa ghi (định kỳ thu, thu hồi cho vay theo lịch).', pt: ptCong([thucThu, thuChua], d.thuDK) });
   }
+  if (d.vayThem > 0.5) ds.push({ ten: 'Không tính vay thêm', ct: 'Cân đối − tiền vay thêm trong tháng: cho biết tháng này tự cân đối được hay đang nhờ tiền vay.', pt: ptCong([d.cb, -d.vayThem], d.cb - d.vayThem) });
   if (bal != null) ds.push({ ten: 'Số dư lũy kế', ct: 'Số dư các ví đầu tháng + cân đối của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
   return giaiThichSo(ds, 'Cách tính các số này');
 }
