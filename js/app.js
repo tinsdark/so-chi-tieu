@@ -127,7 +127,7 @@ function hienPhimTat(){
   moHoiThoai({
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
-      + '/ — tìm trong Sổ tay\n'
+      + '/ — tìm kiếm (mọi thứ)\n'
       + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Công cụ · Cài đặt\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
@@ -150,10 +150,7 @@ document.addEventListener('keydown', function(ev){
     handleAction('fabAdd', null);
   } else if (k === '/'){
     ev.preventDefault();
-    if (state.tab !== 'sotay') chuyenTab('sotay');
-    if (!state.soTayLocMo){ state.soTayLocMo = true; renderSoTay(); }   // khung tìm kiếm mặc định gấp lại
-    var oTim = document.querySelector('[data-act=soTaySearchInput]');
-    if (oTim){ oTim.scrollIntoView({ behavior:'smooth', block:'center' }); oTim.focus(); }
+    handleAction('timBat', null);      // tìm kiếm toàn cục (kính lúp ở header); tìm riêng trong Sổ tay vẫn có ở nút kính lúp của danh sách ngày
   } else if (k === '?'){
     ev.preventDefault();
     hienPhimTat();
@@ -211,7 +208,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
-document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleCongCuInput(ev.target); });
+document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleCongCuInput(ev.target); handleTimInput(ev.target); });
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
@@ -236,6 +233,7 @@ function handleAction(act, el){
   if (handleDongTienAction(act, el)) return;
   if (handleTheoNgayAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
+  if (handleTimAction(act, el)) return;
   if (handleCongCuAction(act, el)) return;
   if (handleDoiSoatAction(act, el)) return;
   if (handleTheAction(act, el)) return;
