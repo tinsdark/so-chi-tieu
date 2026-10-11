@@ -1652,3 +1652,7 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .dn-ds li i{flex:0 0 9px;height:9px;border-radius:99px;margin-top:7px;background:var(--muted)}
 .dn-ds li.dn-tot i{background:var(--green)}.dn-ds li.dn-xau i{background:var(--red)}
 .dn-ds li b{font-weight:700}
+.tim-r mark{background:var(--primary-soft,rgba(37,99,235,.18));color:inherit;border-radius:3px;padding:0 1px}
+.tim-nhay{animation:tim-nhay 2.4s ease-out}
+@keyframes tim-nhay{0%,35%{box-shadow:0 0 0 3px var(--primary);background:var(--primary-soft,rgba(37,99,235,.18))}100%{box-shadow:0 0 0 3px transparent}}
+@media (prefers-reduced-motion:reduce){.tim-nhay{animation:none;box-shadow:0 0 0 3px var(--primary)}}

@@ -4737,13 +4737,20 @@ test('timTatCa: gõ số thì khớp đúng số tiền (giao dịch, Sổ mừn
   ok(nhomTim('ghi', 'trang').ds.some(function(r){ return r.loai === 'lenh'; }), 'lệnh nhanh "Ghi khoản chi"');
   setToday('2026-10-01');
 });
-test('timTatCa: giới hạn số kết quả mỗi nhóm nhưng vẫn đếm đủ; "Xem tất cả" cho giao dịch', function(){
+test('timKetQuaHtml: Giao dịch gộp thành MỘT dòng đầu mục (chi tiết Sổ tay); nhóm khác có "Xem thêm"', function(){
   dataTim(function(x){ for (var i = 0; i < 20; i++){ var ng = '2026-08-' + (i < 9 ? '0' : '') + (i + 1); x.journal[ng] = x.journal[ng] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] };
     x.journal[ng].chi.an = 10000; x.journal[ng].items.push({ iid: 'z' + i, kind: 'chi', catId: 'an', soTien: 10000, ghiChu: 'cà phê sáng', walletId: 'w_chinh' }); } });
-  var g = nhomTim('ca phe', 'gd'); eq(g.tong, 20); eq(g.ds.length, 8, 'chỉ hiện 8'); eq(g.ds[0].ngay, '2026-08-20', 'mới nhất trước');
+  var g = nhomTim('ca phe', 'gd'); eq(g.tong, 20); eq(g.ngay, 20); eq(g.chi, 200000); eq(g.ds[0].ngay, '2026-08-20', 'mới nhất trước (dữ liệu thuần)');
   var h = ctx.timKetQuaHtml('ca phe');
-  ok(h.indexOf('Giao dịch') > 0 && h.indexOf('8 / 20') > 0 && h.indexOf('Xem tất cả 20 khoản trong Sổ tay') > 0, 'có đếm và nút xem tất cả');
-  eq(ctx.state.tim.ds.length, 8, 'danh sách phẳng để chọn bằng phím');
+  ok(h.indexOf('Chi tiết Sổ tay') > 0 && h.indexOf('20 khoản khớp trong 20 ngày') > 0 && h.indexOf('chi 200.000') > 0, 'một dòng đầu mục có đếm và tổng');
+  eq(ctx.state.tim.ds.length, 1); eq(ctx.state.tim.ds[0].loai, 'gdTat'); ok(h.indexOf('cà phê sáng') < 0, 'không liệt kê từng khoản');
+  dataTim(function(x){ for (var i = 0; i < 12; i++) x.muonMua.push({ id: 'mx' + i, ten: 'Món thử ' + i, soTien: 1000, tt: 'cho', ngayThem: '2026-09-01', soNgayCho: 7, thang: 1 }); });
+  ctx.state.tim = { mo: true, q: 'mon thu', sel: 0, het: {} };
+  var h2 = ctx.timKetQuaHtml('mon thu'); ok(h2.indexOf('4 / 12') > 0 && h2.indexOf('Xem thêm 8 kết quả') > 0, 'nhóm khác hiện 4 đầu + nút xem thêm'); eq(ctx.state.tim.ds.length, 4);
+  ctx.handleTimAction('timThem', elAct({ 'data-k': 'muon' }));
+  eq(ctx.state.tim.het.muon, true);
+  ok(ctx.timKetQuaHtml('mon thu').indexOf('Xem thêm') < 0 && ctx.state.tim.ds.length === 12, 'xem thêm mở hết nhóm');
+  ok(ctx.timDanhDau('Cà phê & Sữa', 'ca phe').indexOf('<mark>Cà phê</mark> &amp; Sữa') === 0, 'bôi đậm không phân biệt dấu, escape phần còn lại');
   setToday('2026-10-01');
 });
 test('timKetQuaHtml: ô trống hiện lối tắt; không thấy gì thì báo; chữ gõ vào bị escape', function(){
@@ -4757,10 +4764,10 @@ test('timDi: nhảy đúng tab và đặt đúng trạng thái cho từng loại
   dataTim();
   var tab = null, cu = ctx.chuyenTab; ctx.chuyenTab = function(t){ tab = t; };
   var di = function(r, q){ ctx.state.tim = { mo: true, q: q || '', sel: 0 }; tab = null; ctx.timDi(r); };
-  di({ loai: 'gd', ngay: '2026-09-20' }, 'minh'); eq(tab, 'sotay'); eq(ctx.state.soTayMonth, '2026-09'); eq(ctx.state.soTaySearch, 'minh'); eq(ctx.state.soTayLocMo, true); eq(ctx.state.tim.mo, false, 'đóng ô tìm');
+  di({ loai: 'gdTat' }, 'minh'); eq(tab, 'sotay'); eq(ctx.state.soTaySearch, 'minh', 'Sổ tay lọc sẵn theo từ khóa'); eq(ctx.state.soTayLocMo, true); eq(ctx.state.tim.mo, false, 'đóng ô tìm');
   di({ loai: 'mung', id: 'q1' }, 'minh'); eq(tab, 'congcu'); eq(ctx.state.ccTrang, 'sommung'); eq(ctx.state.sm.tim, 'minh');
-  di({ loai: 'dodac', id: 'd1' }); eq(ctx.state.ccTrang, 'dodac'); eq(ctx.state.ccForm.loai, 'dd'); eq(ctx.state.ccForm.id, 'd1');
-  di({ loai: 'hua', id: 'h1' }); eq(ctx.state.ccTrang, 'loihua'); eq(ctx.state.ccForm.loai, 'lh');
+  di({ loai: 'dodac', id: 'd1' }); eq(ctx.state.ccTrang, 'dodac');
+  di({ loai: 'hua', id: 'h1' }); eq(ctx.state.ccTrang, 'loihua');
   di({ loai: 'muon', id: 'm1' }); eq(ctx.state.ccTrang, 'muonmua');
   di({ loai: 'dm', kind: 'chi', id: 'an' }); eq(tab, 'danhmuc'); eq(ctx.state.dmForm.loai, 'cat'); eq(ctx.state.dmForm.id, 'an');
   di({ loai: 'vi', id: 'w_chinh' }); eq(ctx.state.dmForm.loai, 'vi');
