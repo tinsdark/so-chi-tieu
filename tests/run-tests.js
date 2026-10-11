@@ -969,6 +969,48 @@ test('viChotSoDuDauKy: chốt từng ví, tổng giữ nguyên = số dư thật
 });
 
 /* ==================================================================== */
+group('Cảnh báo chi bất thường + chi theo thứ');
+
+function dataBatThuong(){
+  var j = {};
+  [['2026-08-03', 100000], ['2026-08-20', 120000], ['2026-09-02', 90000], ['2026-09-15', 110000], ['2026-10-01', 100000], ['2026-10-05', 130000]].forEach(function(x, i){
+    j[x[0]] = { thu: {}, chi: { an: x[1] }, ghiChu: '', refs: [], items: [{ iid: 'i' + i, kind: 'chi', catId: 'an', soTien: x[1], ghiChu: '', walletId: 'w_chinh' }] };
+  });
+  return baseData({ journal: j, settings: { soDuDauKy: 0, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' } });
+}
+test('chiBatThuong: gõ thừa số 0 thì cảnh báo; số bình thường, số nhỏ, thiếu dữ liệu, sửa chính dòng đó thì không', function(){
+  setToday('2026-10-10'); loadData(dataBatThuong());
+  var r = ctx.chiBatThuong('an', 1100000);
+  ok(r && r.n === 6 && r.m === 105000 && r.max === 130000, 'cảnh báo: trung vị 105.000, cao nhất 130.000');
+  eq(ctx.chiBatThuong('an', 300000), null, '300.000 chưa quá 3 lần trung vị (315.000)');
+  eq(ctx.chiBatThuong('an', 320000) !== null, true, '320.000 > 3 lần trung vị và > mọi khoản cũ');
+  eq(ctx.chiBatThuong('an', 40000), null, 'dưới 50.000 không xét');
+  eq(ctx.chiBatThuong('traNo', 5000000), null, 'danh mục hệ thống không xét');
+  eq(ctx.chiBatThuong('khac', 5000000), null, 'danh mục chưa có lịch sử');
+  eq(ctx.chiBatThuong('an', 1100000, 'i5') !== null, true, 'bỏ 1 dòng đang sửa vẫn đủ 5 khoản');
+  eq(ctx.chiBatThuong('an', 1100000, 'i5', '2027-06-10'), null, 'quá 6 tháng thì hết dữ liệu');
+  var d = dataBatThuong(); d.journal['2026-09-02'].items[0].soTien = 2000000; d.journal['2026-09-02'].chi.an = 2000000;
+  loadData(d); eq(ctx.chiBatThuong('an', 1100000), null, 'từng có khoản 2.000.000 thì 1.100.000 không bị coi là nhầm');
+  setToday('2026-10-01');
+});
+test('bdTheoThu: chia đúng theo thứ, ngày không chi tính 0, bỏ ngày tương lai', function(){
+  var j = {};
+  // 2026-10-05 là thứ Hai, 2026-10-06 thứ Ba
+  [['2026-10-05', 600000], ['2026-10-06', 300000], ['2026-10-12', 200000]].forEach(function(x, i){
+    j[x[0]] = { thu: {}, chi: { an: x[1] }, ghiChu: '', refs: [], items: [{ iid: 'x' + i, kind: 'chi', catId: 'an', soTien: x[1], ghiChu: '', walletId: 'w_chinh' }] };
+  });
+  setToday('2026-10-14'); loadData(baseData({ journal: j }));
+  var t = ctx.bdTheoThu('2026-10');
+  eq(t.rows[0].ten, 'Thứ Hai'); eq(t.rows[0].tong, 800000); eq(t.rows[0].soNgay, 2, 'thứ Hai 5 và 12/10 (từ ngày có giao dịch đầu tiên)');
+  eq(t.rows[0].tb, 400000); eq(t.rows[1].tong, 300000); eq(t.rows[1].soNgay, 2);
+  eq(t.rows[2].soNgay, 2, 'thứ Tư 7 và 14/10 (14/10 là hôm nay)');
+  eq(t.tong, 1100000);
+  var h = ctx.bdTheoThuHtml('2026-10');
+  ok(h.indexOf('Chi hằng ngày theo thứ') > 0 && h.indexOf('Thứ Hai tiêu nhiều nhất') > 0 && h.indexOf('Thứ Hai: 800.000 ÷ 2 ngày = 400.000') > 0, 'thẻ hiện thứ cao nhất + cách tính bằng số thật');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 group('K. Giao dịch định kỳ');
 
 function dataDinhKy(){

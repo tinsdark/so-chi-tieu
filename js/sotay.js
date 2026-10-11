@@ -1121,11 +1121,54 @@ function canhBaoViAm(act, el){
   return '';
 }
 
+/* ---- Cảnh báo khoản chi bất thường (bắt gõ thừa số 0) ----
+   So số tiền sắp ghi với các khoản chi cùng danh mục trong 6 tháng qua. Chỉ cảnh báo khi đủ dữ liệu (>= 5 khoản) VÀ
+   số mới lớn hơn 3 lần trung vị VÀ lớn hơn mọi khoản đã ghi (khoản lớn lâu lâu mới có, như đồ điện tử, không bị coi là gõ nhầm)
+   VÀ từ 50.000 trở lên. Danh mục hệ thống không xét. Không chặn ghi: người dùng bấm "Vẫn ghi" là xong.
+   boIid = dòng đang sửa, không tính vào lịch sử. Trả { m, max, n } hoặc null. */
+function chiBatThuong(catId, tien, boIid, homNay){
+  if (!catId || CAT_HE_THONG.chi[catId] || tien < 50000) return null;
+  homNay = homNay || todayStr();
+  var tu = monthKeyAdd(monthKey(homNay), -6) + '-' + homNay.slice(8, 10), ds = [];
+  Object.keys(state.data.journal).forEach(function(date){
+    if (date < tu || date > homNay) return;
+    entryItems(state.data.journal[date]).forEach(function(it){
+      if (it.kind === 'chi' && it.catId === catId && it.iid !== boIid && num(it.soTien) > 0) ds.push(num(it.soTien));
+    });
+  });
+  if (ds.length < 5) return null;
+  ds.sort(function(a, b){ return a - b; });
+  var h = Math.floor(ds.length / 2), m = ds.length % 2 ? ds[h] : (ds[h - 1] + ds[h]) / 2;
+  if (m <= 0 || tien <= m * 3 || tien <= ds[ds.length - 1]) return null;
+  return { m: m, max: ds[ds.length - 1], n: ds.length };
+}
+function canhBaoBatThuong(act, el){
+  var kc, tien, boIid = '';
+  if (act === 'qaSave'){
+    if (state.qa.kind === 'thu') return '';
+    kc = ['chi', qaCatChon('chi')];
+    tien = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
+  } else if (act === 'stSaveItem'){
+    kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
+    tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
+    boIid = (el.getAttribute && el.getAttribute('data-iid')) || '';
+    if (boIid){      // sửa mà không đổi số tiền thì không nhắc lại
+      var cu = entryItems(state.data.journal[el.getAttribute('data-date')]).filter(function(it){ return it.iid === boIid; })[0];
+      if (cu && num(cu.soTien) === tien) return '';
+    }
+  } else return '';
+  if (kc[0] !== 'chi') return '';
+  var r = chiBatThuong(kc[1], tien);
+  if (!r) return '';
+  return 'Khoản chi ' + catTen('chi', kc[1]) + ' ' + fmt(Math.round(tien)) + ' lớn gấp ' + Math.round(tien / r.m) + ' lần mức thường thấy '
+    + '(trung vị ' + fmt(Math.round(r.m)) + ', cao nhất từng ghi ' + fmt(Math.round(r.max)) + ', tính trên ' + r.n + ' khoản trong 6 tháng qua). Có gõ thừa số 0 không?';
+}
+
 function handleSoTayAction(act, el){
   el = el || {};      // phím N / Enter ở ô tiền gọi handleAction(..., null): không có phần tử bấm
   if (handleBieuDoAction(act, el)) return true;
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
-    var canhBao = canhBaoViAm(act, el);
+    var canhBao = [canhBaoViAm(act, el), canhBaoBatThuong(act, el)].filter(Boolean).join('\n\n');
     if (canhBao){
       xacNhan('Kiểm tra trước khi ghi', canhBao + '\n\nVẫn ghi khoản này?', { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })
         .then(function(ok){ if (ok){ el._daBaoAm = true; try{ handleSoTayAction(act, el); }finally{ el._daBaoAm = false; } } });
