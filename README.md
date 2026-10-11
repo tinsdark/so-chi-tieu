@@ -39,6 +39,8 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - **Sổ nợ theo đối tượng.** Mỗi khoản cho vay / vay có ô "Đối tượng" (người hoặc nơi vay, ví dụ Minh, Vietcombank) (`loan.nguoi`). Thẻ **Sổ nợ theo đối tượng** ở Vay - Nợ gom các khoản còn mở cùng một đối tượng để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Đối tượng).
 - **Chia hóa đơn nhóm.** Nút trong thẻ Cho vay: mình trả cả hóa đơn, nhập tổng và mỗi dòng một người (`Lan 150k` nếu không chia đều; người không ghi số chia đều phần còn lại cùng mình, lẻ đồng dồn về mình). Phần của mình thành một khoản chi ở Sổ tay, mỗi người khác thành một khoản cho vay (gắn `nguoi`), có Hoàn tác. Chưa có chiều ngược lại (người khác trả hộ, mình nợ họ).
 
+- **Gợi ý giao dịch định kỳ từ lịch sử.** Thẻ Giao dịch định kỳ (tab Danh mục) tự quét Sổ tay, gợi ý tối đa 5 khoản lặp mỗi tháng mà chưa có ở danh sách định kỳ: cùng loại + danh mục + ghi chú (bỏ số, dấu, hoa/thường), có ít nhất 3 tháng khác nhau trong 6 tháng gần nhất, mỗi tháng đúng 1 dòng, tiền lệch ≤ 15% và ngày lệch ≤ 5 ngày so với trung vị, còn xuất hiện ở tháng này hoặc tháng trước. Bỏ qua danh mục hệ thống, dòng do định kỳ sinh ra, danh mục đã có khoản định kỳ cùng loại. **Thêm** tạo khoản định kỳ với tiền / ngày trung vị (sửa lại được); **Bỏ** lưu khóa vào `settings.dkBoGoiY` (có Hoàn tác). Chỉ đọc sổ, không tự ghi tiền. Code: `dinhKyGoiY` ở `state.js`.
+
 - **Đăng nhập Google, dữ liệu ở Drive của bạn.** Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
 - **Dùng khi mất mạng.** Có bản nháp và bản sao dữ liệu trong `localStorage`; có mạng lại thì tự đồng bộ. Service worker giữ khung app để mở được offline.
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, xem danh sách và **khôi phục** một bản ngay trong tab Danh mục. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
@@ -64,7 +66,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 299 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 300 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 

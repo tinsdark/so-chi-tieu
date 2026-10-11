@@ -936,6 +936,56 @@ function dinhKyHoanTac(r){
   entryDeleteItem(r.date, r.iid);   // xóa luôn ngày nếu rỗng
 }
 
+/* ---- GỢI Ý ĐỊNH KỲ TỪ LỊCH SỬ ----
+   Quét Sổ tay tìm khoản chi/thu lặp mỗi tháng mà chưa có trong danh sách định kỳ. Chỉ ĐỌC dữ liệu;
+   thêm hay không do người dùng bấm. Một nhóm = cùng loại + danh mục + ghi chú (đã bỏ số, dấu, hoa/thường).
+   Đủ điều kiện: >= 3 tháng khác nhau trong 6 tháng gần nhất, mỗi tháng đúng 1 dòng, số tiền lệch <= 15% so với
+   trung vị, ngày lệch <= 5 ngày so với ngày trung vị, và còn xuất hiện ở tháng này hoặc tháng trước (còn "sống").
+   Bỏ qua: danh mục hệ thống, dòng do định kỳ/Vay - Nợ sinh ra, danh mục đã có khoản định kỳ cùng loại.
+   settings.dkBoGoiY[] = các khóa gợi ý đã chọn "Bỏ". */
+function dkChuanGhiChu(s){
+  return String(s == null ? '' : s).toLowerCase().replace(/[0-9.,:;\/\-_()#]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function dkTrungVi(arr){
+  var a = arr.slice().sort(function(x, y){ return x - y; }), m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function dinhKyGoiY(homNay){
+  homNay = homNay || todayStr();
+  var mkNay = monthKey(homNay), tu = monthKeyAdd(mkNay, -5);
+  var daCo = {}, bo = {}, nhom = {}, out = [];
+  (state.data.dinhKy || []).forEach(function(k){ daCo[k.kind + '|' + k.catId] = 1; });
+  ((state.data.settings || {}).dkBoGoiY || []).forEach(function(k){ bo[k] = 1; });
+  Object.keys(state.data.journal).forEach(function(date){
+    var mk = monthKey(date);
+    if (mk < tu || mk > mkNay) return;
+    entryItems(state.data.journal[date]).forEach(function(it){
+      if ((it.kind !== 'thu' && it.kind !== 'chi') || it.dkId) return;
+      if (CAT_HE_THONG[it.kind][it.catId] || daCo[it.kind + '|' + it.catId] || num(it.soTien) <= 0) return;
+      var key = it.kind + '|' + it.catId + '|' + dkChuanGhiChu(it.ghiChu);
+      var g = nhom[key] || (nhom[key] = { key: key, kind: it.kind, catId: it.catId, ten: '', cuoi: '', dong: [] });
+      g.dong.push({ mk: mk, ngay: parseInt(date.slice(8, 10), 10), tien: num(it.soTien), walletId: it.walletId });
+      if (date > g.cuoi){ g.cuoi = date; g.ten = String(it.ghiChu || '').trim(); g.walletId = it.walletId; }
+    });
+  });
+  Object.keys(nhom).forEach(function(key){
+    var g = nhom[key];
+    if (bo[key]) return;
+    var thang = {};
+    g.dong.forEach(function(d){ thang[d.mk] = (thang[d.mk] || 0) + 1; });
+    var ms = Object.keys(thang);
+    if (ms.length < 3 || ms.some(function(m){ return thang[m] > 1; })) return;
+    if (g.cuoi.slice(0, 7) < monthKeyAdd(mkNay, -1)) return;
+    var tien = dkTrungVi(g.dong.map(function(d){ return d.tien; }));
+    var ngay = Math.round(dkTrungVi(g.dong.map(function(d){ return d.ngay; })));
+    if (g.dong.some(function(d){ return Math.abs(d.tien - tien) > tien * 0.15 || Math.abs(d.ngay - ngay) > 5; })) return;
+    out.push({ key: key, kind: g.kind, catId: g.catId, ten: g.ten || catTen(g.kind, g.catId),
+               soTien: Math.round(tien), ngay: ngay, n: ms.length, walletId: g.walletId });
+  });
+  out.sort(function(a, b){ return b.soTien - a.soTien; });
+  return out;
+}
+
 /* ====================================================================
    MỤC TIÊU TIẾT KIỆM
    mucTieu[] = [{id, ten, soTien (đích), hanChot ('YYYY-MM' hoặc ''), walletId ('' = gom tay), daGom}]
