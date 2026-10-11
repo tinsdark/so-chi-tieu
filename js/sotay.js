@@ -806,18 +806,16 @@ function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok');
    Chỉ tính phần TIÊU HẰNG NGÀY: hạn mức các danh mục chi mà người dùng CHƯA khai là khoản cố định.
    Khoản cố định (tiền nhà, trả nợ, điện nước...) ra theo ngày và số tiền biết trước nên KHÔNG đưa vào mức này, nếu không
    chúng ăn hết hạn mức và con số mỗi ngày thành vô nghĩa; chúng được tính riêng ở dòng "còn phải ra" (coDinhCon).
-   Danh mục được coi là CỐ ĐỊNH nếu app đã có cách khai nó là khoản theo lịch: cờ "Cố định theo Hạn mức", có "Ngày chi hằng
-   tháng", hoặc có giao dịch định kỳ đang bật. Danh mục hệ thống (Cho vay, Trả nợ...) và "Không tính dự kiến" không vào.
+   Danh mục là CỐ ĐỊNH khi người dùng bật công tắc "Khoản cố định" ở tab Danh mục (c.khoanCoDinh; dữ liệu cũ: bật sẵn
+   cho danh mục có "Ngày chi hằng tháng", xem normalizeData). Danh mục hệ thống (Cho vay, Trả nợ...) và "Không tính dự kiến" không vào.
    Công thức: mức/ngày = (tổng hạn mức tiêu hằng ngày − đã chi TRƯỚC hôm nay) ÷ số ngày còn lại tính cả hôm nay.
    Dùng số đầu ngày nên cả ngày không đổi; tiêu bao nhiêu hôm nay chỉ làm "còn tiêu được" giảm. Danh mục không đặt hạn mức
    không có trong con số (giống thanh "Chi hằng ngày theo hạn mức"). Chỉ ĐỌC dữ liệu. null = không có gì để tính.
    ==================================================================== */
-function catChiCoDinh(c){
-  return !!(c.coDinhChiTieu || catNgayHan(c)
-    || (state.data.dinhKy || []).some(function(k){ return k.bat && k.kind === 'chi' && k.catId === c.id; }));
-}
+// KHÔNG đoán từ "Cố định theo Hạn mức" hay định kỳ: hai cờ đó có việc riêng (dự báo / nhắc), Ăn bật chúng vẫn là chi hằng ngày
+function catChiCoDinh(c){ return !!(c && c.khoanCoDinh); }
 // Quy tắc DÙNG CHUNG cho mọi số "chi hằng ngày" (Sổ tay, Báo cáo, Dòng tiền): chi CỐ ĐỊNH = danh mục hệ thống
-// (Trả nợ, Cho vay, Điều chỉnh số dư) hoặc catChiCoDinh. Mọi danh mục chi còn lại là chi HẰNG NGÀY.
+// (Trả nợ, Cho vay, Điều chỉnh số dư) hoặc danh mục bật "Khoản cố định". Mọi danh mục chi còn lại là chi HẰNG NGÀY.
 function catChiLaCoDinh(c){ return !!(c && (CAT_HE_THONG.chi[c.id] || catChiCoDinh(c))); }
 // theo id; danh mục đã xóa nhưng còn số liệu thì coi là chi hằng ngày
 function catChiHangNgay(id){
@@ -943,7 +941,7 @@ function hanMucThangHtml(mk){
         + '<span class="mb"><i style="width:'+Math.min(100, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
         + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
     });
-    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ, có ngày chi hằng tháng, có định kỳ, "Cố định theo Hạn mức") không tính vào % đã dùng và cảnh báo ở trên.</div>';
+    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Khoản cố định" ở tab Danh mục) không tính vào % đã dùng và cảnh báo ở trên.</div>';
   }
   return h + '</div>';
 }

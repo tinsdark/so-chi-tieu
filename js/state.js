@@ -526,6 +526,12 @@ function normalizeData(d){
   d.categories.chi = d.categories.chi || [];
   d.categories.thu.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; if (c.coDinhChiTieu==null) c.coDinhChiTieu = false; });
   d.categories.chi.forEach(function(c){ if (c.chiTieu==null) c.chiTieu = 0; if (c.khongDuTru==null) c.khongDuTru = false; if (c.coDinhChiTieu==null) c.coDinhChiTieu = false; });
+  // "Khoản cố định" (tiền nhà, điện nước...: không tính vào chi hằng ngày, xem catChiCoDinh ở sotay.js) là công tắc người dùng tự bật.
+  // Dữ liệu cũ chưa có công tắc: bật sẵn MỘT LẦN cho danh mục đã có "Ngày chi hằng tháng"; sau đó giữ đúng lựa chọn của người dùng.
+  d.categories.chi.forEach(function(c){
+    if (c.khoanCoDinh == null){ var n = Math.round(num(c.ngay)); c.khoanCoDinh = n >= 1 && n <= 31; }
+    else c.khoanCoDinh = !!c.khoanCoDinh;
+  });
   d.duTru = d.duTru || { thu: {}, chi: {} };
   d.duTru.thu = d.duTru.thu || {};
   d.duTru.chi = d.duTru.chi || {};

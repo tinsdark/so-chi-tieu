@@ -1704,8 +1704,8 @@ test('tongQuanHtml: số dư, thu/chi, còn lại theo chỉ tiêu, chip việc 
   var h = ctx.tongQuanHtml('2026-10', 0, 700000, 3000000, 2300000, false);
   ok(h.indexOf('Số dư hiện tại') >= 0, 'tháng này gọi là "hiện tại"');
   ok(h.indexOf(ctx.fmt(2300000)) >= 0, 'số dư');
-  // Ăn có định kỳ (Tiền net) = khoản cố định -> thanh hạn mức chỉ còn Xăng: 300k / 200k -> vượt 100k
-  ok(h.indexOf('Chi hằng ngày theo hạn mức') >= 0 && h.indexOf('vượt ' + ctx.fmt(100000)) >= 0 && h.indexOf(ctx.fmt(300000) + ' / ' + ctx.fmt(200000)) >= 0, 'thanh hạn mức chỉ tính chi hằng ngày');
+  // Ăn có định kỳ (Tiền net) nhưng KHÔNG bật "Khoản cố định" -> vẫn là chi hằng ngày: 700k / 1,2tr -> còn 500k
+  ok(h.indexOf('Chi hằng ngày theo hạn mức') >= 0 && h.indexOf('còn ' + ctx.fmt(500000)) >= 0, 'đã chi 700k / hạn mức 1,2tr -> còn 500k');
   ok(h.indexOf('1 khoản định kỳ đến hạn') >= 0, 'chip định kỳ');
   ok(h.indexOf('1 khoản vay/nợ sắp đến hạn') >= 0, 'chip vay nợ');
   ok(h.indexOf('1 danh mục vượt hạn mức') >= 0, 'Xăng 300k > 200k');
@@ -3643,7 +3643,8 @@ test('theDocForm: bật thẻ phải có ngày hợp lệ; tắt thẻ xóa mọ
 group('Mức tiêu mỗi ngày (tieuMoiNgay, sotay.js)');
 
 // 10/10/2026 (tháng 31 ngày -> còn 22 ngày tính cả hôm nay).
-// Tiêu hằng ngày: Ăn (2,6tr) + Xăng (0,9tr) = 3,5tr. Cố định: Tiền nhà (cờ cố định), Điện (có ngày chi), Net (có định kỳ).
+// Tiêu hằng ngày: Ăn (2,6tr) + Xăng (0,9tr) = 3,5tr. Cố định (công tắc "Khoản cố định"): Tiền nhà, Điện (dữ liệu cũ có ngày chi
+// -> bật sẵn khi nạp), Net (có thêm định kỳ để kiểm tra không cộng đôi).
 function tnData(chi, over){
   var j = {};
   (chi || []).forEach(function(c, i){
@@ -3655,9 +3656,9 @@ function tnData(chi, over){
   d.settings.ngayBatDau = '2026-09-01'; d.settings.thangBatDauDuTru = '2026-09';
   d.categories.chi = [
     { id: 'an', ten: 'Ăn uống', chiTieu: 2600000 }, { id: 'xang', ten: 'Xăng', chiTieu: 900000 },
-    { id: 'nha', ten: 'Tiền nhà', chiTieu: 5000000, coDinhChiTieu: true },
+    { id: 'nha', ten: 'Tiền nhà', chiTieu: 5000000, khoanCoDinh: true },
     { id: 'dien', ten: 'Điện', chiTieu: 1000000, ngay: 5 },
-    { id: 'net', ten: 'Net', chiTieu: 300000 },
+    { id: 'net', ten: 'Net', chiTieu: 300000, khoanCoDinh: true },
     { id: 'choi', ten: 'Vui chơi', chiTieu: 0 }
   ];
   d.dinhKy = [{ id: 'dk1', ten: 'Net', kind: 'chi', catId: 'net', soTien: 300000, ngay: 12, bat: true, bo: [] }];
@@ -3807,6 +3808,33 @@ test('B1 Vay - Nợ: trễ 2 kỳ thì thẻ khoản vay và "Sắp đến hạn
   eq(q.n, 1); ok(ctx.vnVayCardHtml(v).indexOf('Kỳ quá hạn') > 0); eq(ctx.danhSachSapDenHan(7)[0].soTien, 3000000);
   setToday('2026-09-05'); ok(ctx.vnVayCardHtml(v).indexOf('Kỳ tới') > 0, 'chưa tới hạn: vẫn là "Kỳ tới"');
   setToday('2026-10-01');
+});
+
+test('"Khoản cố định" là công tắc người dùng bật: "Cố định theo Hạn mức" hay định kỳ KHÔNG làm danh mục thành cố định', function(){
+  tnData(TN_CHI, function(d){
+    d.categories.chi[0].coDinhChiTieu = true;                       // Ăn bật "Cố định theo Hạn mức" (việc dự báo)
+    d.dinhKy.push({ id: 'dk2', ten: 'Cơm tháng', kind: 'chi', catId: 'xang', soTien: 100000, ngay: 3, bat: true, bo: [] });   // định kỳ gắn Xăng
+  });
+  var c = ctx.state.data.categories.chi;
+  eq(ctx.catChiCoDinh(c[0]), false, 'Ăn vẫn là chi hằng ngày'); eq(ctx.catChiCoDinh(c[1]), false, 'Xăng vẫn là chi hằng ngày');
+  eq(ctx.tieuMoiNgay('2026-10-10').cap, 3500000, 'Ăn + Xăng vẫn ở mức tiêu mỗi ngày');
+  eq(ctx.catChiLaCoDinh({ id: 'traNo' }), true, 'Trả nợ (hệ thống) luôn cố định');
+});
+test('dữ liệu cũ: có "Ngày chi hằng tháng" thì bật sẵn Khoản cố định MỘT LẦN; người dùng tắt rồi thì giữ tắt', function(){
+  var d = ctx.normalizeData(JSON.parse(JSON.stringify(baseData({ categories: { thu: [], chi: [
+    { id: 'nha', ten: 'Nhà', chiTieu: 0, ngay: 5 }, { id: 'an', ten: 'Ăn', chiTieu: 0 }, { id: 'dien', ten: 'Điện', chiTieu: 0, ngay: 10, khoanCoDinh: false } ] } }))));
+  var by = function(id){ return d.categories.chi.filter(function(c){ return c.id === id; })[0]; };
+  eq(by('nha').khoanCoDinh, true, 'có ngày chi -> bật sẵn'); eq(by('an').khoanCoDinh, false, 'không có ngày -> hằng ngày');
+  eq(by('dien').khoanCoDinh, false, 'đã tắt thì không bật lại');
+  ctx.normalizeData(d); eq(by('dien').khoanCoDinh, false, 'nạp lại lần nữa vẫn giữ');
+});
+test('form danh mục: công tắc "Khoản cố định" chỉ có ở danh mục chi thường (không có ở thu và danh mục hệ thống)', function(){
+  tnData(TN_CHI);
+  ok(ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'nha' }).indexOf('id="dm_kcd" checked') > 0, 'Tiền nhà: đang bật');
+  ok(ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'an' }).indexOf('id="dm_kcd">') > 0, 'Ăn: có công tắc, đang tắt');
+  ok(ctx.catSheetHtml({ loai: 'cat', kind: 'thu', id: 'luong' }).indexOf('dm_kcd') < 0, 'thu: không có');
+  ctx.state.data.categories.chi.push({ id: 'traNo', ten: 'Trả nợ', chiTieu: 0 });
+  ok(ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'traNo' }).indexOf('dm_kcd') < 0, 'hệ thống: không có');
 });
 
 /* ==================================================================== */
