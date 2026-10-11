@@ -1631,3 +1631,17 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .cb-b small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cb-t{font-weight:700;font-size:13.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .cb-ghichu{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.5;padding:0 4px}
+
+/* ---- Cài đặt chia phần; Hiển thị ---- */
+.dm-seg{position:sticky;top:calc(var(--header-h,52px) + var(--tabs-h,0px));z-index:15}
+.dm-seg button{padding-left:4px;padding-right:4px;font-size:13px}
+@media (max-width:360px){ .dm-seg button{font-size:12px} }
+.ht-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-top:1px solid var(--border);min-height:52px}
+.ht-row:first-of-type{border-top:0}
+.ht-sw{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;flex-direction:row-reverse;justify-content:space-between}
+.ht-t{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ht-t small{color:var(--muted);font-size:12px}
+.ht-ud{display:flex;gap:4px;flex:0 0 auto;min-width:64px;justify-content:flex-end}
+.ht-mt{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ht-mt .ic{width:15px;height:15px}
+.ht-mt:disabled{opacity:.35;cursor:default}

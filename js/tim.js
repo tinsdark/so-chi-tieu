@@ -169,6 +169,7 @@ function timDi(r){
   else if (r.loai === 'muon'){ state.ccTrang = 'muonmua'; tab = 'congcu'; }
   else if (r.loai === 'hua'){ state.ccTrang = 'loihua'; state.ccForm = { loai: 'lh', id: r.id }; tab = 'congcu'; }
   if (!tab) return;
+  if (tab === 'danhmuc'){ var f = state.dkForm ? { loai: 'dk' } : (state.mtForm ? { loai: 'mt' } : state.dmForm); if (f) state.dmTab = dmTabCua(f.loai); }
   chuyenTab(tab);
   if (sau) setTimeout(sau, 350);       // chờ chuyển tab xong mới mở bảng
   if (typeof window !== 'undefined' && window.scrollTo) window.scrollTo(0, 0);

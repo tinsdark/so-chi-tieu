@@ -215,7 +215,12 @@ var CC_TRANG = [
 ];
 function ccHubHtml(){
   var h = '<div class="dm-page">', nhom = '';
-  CC_TRANG.forEach(function(t){
+  var hien = htHien('congcu');                         // thứ tự + bật tắt theo Cài đặt → Hiển thị (ht.js); nhóm Quyết định luôn đứng trước nhóm Sổ
+  var ds = CC_TRANG.filter(function(t){ return hien.indexOf(t.key) >= 0; }).sort(function(a, b){
+    return (a.nhom === b.nhom ? 0 : (a.nhom === 'Quyết định' ? -1 : 1)) || (hien.indexOf(a.key) - hien.indexOf(b.key));
+  });
+  if (!ds.length) return h + '<div class="empty">Đã ẩn hết công cụ. Bật lại ở Cài đặt → Hiển thị.</div></div>';
+  ds.forEach(function(t){
     if (t.nhom !== nhom){ if (nhom) h += '</div>'; nhom = t.nhom; h += dmSec(nhom) + '<div class="card dm-card cc-hub">'; }
     var s = t.tomTat();
     h += '<button type="button" class="cc-tile" data-act="ccMo" data-trang="' + t.key + '"><span class="cc-tile-i">' + icon(t.icon) + '</span>'

@@ -27,8 +27,8 @@ var HT_THE = {
     { id: 'bieudo', ten: 'Biểu đồ chi tiêu', mota: 'Cột bên phải ở màn rộng', khongThuTu: true }
   ],
   congcu: [
-    { id: 'muonmua', ten: 'Muốn mua' }, { id: 'giocong', ten: 'Giờ công' }, { id: 'loihua', ten: 'Lời hứa' },
-    { id: 'sommung', ten: 'Sổ mừng và quà' }, { id: 'dodac', ten: 'Sổ đồ đạc' }
+    { id: 'muonmua', ten: 'Muốn mua', nhomCon: 'qd' }, { id: 'giocong', ten: 'Giờ công', nhomCon: 'qd' }, { id: 'loihua', ten: 'Lời hứa', nhomCon: 'qd' },
+    { id: 'sommung', ten: 'Sổ mừng và quà', nhomCon: 'so' }, { id: 'dodac', ten: 'Sổ đồ đạc', nhomCon: 'so' }
   ]
 };
 var HT_NHOM_TEN = { sotay: 'Sổ tay', baocao: 'Báo cáo', congcu: 'Công cụ' };
@@ -79,10 +79,12 @@ function htDoiViTri(nhom, id, huong){
   var t = htThe(nhom, id);
   if (!t || t.khongThuTu) return false;
   var all = htThuTu(nhom), dsDoi = all.filter(function(x){ return !htThe(nhom, x).khongThuTu; });
+  var tong = dsDoi.slice();                                   // đổi vị trí với láng giềng CÙNG nhomCon (nếu có), bỏ qua thẻ nhóm khác
+  dsDoi = tong.filter(function(x){ return htThe(nhom, x).nhomCon === t.nhomCon; });
   var i = dsDoi.indexOf(id), j = i + (huong < 0 ? -1 : 1);
   if (i < 0 || j < 0 || j >= dsDoi.length) return false;
-  var tmp = dsDoi[i]; dsDoi[i] = dsDoi[j]; dsDoi[j] = tmp;
-  var k = 0, moi = all.map(function(x){ return htThe(nhom, x).khongThuTu ? x : dsDoi[k++]; });
+  var a = tong.indexOf(dsDoi[i]), b = tong.indexOf(dsDoi[j]), tmp = tong[a]; tong[a] = tong[b]; tong[b] = tmp;
+  var k = 0, moi = all.map(function(x){ return htThe(nhom, x).khongThuTu ? x : tong[k++]; });
   var o = htDoc(); o.thuTu = o.thuTu || {}; o.thuTu[nhom] = moi; htLuu(o);
   return true;
 }

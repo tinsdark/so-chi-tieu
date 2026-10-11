@@ -786,14 +786,19 @@ function renderBaoCao(){
   if (!state.soTayMonth) state.soTayMonth = monthKey(todayStr());
   var mk = state.soTayMonth;
   // thứ tự: thẻ đầu (có thanh tháng) -> tổng kết (tháng đã qua) -> hạn mức -> tài sản ròng -> mục tiêu | biểu đồ (màn rộng: 2 cột)
-  var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);
-  html += tongKetCardHtml(mk);              // chỉ có ở tháng đã kết thúc (tongket.js)
   var hm = hanMucThangHtml(mk);
-  html += hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
-    + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>';
-  html += taiSanRongCardHtml(mk);
-  html += mucTieuCardHtml();
-  html += nhanCardHtml();
-  html += '</div><div class="cot-phai">' + bieuDoCardHtml(mk) + '</div></div>';
+  // thẻ đầu luôn có; các thẻ còn lại theo thứ tự / bật tắt của người dùng (Cài đặt → Hiển thị, ht.js)
+  var the = {
+    diemnhan: typeof dnCardHtml === 'function' ? dnCardHtml(mk) : '',
+    tongket: tongKetCardHtml(mk),              // chỉ có ở tháng đã kết thúc (tongket.js)
+    hanmuc: hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
+      + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>',
+    taisan: taiSanRongCardHtml(mk),
+    muctieu: mucTieuCardHtml(),
+    nhan: nhanCardHtml()
+  };
+  var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);
+  htHien('baocao').forEach(function(id){ if (the[id] != null) html += the[id]; });
+  html += '</div><div class="cot-phai">' + (htAn('baocao', 'bieudo') ? '' : bieuDoCardHtml(mk)) + '</div></div>';
   root.innerHTML = html;
 }

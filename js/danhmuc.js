@@ -347,17 +347,33 @@ function backupCardHtml(){
     + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?') + '</div>';
 }
 
+/* Tab Cài đặt chia thành 5 PHẦN bằng thanh chọn (cùng kiểu thanh chọn của Dòng tiền: Theo ngày / Theo tháng / Mô phỏng), không phải danh sách bấm:
+   Danh mục (thu / chi) · Tiền (số dư đầu kỳ, ví, chốt số dư) · Kế hoạch (định kỳ, mục tiêu) · Hiển thị (thẻ, thông báo) · Ứng dụng (cài app, lịch, sao lưu, khóa, tài khoản).
+   state.dmTab nhớ phần đang xem; các nơi nhảy tới một bảng sửa (tìm kiếm, chuông) phải đặt đúng dmTab (xem dmTabCua). */
+var DM_TAB = [['danhmuc', 'Danh mục'], ['tien', 'Tiền'], ['kehoach', 'Kế hoạch'], ['hienthi', 'Hiển thị'], ['ungdung', 'Ứng dụng']];
+// phần chứa từng loại bảng sửa: 'cat' -> danhmuc, 'vi' / 'cfg' / 'doisoat' / 'thanhtoanthe' -> tien, 'dk' / 'mt' -> kehoach
+function dmTabCua(loai){ return { cat: 'danhmuc', vi: 'tien', cfg: 'tien', doisoat: 'tien', thanhtoanthe: 'tien', dk: 'kehoach', mt: 'kehoach', khoa: 'ungdung' }[loai] || 'danhmuc'; }
+function dmThanhTabHtml(){
+  return '<div class="dt-mode dm-seg" role="tablist" aria-label="Phần cài đặt">' + DM_TAB.map(function(t){
+    var on = (state.dmTab || 'danhmuc') === t[0];
+    return '<button type="button" role="tab" data-act="dmTab" data-v="' + t[0] + '" class="' + (on ? 'on' : '') + '" aria-selected="' + on + '">' + t[1] + '</button>';
+  }).join('') + '</div>';
+}
+function dmPhanHtml(tab){
+  if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
+  if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
+  if (tab === 'hienthi') return hienThiHtml();
+  if (tab === 'ungdung') return '<div class="dm-grid">' + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div>';
+  return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
+    + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
+}
 function renderDanhMuc(){
   var root = document.getElementById('tabContent');
-  var html = '<div class="dm-page">'
-    + dmSec('Danh mục') + '<div class="dm-grid dm-cap">'
-    + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
-    + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>'
-    + dmSec('Tiền &amp; kế hoạch') + '<div class="dm-grid">'
-    + cfgCardHtml() + viCardHtml() + chotCardHtml() + dkCardHtml() + mtCardHtml() + '</div>'
-    + dmSec('Ứng dụng') + '<div class="dm-grid">'
-    + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div></div>';
-  root.innerHTML = html;
+  if (!DM_TAB.some(function(t){ return t[0] === state.dmTab; })) state.dmTab = 'danhmuc';
+  // đang mở một bảng sửa thì hiện đúng phần chứa nó (nhảy từ tìm kiếm / chuông / thao tác ở phần khác)
+  var f = state.dkForm ? { loai: 'dk' } : (state.mtForm ? { loai: 'mt' } : state.dmForm);
+  if (f && f.loai) state.dmTab = dmTabCua(f.loai);
+  root.innerHTML = '<div class="dm-page">' + dmThanhTabHtml() + dmPhanHtml(state.dmTab) + '</div>';
   attachCatDragDrop();
   dmSheetVe();
 }
@@ -584,6 +600,10 @@ function handleDanhMucAction(act, el){
     state.dmForm = { loai:'vi', id:'' }; renderDanhMuc();
   } else if (act === 'dmSuaVi'){
     state.dmForm = { loai:'vi', id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'dmTab'){
+    state.dmTab = el.getAttribute('data-v') || 'danhmuc';
+    state.dmForm = null; state.dkForm = null; state.mtForm = null;
+    renderDanhMuc(); window.scrollTo(0, 0);
   } else if (act === 'dmSeg'){
     var fS = el.getAttribute('data-f'), vS = el.getAttribute('data-v');
     var iS = document.getElementById(fS); if (iS) iS.value = vS;
@@ -854,6 +874,7 @@ function handleDanhMucAction(act, el){
 function handleDanhMucChange(el){
   if (handleDoiSoatInput(el)) return true;
   if (handleTheChange(el)) return true;
+  if (handleHienThiChange(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
   if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });

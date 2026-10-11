@@ -51,6 +51,7 @@ var state = {
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
   imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
+  dmTab: 'danhmuc',       // phần đang xem ở tab Cài đặt: danhmuc | tien | kehoach | hienthi | ungdung (xem DM_TAB ở danhmuc.js)
   dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Cài đặt: { loai:'cat'|'cfg'|'vi', kind?, id? }
   mtForm: null,           // form mục tiêu tiết kiệm ở tab Cài đặt (như dkForm)
   dkForm: null,           // form giao dịch định kỳ ở tab Cài đặt: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa

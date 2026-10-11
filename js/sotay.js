@@ -240,7 +240,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
     + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(daysInMonth(mk) - parseInt(todayStr().slice(8, 10), 10))+' ngày' : '')+'</div>'
     // số dư từng ví ngay dưới số dư tổng: mở app là thấy, không phải cuộn
-    + viTheHtml(mk, beforeLock)
+    + (htAn('sotay', 'vi') ? '' : viTheHtml(mk, beforeLock))
     // thu nhập / chi tiêu / dư thật chung 1 hàng
     + '<div class="hero-nums">'
     +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+soGon(tongThu)+'</div></div>'
@@ -248,8 +248,8 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
     +   '<div><div class="l">Dư thật</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
     + '</div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
-  if (laThangNay && !beforeLock) h += tieuMoiNgayHtml(todayStr());
-  if (rows.length){
+  if (laThangNay && !beforeLock && !htAn('sotay', 'tieu')) h += tieuMoiNgayHtml(todayStr());
+  if (rows.length && !htAn('sotay', 'hanmuc')){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
     h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi hằng ngày theo hạn mức</span><span>'
@@ -258,7 +258,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
-  h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
+  if (!htAn('sotay', 'sosanh')) h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
   if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay);
   // lời nhắc (định kỳ, thu/chi theo ngày, vay/nợ, thẻ, ví thiếu tiền, vượt hạn mức, tổng kết tháng) nằm ở CHUÔNG ở header (chuong.js)
   return h + '</div>';

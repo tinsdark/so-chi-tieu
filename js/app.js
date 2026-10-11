@@ -217,6 +217,7 @@ function handleAction(act, el){
   if (handleNhapAction(act, el)) return;
   if (handleNhanAction(act, el)) return;
   if (handleChuongAction(act, el)) return;
+  if (handleHienThiAction(act, el)) return;
   if (handleLichAction(act, el)) return;
   if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
