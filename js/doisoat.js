@@ -8,7 +8,7 @@
    - Tạo khoản điều chỉnh: ví thật NHIỀU hơn sổ -> khoản THU, ít hơn -> khoản CHI, danh mục "Điều chỉnh số dư"
      (id dieuChinh, tự tạo lần đầu; thuộc CAT_HE_THONG nên không hiện ở Ghi nhanh, không tính vào nhịp chi hằng ngày, không xóa được).
      Là một dòng chi tiết bình thường (it.dieuChinh = true) nên sửa / xóa được ở Sổ tay như mọi dòng.
-   Cần state.js (soDuTheoVi, entryAddItem...), danhmuc.js (vnSheetKhung) load trước; giao diện nằm ở thẻ Ví của tab Danh mục.
+   Cần state.js (soDuTheoVi, entryAddItem...), danhmuc.js (vnSheetKhung) load trước; giao diện nằm ở thẻ Ví của tab Cài đặt.
    ==================================================================== */
 
 var DS_DANH_MUC = 'dieuChinh';
@@ -64,7 +64,7 @@ function doiSoatHoanTac(r){
   invalidateBalanceCache();
 }
 function doiSoatCuoi(w){ return (w && Array.isArray(w.doiSoat) && w.doiSoat.length) ? w.doiSoat[w.doiSoat.length - 1] : null; }
-// dòng trạng thái dưới tên ví ở Danh mục
+// dòng trạng thái dưới tên ví ở Cài đặt
 function doiSoatTrangThai(w){
   var b = doiSoatCuoi(w);
   if (!b) return 'Chưa đối soát';

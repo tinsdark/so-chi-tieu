@@ -224,7 +224,7 @@ function handleNguoiAction(act, el){
     var kq = chiaDoc();
     if (!ten){ toast('Nhập tên hóa đơn.', { loai:'warn' }); return true; }
     if (kq.loi){ toast(kq.loi, { loai:'warn' }); return true; }
-    if (!cat){ toast('Chưa có danh mục chi cho phần của mình — thêm ở tab "Danh mục".', { loai:'warn' }); return true; }
+    if (!cat){ toast('Chưa có danh mục chi cho phần của mình — thêm ở tab "Cài đặt".', { loai:'warn' }); return true; }
     var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: vnViTuForm('vn_chia_wallet', null), minh: kq.minh, phan: kq.phan });
     state.vnFormKind = null; state.vnFormId = null;
     scheduleSave(); renderVayNo();

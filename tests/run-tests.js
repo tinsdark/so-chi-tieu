@@ -1766,7 +1766,7 @@ test('tongQuanHtml: không có việc gì thì báo gọn, không có chip', fun
 });
 
 /* ==================================================================== */
-group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Danh mục');
+group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
   setToday('2026-10-10');
@@ -1836,7 +1836,7 @@ test('Vay-Nợ: thẻ tổng quan cộng đúng nợ / cho vay / tháng này; S�
   setToday('2026-10-01');
 });
 
-test('Đăng xuất không còn ở thanh đầu trang mà ở tab Danh mục', function(){
+test('Đăng xuất không còn ở thanh đầu trang mà ở tab Cài đặt', function(){
   var idx = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   ok(idx.indexOf('btnSignOut') < 0, 'index.html không còn nút Đăng xuất');
   loadData(baseData());
@@ -4179,7 +4179,7 @@ test('Báo cáo / Tổng kết / Dòng tiền / Theo ngày: phép tính trong gi
   var d = ctx.dtThangDuLieu('2026-10'), cd = ctx.dtCanDoiGiaiThichHtml(d, 1000000); ok(cd.indexOf('Cân đối') > 0 && cd.indexOf('Số dư lũy kế') > 0, 'Dòng tiền Cân đối'); eq(kiemPhepCong(cd).loi.join(' | '), '');
   setToday('2026-10-01');
 });
-test('Tab Danh mục / Vay - Nợ: ghi chú có ví dụ "Với số của bạn" bằng số thật, phép tính đúng', function(){
+test('Tab Cài đặt / Vay - Nợ: ghi chú có ví dụ "Với số của bạn" bằng số thật, phép tính đúng', function(){
   tndData(5000000, function(d){
     d.mucTieu = [{ id: 'g1', ten: 'Quỹ', soTien: 20000000, hanChot: '2027-06', walletId: '', daGom: 3000000 }];
     d.dinhKy = [{ id: 'dk1', ten: 'Tiền điện', kind: 'chi', catId: 'dien', soTien: 600000, ngay: 1, bat: true, bo: [] }];
@@ -4195,7 +4195,7 @@ test('Tab Danh mục / Vay - Nợ: ghi chú có ví dụ "Với số của bạn
   var ng = ctx.nguoiCardHtml(); ok(ng.indexOf('Với số của bạn') > 0 && ng.indexOf('phải trả') > 0 && ng.indexOf('mình nợ họ') > 0, 'Sổ nợ theo đối tượng');
   [vi, mt, dk, ct, cv, ng].forEach(function(x){ eq(kiemPhepCong(x).loi.join(' | '), ''); });
 });
-test('Hạn mức / Số dư đầu kỳ ở tab Danh mục: ví dụ trung bình gợi ý bằng số thật của các tháng hoàn chỉnh', function(){
+test('Hạn mức / Số dư đầu kỳ ở tab Cài đặt: ví dụ trung bình gợi ý bằng số thật của các tháng hoàn chỉnh', function(){
   var j = {};
   [['2026-08', 300000], ['2026-09', 900000]].forEach(function(x){ j[x[0] + '-05'] = { thu: {}, chi: { an: x[1] }, ghiChu: '', refs: [], items: [{ iid: x[0], kind: 'chi', catId: 'an', soTien: x[1], ghiChu: '', walletId: 'w_chinh' }] }; });
   var d = baseData({ journal: j }); d.settings = { soDuDauKy: 0, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' };

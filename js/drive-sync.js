@@ -455,7 +455,7 @@ async function giaiQuyetXungDot(){
   try{
     var ma = await chonMot('Dữ liệu trên Drive đã đổi từ thiết bị khác',
       'Máy này có thay đổi chưa lưu, nhưng file trên Drive đã được thiết bị khác sửa sau lần bạn tải gần nhất.\n\n'
-      + 'Chọn bên nào thì bên còn lại vẫn được giữ thành 1 file sao lưu trên Drive (tab Danh mục → Sao lưu dữ liệu), không mất dữ liệu.',
+      + 'Chọn bên nào thì bên còn lại vẫn được giữ thành 1 file sao lưu trên Drive (tab Cài đặt → Sao lưu dữ liệu), không mất dữ liệu.',
       [ { ma:'taiVe', chu:'Lấy bản trên Drive' }, { ma:'ghiDe', chu:'Ghi đè bằng bản máy này' } ]);
     if (ma === 'taiVe'){
       await saoLuuNgay('may-nay', JSON.stringify(state.data));      // giữ phần chưa lưu của máy này

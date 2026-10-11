@@ -226,7 +226,7 @@ function khoaXoaHet(){
   location.reload();
 }
 
-/* ---- bật / tắt / đổi (gọi từ thẻ ở tab Danh mục) ---- */
+/* ---- bật / tắt / đổi (gọi từ thẻ ở tab Cài đặt) ---- */
 function _hoiPin(tieuDe, noiDung){
   return moHoiThoai({
     tieuDe: tieuDe, noiDung: noiDung,

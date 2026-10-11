@@ -1,6 +1,6 @@
 "use strict";
 /* ====================================================================
-   danhmuc.js — tab "Danh mục": quản lý danh mục thu/chi, số dư đầu kỳ,
+   danhmuc.js — tab "Cài đặt": quản lý danh mục thu/chi, số dư đầu kỳ,
    khóa sổ. Có validate chặn tên danh mục rỗng/trùng.
    Cần state.js, drive-sync.js load trước.
    ==================================================================== */
@@ -50,7 +50,7 @@ function attachCatDragDrop(){
   });
 }
 
-/* ---- giao diện tab Danh mục: mỗi mục là 1 hàng gọn, chạm vào mở bảng trượt để sửa ---- */
+/* ---- giao diện tab Cài đặt: mỗi mục là 1 hàng gọn, chạm vào mở bảng trượt để sửa ---- */
 function dmSec(nhan){ return '<div class="dm-sec">'+nhan+'</div>'; }
 function dmGo(){ return icon('chev', 'dm-go'); }
 function dmHead(tieuDe, nut){ return '<div class="dm-h"><h3>'+tieuDe+'</h3>'+(nut || '')+'</div>'; }

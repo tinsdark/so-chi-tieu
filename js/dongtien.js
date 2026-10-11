@@ -11,7 +11,7 @@
    - tháng đang chạy chưa đủ số liệu -> lấy vào là kéo TB xuống sai
    - tháng lẻ đầu tiên (bắt đầu dùng app từ giữa tháng) cũng không phản ánh cả tháng
    Cửa sổ trượt tối đa 3 tháng hoàn chỉnh gần nhất. Chưa có tháng nào -> null
-   để nơi gọi fallback về Chỉ tiêu/tháng ở tab Danh mục.
+   để nơi gọi fallback về Chỉ tiêu/tháng ở tab Cài đặt.
    Ví dụ (bắt đầu dự trù T10/2026): dự trù T11 = thực tế T10; T12 = TB(T10,T11);
    T1/2027 = TB(T10,T11,T12); T2/2027 = TB(T11,T12,T1).
    Tháng không phát sinh TÍNH LÀ 0 vào TB — mua 1 lần rồi thôi thì gợi ý phải
@@ -365,7 +365,7 @@ function dtDuKienHtml(rowsAll, selMk){
     + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số dư tính bằng ₫</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
-      + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Danh mục')
+      + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Cài đặt')
       + '). Tháng không phát sinh được tính là 0 vào TB. Các khoản biết trước — "Trả nợ"/"Thu hồi cho vay" (lấy từ lịch vay) hoặc danh mục có cờ "Cố định theo Hạn mức" — hiện số biết trước luôn kể cả tháng hiện tại nếu chưa ghi Sổ tay. Số dư lũy kế từ tháng hiện tại trở đi đã cộng cả số dự báo.' + (typeof dmTbViDu === 'function' ? dmTbViDu() : ''), 'Số gợi ý tính thế nào?')
     + '</div>';
 }
@@ -411,7 +411,7 @@ function dtBangNamHtml(){
   DONGTIEN_GROUPS.forEach(function(g){
     var cats = state.data.categories[g.kind];
     html += '<tr><td colspan="'+(vm.length+1)+'" class="group-title">'+g.title+'</td></tr>';
-    if (!cats.length) html += '<tr><td colspan="'+(vm.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Danh mục".</td></tr>';
+    if (!cats.length) html += '<tr><td colspan="'+(vm.length+1)+'" class="empty">Chưa có danh mục — thêm ở tab "Cài đặt".</td></tr>';
     cats.forEach(function(c){
       var base = dtBase(g.kind, c.id);
       var tagHtml = base>0 ? ' <span class="cat-tag" title="Hạn mức/tháng">'+fmt(base)+'</span>' : '';

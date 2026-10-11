@@ -52,7 +52,7 @@ function renderAll(){
   vnSheetVe();                       // rời Vay - Nợ thì form thêm/sửa khoản vay tự đóng
   nhacHanSheetVe();                  // rời Sổ tay thì bảng sắp đến hạn tự đóng
   ccSheetVe();                       // rời Công cụ thì bảng "Mua rồi" tự đóng
-  dmSheetVe();                       // rời Danh mục thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
+  dmSheetVe();                       // rời Cài đặt thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
   renderVayNoBadge();
   renderSoTayBadge();
   updateStickyOffsets();
@@ -128,7 +128,7 @@ function hienPhimTat(){
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
       + '/ — tìm trong Sổ tay\n'
-      + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Công cụ · Danh mục\n'
+      + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Công cụ · Cài đặt\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
       + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',

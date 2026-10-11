@@ -126,7 +126,7 @@ function ghiNhanhHtml(){
     + '<datalist id="qa_nhan_goiy">' + nhanThongKe().slice(0, 30).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>';
   h += '<div class="qa-lbl">Danh mục</div>';
   if (!cats.length){
-    h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Danh mục".</div>';
+    h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Cài đặt".</div>';
   } else {
     h += '<div class="qa-chips qa-cats" role="group" aria-label="Danh mục">'
       + top.map(function(c){
@@ -474,7 +474,7 @@ function renderSoTay(){
   html += '<div class="form-sec thu"><div class="form-sec-head">'+icon('arrow-down')+' Khoản thu</div>';
   html += '<div class="form-row">';
   if (!thuCats.length){
-    html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Danh mục".</div>';
+    html += '<div class="empty">Chưa có danh mục thu — thêm ở tab "Cài đặt".</div>';
   }
   thuCats.forEach(function(c){
     var lockThu = hasRefs ? entryRefSum(editEntry, 'thu', c.id) : 0;
@@ -498,7 +498,7 @@ function renderSoTay(){
   html += '<div class="form-sec chi"><div class="form-sec-head">'+icon('arrow-up')+' Khoản chi</div>';
   html += '<div class="form-row">';
   if (!cats.length){
-    html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Danh mục".</div>';
+    html += '<div class="empty">Chưa có danh mục chi — thêm ở tab "Cài đặt".</div>';
   }
   cats.forEach(function(c){
     var lockChi = hasRefs ? entryRefSum(editEntry, 'chi', c.id) : 0;
@@ -772,7 +772,7 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
 }
 
 /* ====================================================================
-   MỤC TIÊU TIẾT KIỆM — card tiến độ. Logic ở state.js (mucTieuTienDo); khai báo ở tab Danh mục.
+   MỤC TIÊU TIẾT KIỆM — card tiến độ. Logic ở state.js (mucTieuTienDo); khai báo ở tab Cài đặt.
    ==================================================================== */
 function mucTieuCardHtml(){
   var gs = state.data.mucTieu || [];
@@ -810,7 +810,7 @@ function mucTieuCardHtml(){
 }
 
 /* ====================================================================
-   KHOẢN ĐỊNH KỲ ĐẾN HẠN — card nhắc ở đầu Sổ tay. Mẫu khai báo ở tab Danh mục;
+   KHOẢN ĐỊNH KỲ ĐẾN HẠN — card nhắc ở đầu Sổ tay. Mẫu khai báo ở tab Cài đặt;
    logic nằm ở state.js (dinhKyDenHan / dinhKyGhi). Bấm "Ghi vào Sổ tay" mới có tiền.
    ==================================================================== */
 function dinhKyDenHanHtml(){
@@ -881,7 +881,7 @@ function viSoDuCardHtml(mk){
 
 /* ====================================================================
    HẠN MỨC THÁNG — progress bar thực tế / chỉ tiêu cho từng danh mục chi có
-   đặt "chỉ tiêu/tháng" ở tab Danh mục. Thuần hiển thị: chỉ ĐỌC categories +
+   đặt "chỉ tiêu/tháng" ở tab Cài đặt. Thuần hiển thị: chỉ ĐỌC categories +
    journal, không ghi gì. Danh mục khongDuTru (Cho vay...) bị loại vì không
    phải chi tiêu thật. Sắp theo % giảm dần để cái sắp/đã vượt nằm trên cùng.
    r.coDinh = khoản cố định (catChiLaCoDinh): KHÔNG tính vào % đã dùng / nhịp / cảnh báo vượt, chỉ hiện riêng.
@@ -905,7 +905,7 @@ function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok');
    Chỉ tính phần TIÊU HẰNG NGÀY: hạn mức các danh mục chi mà người dùng CHƯA khai là khoản cố định.
    Khoản cố định (tiền nhà, trả nợ, điện nước...) ra theo ngày và số tiền biết trước nên KHÔNG đưa vào mức này, nếu không
    chúng ăn hết hạn mức và con số mỗi ngày thành vô nghĩa; chúng được tính riêng ở dòng "còn phải ra" (coDinhCon).
-   Danh mục là CỐ ĐỊNH khi người dùng bật công tắc "Khoản cố định" ở tab Danh mục (c.khoanCoDinh; dữ liệu cũ: bật sẵn
+   Danh mục là CỐ ĐỊNH khi người dùng bật công tắc "Khoản cố định" ở tab Cài đặt (c.khoanCoDinh; dữ liệu cũ: bật sẵn
    cho danh mục có "Ngày chi hằng tháng", xem normalizeData). Danh mục hệ thống (Cho vay, Trả nợ...) và "Không tính dự kiến" không vào.
    Công thức: mức/ngày = (tổng hạn mức tiêu hằng ngày − đã chi TRƯỚC hôm nay) ÷ số ngày còn lại tính cả hôm nay.
    Dùng số đầu ngày nên cả ngày không đổi; tiêu bao nhiêu hôm nay chỉ làm "còn tiêu được" giảm. Danh mục không đặt hạn mức
@@ -1045,7 +1045,7 @@ function hanMucThangHtml(mk){
         + '<span class="mb"><i style="width:'+Math.min(100, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
         + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
     });
-    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Khoản cố định" ở tab Danh mục) không tính vào % đã dùng và cảnh báo ở trên.</div>';
+    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Khoản cố định" ở tab Cài đặt) không tính vào % đã dùng và cảnh báo ở trên.</div>';
   }
   return h + '</div>';
 }
@@ -1360,7 +1360,7 @@ function handleSoTayAction(act, el){
       var oTien = document.getElementById('qa_amount'); if (oTien && oTien.focus) oTien.focus();
       return true;
     }
-    if (!catQ){ toast('Chưa có danh mục '+(kQ === 'thu' ? 'thu' : 'chi')+' để ghi — thêm ở tab "Danh mục".', { loai:'warn' }); return true; }
+    if (!catQ){ toast('Chưa có danh mục '+(kQ === 'thu' ? 'thu' : 'chi')+' để ghi — thêm ở tab "Cài đặt".', { loai:'warn' }); return true; }
     var itQ = entryAddItem(ngayQ, kQ, catQ, tienQ, noteQ, viQ || state.viChon);
     if (!itQ){ toast('Không ghi được khoản này.', { loai:'err' }); return true; }
     itemDatNhan(itQ, nhanParse((document.getElementById('qa_nhan') || {}).value));

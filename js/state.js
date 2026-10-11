@@ -51,13 +51,13 @@ var state = {
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
   imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
-  dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Danh mục: { loai:'cat'|'cfg'|'vi', kind?, id? }
-  mtForm: null,           // form mục tiêu tiết kiệm ở tab Danh mục (như dkForm)
-  dkForm: null,           // form giao dịch định kỳ ở tab Danh mục: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
+  dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Cài đặt: { loai:'cat'|'cfg'|'vi', kind?, id? }
+  mtForm: null,           // form mục tiêu tiết kiệm ở tab Cài đặt (như dkForm)
+  dkForm: null,           // form giao dịch định kỳ ở tab Cài đặt: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
   viFormOpen: false,      // form chuyển tiền giữa ví đang mở
   viChon: '',             // ví chọn gần nhất ở form nhập (mặc định: ví đầu tiên)
   backupMo: false,        // true = đang mở danh sách bản sao lưu
-  backupDs: null,         // danh sách bản sao lưu đã tải ở tab Danh mục (null = chưa tải)
+  backupDs: null,         // danh sách bản sao lưu đã tải ở tab Cài đặt (null = chưa tải)
   backupBusy: false,
   soTayCat: '',           // lọc bảng theo danh mục: '' | 'thu:<id>' | 'chi:<id>'
   soTayDetailDate: null,  // ngày đang bung chi tiết giao dịch
@@ -478,7 +478,7 @@ function giaiThichSo(ds, nhan){
   var dong = ds.filter(function(x){ return x; }).map(gtDong).join('');
   return dong ? ghiChuGon(dong, nhan || 'Cách tính') : '';
 }
-// VÍ DỤ BẰNG SỐ THẬT cho các ghi chú giải thích khái niệm (tab Danh mục, Dòng tiền): lời giải thích chung + "Với số của bạn: ..."
+// VÍ DỤ BẰNG SỐ THẬT cho các ghi chú giải thích khái niệm (tab Cài đặt, Dòng tiền): lời giải thích chung + "Với số của bạn: ..."
 // (ds rỗng thì chỉ có lời giải thích chung). Cách dùng: ghiChuGon(noiDung + gtViDu([ {ten, ct, pt} ]), nhan)
 function gtViDu(ds){
   var d = ds.filter(function(x){ return x; });
@@ -504,6 +504,7 @@ var ICON_PATHS = {
   'book': "<path d=\"M5 4.5A1.5 1.5 0 0 1 6.5 3H19v14H6.5A1.5 1.5 0 0 0 5 18.5z\"/><path d=\"M5 18.5A1.5 1.5 0 0 0 6.5 20H19v-3\"/><path d=\"M9 7h6\"/>",
   'trend': "<path d=\"M3 17l5.5-6 4 4L21 6\"/><path d=\"M15 6h6v6\"/>",
   'scale': "<path d=\"M12 4v16\"/><path d=\"M6.5 20h11\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-2.5 6a3 3 0 0 0 5 0z\"/><path d=\"M19 7l-2.5 6a3 3 0 0 0 5 0z\"/>",
+  'wrench': "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>",
   'sliders': "<path d=\"M4 7h9\"/><path d=\"M17 7h3\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><path d=\"M4 17h3\"/><path d=\"M11 17h9\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
   'backspace': "<path d=\"M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z\"/><path d=\"M13 9.5l5 5\"/><path d=\"M18 9.5l-5 5\"/>",
   'fingerprint': "<path d=\"M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4\"/><path d=\"M14 13.12c0 2.38 0 6.38-1 8.88\"/><path d=\"M17.29 21.02c.12-.6.43-2.3.5-3.02\"/><path d=\"M2 12a10 10 0 0 1 18-6\"/><path d=\"M2 16h.01\"/><path d=\"M21.8 16c.2-2 .131-5.354 0-6\"/><path d=\"M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2\"/><path d=\"M8.65 22c.21-.66.45-1.32.57-2\"/><path d=\"M9 6.8a6 6 0 0 1 9 5.2v2\"/>",
@@ -542,7 +543,7 @@ function icon(ten, lop){
   return '<svg class="ic'+(lop ? ' '+lop : '')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+d+'</svg>';
 }
 
-// Tài khoản Google đang đăng nhập {ten, email} (drive-sync.js ghi, thẻ Tài khoản ở Danh mục đọc); null nếu chưa có
+// Tài khoản Google đang đăng nhập {ten, email} (drive-sync.js ghi, thẻ Tài khoản ở Cài đặt đọc); null nếu chưa có
 var TAI_KHOAN_KEY = 'chitieu_tai_khoan_v1';
 function docTaiKhoan(){
   try{
@@ -741,7 +742,7 @@ function normalizeData(d){
      biểu đồ và dự trù. Tổng số dư không đổi nên balanceAt() & mọi hàm tổng khỏi sửa.
    - Số dư theo ví chỉ tính từ ngayBatDau (cùng mốc khóa sổ với số dư tổng).
    ==================================================================== */
-// Ví do người dùng TÍCH CHỌN làm mặc định ở tab Danh mục (settings.viMacDinh); '' nếu chưa chọn / ví đó không còn.
+// Ví do người dùng TÍCH CHỌN làm mặc định ở tab Cài đặt (settings.viMacDinh); '' nếu chưa chọn / ví đó không còn.
 function viMacDinhDaChon(d){
   d = d || state.data;
   var id = d && d.settings && d.settings.viMacDinh;
