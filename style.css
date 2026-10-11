@@ -1657,3 +1657,5 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 @keyframes tim-nhay{0%,35%{box-shadow:0 0 0 3px var(--primary);background:var(--primary-soft,rgba(37,99,235,.18))}100%{box-shadow:0 0 0 3px transparent}}
 @media (prefers-reduced-motion:reduce){.tim-nhay{animation:none;box-shadow:0 0 0 3px var(--primary)}}
 .dl-bar{scroll-margin-top:72px}
+.dk-in{width:112px;text-align:right;font-weight:600;padding:6px 8px}
+.dk-in.thu{color:var(--green)}.dk-in.chi{color:var(--red)}
