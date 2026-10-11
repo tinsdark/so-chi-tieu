@@ -51,6 +51,7 @@ var state = {
   offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
   offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
   imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
+  dmTab: 'danhmuc',       // phần đang xem ở tab Cài đặt: danhmuc | tien | kehoach | hienthi | ungdung (xem DM_TAB ở danhmuc.js)
   dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Cài đặt: { loai:'cat'|'cfg'|'vi', kind?, id? }
   mtForm: null,           // form mục tiêu tiết kiệm ở tab Cài đặt (như dkForm)
   dkForm: null,           // form giao dịch định kỳ ở tab Cài đặt: null = đóng, {id:''} = thêm mới, {id:'dk_x'} = sửa
@@ -68,7 +69,6 @@ var state = {
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
-  hanMo: false,           // bảng "Sắp đến hạn" (nhắc thu/chi theo ngày của danh mục) đang mở
   nguoiMo: null,          // tab Vay - Nợ: khóa người đang mở ở thẻ "Sổ nợ theo đối tượng"
   nhanMo: null,           // tab Báo cáo: khóa nhãn đang mở ở thẻ "Theo nhãn" (null = gấp hết)
   hmMoHet: false,         // tab Báo cáo: mở hết nhóm "Ổn" ở thẻ Hạn mức (mặc định chỉ hiện 3)
@@ -678,8 +678,10 @@ function normalizeData(d){
       w.ngaySaoKe = Math.max(1, Math.min(31, Math.round(num(w.ngaySaoKe)) || 1));
       w.ngayTraThe = Math.max(1, Math.min(31, Math.round(num(w.ngayTraThe)) || 1));
       w.deDanh = false;
+      w.tyLeToiThieu = Math.min(100, numNonNeg(w.tyLeToiThieu)); if (!(w.tyLeToiThieu > 0)) delete w.tyLeToiThieu;
+      w.laiSuatThe = Math.min(100, numNonNeg(w.laiSuatThe)); if (!(w.laiSuatThe > 0)) delete w.laiSuatThe;
     } else {
-      delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe;
+      delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe; delete w.tyLeToiThieu; delete w.laiSuatThe;
     }
     if (!w.ten) w.ten = 'Ví';
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -743,6 +745,12 @@ function normalizeData(d){
     x.tt = (x.tt === 'het' && reNgay.test(x.ngayHet || '')) ? 'het' : 'dung';
     if (x.tt === 'het'){ x.giaBan = numNonNeg(x.giaBan); } else { x.ngayHet = ''; x.giaBan = 0; }
   });
+  // thông báo đã xem (chuong.js): { khóa: 'YYYY-MM-DD' }, bỏ giá trị hỏng
+  if (d.settings.thongBaoXem && typeof d.settings.thongBaoXem === 'object' && !Array.isArray(d.settings.thongBaoXem)){
+    var xem = {};
+    Object.keys(d.settings.thongBaoXem).forEach(function(k){ if (/^\d{4}-\d{2}-\d{2}$/.test(d.settings.thongBaoXem[k] || '')) xem[k] = d.settings.thongBaoXem[k]; });
+    d.settings.thongBaoXem = xem;
+  } else delete d.settings.thongBaoXem;
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
     if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

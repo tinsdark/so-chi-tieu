@@ -7,8 +7,8 @@
    nhắc "quá hạn N ngày" suốt tháng). Đã ghi rồi thì nhắc lần tới của tháng sau khi còn trong N ngày.
    Nút "Hoàn thành" ở bảng chỉ TẮT NHẮC của kỳ đó (cat.xong = ['YYYY-MM', ...] các tháng đã tắt), KHÔNG ghi giao dịch nào,
    không đổi số dư. Ghi giao dịch thật ở Sổ tay cũng làm khoản đó hết nhắc (kỳ đó coi như đã thực hiện).
-   Hiện thành chip "N khoản thu/chi sắp đến hạn" ở thẻ tổng quan Sổ tay; bấm vào mở bảng trượt từ đáy liệt kê, mỗi dòng có
-   nút Ghi (mở Ghi nhanh với đúng danh mục đó). Danh mục hệ thống của Vay - Nợ không có ngày (đi theo lịch vay).
+   Hiện ở CHUÔNG THÔNG BÁO (chuong.js, loại 'cat'): bấm vào mục thì mở Ghi nhanh với đúng danh mục đó (nhacHanGhi), nút "Hoàn thành" tắt nhắc kỳ đó.
+   Danh mục hệ thống của Vay - Nợ không có ngày (đi theo lịch vay).
    Cần state.js (CAT_HE_THONG, catTen, catMau), vayno.js (ngayTraCuaKy, actualCatInMonth), sotay.js (qaMoSheet) load trước.
    ==================================================================== */
 
@@ -58,79 +58,14 @@ function nhacHanHoanTac(kind, id, mk){
   c.xong = c.xong.filter(function(m){ return m !== mk; });
   if (!c.xong.length) delete c.xong;
 }
-// badge số trên tab "Sổ tay": số khoản thu/chi sắp đến hạn (cùng con số với chip ở thẻ tổng quan), thấy được dù đang ở tab khác
-function renderSoTayBadge(){
-  var el = document.getElementById('stBadge');
-  if (!el) return;
-  var n = (state.data && state.data.categories) ? dsCatSapDenHan().length : 0;
-  if (n > 0){ el.textContent = n; el.style.display = 'inline-block'; }
-  else { el.style.display = 'none'; }
-}
 function nhacHanNhan(so){
   return so < 0 ? 'Quá hạn ' + (-so) + ' ngày' : (so === 0 ? 'Hôm nay' : (so === 1 ? 'Ngày mai' : 'Còn ' + so + ' ngày'));
 }
 
-/* ---- bảng trượt từ đáy ---- */
-function nhacHanSheetHtml(){
-  var ds = dsCatSapDenHan();
-  var h = '<div class="qa-scrim" data-act="hanDong"></div>'
-    + '<div class="qa-sheet" id="hanSheet" role="dialog" aria-modal="true" aria-label="Khoản thu chi sắp đến hạn"><div class="qa-grab" aria-hidden="true"></div>'
-    + '<div class="qa-head"><h3>Sắp đến hạn</h3><button type="button" class="qa-x" data-act="hanDong" aria-label="Đóng">'+icon('x')+'</button></div>'
-    + '<div class="qa-body">';
-  if (!ds.length) h += '<div class="empty">Không còn khoản nào cần nhắc.</div>';
-  ds.forEach(function(x){
-    h += '<div class="han-r">'
-      + '<span class="dl-dot" style="--c:'+catMau(x.kind, x.id)+'" aria-hidden="true"></span>'
-      + '<span class="han-t"><b>'+esc(x.ten)+'</b><small>'+(x.kind === 'thu' ? 'Thu' : 'Chi')+' · hạn '+ngayVN(x.han)+'</small></span>'
-      + '<span class="han-s'+(x.soNgay < 0 ? ' qua' : '')+'">'+nhacHanNhan(x.soNgay)+'</span>'
-      + '<span class="han-b"><button type="button" class="btn secondary sm" data-act="hanXong" data-kind="'+x.kind+'" data-id="'+esc(x.id)+'" data-mk="'+x.mk+'">'+icon('check')+' Hoàn thành</button>'
-      + '<button type="button" class="btn sm" data-act="hanGhi" data-kind="'+x.kind+'" data-id="'+esc(x.id)+'">Ghi</button></span></div>';
-  });
-  return h + '<div class="vn-hint" style="margin-top:12px">Nhắc theo "Ngày thu/chi hằng tháng" đặt ở từng danh mục (tab Cài đặt). "Hoàn thành" chỉ tắt nhắc, không ghi vào sổ. Ghi giao dịch ở danh mục đó cũng tự hết nhắc.</div></div></div>';
-}
-function nhacHanSheetVe(){
-  if (typeof document === 'undefined' || !document.body || !document.createElement) return;
-  if (state.tab !== 'sotay') state.hanMo = false;
-  var root = document.getElementById('hanSheetRoot');
-  if (!state.hanMo || !state.data){
-    if (root && root.parentNode) root.parentNode.removeChild(root);
-    if (!vnMoKhoaNen()) document.body.classList.remove('qa-mo');
-    return;
-  }
-  if (root && root.parentNode) root.parentNode.removeChild(root);
-  root = document.createElement('div');
-  root.id = 'hanSheetRoot';
-  root.className = 'qa-back moi';
-  root.innerHTML = nhacHanSheetHtml();
-  document.body.appendChild(root);
-  document.body.classList.add('qa-mo');
-  if (typeof qaKhopKhungNhin === 'function') qaKhopKhungNhin();
-  setTimeout(function(){ root.classList.remove('moi'); }, 400);
-}
-
-function handleNhacHanAction(act, el){
-  if (act === 'hanMo'){ state.hanMo = true; nhacHanSheetVe(); return true; }
-  if (act === 'hanDong'){ state.hanMo = false; nhacHanSheetVe(); return true; }
-  if (act === 'hanXong'){
-    var kX = el.getAttribute('data-kind') === 'thu' ? 'thu' : 'chi', idX = el.getAttribute('data-id'), mkX = el.getAttribute('data-mk');
-    if (!nhacHanHoanThanh(kX, idX, mkX)) return true;
-    scheduleSave();
-    nhacHanSheetVe();
-    if (typeof renderSoTay === 'function' && state.tab === 'sotay') renderSoTay();
-    toast('Đã tắt nhắc "' + catTen(kX, idX) + '" (không ghi vào sổ).', { hoanTac: function(){
-      nhacHanHoanTac(kX, idX, mkX); scheduleSave();
-      if (state.hanMo) nhacHanSheetVe();
-      if (state.tab === 'sotay') renderSoTay();
-    } });
-    return true;
-  }
-  if (act === 'hanGhi'){
-    var kind = el.getAttribute('data-kind') === 'thu' ? 'thu' : 'chi', id = el.getAttribute('data-id');
-    state.hanMo = false; nhacHanSheetVe();
-    state.qa.kind = kind; state.qa.cat[kind] = id;
-    if (typeof qaGhiNho === 'function') qaGhiNho();
-    qaMoSheet();
-    return true;
-  }
-  return false;
+/* ---- mở Ghi nhanh với đúng danh mục (từ chuông thông báo, chuong.js): vẫn Ghi ở Sổ tay, không ghi gì ở đây ---- */
+function nhacHanGhi(kind, id){
+  kind = kind === 'thu' ? 'thu' : 'chi';
+  state.qa.kind = kind; state.qa.cat[kind] = id;
+  if (typeof qaGhiNho === 'function') qaGhiNho();
+  qaMoSheet();
 }

@@ -867,7 +867,7 @@ function renderVayNo(){
 function vnKhopKhungNhin(){
   var vv = window.visualViewport;
   if (!vv) return;
-  ['vnSheetRoot', 'vnDlRoot', 'dmSheetRoot', 'ccSheetRoot'].forEach(function(id){
+  ['vnSheetRoot', 'vnDlRoot', 'dmSheetRoot', 'ccSheetRoot', 'timRoot'].forEach(function(id){
     var r = document.getElementById(id);
     if (!r) return;
     r.style.top = vv.offsetTop + 'px';
@@ -881,7 +881,7 @@ if (typeof window !== 'undefined' && window.visualViewport){
 }
 function vnMoKhoaNen(){
   return !!(document.getElementById('qaSheetRoot') || document.getElementById('mpSheetRoot')
-    || document.getElementById('vnSheetRoot') || document.getElementById('hanSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot') || document.getElementById('ccSheetRoot'));
+    || document.getElementById('vnSheetRoot') || document.getElementById('hanSheetRoot') || document.getElementById('vnDlRoot') || document.getElementById('dmSheetRoot') || document.getElementById('ccSheetRoot') || document.getElementById('timRoot'));
 }
 
 function vnF(nhan, noiDung, ht, ghiChu){

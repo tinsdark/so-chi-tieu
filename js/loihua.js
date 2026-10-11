@@ -9,7 +9,7 @@
    - Trạng thái TÍNH TỪ SỔ TAY, không lưu: chưa bắt đầu / đang giữ (ngày thứ N) / đã phá (ngày dòng chi làm vượt) / đã giữ lời (hết hạn mà chưa vượt).
      Sửa hay xóa dòng chi ở Sổ tay thì trạng thái tự đổi theo, không có số liệu thứ hai để lệch.
    - Lúc bấm Lưu một khoản chi sẽ làm VƯỢT lời hứa (Ghi nhanh, hoặc sửa / thêm một dòng ở Sổ tay) thì hiện đúng câu bạn tự viết trong hộp
-     "Kiểm tra trước khi ghi" (canhBaoLoiHua, nối vào handleSoTayAction ở sotay.js). Vẫn ghi được: bấm "Vẫn ghi" là phá lời hứa, app chỉ không làm ngơ.
+     "Kiểm tra trước khi ghi" (canhBaoKhoan ở canhbao.js gọi lhViPham; MỌI đường ghi một khoản chi đều qua đó). Vẫn ghi được: bấm "Vẫn ghi" là phá lời hứa, app chỉ không làm ngơ.
      Lời hứa đã bị phá rồi thì không nhắc nữa cho khỏi lặp. Form "Sửa cả ngày" chưa có nhắc.
    Cần state.js, sotay.js, danhmuc.js (dmHead, dmSeg, dmMoney, dkCatOptions), vayno.js (vnF, vnSheetKhung), congcu.js (sheet dùng chung) load trước.
    ==================================================================== */
@@ -94,32 +94,6 @@ function lhViPham(catId, tien, ngay, boIid, homNay, ghiChu){
   });
   return out;
 }
-// nối vào hộp "Kiểm tra trước khi ghi" ở sotay.js; chỉ xét khoản CHI
-function canhBaoLoiHua(act, el){
-  if (!(state.data.loiHua || []).length) return '';
-  var catId, tien, ngay, boIid = '', ghiChu = '';
-  if (act === 'qaSave'){
-    if (state.qa.kind === 'thu') return '';
-    catId = qaCatChon('chi');
-    tien = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
-    ngay = (document.getElementById('qa_date') || {}).value || todayStr();
-    ghiChu = (document.getElementById('qa_note') || {}).value || '';
-  } else if (act === 'stSaveItem'){
-    var kc = ((document.getElementById('st_it_cat') || {}).value || '').split('|');
-    if (kc[0] !== 'chi') return '';
-    catId = kc[1];
-    tien = numNonNeg(docSo((document.getElementById('st_it_tien') || {}).value));
-    ngay = (el.getAttribute && el.getAttribute('data-date')) || todayStr();
-    ghiChu = (document.getElementById('st_it_note') || {}).value || '';
-    boIid = (el.getAttribute && el.getAttribute('data-iid')) || '';
-    if (boIid){      // sửa mà không đổi danh mục / số tiền / ghi chú thì không nhắc lại
-      var cu = entryItems(state.data.journal[ngay]).filter(function(it){ return it.iid === boIid; })[0];
-      if (cu && cu.catId === catId && num(cu.soTien) === tien && String(cu.ghiChu || '') === ghiChu) return '';
-    }
-  } else return '';
-  return lhViPham(catId, tien, ngay, boIid, undefined, ghiChu).join('\n\n');
-}
-
 /* ---- giao diện ---- */
 function lhTheTrang(h, t){
   if (t.trang === 'pha') return '<span class="cc-tag bad">Đã phá lời hứa ngày ' + ngayNganVN(t.pha) + '</span>';

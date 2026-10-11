@@ -328,6 +328,8 @@ function nhapCardHtml(){
     + (kq.nTrung ? ' · <span style="color:var(--amber)">'+kq.nTrung+' dòng trùng bỏ qua</span>' : '')
     + (kq.nLoi ? ' · <span style="color:var(--red)">'+kq.nLoi+' dòng lỗi bỏ qua</span>' : '') + '</div>';
 
+  var cbNhap = canhBaoNhap(kq, imp.viId);
+  if (cbNhap.length) h += '<div class="vn-note">' + icon('alert') + '<span>' + cbNhap.map(esc).join('<br>') + '<br><small>Vẫn nhập được; đây chỉ là nhắc trước khi bạn bấm Nhập.</small></span></div>';
   var SHOW = 12;
   h += '<div class="table-wrap"><table><thead><tr><th>#</th><th>Ngày</th><th>Loại</th><th>Số tiền</th><th style="text-align:left">Danh mục</th><th style="text-align:left">Nội dung</th><th style="text-align:left">Trạng thái</th></tr></thead><tbody>';
   kq.dong.slice(0, SHOW).forEach(function(x){

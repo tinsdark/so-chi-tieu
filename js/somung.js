@@ -182,6 +182,7 @@ function handleSoMungAction(act, el){
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ngay)){ toast('Chọn ngày.', { loai: 'warn' }); return true; }
     if (ghi && (cat.length !== 2 || !cat[1] || cat[0] !== loaiGhi)){ toast('Chọn danh mục ' + (loaiGhi === 'thu' ? 'thu' : 'chi') + ' để ghi vào Sổ tay.', { loai: 'warn' }); return true; }
     var cu = ds.filter(function(x){ return x.id === (state.ccForm && state.ccForm.id); })[0], ghiSo = '', it = null;
+    if (ghi && loaiGhi === 'chi' && chayNeuDongY(canhBaoKhoan({ kind: 'chi', catId: cat[1], tien: tien, ngay: ngay, ghiChu: 'Mừng ' + nguoi + (dip ? ' (' + dip + ')' : ''), viId: (document.getElementById('sm_vi') || {}).value || '', batThuong: false }), act, el, handleSoMungAction)) return true;
     if (ghi){
       var vi = (document.getElementById('sm_vi') || {}).value || '';
       var gc = (chieu === 'nhan' ? nguoi + ' mừng' : 'Mừng ' + nguoi) + (dip ? ' (' + dip + ')' : '');

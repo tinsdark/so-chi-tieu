@@ -225,7 +225,12 @@ function handleNguoiAction(act, el){
     if (!ten){ toast('Nhập tên hóa đơn.', { loai:'warn' }); return true; }
     if (kq.loi){ toast(kq.loi, { loai:'warn' }); return true; }
     if (!cat){ toast('Chưa có danh mục chi cho phần của mình — thêm ở tab "Cài đặt".', { loai:'warn' }); return true; }
-    var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: vnViTuForm('vn_chia_wallet', null), minh: kq.minh, phan: kq.phan });
+    var viChia = vnViTuForm('vn_chia_wallet', null), tongChia = kq.minh; kq.phan.forEach(function(p){ tongChia += p.tien; });
+    var cbChia = canhBaoKhoan({ kind: 'chi', catId: cat, tien: kq.minh, ngay: ngay, ghiChu: ten + ' (phần mình)', viId: viChia, boViAm: true });
+    var viAmChia = viCanhBaoAm(viChia, -tongChia);          // cả hóa đơn ra khỏi ví (phần của mình + các khoản cho vay)
+    if (viAmChia) cbChia.unshift(viAmChia);
+    if (chayNeuDongY(cbChia, act, el, handleNguoiAction)) return true;
+    var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: viChia, minh: kq.minh, phan: kq.phan });
     state.vnFormKind = null; state.vnFormId = null;
     scheduleSave(); renderVayNo();
     toast('Đã chia "' + ten + '": phần mình ' + fmt(kq.minh) + ', ' + kq.phan.length + ' khoản cho vay.', { giay: 7, hoanTac: function(){
