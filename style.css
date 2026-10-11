@@ -1505,3 +1505,9 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .tk-r1>span{color:var(--muted);font-weight:600}
 .tk-r1>b{font-size:15px;font-variant-numeric:tabular-nums;text-align:right} .tk-r1>b.thu{color:var(--green)} .tk-r1>b.chi{color:var(--red)}
 .tk-r2{margin-top:2px;font-size:12px;color:var(--muted)}
+
+/* ---- Thu chi thật: dòng Vay nợ tính riêng (bieudo.js bdVayNoDongHtml) ---- */
+.bd-vn{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--hover);font-size:12px;color:var(--muted)}
+.bd-vn small{font-weight:500}
+.bd-vn b{color:var(--text);font-variant-numeric:tabular-nums} .bd-vn b.thu{color:var(--green)} .bd-vn b.chi{color:var(--red)}
+.bd-vn.hero-vn{margin-top:8px}

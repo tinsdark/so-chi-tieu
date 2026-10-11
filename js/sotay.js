@@ -223,8 +223,11 @@ function qaDongSheet(){
    Chỉ ĐỌC dữ liệu, không ghi gì. Số liệu giống các thẻ bên dưới (hanMucThangRows, dinhKyDenHan,
    danhSachSapDenHan) nên không có con số thứ hai nào để lệch.
    ==================================================================== */
-function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
+function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   var laThangNay = (mk === monthKey(todayStr()));
+  // THU CHI THẬT: thu nhập / chi tiêu thường xuyên, tách VAY NỢ ra dòng riêng (bdThang ở bieudo.js). tongThuTat / tongChiTat là
+  // tổng gồm cả vay nợ (số dư ví tính từ đây) nên chỉ dùng khi không có số thật.
+  var ct = bdThang(mk), tongThu = ct.tongThuThat, tongChi = ct.tongChiThat;
   var so = function(v){ return beforeLock ? '—' : fmt(Math.round(v)); };
   var rows = hanMucThangRows(mk).filter(function(r){ return !r.coDinh; });      // khoản cố định không vào thanh hạn mức / chip vượt
   var tongDa = 0, tongCap = 0;
@@ -238,11 +241,12 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
     // thanh chia theo tỷ lệ thu : chi của tháng, để nhìn một cái biết tháng này thu hay chi nhiều hơn
     + '<div class="hero-flow" aria-hidden="true"><i class="thu" style="flex:'+phanThu+'"></i><i class="chi" style="flex:'+(100 - phanThu)+'"></i></div>'
     + '<div class="hero-nums">'
-    +   '<div><div class="l"><i class="dot thu"></i>Tổng thu</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
-    +   '<div><div class="l"><i class="dot chi"></i>Tổng chi</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
+    +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+fmt(Math.round(tongThu))+'</div></div>'
+    +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+fmt(Math.round(tongChi))+'</div></div>'
     + '</div>'
     // hàng riêng: 3 số hàng chục triệu nằm chung 1 hàng sẽ tràn ra ngoài thẻ trên điện thoại
-    + '<div class="hero-cl"><span>Chênh lệch</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>';
+    + '<div class="hero-cl"><span>Dư thật</span><b class="'+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+fmt(Math.abs(Math.round(chenh)))+'</b></div>'
+    + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
@@ -275,8 +279,8 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
 function tongQuanSoSanhHtml(mk, tongChi, beforeLock){
   if (beforeLock || typeof bdThangSoSanh !== 'function') return '';
   var prev = bdThangSoSanh(mk);
-  if (!prev.coDl || !(prev.tongChi > 0)) return '';
-  var pct = bdPhanTram(tongChi, prev.tongChi);
+  if (!prev.coDl || !(prev.tongChiThat > 0)) return '';
+  var pct = bdPhanTram(tongChi, prev.tongChiThat);
   var hu, ic, lop;
   if (Math.abs(pct) < 3){ hu = 'Chi gần bằng'; ic = ''; lop = ''; }
   else if (pct > 0){ hu = 'Chi nhiều hơn ' + pct + '% so với'; ic = icon('arrow-up'); lop = ' len'; }
