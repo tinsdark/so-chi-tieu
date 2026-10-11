@@ -2456,8 +2456,8 @@ test('Nút + nổi (FAB) đã bỏ hẳn; phím N vẫn ghi nhanh', function(){
 test('Thẻ phân màu theo loại + "Số dư theo ví" nằm ngay dưới thẻ tổng quan', function(){
   var root = path.join(__dirname, '..');
   var st = fs.readFileSync(path.join(root, 'js', 'sotay.js'), 'utf8');
-  var iThe = st.indexOf('html += viTheHtml(mk, beforeLock);'), i = st.indexOf('html += viSoDuCardHtml(mk);');
-  ok(iThe > 0 && i > iThe, 'dải thẻ ví đứng ngay sau thẻ tổng quan, trước thẻ chuyển ví');
+  var iHero = st.indexOf('function tongQuanHtml'), iThe = st.indexOf('+ viTheHtml(mk, beforeLock)'), i = st.indexOf('html += viSoDuCardHtml(mk);');
+  ok(iThe > iHero && st.indexOf('html += viTheHtml(') < 0 && i > iThe, 'dải thẻ ví nằm TRONG thẻ tổng quan, ngay dưới số dư, trước thẻ chuyển ví');
   ok(st.indexOf('html += ghiNhanhHtml();') < 0 && st.lastIndexOf('qaBarHtml()') > i, 'Ghi nhanh là thanh nổi + bảng ghi, không còn thẻ trong luồng trang');
   ok(st.indexOf('card k-wal') > 0 && st.indexOf('k-act') > 0);   // Hạn mức / Mục tiêu ở tab Báo cáo đã chuyển sang thẻ bc-card (không viền màu theo loại)
   var css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
@@ -3763,7 +3763,7 @@ test('không có hạn mức hằng ngày nào -> không hiện (null / rỗng),
 test('thẻ tổng quan Sổ tay: tháng này có khối "Hôm nay còn tiêu được"; tháng khác thì không', function(){
   tnData(TN_CHI);
   var h = ctx.tongQuanHtml('2026-10', 0, 0, 0, 0, false);
-  ok(h.indexOf('Hôm nay còn tiêu được') >= 0 && h.indexOf('Khoản cố định còn phải ra') >= 0, 'tháng hiện tại');
+  ok(h.indexOf('Hôm nay còn tiêu được') >= 0 && h.indexOf('cố định còn phải ra') >= 0, 'tháng hiện tại');
   ok(ctx.tongQuanHtml('2026-09', 0, 0, 0, 0, false).indexOf('Hôm nay còn tiêu được') < 0, 'tháng cũ');
 });
 
@@ -4084,7 +4084,7 @@ test('Sổ tay thẻ đầu: Thu nhập / Chi tiêu / Dư thật + dòng Vay n�
   tcData();
   var h = ctx.tongQuanHtml('2026-10', 51600000, 33140000, 0, 18460000, false);
   ok(h.indexOf('Thu nhập') > 0 && h.indexOf('Chi tiêu') > 0 && h.indexOf('Dư thật') > 0 && h.indexOf('Tổng thu</div>') < 0 && h.indexOf('>Chênh lệch<') < 0, 'nhãn mới');
-  ok(h.indexOf('−' + ctx.fmt(200000)) > 0, 'dư thật = 1tr − 1,2tr = −200.000 (không phải +18,4tr)');
+  ok(h.indexOf('−' + ctx.fmt(200000).replace(' ₫', '')) > 0, 'dư thật = 1tr − 1,2tr = −200.000 (không phải +18,4tr)');
   ok(h.indexOf('Vay nợ') > 0 && h.indexOf('vào <b>' + ctx.fmt(50500000).replace(' ₫', '')) > 0 || h.indexOf(ctx.fmt(50500000)) > 0, 'vào = vay 50tr + thu hồi 0,5tr');
   ok(h.indexOf(ctx.fmt(31900000)) > 0, 'ra = trả nợ 29,9tr + cho vay 2tr');
   ok(h.indexOf(ctx.fmt(18460000)) > 0, 'số dư hiện tại giữ nguyên');
