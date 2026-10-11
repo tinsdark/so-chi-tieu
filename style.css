@@ -1536,3 +1536,34 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .tn-vi-b.on{background:var(--primary);border-color:var(--primary);color:#fff}
 .tn-canh>span{min-width:0}
 .tn-chuyen{margin-top:8px}
+
+/* ---- Công cụ (tab 6): Muốn mua ---- */
+.cc-form{margin-top:8px}
+.cc-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.cc-kq{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--hover)}
+.cc-kq.ok{border-color:var(--green)}.cc-kq.warn{border-color:var(--amber)}.cc-kq.bad{border-color:var(--red)}
+.cc-v{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:8px}
+.cc-kq.ok .cc-v{color:var(--green)}.cc-kq.warn .cc-v{color:var(--amber)}.cc-kq.bad .cc-v{color:var(--red)}
+.cc-r{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--border);font-size:13.5px}
+.cc-r:first-of-type{border-top:0}
+.cc-r span{color:var(--muted)}.cc-r b{white-space:nowrap}.cc-r b.chi{color:var(--red)}.cc-r b.thu{color:var(--green)}
+.cc-note{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:13px;color:var(--warn-tx);background:var(--warn-bg);border:1px solid var(--warn-br);border-radius:10px;padding:8px 10px}
+.cc-ds{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.cc-it{border:1px solid var(--border);border-radius:14px;padding:10px 12px}
+.cc-it.den{border-color:var(--amber);background:var(--warn-bg)}
+.cc-it-h{display:flex;justify-content:space-between;gap:10px}
+.cc-it-s{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0;font-size:12.5px}
+.cc-tag{padding:2px 8px;border-radius:99px;font-weight:600;font-size:12px;background:var(--hover)}
+.cc-tag.ok{color:var(--green)}.cc-tag.warn{color:var(--amber)}.cc-tag.bad{color:var(--red)}
+.cc-it-b{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cc-nhin{margin-top:12px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+
+/* ---- Công cụ: Giờ công, Lời hứa ---- */
+.gc-hero{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 0 2px}
+.gc-hero span{color:var(--muted);font-size:13.5px}.gc-hero b{font-size:22px}
+.gc-kq{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--hover);font-weight:600;font-size:14px}
+.gc-ds{margin-top:4px}
+.gc-cfg{margin-top:14px}.gc-cfg summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--muted);padding:4px 0}
+.lh-cau{font-style:italic;color:var(--muted);font-size:13px;margin:4px 0}
+.cc-it.lh-pha{border-color:var(--red)}.cc-it.lh-giu{border-color:var(--green)}
+.cc-it[role=button]{cursor:pointer}

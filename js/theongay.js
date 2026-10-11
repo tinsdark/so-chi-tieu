@@ -229,7 +229,7 @@ function tnHomNayHtml(t, tm){
   var h = '<div class="card hero bc-hero tn-hero" id="tnHomNay">';
   if (!t || !tm){
     return h + '<div class="hero-lbl">Hôm nay</div><div class="bc-pace-n" style="margin-top:8px">Chưa có hạn mức cho khoản chi hằng ngày nào (Ăn, Xăng...). '
-      + 'Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi mỗi ngày còn tiêu được bao nhiêu.</div></div>';
+      + 'Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi mỗi ngày còn tiêu được bao nhiêu.</div></div>';
   }
   var vuotNgay = !tm.het && tm.honNayCon < 0;
   var nhan = tm.het ? 'Hạn mức tiêu hằng ngày đã hết' : (vuotNgay ? 'Hôm nay đã vượt mức' : 'Hôm nay còn tiêu được');

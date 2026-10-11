@@ -708,7 +708,7 @@ function baoCaoDauHtml(mk){
         + (du <= cap ? 'và còn dư ~<b>'+bdTien(cap - du)+'</b> hạn mức.' : 'và vượt ~<b>'+bdTien(du - cap)+'</b> hạn mức.') + '</div>';
     }
   } else {
-    h += '<div class="bc-pace-n">Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div>';
+    h += '<div class="bc-pace-n">Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div>';
   }
   if (cur.tongChiThat > 0){
     var den = dang ? nhip.ngayQua : cur.soNgay, mxD = 0, mxV = 0;
@@ -790,7 +790,7 @@ function renderBaoCao(){
   html += tongKetCardHtml(mk);              // chỉ có ở tháng đã kết thúc (tongket.js)
   var hm = hanMucThangHtml(mk);
   html += hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
-    + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Danh mục để theo dõi ở đây.</div></div>';
+    + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>';
   html += taiSanRongCardHtml(mk);
   html += mucTieuCardHtml();
   html += nhanCardHtml();

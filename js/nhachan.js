@@ -86,7 +86,7 @@ function nhacHanSheetHtml(){
       + '<span class="han-b"><button type="button" class="btn secondary sm" data-act="hanXong" data-kind="'+x.kind+'" data-id="'+esc(x.id)+'" data-mk="'+x.mk+'">'+icon('check')+' Hoàn thành</button>'
       + '<button type="button" class="btn sm" data-act="hanGhi" data-kind="'+x.kind+'" data-id="'+esc(x.id)+'">Ghi</button></span></div>';
   });
-  return h + '<div class="vn-hint" style="margin-top:12px">Nhắc theo "Ngày thu/chi hằng tháng" đặt ở từng danh mục (tab Danh mục). "Hoàn thành" chỉ tắt nhắc, không ghi vào sổ. Ghi giao dịch ở danh mục đó cũng tự hết nhắc.</div></div></div>';
+  return h + '<div class="vn-hint" style="margin-top:12px">Nhắc theo "Ngày thu/chi hằng tháng" đặt ở từng danh mục (tab Cài đặt). "Hoàn thành" chỉ tắt nhắc, không ghi vào sổ. Ghi giao dịch ở danh mục đó cũng tự hết nhắc.</div></div></div>';
 }
 function nhacHanSheetVe(){
   if (typeof document === 'undefined' || !document.body || !document.createElement) return;

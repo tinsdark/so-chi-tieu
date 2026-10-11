@@ -59,7 +59,7 @@ function theSapDenHan(homNay, nNgay){
   return out;
 }
 
-/* ---- hiển thị ở thẻ Ví (tab Danh mục) ---- */
+/* ---- hiển thị ở thẻ Ví (tab Cài đặt) ---- */
 function theDongHtml(w){
   var t = theTinh(w);
   var h = '<span class="dm-s">Dư nợ '+fmt(Math.round(t.duNo))
