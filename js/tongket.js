@@ -11,13 +11,16 @@
 
 var TK_NGAY_GOI_Y = 7;      // chip ở Sổ tay hiện trong N ngày đầu tháng
 
-// số liệu tổng kết tháng mk; null nếu tháng chưa kết thúc, trước mốc bắt đầu sổ, hoặc không có giao dịch
+// số liệu tổng kết tháng mk; null nếu tháng chưa kết thúc hoặc không có giao dịch.
+// Tháng TRƯỚC mốc bắt đầu sổ (ngayBatDau) vẫn tổng kết được: giao dịch còn nguyên trong sổ, chỉ riêng TÀI SẢN RÒNG cần số dư
+// tính từ mốc nên để null (nợ gốc tính từ lịch vay, không phụ thuộc mốc).
 function tongKetThang(mk){
   var hom = todayStr(), start = (state.data.settings.ngayBatDau || '').slice(0, 7);
-  if (mk >= monthKey(hom) || (start && mk < start)) return null;
+  if (mk >= monthKey(hom)) return null;
   var cur = bdThang(mk);
   if (!cur.coDl) return null;
-  var prevMk = bdThangTruoc(mk), coTruoc = !start || prevMk >= start, prev = bdThang(prevMk);
+  var prevMk = bdThangTruoc(mk), prev = bdThang(prevMk);
+  var coSoDu = !start || mk >= start, coSoDuTruoc = !start || prevMk >= start;
   var r = { mk: mk, prevMk: prevMk, soNgay: cur.soNgay, thu: cur.tongThu, chi: cur.tongChi, hangNgay: cur.tongChiHN,
             coDinh: cur.tongChi - cur.tongChiHN, traNo: num(cur.theoCat.traNo), cap: hanMucHangNgay().cap,
             ngayOk: null, tang: null, no: null, noTruoc: null, rong: null, rongTruoc: null };
@@ -32,9 +35,10 @@ function tongKetThang(mk){
       if (d > 0.5 && (!r.tang || d > r.tang.d)) r.tang = { id: k, ten: catTen('chi', k), d: d, v: cur.theoCat[k] };
     });
   }
-  var th = taiSanRongThang(mk);
-  r.no = th.no; r.rong = th.rong;
-  if (coTruoc){ var tp = taiSanRongThang(prevMk); r.noTruoc = tp.no; r.rongTruoc = tp.rong; }
+  var th = taiSanRongThang(mk), tp = taiSanRongThang(prevMk);
+  r.no = th.no; r.noTruoc = tp.no;
+  if (coSoDu) r.rong = th.rong;
+  if (coSoDu && coSoDuTruoc) r.rongTruoc = tp.rong;
   return r;
 }
 
@@ -61,9 +65,11 @@ function tongKetCardHtml(mk){
     h += tkDong('Trả nợ', bdTien(r.traNo), 'nợ gốc còn ' + bdTien(r.no)
       + (giam != null && Math.abs(giam) >= 1 ? (giam > 0 ? ', giảm ' : ', tăng ') + bdTien(Math.abs(giam)) + ' so với đầu tháng' : ''));
   }
-  var dRong = r.rongTruoc != null ? r.rong - r.rongTruoc : null;
-  h += tkDong('Tài sản ròng cuối tháng', bdTien(r.rong),
-    dRong != null && Math.abs(dRong) >= 1 ? (dRong > 0 ? '↑ ' : '↓ ') + bdTien(Math.abs(dRong)) + ' so với tháng trước' : '', r.rong < 0 ? 'chi' : '');
+  if (r.rong != null){
+    var dRong = r.rongTruoc != null ? r.rong - r.rongTruoc : null;
+    h += tkDong('Tài sản ròng cuối tháng', bdTien(r.rong),
+      dRong != null && Math.abs(dRong) >= 1 ? (dRong > 0 ? '↑ ' : '↓ ') + bdTien(Math.abs(dRong)) + ' so với tháng trước' : '', r.rong < 0 ? 'chi' : '');
+  }
   if (r.tang) h += tkDong('Tăng mạnh nhất', esc(r.tang.ten), '+' + bdTien(r.tang.d) + ' so với tháng ' + parseInt(r.prevMk.slice(5, 7), 10) + ' (chi hằng ngày)');
   return h + '</div>';
 }
