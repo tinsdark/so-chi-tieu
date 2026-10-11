@@ -4803,6 +4803,18 @@ test('chuông: mở chuông KHÔNG làm số giảm; bấm vào mục mới gi�
   ok(Object.keys(ctx.state.data.settings.thongBaoXem).length === 1, 'lưu vào settings.thongBaoXem (đi lên Drive)');
   ctx.chuyenTab = cu; setToday('2026-10-01');
 });
+test('chuông: khoản vừa là danh mục có ngày vừa là định kỳ cùng ngày thì chỉ nhắc MỘT lần khi đến hạn', function(){
+  hanData(0, 20);
+  var d = ctx.state.data;
+  d.dinhKy = [{ id: 'dkNha', ten: 'Tiền nhà', kind: 'chi', catId: 'nha', soTien: 1400000, ngay: 20, bat: true, bo: [] },
+              { id: 'dkDien', ten: 'Tiền điện nước', kind: 'chi', catId: 'nha', soTien: 554000, ngay: 11, bat: true, bo: [] }];
+  var dem = function(h){ return ctx.cbTatCa(h).filter(function(x){ return x.loai === 'dk' || x.loai === 'cat'; }).map(function(x){ return x.loai + ':' + x.tieu; }); };
+  eq(dem('2026-10-15').join(','), 'dk:Tiền điện nước,cat:Tiền nhà', 'trước hạn: Tiền nhà chỉ có lời nhắc sớm của danh mục (định kỳ ngày 20 chưa đến); điện nước ngày 11 đã đến hạn');
+  eq(dem('2026-10-20').join(','), 'dk:Tiền điện nước,dk:Tiền nhà', 'đến hạn: định kỳ thay thế, KHÔNG còn nhắc lần hai từ danh mục; "điện nước" cùng danh mục nhưng ngày 11 vẫn nhắc riêng');
+  d.dinhKy[0].bo = ['2026-10']; d.dinhKy[1].bo = ['2026-10'];
+  eq(dem('2026-10-20').join(','), 'cat:Tiền nhà', 'định kỳ đã bỏ qua tháng này thì danh mục nhắc lại như cũ (không mất lời nhắc)');
+  setToday('2026-10-01');
+});
 test('chuông: sắp đến hạn -> đến hạn là THÔNG BÁO MỚI (số đỏ tăng lại); xong thì mất khỏi chuông', function(){
   setToday('2026-10-14'); hanData(20, 0);
   var k1 = ctx.cbTatCa('2026-10-14')[0].key; ctx.cbDanhDauXem(k1, '2026-10-14');
