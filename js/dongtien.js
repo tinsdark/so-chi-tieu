@@ -34,13 +34,14 @@ function recentAvgActual(kind, catId, n){
   return sum / win.length;
 }
 
-// tab Dòng tiền có 2 chế độ: số liệu thật (+ dự kiến) và vùng nháp Mô phỏng (mophong.js) — gộp chung 1 tab
-// để thanh tab dưới chỉ còn 5 mục. state.dtMoPhong quyết định vẽ cái nào (app.js renderAll).
+// tab Dòng tiền có 3 chế độ: Theo ngày (theongay.js), Theo tháng (số liệu thật + dự kiến, file này) và vùng nháp Mô phỏng
+// (mophong.js) — gộp chung 1 tab để thanh tab dưới chỉ còn 5 mục. state.dtTheoNgay / state.dtMoPhong quyết định vẽ cái nào
+// (app.js renderAll); cả hai tắt = Theo tháng (mặc định).
 function dtCheDoHtml(){
-  var mp = !!state.dtMoPhong;
+  var mp = !!state.dtMoPhong, ng = !mp && !!state.dtTheoNgay, th = !mp && !ng;
+  var nut = function(v, on, nhan){ return '<button type="button" role="tab" data-act="dtCheDo" data-v="'+v+'" class="'+(on ? 'on' : '')+'" aria-selected="'+on+'">'+nhan+'</button>'; };
   return '<div class="dt-mode" role="tablist" aria-label="Chế độ xem dòng tiền">'
-    + '<button type="button" role="tab" data-act="dtCheDo" data-v="tt" class="'+(mp ? '' : 'on')+'" aria-selected="'+!mp+'">Thực tế &amp; dự kiến</button>'
-    + '<button type="button" role="tab" data-act="dtCheDo" data-v="mp" class="'+(mp ? 'on' : '')+'" aria-selected="'+mp+'">'+icon('sliders')+' Mô phỏng</button>'
+    + nut('ngay', ng, 'Theo ngày') + nut('tt', th, 'Theo tháng') + nut('mp', mp, icon('sliders')+' Mô phỏng')
     + '</div>';
 }
 
@@ -454,8 +455,9 @@ function handleDongTienAction(act, el){
     state.dongTienYear += (act==='nextYear'?1:-1);
     renderDongTien();
   } else if (act === 'dtCheDo'){
-    state.dtMoPhong = el.getAttribute('data-v') === 'mp';
-    if (state.dtMoPhong) renderMoPhong(); else renderDongTien();
+    var v = el.getAttribute('data-v');
+    state.dtMoPhong = v === 'mp'; state.dtTheoNgay = v === 'ngay';
+    if (state.dtMoPhong) renderMoPhong(); else if (state.dtTheoNgay) renderTheoNgay(); else renderDongTien();
   } else if (act === 'dtThang'){
     state.dtThang = el.getAttribute('data-mk');
     renderDongTien();

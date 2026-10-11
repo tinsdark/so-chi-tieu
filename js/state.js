@@ -493,7 +493,9 @@ var ICON_PATHS = {
   'upload': "<path d=\"M12 15V4\"/><path d=\"M7.5 8L12 3.5 16.5 8\"/><path d=\"M5 20h14\"/>",
   'transfer': "<path d=\"M4 8h14\"/><path d=\"M14.5 4.5L18 8l-3.5 3.5\"/><path d=\"M20 16H6\"/><path d=\"M9.5 12.5L6 16l3.5 3.5\"/>",
   'arrow-up': "<path d=\"M12 19V5\"/><path d=\"M6 11l6-6 6 6\"/>",
-  'arrow-down': "<path d=\"M12 5v14\"/><path d=\"M18 13l-6 6-6-6\"/>"
+  'arrow-down': "<path d=\"M12 5v14\"/><path d=\"M18 13l-6 6-6-6\"/>",
+  'eye': "<path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+  'eye-off': "<path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M4 4l16 16\"/>"
 };
 function icon(ten, lop){
   var d = ICON_PATHS[ten];
@@ -943,6 +945,11 @@ function chiTotal(entry){
 /* ---------------- helpers chung ---------------- */
 // VND không có phần lẻ: làm tròn ở đây để số tổng (cộng từ nhiều khoản chia lẻ như lãi) không hiện ",303"
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('vi-VN') + ' ₫'; }
+/* CHẾ ĐỘ ẨN SỐ TIỀN: ui.js gọi anSoChuoi cho từng đoạn chữ ĐANG HIỆN trên màn hình. KHÔNG sửa fmt(): fmt còn được dùng để
+   ghi ghi chú vào dữ liệu (ghi định kỳ, nhập sao kê, file .ics) — sửa fmt là lưu "•••••" vĩnh viễn lên Drive.
+   Che: số có dấu chấm ngăn nghìn (1.234.000), số kèm ₫, số rút gọn ở trục biểu đồ (350k, 1,2tr, 2 tỷ). Giữ: %, ngày, giờ, số ngày. */
+var AN_SO_RE = /[+\u2212-]?\d{1,3}(?:\.\d{3})+(?:\s?₫)?|[+\u2212-]?\d+\s?₫|[+\u2212-]?\d+(?:,\d+)?(?:tr|k|\s?tỷ)(?![0-9A-Za-zÀ-ỹ])/g;
+function anSoChuoi(s){ return String(s).replace(AN_SO_RE, function(m){ return m.indexOf('₫') >= 0 ? '••••• ₫' : '•••••'; }); }
 function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 // giống num() nhưng chặn số âm -> về 0 (dùng cho các ô nhập tiền)
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }
