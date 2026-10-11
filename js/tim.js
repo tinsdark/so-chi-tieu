@@ -136,7 +136,8 @@ function timVe(){
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
   timChon(0);
-  var o = document.getElementById('tim_q'); if (o && o.focus) setTimeout(function(){ o.focus(); }, 50);
+  // focus NGAY trong lúc xử lý cú bấm: iOS chỉ bật bàn phím khi focus nằm trong cử chỉ của người dùng (setTimeout làm mất cử chỉ)
+  var o = document.getElementById('tim_q'); if (o && o.focus) o.focus();
 }
 function timChon(i){
   var rs = document.querySelectorAll('#timKq .tim-r');
