@@ -584,13 +584,49 @@ function bdXuHuongHtml(mk){
   }
   return h;
 }
+/* ---------- chi hằng ngày theo thứ trong tuần ----------
+   Gộp tháng đang xem + 2 tháng trước. Mỗi thứ: tổng chi hằng ngày (bdThang.chiHN, không gồm khoản cố định / vay nợ)
+   ÷ số ngày thuộc thứ đó đã qua (ngày không chi vẫn đếm là 0 đồng). Bỏ ngày tương lai và ngày trước giao dịch đầu tiên của sổ. */
+var BD_THU_TEN = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'];
+function bdTheoThu(mk, homNay){
+  homNay = homNay || todayStr();
+  var dau = Object.keys(state.data.journal).sort()[0] || '9999-99-99';
+  var rows = BD_THU_TEN.map(function(t){ return { ten: t, tong: 0, soNgay: 0, tb: 0 }; });
+  var mks = [monthKeyAdd(mk, -2), monthKeyAdd(mk, -1), mk], tong = 0;
+  mks.forEach(function(k){
+    var b = bdThang(k), p = k.split('-');
+    for (var d = 1; d <= b.soNgay; d++){
+      var ngay = k + '-' + pad2(d);
+      if (ngay > homNay || ngay < dau) continue;
+      var r = rows[(new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, d).getDay() + 6) % 7];
+      r.tong += b.chiHN[d - 1]; r.soNgay++; tong += b.chiHN[d - 1];
+    }
+  });
+  rows.forEach(function(r){ r.tb = r.soNgay ? r.tong / r.soNgay : 0; });
+  return { rows: rows, tong: tong, tu: mks[0], den: mk };
+}
+function bdTheoThuHtml(mk){
+  var t = bdTheoThu(mk), co = t.rows.filter(function(r){ return r.soNgay > 0; });
+  if (co.length < 7 || t.tong <= 0) return '';
+  var mx = Math.max.apply(null, co.map(function(r){ return r.tb; })), mn = Math.min.apply(null, co.map(function(r){ return r.tb; }));
+  var cao = co.filter(function(r){ return r.tb === mx; })[0];
+  var h = '<div class="bd-h" style="margin-top:18px">Chi hằng ngày theo thứ<span>TB mỗi ngày · T'+parseInt(t.tu.slice(5), 10)+'–T'+parseInt(t.den.slice(5), 10)+'</span></div><div class="bd-box"><div class="bd-hb">';
+  t.rows.forEach(function(r){
+    h += '<div class="bd-hb-r"><div class="top"><span>'+r.ten+'</span><b>'+fmt(Math.round(r.tb))+'</b></div>'
+      + '<div class="bar"><i style="width:'+Math.max(2, Math.round(r.tb / mx * 100))+'%;background:'+(r === cao ? 'var(--chi-solid)' : 'var(--muted)')+'"></i></div></div>';
+  });
+  h += '</div></div><div class="bd-note">'+cao.ten+' tiêu nhiều nhất'+(mn > 0 ? ', gấp '+(Math.round(mx / mn * 10) / 10).toString().replace('.', ',')+' lần ngày ít nhất' : '')+'. Chỉ tính chi hằng ngày, không gồm khoản cố định và vay nợ.</div>';
+  h += giaiThichSo([{ ten: 'Trung bình mỗi ngày theo thứ', ct: 'Tổng chi hằng ngày của các ngày cùng thứ ÷ số ngày đó đã qua (ngày không chi tính 0 đồng).',
+    pt: cao.ten + ': ' + soGt(cao.tong) + ' ÷ ' + cao.soNgay + ' ngày = ' + soGt(cao.tb) }], 'Cách tính các số này');
+  return h;
+}
 function bieuDoInnerHtml(mk){
   var tab = state.bdTab || 'tq';
   var h = '<h3>Biểu đồ chi tiêu</h3><div class="bd-sub" role="tablist">'
     + [['tq', 'Tổng quan'], ['dm', 'Danh mục'], ['xh', 'Xu hướng']].map(function(t){
         return '<button type="button" role="tab" data-act="bdTab" data-tab="'+t[0]+'" class="'+(tab === t[0] ? 'on' : '')+'" aria-selected="'+(tab === t[0])+'">'+t[1]+'</button>';
       }).join('') + '</div>';
-  h += tab === 'dm' ? bdDanhMucHtml(mk) : (tab === 'xh' ? bdXuHuongHtml(mk) : bdTongQuanHtml(mk));
+  h += tab === 'dm' ? bdDanhMucHtml(mk) : (tab === 'xh' ? bdXuHuongHtml(mk) + bdTheoThuHtml(mk) : bdTongQuanHtml(mk));
   return h;
 }
 function bieuDoCardHtml(mk){
