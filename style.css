@@ -43,6 +43,7 @@
   --chi-solid:#a8432f; --thu-solid:#1a7a42;
 }
 *{box-sizing:border-box}
+html,body{overscroll-behavior-y:none}   /* iOS 16+: bớt nảy cao su ở đầu / cuối trang làm thanh tab trôi theo (chưa kiểm trên máy thật) */
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
 #app{max-width:1100px;margin:0 auto;padding:12px 14px 60px}
 header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:20}
@@ -59,6 +60,10 @@ button{cursor:pointer;font-family:inherit}
 .tab.active{color:var(--primary-d);border-bottom-color:var(--primary)}
 .tab-badge{display:inline-block;margin-left:5px;background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:1;padding:2px 5px;border-radius:999px;vertical-align:middle}
 .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+/* thẻ / form là đích cuộn (scrollIntoView ở chip "khoản định kỳ đến hạn", "danh mục vượt hạn mức", sửa một ngày...): chừa chỗ cho header dán
+   đầu trang (và thanh tab dán ở trên khi màn rộng). Điện thoại: thanh tab nằm đáy nên chỉ chừa header. */
+.card,#formGiaoDich{scroll-margin-top:calc(var(--header-h,52px) + var(--tabs-h,45px) + 8px)}
+@media (max-width:700px){ .card,#formGiaoDich{scroll-margin-top:calc(var(--header-h,52px) + 8px)} }
 .card h3{margin:0 0 12px;font-size:15px;color:var(--text)}
 .grid-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
@@ -1500,7 +1505,3 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .tk-r1>span{color:var(--muted);font-weight:600}
 .tk-r1>b{font-size:15px;font-variant-numeric:tabular-nums;text-align:right} .tk-r1>b.thu{color:var(--green)} .tk-r1>b.chi{color:var(--red)}
 .tk-r2{margin-top:2px;font-size:12px;color:var(--muted)}
-
-/* thẻ là đích cuộn (chip ở Sổ tay, nút "Xem ở Báo cáo"...): chừa chỗ cho header dán đầu trang (và thanh tab trên desktop) */
-.bc-card,.card.hero{scroll-margin-top:calc(var(--header-h,52px) + var(--tabs-h,45px) + 8px)}
-@media (max-width:700px){ .bc-card,.card.hero{scroll-margin-top:calc(var(--header-h,52px) + 8px)} }
