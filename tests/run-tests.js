@@ -3964,7 +3964,7 @@ test('tongKetThang: nợ gốc giảm / tài sản ròng đổi so với tháng 
   eq(r.no, 6000000, 'nợ gốc còn lại'); eq(r.noTruoc, 6000000, 'tháng 9 chưa trả kỳ nào');
   eq(r.rong - r.rongTruoc, ctx.taiSanRongThang('2026-10').rong - ctx.taiSanRongThang('2026-09').rong);
   eq(ctx.tongKetThang('2026-11'), null, 'tháng hiện tại chưa kết thúc');
-  eq(ctx.tongKetThang('2026-08'), null, 'trước mốc bắt đầu sổ (01/09)');
+  eq(ctx.tongKetThang('2026-08'), null, 'tháng không có giao dịch');
   eq(ctx.tongKetThang('2026-12'), null, 'tháng tương lai');
   tkData(function(d){ d.journal = {}; });
   eq(ctx.tongKetThang('2026-10'), null, 'không có giao dịch');
@@ -3990,6 +3990,20 @@ test('Sổ tay: chip "Tổng kết tháng" chỉ trong 7 ngày đầu tháng và
   tkData();
   var st = fs.readFileSync(path.join(__dirname, '..', 'js', 'bieudo.js'), 'utf8'), r = st.slice(st.indexOf('function renderBaoCao'));
   ok(r.indexOf('baoCaoDauHtml(mk)') < r.indexOf('tongKetCardHtml(mk)') && r.indexOf('tongKetCardHtml(mk)') < r.indexOf('hanMucThangHtml(mk)'), 'thứ tự: thẻ đầu, tổng kết, hạn mức');
+  setToday('2026-10-01');
+});
+
+test('tháng TRƯỚC mốc bắt đầu sổ vẫn tổng kết được (chỉ bỏ tài sản ròng); tháng đầu sau mốc so với tháng trước mốc thì không có so sánh tài sản ròng', function(){
+  tkData(function(d){ d.settings.ngayBatDau = '2026-10-01'; d.settings.thangBatDauDuTru = '2026-10'; });
+  var r = ctx.tongKetThang('2026-09');
+  ok(r && r.chi === 600000, 'tháng 9 còn nguyên giao dịch: chi 600k');
+  eq(r.rong, null, 'không có số dư trước mốc'); eq(r.rongTruoc, null); eq(r.no, 6000000, 'nợ gốc tính từ lịch vay');
+  var h = ctx.tongKetCardHtml('2026-09');
+  ok(h.indexOf('Tổng kết tháng 9/2026') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('Tài sản ròng') < 0, 'có thẻ, không có dòng tài sản ròng');
+  setToday('2026-12-02');
+  var r10 = ctx.tongKetThang('2026-10');
+  ok(r10.rong != null && r10.rongTruoc === null, 'tháng 10 (đúng mốc): có tài sản ròng, không có tháng trước để so');
+  ok(ctx.tongKetCardHtml('2026-10').indexOf('Tài sản ròng cuối tháng') > 0 && ctx.tongKetCardHtml('2026-10').indexOf('so với tháng trước') < 0);
   setToday('2026-10-01');
 });
 
