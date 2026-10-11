@@ -6,7 +6,7 @@ Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn
 
 ## 1. Project đã có gì
 
-### 5 tab chính
+### 6 tab chính
 
 | Tab | Phím tắt | Nội dung |
 |---|---|---|
@@ -15,6 +15,7 @@ Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn
 | **Báo cáo** | `3` | Thẻ đầu theo tháng, theo dõi **hạn mức** từng danh mục chi, **tài sản ròng** (tiền các ví + cho vay chưa thu − nợ gốc), **mục tiêu tiết kiệm** (tiến độ, cần để dành mỗi tháng bao nhiêu), biểu đồ chi tiêu (Tổng quan / Danh mục / Xu hướng), so sánh tháng với cùng kỳ. |
 | **Vay - Nợ** | `4` | **Cho vay** và **vay phải trả** (ngân hàng / ví / bạn bè / người thân). Hình thức trả: 1 lần, không lãi, có lãi, trả cố định/tháng, gốc đều lãi giảm dần. Thẻ tổng quan (còn nợ, cho vay chờ thu, nợ ròng, tháng này cần trả / đã trả, dự kiến hết nợ), thẻ "Sắp đến hạn / quá hạn", mỗi khoản là một thẻ với **lịch trả theo từng kỳ** (đã trả đủ / xong kỳ nhưng thiếu / trả dở / chưa trả), ghi nhận trả (trả một phần hoặc đóng kỳ), tất toán sớm, **Bảng theo dõi** (chọn 6 / 12 / 24 tháng): mỗi tháng một dòng, 2 cột Số tiền trả (các kỳ trả nợ) và Số tiền thu (cho vay), dạng "đã / dự kiến": số nhỏ là tiền THẬT đã trả / thu, số to là dự kiến; lần trả / thu đã hoàn thành (kỳ đã đóng, khoản cho vay thu đủ hoặc xóa nợ) có nhãn **Done** ở góc trên phải ô, kể cả khi tiền thật ít hơn dự kiến (2.900.000 / 3.000.000 · Done). Chạm một tháng để xem từng khoản; kỳ quá hạn chưa xong dồn vào tháng này. Dòng tiền cả sổ (thu chi sinh hoạt, số dư lũy kế) xem ở tab Dòng tiền. Ghi thu/trả tự hạch toán sang Sổ tay. Thêm/sửa khoản vay có khối xem trước số trả mỗi tháng, tổng lãi, tháng trả xong. |
 | **Danh mục** | `5` | Ba khối. **Danh mục**: thu / chi (tên, màu, hạn mức tháng, "Không tính dự kiến", "Cố định theo Hạn mức", kéo thả đổi thứ tự). **Tiền & kế hoạch**: số dư đầu kỳ, ví (mặc định, để dành), chốt số dư, giao dịch định kỳ (chỉ nhắc, không tự ghi), mục tiêu tiết kiệm (gắn ví hoặc tự gom). **Ứng dụng**: cài lên màn hình chính, sao lưu / khôi phục, khóa app, đăng xuất. |
+| **Công cụ** | `6` | Các công cụ hỗ trợ quyết định, không phải sổ ghi. Hiện có thẻ **Muốn mua** (xem mục "Muốn mua / Mua được không" bên dưới). |
 
 Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?` xem bảng phím tắt, `Esc` đóng hộp thoại.
 
@@ -39,6 +40,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - **Sổ nợ theo đối tượng.** Mỗi khoản cho vay / vay có ô "Đối tượng" (người hoặc nơi vay, ví dụ Minh, Vietcombank) (`loan.nguoi`). Thẻ **Sổ nợ theo đối tượng** ở Vay - Nợ gom các khoản còn mở cùng một đối tượng để thấy số ròng (họ nợ mình / mình nợ họ), chạm một khoản để nhảy tới thẻ của nó. Chỉ gom để xem: từng khoản vẫn giữ hình thức, lịch trả, kỳ và tất toán riêng. Khoản cũ chưa gán người thì chưa vào sổ (mở khoản, điền ô Đối tượng).
 - **Chia hóa đơn nhóm.** Nút trong thẻ Cho vay: mình trả cả hóa đơn, nhập tổng và mỗi dòng một người (`Lan 150k` nếu không chia đều; người không ghi số chia đều phần còn lại cùng mình, lẻ đồng dồn về mình). Phần của mình thành một khoản chi ở Sổ tay, mỗi người khác thành một khoản cho vay (gắn `nguoi`), có Hoàn tác. Chưa có chiều ngược lại (người khác trả hộ, mình nợ họ).
 
+- **Muốn mua / Mua được không** (tab Công cụ). Hỏi TRƯỚC khi tiêu. Nhập tên món, giá, ví trả, tùy chọn trả góp (số tháng + lãi %/năm) và mức muốn giữ lại tối thiểu; bấm **Kiểm tra** thì app chèn khoản chi vào **lịch tiền 60 ngày tới** (`tnLichTien`, tổng các ví) và trả lời: số dư thấp nhất nếu mua và ngày nào; **ngày sớm nhất mua mà vẫn an toàn** (không ngày nào sau đó xuống dưới mức giữ lại); mức tiêu mỗi ngày trước → sau nếu tính vào chi hằng ngày (chỉ để biết); mục tiêu tiết kiệm gắn đúng ví trả bị lùi bao nhiêu (số còn thiếu, số cần để dành mỗi tháng, khoảng bao nhiêu ngày); ví trả có đủ tiền hôm nay không. **Kết luận chỉ dựa vào SỐ DƯ**, không dựa vào hạn mức chi hằng ngày (món lớn nào cũng vượt hạn mức tháng). Trả góp: tiền góp theo lãi dư nợ giảm dần, lần đầu đúng ngày mua, các lần sau cùng ngày của tháng sau; dự báo xa hơn 30 ngày kém chắc hơn. **Lưu vào danh sách** (`muonMua[]`): món có thời gian chờ (mặc định 7 ngày); kết luận từng món TÍNH LẠI mỗi lần mở tab; đủ thời gian chờ thì hỏi "còn muốn mua không?". **Mua rồi** mở bảng (số tiền, ngày, danh mục, ví, ghi chú) rồi ghi khoản chi vào Sổ tay, có Hoàn tác; **Bỏ** không ghi gì, cộng vào "Đã nhịn được". Phân tích chỉ đọc dữ liệu. Có mục "Cách tính" bằng số thật. Code: `js/congcu.js` (`mmPhanTich`, `mmKeHoachTra`, `mmMucNgay`, `mmMucTieu`).
 - **Cảnh báo khoản chi bất thường.** Khi bấm Lưu ở Ghi nhanh (hoặc sửa số tiền một dòng ở Sổ tay), app so số tiền với các khoản chi CÙNG DANH MỤC trong 6 tháng qua. Chỉ hỏi lại ("Có gõ thừa số 0 không?") khi đủ 4 điều kiện: có ít nhất 5 khoản trong lịch sử, số mới > 3 lần trung vị, số mới lớn hơn mọi khoản đã ghi (khoản lớn lâu lâu mới có thì không bị coi là nhầm), và từ 50.000 trở lên. Danh mục hệ thống không xét. Dùng chung hộp "Kiểm tra trước khi ghi" với cảnh báo ví âm; không chặn, bấm "Vẫn ghi" là ghi. Code: `chiBatThuong`, `canhBaoBatThuong` ở `sotay.js`.
 - **Chi hằng ngày theo thứ trong tuần.** Báo cáo → Biểu đồ chi tiêu → tab Xu hướng, cuối tab: trung bình chi mỗi ngày theo từng thứ (T2 tới CN), gộp tháng đang xem + 2 tháng trước. Chỉ tính chi hằng ngày (không gồm khoản cố định và vay nợ); ngày không chi tính 0 đồng; bỏ ngày tương lai và ngày trước giao dịch đầu tiên của sổ; chưa đủ cả 7 thứ có dữ liệu thì không hiện. Có mục "Cách tính" bằng số thật. Chỉ đọc dữ liệu. Code: `bdTheoThu`, `bdTheoThuHtml` ở `bieudo.js`.
 
@@ -67,7 +69,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm trong Sổ tay, `?`
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 301 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
+- Có 308 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết.
 
 ---
 
@@ -97,6 +99,7 @@ js/
   danhmuc.js        Tab Danh mục: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
   dongtien.js       Tab Dòng tiền (Theo tháng) + thanh chọn 3 chế độ
   theongay.js       Dòng tiền · Theo ngày: hôm nay, từng ngày tháng này, tiền 30 ngày tới
+  congcu.js         Tab Công cụ (phím 6): thẻ Muốn mua / Mua được không
   tongket.js        Tổng kết tháng đã kết thúc (thẻ ở Báo cáo + chip ở Sổ tay)
   mophong.js        Chế độ Mô phỏng của Dòng tiền
   motion.js         Animation dùng chung

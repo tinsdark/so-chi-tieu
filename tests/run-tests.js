@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -4335,6 +4335,79 @@ test('locTongKet: cộng đúng các DÒNG khớp từ khóa / danh mục (khôn
   ok(h.indexOf('75.000 ÷ 2 khoản = 37.500/khoản') > 0, 'giải thích có phép tính');
   ok(ctx.locTongKetHtml(oct, true, '2026-10').indexOf('Tháng 9') < 0, 'khoảng ngày tùy chọn: không so tháng trước');
   ctx.state.soTaySearch = ''; ctx.state.soTayCat = ''; eq(ctx.locTongKetHtml(oct, false, '2026-10'), '', 'không lọc thì không có dòng tổng');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('Công cụ: Muốn mua (mmPhanTich)');
+
+// kiểm độc lập: mua ngày d (trả đủ một lần) có an toàn không = mọi ngày từ d trở đi, số dư lịch tiền − giá >= giu
+function mmAnToan(L, d, gia, giu){
+  return L.ngay.filter(function(r){ return r.ngay >= d; }).every(function(r){ return r.cuoi - gia >= giu - 0.5; });
+}
+test('mmTienGop: góp 0% chia đều; có lãi theo công thức niên kim', function(){
+  near(ctx.mmTienGop(12000000, 12, 0), 1000000, 0.01); near(ctx.mmTienGop(12000000, 12, 12), 1066185.4, 1);
+  eq(ctx.mmTienGop(5000000, 0, 10), 5000000, 'thang 0 = trả đủ'); eq(ctx.mmTienGop(5000000, 1, 10), 5000000);
+  var kh = ctx.mmKeHoachTra(3000000, 3, 0, '2026-10-31');
+  eq(kh.length, 3); eq(kh[0].ngay, '2026-10-31'); eq(kh[1].ngay, '2026-11-30', 'ngày 31 co về cuối tháng ngắn'); eq(kh[2].ngay, '2026-12-31'); eq(kh[0].soTien, 1000000);
+});
+test('mmPhanTich: số dư thấp nhất = thấp nhất lịch tiền − giá; mua nhỏ thì an toàn hôm nay', function(){
+  tndData(5000000);
+  var L = ctx.tnLichTien('2026-10-11', 60), minC = Math.min.apply(null, L.ngay.map(function(r){ return r.cuoi; }));
+  var p = ctx.mmPhanTich({ soTien: 100000, thang: 0, lai: 0, giu: 0 }, '2026-10-11');
+  near(p.thap.cuoi, minC - 100000, 0.5, 'thấp nhất nếu mua'); eq(p.mau, 'ok'); eq(p.antoanHomNay, true); eq(p.thieu, null);
+  eq(p.mucTieu.length, 0);
+  ok(p.mucNgay && p.mucNgay.truoc > p.mucNgay.sau, 'mức tiêu/ngày giảm sau khi tính khoản này');
+});
+test('mmPhanTich: mua lớn thì chưa an toàn hôm nay; ngày an toàn sớm nhất đúng với kiểm độc lập', function(){
+  tndData(5000000);
+  var L = ctx.tnLichTien('2026-10-11', 60), gia = Math.round(L.dau + 1000000), giu = 0;
+  var p = ctx.mmPhanTich({ soTien: gia, thang: 0, lai: 0, giu: giu }, '2026-10-11');
+  ok(p.mau === 'bad' && p.thieu, 'bad: số dư xuống âm'); eq(p.antoanHomNay, false);
+  var truth = null;
+  for (var i = 0; i < L.ngay.length; i++){ if (mmAnToan(L, L.ngay[i].ngay, gia, giu)){ truth = L.ngay[i].ngay; break; } }
+  eq(p.antoan, truth, 'ngày an toàn sớm nhất khớp kiểm độc lập');
+  if (p.antoan){ ok(mmAnToan(L, p.antoan, gia, giu), 'mua ngày đó thì an toàn'); }
+  var h = ctx.mmKetQuaHtml(p);
+  ok(h.indexOf('Chưa nên mua hôm nay') > 0 && h.indexOf('Cách tính các số này') > 0, 'kết quả + giải thích');
+  eq(kiemPhepCong(h).loi.join(' | '), '', 'phép cộng trong giải thích đúng');
+  setToday('2026-10-01');
+});
+test('mmPhanTich: giữ lại tối thiểu làm kết luận chặt hơn; trả góp nhẹ hơn trả đủ', function(){
+  tndData(5000000);
+  var L = ctx.tnLichTien('2026-10-11', 60), minC = Math.min.apply(null, L.ngay.map(function(r){ return r.cuoi; }));
+  var gia = Math.round(minC - 500000);
+  eq(ctx.mmPhanTich({ soTien: gia, thang: 0, lai: 0, giu: 0 }, '2026-10-11').mau, 'ok', 'còn dư 500.000');
+  eq(ctx.mmPhanTich({ soTien: gia, thang: 0, lai: 0, giu: 1000000 }, '2026-10-11').mau, 'bad', 'muốn giữ 1.000.000 thì không đủ');
+  var tra = ctx.mmPhanTich({ soTien: gia, thang: 12, lai: 0, giu: 1000000 }, '2026-10-11');
+  eq(tra.tra.length, 12); near(tra.tra[0].soTien, gia / 12, 0.01); eq(tra.mau, 'ok', 'góp 12 tháng thì tháng đầu nhẹ');
+  setToday('2026-10-01');
+});
+test('mmPhanTich: mục tiêu gắn ví trả bị lùi; ví không đủ tiền thì báo thiếu', function(){
+  tndData(5000000, function(d){ d.mucTieu = [{ id: 'g1', ten: 'Mua xe', soTien: 20000000, hanChot: '2027-06', walletId: 'w_chinh', daGom: 0 }]; });
+  var t = ctx.mucTieuTienDo(ctx.state.data.mucTieu[0], '2026-10-11'), p = ctx.mmPhanTich({ soTien: 1000000, thang: 0, lai: 0, giu: 0, viId: 'w_chinh' }, '2026-10-11');
+  eq(p.mucTieu.length, 1); near(p.mucTieu[0].thieuSau, t.conThieu + 1000000, 0.5); near(p.mucTieu[0].luiNgay, Math.round(1000000 / (t.canMoiThang / 30)), 1);
+  var vi = ctx.soDuTheoVi('w_chinh', '2026-10-11');
+  var q = ctx.mmPhanTich({ soTien: vi + 1000000, thang: 0, lai: 0, giu: 0, viId: 'w_chinh' }, '2026-10-11');
+  near(q.thieuVi, 1000000, 0.5, 'ví thiếu đúng 1.000.000');
+  setToday('2026-10-01');
+});
+test('normalizeData: muonMua bỏ dòng hỏng, ép kiểu, mặc định chờ 7 ngày', function(){
+  var d = baseData({ muonMua: [{ ten: 'Điện thoại', soTien: '25000000', thang: '12', tt: 'lạ' }, { ten: '', soTien: 5 }, null, { ten: 'x', soTien: 0 }] });
+  var n = loadData(d).muonMua;
+  eq(n.length, 1); eq(n[0].soTien, 25000000); eq(n[0].thang, 12); eq(n[0].tt, 'cho'); eq(n[0].soNgayCho, 7); ok(!!n[0].id && /^\d{4}-/.test(n[0].ngayThem));
+  eq(loadData(baseData()).muonMua.length, 0, 'không có trường thì thành mảng rỗng');
+});
+test('mmCardHtml: có form, danh sách chờ với kết luận, đã nhịn được', function(){
+  tndData(5000000, function(d){ d.muonMua = [
+    { id: 'm1', ten: 'Tai nghe', soTien: 300000, viId: 'w_chinh', thang: 0, lai: 0, giu: 0, ngayThem: '2026-10-01', soNgayCho: 7, tt: 'cho' },
+    { id: 'm2', ten: 'Giày', soTien: 2400000, thang: 0, lai: 0, giu: 0, ngayThem: '2026-09-01', soNgayCho: 7, tt: 'bo' }]; });
+  ctx.state.cc = { ten: '', gia: '', vi: '', thang: '', lai: '', giu: '', kq: false, xem: '' };
+  var h = ctx.mmCardHtml();
+  ok(h.indexOf('Tai nghe') > 0 && h.indexOf('Mua được hôm nay') > 0, 'món chờ + kết luận');
+  ok(h.indexOf('Đã đủ thời gian chờ') > 0, 'chờ từ 01/10 đủ 7 ngày tới 08/10, hôm nay 11/10');
+  ok(h.indexOf('Giày') < 0 && h.indexOf('2.400.000') > 0 && h.indexOf('Đã nhịn được') > 0, 'món đã bỏ không nằm trong danh sách, cộng vào đã nhịn');
+  eq(ctx.mmDenHanCho(ctx.state.data.muonMua[0], '2026-10-07'), false); eq(ctx.mmDenHanCho(ctx.state.data.muonMua[0], '2026-10-08'), true);
   setToday('2026-10-01');
 });
 

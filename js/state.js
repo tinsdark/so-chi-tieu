@@ -690,6 +690,17 @@ function normalizeData(d){
     d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
   });
   // mục tiêu tiết kiệm (xem khối MỤC TIÊU TIẾT KIỆM)
+  // món muốn mua (xem congcu.js): chỉ giữ dòng có tên + giá, ép kiểu các trường
+  d.muonMua = (Array.isArray(d.muonMua) ? d.muonMua : []).filter(function(m){ return m && m.ten && num(m.soTien) > 0; });
+  d.muonMua.forEach(function(m){
+    if (!m.id) m.id = 'mm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    m.soTien = num(m.soTien); m.thang = Math.max(0, Math.round(num(m.thang))); m.lai = numNonNeg(m.lai); m.giu = numNonNeg(m.giu);
+    m.soNgayCho = Math.max(0, Math.round(num(m.soNgayCho))) || 7;
+    if (m.tt !== 'mua' && m.tt !== 'bo') m.tt = 'cho';
+    m.viId = (m.viId && d.wallets.some(function(w){ return w.id === m.viId; })) ? m.viId : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(m.ngayThem || '')) m.ngayThem = todayStr();
+    m.ngayXong = /^\d{4}-\d{2}-\d{2}$/.test(m.ngayXong || '') ? m.ngayXong : '';
+  });
   d.mucTieu = Array.isArray(d.mucTieu) ? d.mucTieu : [];
   d.mucTieu.forEach(function(g){
     if (!g.id) g.id = 'mt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);

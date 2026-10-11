@@ -45,11 +45,13 @@ function renderAll(){
   else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else if (state.dtTheoNgay) renderTheoNgay(); else renderDongTien(); }
   else if (state.tab === 'baocao') renderBaoCao();
   else if (state.tab === 'vayno') renderVayNo();
+  else if (state.tab === 'congcu') renderCongCu();
   else renderDanhMuc();
   qaSheetVe();                       // rời tab Sổ tay thì bảng ghi khoản tự đóng
   mpSheetVe();                       // rời Mô phỏng thì bảng thêm điều chỉnh tự đóng
   vnSheetVe();                       // rời Vay - Nợ thì form thêm/sửa khoản vay tự đóng
   nhacHanSheetVe();                  // rời Sổ tay thì bảng sắp đến hạn tự đóng
+  ccSheetVe();                       // rời Công cụ thì bảng "Mua rồi" tự đóng
   dmSheetVe();                       // rời Danh mục thì bảng sửa danh mục/ví/định kỳ/mục tiêu tự đóng
   renderVayNoBadge();
   renderSoTayBadge();
@@ -105,7 +107,7 @@ document.addEventListener('click', function(ev){
 
 // chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
 // Đổi tab: nội dung mờ dần vào (motionChuyenTab ở motion.js)
-var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc'];
+var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc', 'congcu'];
 function chuyenTab(tab){
   var cu = state.tab;
   var lam = function(){
@@ -120,13 +122,13 @@ function chuyenTab(tab){
 /* ---------------- phím tắt (desktop) ----------------
    Không bắt phím khi: đang gõ trong ô nhập/chọn (isTypingNow), đang mở hộp thoại,
    giữ Ctrl/Alt/Cmd (để không cướp phím tắt của trình duyệt), chưa đăng nhập. */
-var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'danhmuc' };
+var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'danhmuc', '6':'congcu' };
 function hienPhimTat(){
   moHoiThoai({
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
       + '/ — tìm trong Sổ tay\n'
-      + '1 · 2 · 3 · 4 · 5 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Danh mục\n'
+      + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Danh mục · Công cụ\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
       + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',
@@ -209,7 +211,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
-document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); });
+document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleCongCuInput(ev.target); });
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
@@ -234,6 +236,7 @@ function handleAction(act, el){
   if (handleDongTienAction(act, el)) return;
   if (handleTheoNgayAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
+  if (handleCongCuAction(act, el)) return;
   if (handleDoiSoatAction(act, el)) return;
   if (handleTheAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
