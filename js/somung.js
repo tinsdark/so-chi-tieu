@@ -1,18 +1,19 @@
 "use strict";
 /* ====================================================================
    somung.js — SỔ MỪNG VÀ QUÀ (trang trong tab Công cụ): tiền mừng cưới, phúng viếng, sinh nhật, mừng tuổi... để "có đi có lại".
-   quaTang[] = [{ id, nguoi, dip: 'cuoi'|'hieu'|'sinhnhat'|'tet'|'khac', chieu: 'cho' | 'nhan', soTien, ngay, ghiChu, ghiSo }]
+   quaTang[] = [{ id, nguoi, dip (DỊP: chữ tự gõ, tùy chọn, VD "Cưới", "Thôi nôi"), chieu: 'cho' | 'nhan', soTien, ngay, ghiChu, ghiSo }]
    - chieu 'cho' = mình mừng người ta, 'nhan' = người ta mừng mình.
    - Gom theo NGƯỜI bằng tên đã bỏ dấu / hoa thường ("anh minh" = "Anh Minh"). Không có danh bạ riêng: danh sách người là những tên đang dùng.
    - "Có đi có lại": họ mừng mình mà mình chưa mừng lại (nhan > 0, cho = 0), hoặc ngược lại.
-   - Gợi ý mức mừng: trung vị các khoản "cho" cùng dịp, khi đã có ít nhất 3 khoản.
+   - Dịp là ô TỰ GÕ (không có danh sách cố định); khi gõ chỉ có gợi ý các dịp đã dùng. Hai dịp chỉ khác hoa thường / dấu coi là một ("cuoi" = "Cưới").
+   - Gợi ý mức mừng: trung vị các khoản "cho" cùng dịp (bỏ qua khoản không ghi dịp), khi đã có ít nhất 3 khoản.
    - Mặc định sổ này CHỈ ghi nhớ, KHÔNG đụng Sổ tay hay số dư (nhiều khoản mừng bằng tiền mặt). Mỗi khoản có lựa chọn "Ghi vào Sổ tay? Không / Có":
      chọn Có thì tạo thêm 1 dòng thật ở Sổ tay (bạn mừng = khoản chi, họ mừng bạn = khoản thu; ghiSo = 'ngày|iid' để biết đã ghi);
      xóa dòng ở sổ này KHÔNG xóa dòng ở Sổ tay.
    Cần state.js, loihua.js (lhChuanHoa), danhmuc.js (dmSeg, dmMoney, dmToggle, dkCatOptions, dmSec), vayno.js (vnF, vnSheetKhung), congcu.js load trước.
    ==================================================================== */
 
-var SM_DIP = { cuoi: 'Cưới', hieu: 'Hiếu', sinhnhat: 'Sinh nhật', tet: 'Tết / mừng tuổi', khac: 'Khác' };
+var SM_DIP_GOI_Y = ['Cưới', 'Hiếu', 'Sinh nhật', 'Tết / mừng tuổi'];      // chỉ để gợi ý lúc gõ ô Dịp, không bắt buộc
 var SM_GIOI_HAN = 40;
 state.sm = state.sm || { tim: '' };
 
@@ -40,11 +41,27 @@ function smCoDiCoLai(r){
   if (r.cho > 0 && r.nhan === 0) return 'choChuaNhan';
   return '';
 }
-// trung vị số tiền MÌNH mừng theo dịp (cần >= 3 khoản): { cuoi: 500000, ... }
+// trung vị số tiền MÌNH mừng theo dịp (cần >= 3 khoản, bỏ khoản không ghi dịp): [{ khoa, ten, tien, n }], nhiều khoản nhất lên đầu
 function smGoiY(){
-  var theo = {}, out = {};
-  (state.data.quaTang || []).forEach(function(q){ if (q.chieu === 'cho'){ (theo[q.dip] = theo[q.dip] || []).push(q.soTien); } });
-  Object.keys(theo).forEach(function(d){ if (theo[d].length >= 3) out[d] = smTrungVi(theo[d]); });
+  var theo = {};
+  (state.data.quaTang || []).forEach(function(q){
+    var k = lhChuanHoa(q.dip);
+    if (q.chieu !== 'cho' || !k) return;
+    var r = theo[k] || (theo[k] = { khoa: k, ten: q.dip, ds: [], cuoi: '' });
+    r.ds.push(q.soTien);
+    if (q.ngay >= r.cuoi){ r.cuoi = q.ngay; r.ten = q.dip; }
+  });
+  return Object.keys(theo).map(function(k){ var r = theo[k]; return { khoa: k, ten: r.ten, tien: smTrungVi(r.ds), n: r.ds.length }; })
+    .filter(function(r){ return r.n >= 3; }).sort(function(a, b){ return b.n - a.n; });
+}
+// các dịp đã dùng (mới dùng gần nhất lên đầu) + vài dịp thường gặp, không trùng, cho gợi ý khi gõ
+function smDipGoiY(){
+  var thay = {}, out = [];
+  (state.data.quaTang || []).slice().sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); }).concat(SM_DIP_GOI_Y.map(function(d){ return { dip: d }; })).forEach(function(q){
+    var k = lhChuanHoa(q.dip);
+    if (!k || thay[k]) return;
+    thay[k] = 1; out.push(q.dip);
+  });
   return out;
 }
 function smTongNam(nam){
@@ -59,7 +76,7 @@ function smTongNam(nam){
 function smLoc(tim){
   var k = lhChuanHoa(tim);
   return (state.data.quaTang || []).filter(function(q){
-    return !k || lhChuanHoa(q.nguoi).indexOf(k) >= 0 || lhChuanHoa(q.ghiChu).indexOf(k) >= 0 || lhChuanHoa(SM_DIP[q.dip]).indexOf(k) >= 0;
+    return !k || lhChuanHoa(q.nguoi).indexOf(k) >= 0 || lhChuanHoa(q.ghiChu).indexOf(k) >= 0 || lhChuanHoa(q.dip).indexOf(k) >= 0;
   }).sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
 }
 
@@ -73,7 +90,7 @@ function smTomTat(){
 function smDongHtml(q){
   var nhan = q.chieu === 'nhan';
   return '<div class="dm-row" role="button" tabindex="0" data-act="smSua" data-id="' + esc(q.id) + '" aria-label="Sửa khoản ' + esc(q.nguoi) + '">'
-    + '<span class="dm-main"><b class="dm-n">' + esc(q.nguoi) + '</b><span class="dm-s">' + esc(SM_DIP[q.dip] || 'Khác') + ' · ' + ngayVN(q.ngay) + (q.ghiChu ? ' · ' + esc(q.ghiChu) : '') + (q.ghiSo ? ' · đã ghi Sổ tay' : '') + '</span></span>'
+    + '<span class="dm-main"><b class="dm-n">' + esc(q.nguoi) + '</b><span class="dm-s">' + (q.dip ? esc(q.dip) + ' · ' : '') + ngayVN(q.ngay) + (q.ghiChu ? ' · ' + esc(q.ghiChu) : '') + (q.ghiSo ? ' · đã ghi Sổ tay' : '') + '</span></span>'
     + '<span class="dm-v"><b class="' + (nhan ? 'thu' : 'chi') + '">' + (nhan ? '+' : '−') + fmt(Math.round(q.soTien)) + '</b></span>' + dmGo() + '</div>';
 }
 // vùng danh sách (được vẽ lại riêng khi gõ ô tìm): tóm tắt người nếu ô tìm khớp đúng một người (hoặc chỉ một người chứa chữ đó) + các dòng
@@ -112,13 +129,14 @@ function smPageHtml(){
 /* ---- bảng thêm / sửa ---- */
 function smSheetHtml(id){
   var ds = state.data.quaTang || [], ed = id ? ds.filter(function(x){ return x.id === id; })[0] : null;
-  var d = ed || { nguoi: '', dip: 'cuoi', chieu: 'cho', soTien: '', ngay: todayStr(), ghiChu: '' };
-  var gy = smGoiY(), gyChu = Object.keys(gy).map(function(k){ return SM_DIP[k] + ' ' + fmt(Math.round(gy[k])); }).join(' · ');
+  var d = ed || { nguoi: '', dip: '', chieu: 'cho', soTien: '', ngay: todayStr(), ghiChu: '' };
+  var gy = smGoiY(), gyChu = gy.map(function(r){ return r.ten + ' ' + fmt(Math.round(r.tien)); }).join(' · ');
   var ten = nguoiTen();
   var h = vnF('Người', '<input type="text" id="sm_nguoi" list="sm_nguoi_goiy" autocomplete="off" value="' + esc(d.nguoi) + '" placeholder="VD: Anh Minh"><datalist id="sm_nguoi_goiy">'
       + ten.map(function(n){ return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>')
     + vnF('Chiều', dmSeg('sm_chieu', d.chieu === 'nhan' ? 'nhan' : 'cho', [['cho', 'Bạn mừng'], ['nhan', 'Họ mừng bạn']]))
-    + vnF('Dịp', '<select id="sm_dip">' + Object.keys(SM_DIP).map(function(k){ return '<option value="' + k + '"' + (k === d.dip ? ' selected' : '') + '>' + SM_DIP[k] + '</option>'; }).join('') + '</select>')
+    + vnF('Dịp <span class="mp-hint">(tự gõ, tùy chọn)</span>', '<input type="text" id="sm_dip" list="sm_dip_goiy" maxlength="30" autocomplete="off" value="' + esc(d.dip || '') + '" placeholder="VD: Cưới, Hiếu, Thôi nôi, Tân gia"><datalist id="sm_dip_goiy">'
+      + smDipGoiY().map(function(x){ return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>')
     + vnF('Số tiền', dmMoney('sm_tien', d.soTien), '', gyChu ? 'Mức bạn thường mừng: ' + gyChu : '')
     + vnF('Ngày', '<input type="date" id="sm_ngay" value="' + esc(d.ngay) + '">')
     + vnF('Ghi chú <span class="mp-hint">(tùy chọn)</span>', '<input type="text" id="sm_note" value="' + esc(d.ghiChu || '') + '" placeholder="VD: cưới con anh Minh, Đà Nẵng">');
@@ -153,7 +171,7 @@ function handleSoMungAction(act, el){
   else if (act === 'smLuu'){
     var nguoi = ((document.getElementById('sm_nguoi') || {}).value || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     var chieu = (document.getElementById('sm_chieu') || {}).value === 'nhan' ? 'nhan' : 'cho';
-    var dip = (document.getElementById('sm_dip') || {}).value; if (!SM_DIP[dip]) dip = 'khac';
+    var dip = ((document.getElementById('sm_dip') || {}).value || '').replace(/\s+/g, ' ').trim().slice(0, 30);
     var tien = numNonNeg(docSo((document.getElementById('sm_tien') || {}).value));
     var ngay = (document.getElementById('sm_ngay') || {}).value || '';
     var note = ((document.getElementById('sm_note') || {}).value || '').trim().slice(0, 120);
@@ -166,7 +184,7 @@ function handleSoMungAction(act, el){
     var cu = ds.filter(function(x){ return x.id === (state.ccForm && state.ccForm.id); })[0], ghiSo = '', it = null;
     if (ghi){
       var vi = (document.getElementById('sm_vi') || {}).value || '';
-      var gc = (chieu === 'nhan' ? nguoi + ' mừng (' : 'Mừng ' + nguoi + ' (') + SM_DIP[dip] + ')';
+      var gc = (chieu === 'nhan' ? nguoi + ' mừng' : 'Mừng ' + nguoi) + (dip ? ' (' + dip + ')' : '');
       it = entryAddItem(ngay, loaiGhi, cat[1], tien, gc, vi);
       if (!it){ toast('Không ghi được vào Sổ tay.', { loai: 'err' }); return true; }
       var gcN = gc + ' ' + fmt(Math.round(tien)), e = state.data.journal[ngay];

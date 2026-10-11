@@ -4563,7 +4563,7 @@ test('smNguoi / smCoDiCoLai: gom "Anh Minh" và "anh minh" thành một người
 });
 test('smGoiY / smTongNam / smLoc', function(){
   dataSoMung();
-  var gy = ctx.smGoiY(); eq(gy.cuoi, 400000, 'trung vị 500k, 300k, 400k'); eq(gy.sinhnhat, undefined, 'dịp chỉ có 1 khoản thì không gợi ý'); eq(gy.hieu, undefined);
+  var gy = ctx.smGoiY(); eq(gy.length, 1, 'chỉ dịp Cưới đủ 3 khoản'); eq(gy[0].ten, 'Cưới'); eq(gy[0].tien, 400000, 'trung vị 500k, 300k, 400k'); eq(gy[0].n, 3);
   var t = ctx.smTongNam('2026'); eq(t.cho, 1200000); eq(t.nCho, 3); eq(t.nhan, 500000); eq(t.nNhan, 1);
   eq(ctx.smLoc('minh').length, 2, 'tìm không dấu'); eq(ctx.smLoc('CƯỚI').length, 4, 'tìm theo tên dịp, hoa thường + dấu'); eq(ctx.smLoc('sinh nhat con').length, 1, 'tìm trong ghi chú'); eq(ctx.smLoc('').length, 6);
   setToday('2026-10-01');
@@ -4580,7 +4580,7 @@ test('smPageHtml / smDsHtml: hiện người chưa mừng lại, tóm tắt ngư
 });
 test('smLuu: mặc định không đụng Sổ tay; chọn "Có" thì ghi thành chi (bạn mừng) hoặc thu (họ mừng bạn)', function(){
   dataSoMung(function(d){ d.quaTang = []; });
-  var root = { innerHTML: '' }, fm = function(over){ return Object.assign({ tabContent: root, sm_nguoi: { value: 'Cô Hoa' }, sm_chieu: { value: 'cho' }, sm_dip: { value: 'cuoi' }, sm_tien: { value: '500000' },
+  var root = { innerHTML: '' }, fm = function(over){ return Object.assign({ tabContent: root, sm_nguoi: { value: 'Cô Hoa' }, sm_chieu: { value: 'cho' }, sm_dip: { value: 'Cưới' }, sm_tien: { value: '500000' },
     sm_ngay: { value: '2026-10-05' }, sm_note: { value: 'cưới con' }, sm_ghi: { value: 'khong' }, sm_cat: { value: 'chi|qua' }, sm_vi: { value: '' } }, over || {}); };
   var so0 = ctx.balanceAt('2026-10-31'); ctx.state.ccForm = { loai: 'sm', id: '' };
   voiDom(fm(), null, function(){ ok(ctx.handleSoMungAction('smLuu', {}), 'xử lý'); });
@@ -4607,6 +4607,19 @@ test('smLuu: mặc định không đụng Sổ tay; chọn "Có" thì ghi thành
   eq(ctx.state.data.quaTang[3].ghiSo, '', 'chọn Không thì không ghi'); eq(ctx.balanceAt('2026-10-31'), so0 - 300000 + 200000);
   setToday('2026-10-01');
 });
+test('Dịp là ô tự gõ: gom "cuoi" và "Cưới" thành một dịp, khoản không ghi dịp vẫn lưu được, dữ liệu cũ (khóa cố định) đổi sang chữ', function(){
+  var n = dataSoMung(function(d){ d.quaTang = [
+    { nguoi: 'A', dip: 'cuoi', chieu: 'cho', soTien: 100000, ngay: '2026-01-01' }, { nguoi: 'B', dip: ' Cưới ', chieu: 'cho', soTien: 300000, ngay: '2026-02-01' },
+    { nguoi: 'C', dip: 'CƯỚI', chieu: 'cho', soTien: 200000, ngay: '2026-03-01' }, { nguoi: 'D', dip: '', chieu: 'cho', soTien: 900000, ngay: '2026-04-01' },
+    { nguoi: 'E', dip: 'khac', chieu: 'cho', soTien: 700000, ngay: '2026-05-01' }, { nguoi: 'F', dip: 'Thôi nôi', chieu: 'cho', soTien: 400000, ngay: '2026-06-01' }]; });
+  eq(n.quaTang[0].dip, 'Cưới', 'khóa cũ "cuoi" thành chữ'); eq(n.quaTang[4].dip, '', 'khóa cũ "khac" thành không ghi dịp'); eq(n.quaTang[1].dip, 'Cưới', 'cắt khoảng trắng');
+  var gy = ctx.smGoiY(); eq(gy.length, 1); eq(gy[0].n, 3, '"cuoi", "Cưới", "CƯỚI" là một dịp'); eq(gy[0].tien, 200000); eq(gy[0].ten, 'CƯỚI', 'tên hiển thị theo lần gõ gần nhất');
+  var g = ctx.smDipGoiY(); eq(g[0], 'Thôi nôi', 'dịp mới dùng gần nhất lên đầu'); ok(g.indexOf('Hiếu') > 0 && g.filter(function(x){ return ctx.lhChuanHoa(x) === 'cuoi'; }).length === 1, 'có gợi ý mặc định, không trùng');
+  ok(ctx.smSheetHtml('').indexOf('<input type="text" id="sm_dip"') > 0 && ctx.smSheetHtml('').indexOf('<select id="sm_dip"') < 0, 'ô Dịp là ô gõ, không phải danh sách chọn');
+  ok(ctx.smDongHtml(n.quaTang[3]).indexOf('dm-s">01/04/2026') > 0 && ctx.smDongHtml(n.quaTang[3]).indexOf('Khác') < 0, 'không ghi dịp thì không hiện chữ Khác');
+  eq(ctx.smLoc('thoi noi').length, 1, 'tìm theo dịp không dấu');
+  setToday('2026-10-01');
+});
 test('ddTinh: chi phí mỗi ngày, dự kiến, giá trị còn lại, bảo hành', function(){
   dataSoMung(function(d){ d.doDac = [
     { id: 'd1', ten: 'Điện thoại', gia: 21900000, ngayMua: '2026-04-14', soNam: 3, baoHanhDen: '2026-10-20', ghiChu: '', tt: 'dung' },
@@ -4628,7 +4641,7 @@ test('normalizeData: quaTang và doDac bỏ dòng hỏng, ép kiểu, mặc đ�
   var n = dataSoMung(function(d){
     d.quaTang = [{ nguoi: ' A  B ', soTien: '100000', ngay: '2026-01-01', dip: '???' }, { nguoi: '', soTien: 5, ngay: '2026-01-01' }, { nguoi: 'C', soTien: 0, ngay: '2026-01-01' }, { nguoi: 'D', soTien: 5, ngay: 'xấu' }, null];
     d.doDac = [{ ten: 'Tủ lạnh', gia: '8000000', ngayMua: '2026-01-01', soNam: 999, tt: 'het' }, { ten: '', gia: 5 }, { ten: 'Rẻ', gia: 0 }]; });
-  eq(n.quaTang.length, 1); eq(n.quaTang[0].nguoi, 'A B'); eq(n.quaTang[0].dip, 'khac'); eq(n.quaTang[0].chieu, 'cho'); eq(n.quaTang[0].soTien, 100000);
+  eq(n.quaTang.length, 1); eq(n.quaTang[0].nguoi, 'A B'); eq(n.quaTang[0].dip, '???', 'dịp là chữ tự gõ, giữ nguyên'); eq(n.quaTang[0].chieu, 'cho'); eq(n.quaTang[0].soTien, 100000);
   eq(n.doDac.length, 1); eq(n.doDac[0].soNam, 3, 'số năm ngoài 0..50 về mặc định'); eq(n.doDac[0].tt, 'dung', 'tt het mà không có ngày thôi dùng thì về đang dùng');
   eq(loadData(baseData()).quaTang.length, 0); eq(loadData(baseData()).doDac.length, 0);
   setToday('2026-10-01');

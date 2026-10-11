@@ -727,7 +727,9 @@ function normalizeData(d){
     if (!q.id) q.id = 'qt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     q.nguoi = String(q.nguoi).replace(/\s+/g, ' ').trim().slice(0, 60); q.soTien = num(q.soTien);
     q.chieu = q.chieu === 'nhan' ? 'nhan' : 'cho';
-    if (['cuoi', 'hieu', 'sinhnhat', 'tet'].indexOf(q.dip) < 0) q.dip = 'khac';
+    // dịp từng là khóa cố định (cuoi / hieu / sinhnhat / tet / khac): đổi sang chữ; giờ là ô tự gõ
+    var dipCu = { cuoi: 'Cưới', hieu: 'Hiếu', sinhnhat: 'Sinh nhật', tet: 'Tết / mừng tuổi', khac: '' };
+    q.dip = Object.prototype.hasOwnProperty.call(dipCu, q.dip) ? dipCu[q.dip] : String(q.dip || '').replace(/\s+/g, ' ').trim().slice(0, 30);
     q.ghiChu = String(q.ghiChu || '').slice(0, 120); q.ghiSo = /^\d{4}-\d{2}-\d{2}\|.+/.test(q.ghiSo || '') ? q.ghiSo : '';
   });
   d.doDac = (Array.isArray(d.doDac) ? d.doDac : []).filter(function(x){ return x && String(x.ten || '').trim() && num(x.gia) > 0; });
