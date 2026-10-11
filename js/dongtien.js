@@ -129,13 +129,17 @@ function dtThangDuLieu(mk){
         else if (c.coDinhChiTieu) proj = Math.max(act, base);
         else proj = nhip.tyLe >= 0.2 ? act / nhip.tyLe : Math.max(act, base);
       }
-      var r = { kind: kind, id: c.id, ten: c.ten, act: act, plan: plan, proj: proj, base: base, lich: lich };
+      var r = { kind: kind, id: c.id, ten: c.ten, act: act, plan: plan, proj: proj, base: base, lich: lich, coDinh: kind === 'chi' && catChiLaCoDinh(c) };
       if (kind === 'chi' && c.id === 'traNo') d.traNo = r; else d[kind].push(r);
     });
   });
   var tong = function(arr, f){ var s = 0; arr.forEach(function(r){ s += r[f]; }); return s; };
   d.thuAct = tong(d.thu, 'act'); d.thuPlan = tong(d.thu, 'plan');
   d.chiAct = tong(d.chi, 'act'); d.chiPlan = tong(d.chi, 'plan');
+  // tách chi hằng ngày / cố định (catChiLaCoDinh ở sotay.js): nhịp chi chỉ xét chi hằng ngày
+  var hn = d.chi.filter(function(r){ return !r.coDinh; }), cd = d.chi.filter(function(r){ return r.coDinh; });
+  d.chiActHN = tong(hn, 'act'); d.chiPlanHN = tong(hn, 'plan');
+  d.chiActCD = tong(cd, 'act'); d.chiPlanCD = tong(cd, 'plan');
   d.cb = tongThuThangCard(mk) - tongChiThangCard(mk);
   d.tn = dtTraNoKy(mk);
   return d;
@@ -184,9 +188,9 @@ function dtGiaiThichHtml(d){
     cau.push('Tháng chưa tới: số liệu là gợi ý theo hạn mức, lịch trả nợ và trung bình các tháng đã hoàn chỉnh.');
   } else if (d.qua){
     cau.push('Tháng đã qua: thu '+fmt(d.thuAct)+', chi '+fmt(d.chiAct + (d.traNo ? d.traNo.act : 0))+'.');
-  } else if (d.chiPlan > 0){
-    var p = d.chiAct / d.chiPlan, t = d.nhip.tyLe, vs = p < t - 0.05 ? 'dưới nhịp' : (p > t + 0.05 ? 'vượt nhịp' : 'đúng nhịp');
-    cau.push('Chi đang '+vs+' ('+Math.round(p * 100)+'% hạn mức sau '+Math.round(t * 100)+'% số ngày).');
+  } else if (d.chiPlanHN > 0){
+    var p = d.chiActHN / d.chiPlanHN, t = d.nhip.tyLe, vs = p < t - 0.05 ? 'dưới nhịp' : (p > t + 0.05 ? 'vượt nhịp' : 'đúng nhịp');
+    cau.push('Chi hằng ngày đang '+vs+' ('+Math.round(p * 100)+'% hạn mức sau '+Math.round(t * 100)+'% số ngày).');
   }
   var conNo = d.traNo ? Math.max(0, d.traNo.plan - d.traNo.act) : 0;
   if (am && conNo > 0 && !d.qua){
@@ -208,8 +212,12 @@ function dtDauHtml(d, bal, startMk, maxMk){
   var nhanThu = d.tuong ? 'gợi ý' : 'kế hoạch';
   h += dtThanhHtml({ kind:'thu', ten:'Thu', act:d.thuAct, plan:d.thuPlan, nhanPlan:nhanThu,
     phu: d.thuPlan > 0 ? (d.thuAct >= d.thuPlan ? 'Vượt kế hoạch '+fmt(d.thuAct - d.thuPlan) : 'Còn thiếu '+fmt(d.thuPlan - d.thuAct)+' so với kế hoạch') : 'Chưa đặt kế hoạch thu' });
-  h += dtThanhHtml({ kind:'chi', ten:'Chi', act:d.chiAct, plan:d.chiPlan, nhanPlan:'hạn mức', tick: d.nay ? d.nhip.tyLe : null,
+  h += dtThanhHtml({ kind:'chi', ten:'Chi hằng ngày', act:d.chiActHN, plan:d.chiPlanHN, nhanPlan:'hạn mức', tick: d.nay ? d.nhip.tyLe : null,
     phu: d.nay ? 'Đã qua '+d.nhip.ngayQua+'/'+d.nhip.soNgay+' ngày' : (d.tuong ? 'Gợi ý cả tháng' : 'Cả tháng') });
+  if (d.chiActCD > 0 || d.chiPlanCD > 0){
+    h += dtThanhHtml({ kind:'chi', ten:'Chi cố định', act:d.chiActCD, plan:d.chiPlanCD, nhanPlan:'hạn mức',
+      phu: 'Danh mục bật "Khoản cố định" · không xét nhịp' });
+  }
   if (tn && (tn.plan > 0 || tn.act > 0)){
     h += dtThanhHtml({ kind:'no', ten:'Trả nợ', act:tn.act, plan:tn.plan, nhanPlan:'',
       phu: d.tn.n ? 'Đến hạn '+d.tn.n+' khoản · gần nhất '+dtNgay(d.tn.gan) : 'Theo lịch Vay - Nợ' });
@@ -238,6 +246,7 @@ function dtThuCardHtml(d){
 }
 // mức của 1 dòng chi: over (vượt) / warn (từ 80% hoặc theo nhịp sẽ vượt) / ok
 function dtChiMuc(r, d){
+  if (r.coDinh) return 'cd';               // khoản cố định: trả đủ là bình thường, không cảnh báo theo % / nhịp
   if (r.plan <= 0) return 'khong';
   var pct = r.act / r.plan;
   if (pct > 1) return 'over';
@@ -249,6 +258,8 @@ function dtChiRowHtml(r, d){
   var muc = dtChiMuc(r, d), pct = r.plan > 0 ? r.act / r.plan : 0, rong = Math.min(100, Math.round(pct * 100));
   var mo = state.dtMoDong === r.id, phu;
   if (muc === 'khong') phu = d.tuong ? 'gợi ý' : 'chưa đặt hạn mức';
+  else if (muc === 'cd') phu = d.tuong ? 'gợi ý' : (r.plan <= 0 ? 'khoản cố định'
+    : (r.act > r.plan ? 'nhiều hơn hạn mức '+fmt(r.act - r.plan) : (r.act >= r.plan ? 'đã chi đủ' : (r.act > 0 ? 'còn '+fmt(r.plan - r.act) : 'chưa chi'))));
   else if (muc === 'over') phu = '<span class="dt-vuot">Vượt '+fmt(r.act - r.plan)+'</span>';
   else phu = (d.tuong ? 'gợi ý · ' : '')+'còn '+fmt(r.plan - r.act);
   var h = '<div class="dt-r chi '+muc+(mo ? ' mo' : '')+'" data-act="dtMoDong" data-id="'+esc(r.id)+'" role="button" tabindex="0" aria-expanded="'+mo+'">'
@@ -269,8 +280,8 @@ function dtChiRowHtml(r, d){
 function dtChiCardHtml(d){
   var co = d.chi.filter(function(r){ return r.act > 0 || r.plan > 0; });
   var trong = d.chi.filter(function(r){ return !(r.act > 0 || r.plan > 0); });
-  var chuY = [], on = [];
-  co.forEach(function(r){ var m = dtChiMuc(r, d); (m === 'over' || m === 'warn' ? chuY : on).push(r); });
+  var chuY = [], on = [], cd = [];
+  co.forEach(function(r){ var m = dtChiMuc(r, d); (m === 'cd' ? cd : (m === 'over' || m === 'warn' ? chuY : on)).push(r); });
   var pc = function(r){ return r.plan > 0 ? r.act / r.plan : 0; };
   chuY.sort(function(a, b){ return pc(b) - pc(a); });
   on.sort(function(a, b){ return pc(b) - pc(a) || b.act - a.act; });
@@ -283,6 +294,9 @@ function dtChiCardHtml(d){
     var hienHet = !!state.dtChiHet, gioiHan = 3, ds = hienHet ? on : on.slice(0, gioiHan);
     h += '<div class="dt-sec on"><i></i>Ổn · '+on.length+'</div>' + ds.map(function(r){ return dtChiRowHtml(r, d); }).join('');
     if (on.length > gioiHan) h += '<button type="button" class="dt-more" data-act="dtChiHet">'+(hienHet ? 'Thu gọn' : 'Xem thêm '+(on.length - gioiHan))+'</button>';
+  }
+  if (cd.length){
+    h += '<div class="dt-sec cd"><i></i>Cố định · '+cd.length+'</div>' + cd.map(function(r){ return dtChiRowHtml(r, d); }).join('');
   }
   if (trong.length) h += '<div class="dt-ghichu">'+(d.tuong ? 'Chưa có gợi ý: ' : 'Chưa phát sinh: ')+trong.map(function(r){ return esc(r.ten); }).join(', ')+'</div>';
   return h + '</div>';

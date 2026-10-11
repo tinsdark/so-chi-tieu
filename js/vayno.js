@@ -188,11 +188,28 @@ function danhSachSapDenHan(nNgay){
     if (!loanIsActive(v)) return;
     var td = tienDoTraNo(v), ky = td.kyTiepTheo;
     if (!ky) return;
-    var soNgay = daysBetween(todayStr(), ky.ngayTra);
-    if (soNgay <= nNgay) out.push({ loai: 'vayNo', id: v.id, ten: v.ten, ngay: ky.ngayTra, soNgay: soNgay, soTien: conThieuKy(v, td.kyTiepIdx, td.sch) });
+    var soNgay = daysBetween(todayStr(), ky.ngayTra), qh = kyQuaHan(v);
+    // trễ từ 2 kỳ trở lên: số tiền là tổng các kỳ đang trễ (kỳ cũ nhất thôi là ghi thiếu)
+    if (soNgay <= nNgay) out.push({ loai: 'vayNo', id: v.id, ten: v.ten, ngay: ky.ngayTra, soNgay: soNgay,
+      soTien: qh.n >= 2 ? qh.tong : conThieuKy(v, td.kyTiepIdx, td.sch), soKy: qh.n >= 2 ? qh.n : 0 });
   });
   out.sort(function(a,b){ return a.soNgay - b.soNgay; });
   return out;
+}
+// các kỳ ĐÃ QUA HẠN (ngày trả trước homNay) mà chưa đóng và còn thiếu tiền: { n, tong (tổng còn thiếu), cuNhat (hạn kỳ cũ nhất) }
+// để thẻ khoản vay / danh sách sắp đến hạn ghi đủ số đang trễ, không chỉ kỳ cũ nhất
+function kyQuaHan(loan, homNay){
+  homNay = homNay || todayStr();
+  var sch = tinhLichTraNo(loan), r = { n: 0, tong: 0, cuNhat: null };
+  if (loan.tatToan || !loanIsActive(loan)) return r;
+  sch.forEach(function(row, i){
+    if (row.ngayTra >= homNay || kyDaDong(loan, i)) return;
+    var thieu = conThieuKy(loan, i, sch);
+    if (thieu <= 0) return;
+    r.n++; r.tong += thieu;
+    if (!r.cuNhat || row.ngayTra < r.cuNhat) r.cuNhat = row.ngayTra;
+  });
+  return r;
 }
 // số khoản sắp/đã tới hạn trong N ngày — dùng cho badge trên tab nav
 function vnBadgeCount(nNgay){ return danhSachSapDenHan(nNgay || 7).length; }
@@ -562,7 +579,7 @@ function sapDenHanHtml(nNgay){
   list.forEach(function(x){
     h += '<button type="button" class="vn-row vn-sap" data-act="vnCuonTo" data-loai="'+x.loai+'" data-id="'+esc(x.id)+'">'
       + '<span class="vn-r1"><b>'+esc(x.ten)+'</b><b>'+fmt(Math.round(x.soTien))+'</b></span>'
-      + '<span class="vn-r2"><span>'+(x.loai === 'choVay' ? 'Thu hồi cho vay' : 'Trả nợ')+' · '+ngayVN(x.ngay)+'</span>'+vnTrangThaiHan(x.soNgay)+'</span></button>';
+      + '<span class="vn-r2"><span>'+(x.loai === 'choVay' ? 'Thu hồi cho vay' : 'Trả nợ')+(x.soKy ? ' '+x.soKy+' kỳ · từ ' : ' · ')+ngayVN(x.ngay)+'</span>'+vnTrangThaiHan(x.soNgay)+'</span></button>';
   });
   return h + '</div>';
 }
@@ -644,11 +661,17 @@ function vnVayCardHtml(v){
     + '<div class="vn-lbl">Dư nợ còn lại</div><div class="vn-big m">'+fmt(duNo)+'</div>'
     + '<div class="vn-prog"><div class="dt-track sm'+(xong ? '' : ' no')+'"><i style="width:'+pct+'%"></i></div><span>'+td.daTraKy+'/'+td.tongKy+' kỳ</span></div>';
   if (!xong){
-    var motPhan = st && st.trangThai === 'motphan';
-    h += '<div class="vn-2c"><div><div class="vn-lbl">'+(motPhan ? 'Kỳ '+(idx+1)+' còn thiếu' : 'Kỳ tới')+'</div>'
-      + '<b'+(motPhan ? ' class="vn-bad"' : '')+'>'+(ky ? fmt(Math.round(motPhan ? conThieuKy(v, idx, td.sch) : ky.tongTra)) : '—')+'</b>'
-      + (ky ? '<div class="vn-sub">Hạn '+ngayVN(ky.ngayTra)+'</div>' : '')+'</div>'
-      + '<div><div class="vn-lbl">Dự kiến hết nợ</div><b>'+(hetMk ? monthLabel(hetMk) : '—')+'</b></div></div>';
+    var motPhan = st && st.trangThai === 'motphan', qh = kyQuaHan(v);
+    if (qh.n >= 2){
+      // trễ nhiều kỳ: ghi đủ tổng đang trễ, không chỉ kỳ cũ nhất
+      h += '<div class="vn-2c"><div><div class="vn-lbl">Quá hạn '+qh.n+' kỳ</div><b class="vn-bad">'+fmt(Math.round(qh.tong))+'</b>'
+        + '<div class="vn-sub">Kỳ cũ nhất hạn '+ngayVN(qh.cuNhat)+'</div></div>';
+    } else {
+      h += '<div class="vn-2c"><div><div class="vn-lbl">'+(motPhan ? 'Kỳ '+(idx+1)+' còn thiếu' : (quaHan > 0 ? 'Kỳ quá hạn' : 'Kỳ tới'))+'</div>'
+        + '<b'+(motPhan || quaHan > 0 ? ' class="vn-bad"' : '')+'>'+(ky ? fmt(Math.round(motPhan ? conThieuKy(v, idx, td.sch) : ky.tongTra)) : '—')+'</b>'
+        + (ky ? '<div class="vn-sub">Hạn '+ngayVN(ky.ngayTra)+'</div>' : '')+'</div>';
+    }
+    h += '<div><div class="vn-lbl">Dự kiến hết nợ</div><b>'+(hetMk ? monthLabel(hetMk) : '—')+'</b></div></div>';
   }
   h += '<div class="vn-act"><button type="button" class="vn-lich-b'+(mo ? ' mo' : '')+'" data-act="vnToggleDetail" data-id="'+v.id+'" aria-expanded="'+mo+'">'
     + (mo ? 'Thu gọn' : 'Lịch trả')+icon('chev')+'</button><span class="sp"></span>'

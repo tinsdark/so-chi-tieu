@@ -66,7 +66,8 @@ function categoryCardHtml(kind, title, cats){
   } else {
     h += '<div class="cat-list" data-kind="'+kind+'">';
     cats.forEach(function(c){
-      var chips = (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
+      var chips = (kind === 'chi' && c.khoanCoDinh && !CAT_HE_THONG.chi[c.id] ? '<span class="dm-chip md">Khoản cố định</span>' : '')
+                + (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
                 + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '');
       h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
         + '<span class="cat-drag" draggable="true" data-act="dmNop" title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>'
@@ -333,6 +334,7 @@ function catSheetHtml(f){
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')
     + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : vnF('Ngày '+(f.kind === 'thu' ? 'thu' : 'chi')+' hằng tháng <span class="mp-hint">(nhắc)</span>', '<input type="number" id="dm_ngay" min="1" max="31" inputmode="numeric" value="'+(catNgayHan(d) || '')+'" placeholder="Bỏ trống = không nhắc">', '', 'VD: Tiền nhà ngày 5, Lương ngày 20. Gần tới ngày, Sổ tay hiện "N khoản thu/chi sắp đến hạn" cho tới khi tháng đó có giao dịch ở danh mục này.'))
     + dmToggle('dm_nodk', 'Không tính dự kiến', 'Không đoán số cho tháng tương lai (khoản không đều đặn, không thể dự đoán).', d.khongDuTru)
+    + (f.kind === 'chi' && !(c && CAT_HE_THONG.chi[c.id]) ? dmToggle('dm_kcd', 'Khoản cố định', 'Tiền nhà, điện nước, học phí...: tiền ra theo lịch. Không tính vào mức tiêu mỗi ngày, nhịp chi và cảnh báo hạn mức; hiện ở nhóm "Cố định". Ăn uống, xăng xe... để tắt.', !!d.khoanCoDinh) : '')
     + dmToggle('dm_codinh', 'Cố định theo Hạn mức', 'Luôn dùng đúng Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa thay đổi).', d.coDinhChiTieu);
   if (c){
     h += '<div class="dm-tool"><button type="button" class="btn secondary sm" data-act="catUp" data-kind="'+f.kind+'" data-id="'+esc(c.id)+'"'+(idx === 0 ? ' disabled' : '')+'>'+icon('arrow-up')+' Lên trên</button>'
@@ -566,6 +568,8 @@ function handleDanhMucAction(act, el){
       khongDuTru: !!document.getElementById('dm_nodk').checked,
       coDinhChiTieu: !!document.getElementById('dm_codinh').checked
     };
+    var kcdEl = document.getElementById('dm_kcd');
+    if (fC.kind === 'chi' && kcdEl) cDoi.khoanCoDinh = !!kcdEl.checked;
     var ngayEl = document.getElementById('dm_ngay');
     var mauMoi = mauEl && mauEl.getAttribute('data-reset') !== '1' && mauEl.value !== mauEl.getAttribute('data-cur') ? mauEl.value : null;
     if (ngayEl){ var ngayN = Math.round(num(ngayEl.value)); cDoi.ngay = (ngayN >= 1 && ngayN <= 31) ? ngayN : 0; }
