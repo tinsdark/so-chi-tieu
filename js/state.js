@@ -977,15 +977,17 @@ function dinhKyDenHan(homNay){
 // ghi 1 khoản định kỳ vào Sổ tay. Ngày ghi = ngày đến hạn; nếu ngày đó đã nằm trước mốc
 // khóa sổ (không còn tính vào số dư) thì ghi vào hôm nay để tiền không biến mất khỏi số dư.
 // Trả về {date, iid, note} để hoàn tác được; null nếu không ghi được.
-function dinhKyGhi(dk, mk, homNay){
+// tien (tuỳ chọn): số tiền thật của kỳ này nếu khác số tiền mẫu; mẫu không bị đổi
+function dinhKyGhi(dk, mk, homNay, tien){
+  tien = tien > 0 ? tien : dk.soTien;
   var han = ngayTraCuaKy(mk, dk.ngay);
   var start = state.data.settings.ngayBatDau || '';
   var date = (!start || han >= start) ? han : homNay;
-  var it = entryAddItem(date, dk.kind, dk.catId, dk.soTien, dk.ghiChu || dk.ten, dk.walletId);
+  var it = entryAddItem(date, dk.kind, dk.catId, tien, dk.ghiChu || dk.ten, dk.walletId);
   if (!it) return null;
   it.dkId = dk.id; it.dkMk = mk;
   var e = state.data.journal[date];
-  var note = dk.ten + ' ' + fmt(Math.round(dk.soTien));
+  var note = dk.ten + ' ' + fmt(Math.round(tien));
   e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + note : note;
   it.gc = note;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo (entryGoGhiChuCuaItem)
   return { date: date, iid: it.iid, note: note };
