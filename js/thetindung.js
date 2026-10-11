@@ -9,6 +9,10 @@
    - Cấu hình của ví thẻ: w.hanMucThe (hạn mức tín dụng, 0 = không cảnh báo), w.ngaySaoKe (1-31), w.ngayTraThe (1-31,
      ngày đến hạn thanh toán). Ngày 29-31 tự co về cuối tháng ngắn (ngayTraCuaKy).
    - Dư nợ, số sao kê, số còn phải trả đều TÍNH LẠI từ giao dịch mỗi lần xem (theTinh), không lưu: không có chỗ thứ hai để lệch.
+   - THANH TOÁN TỐI THIỂU (tùy chọn, w.tyLeToiThieu = % của số sao kê, 0 = không dùng; mỗi ngân hàng một khác nên người dùng tự nhập) và LÃI ƯỚC TÍNH
+     (w.laiSuatThe = %/năm, 0 = không ước tính): nếu CHỈ trả tối thiểu thì phần sao kê còn lại chịu lãi khoảng
+     (còn phải trả − tối thiểu) × lãi suất năm ÷ 12 cho MỘT tháng. Đây là ước lượng thô để thấy cái giá của việc trả thiếu, không phải số ngân hàng tính
+     (ngân hàng tính lãi theo ngày từ ngày mua và có phí trả chậm). Trả góp và phí trả chậm chưa có.
    Cần state.js (soDuTheoVi, chuyenViThem, viCanhBaoAm...), vayno.js (ngayTraCuaKy, monthKeyAdd, vnF, vnSheetKhung),
    nhachan.js (nhacHanNhan) load trước; danhmuc.js (dmToggle, dmMoney) chỉ cần lúc vẽ.
    ==================================================================== */
@@ -16,6 +20,8 @@
 var THE_NHAC_NGAY = 7;      // báo "sắp đến hạn thanh toán thẻ" trước bao nhiêu ngày
 
 function viLaThe(w){ return !!(w && w.the); }
+// 5 hoặc 2,5 (một chữ số thập phân, dấu phẩy)
+function theSoChu(x){ return (Math.round(x * 10) / 10).toString().replace('.', ','); }
 
 // ngày sao kê gần nhất, không sau homNay
 function theNgaySaoKe(w, homNay){
@@ -40,10 +46,15 @@ function theTinh(w, homNay){
   (state.data.chuyenVi || []).forEach(function(t){
     if (t.denVi === w.id && t.ngay > nsk && t.ngay <= homNay) daTra += num(t.soTien);
   });
-  var hm = num(w.hanMucThe);
+  var hm = num(w.hanMucThe), conPhaiTra = Math.min(duNo, Math.max(0, soSaoKe - daTra));
+  var tl = numNonNeg(w.tyLeToiThieu), lai = numNonNeg(w.laiSuatThe);
+  // tối thiểu còn phải trả = % số sao kê − đã trả, không vượt số còn phải trả; lãi ước tính một tháng trên phần còn lại nếu chỉ trả tối thiểu
+  var toiThieu = tl > 0 ? Math.min(conPhaiTra, Math.max(0, soSaoKe * tl / 100 - daTra)) : null;
+  var conNeuToiThieu = toiThieu == null ? null : conPhaiTra - toiThieu;
   return { nsk: nsk, han: han, soNgay: daysBetween(homNay, han), duNo: duNo, soSaoKe: soSaoKe, daTra: daTra,
-           conPhaiTra: Math.min(duNo, Math.max(0, soSaoKe - daTra)),
-           hanMuc: hm, khaDung: hm > 0 ? Math.max(0, hm - duNo) : null };
+           conPhaiTra: conPhaiTra, hanMuc: hm, khaDung: hm > 0 ? Math.max(0, hm - duNo) : null,
+           tyLeToiThieu: tl, toiThieu: toiThieu, conNeuToiThieu: conNeuToiThieu, laiSuat: lai,
+           laiUocTinh: (conNeuToiThieu != null && lai > 0) ? conNeuToiThieu * lai / 100 / 12 : null };
 }
 // các thẻ còn phải trả mà hạn trong vòng nNgay ngày (hoặc đã quá hạn), gần hạn nhất trước
 function theSapDenHan(homNay, nNgay){
@@ -68,6 +79,10 @@ function theDongHtml(w){
   h += '<span class="dm-s'+(qua ? ' ds-lech' : '')+'">Sao kê '+ngayNganVN(t.nsk)+': '+fmt(Math.round(t.soSaoKe))
     + (t.conPhaiTra > 0 ? ' · còn phải trả '+fmt(Math.round(t.conPhaiTra))+' ('+nhacHanNhan(t.soNgay).toLowerCase()+', hạn '+ngayNganVN(t.han)+')'
                         : ' · đã trả đủ')+'</span>';
+  if (t.toiThieu != null && t.conPhaiTra > 0){
+    h += '<span class="dm-s">Tối thiểu '+fmt(Math.round(t.toiThieu))+' ('+theSoChu(t.tyLeToiThieu)+'% sao kê)'
+      + (t.laiUocTinh != null && t.conNeuToiThieu > 0 ? ' · chỉ trả tối thiểu thì còn nợ '+fmt(Math.round(t.conNeuToiThieu))+', lãi ước tính ~'+fmt(Math.round(t.laiUocTinh))+'/tháng' : '')+'</span>';
+  }
   return h + '<span class="dm-s"><button type="button" class="btn secondary sm" data-act="theTra" data-id="'+esc(w.id)+'">Thanh toán thẻ</button></span>';
 }
 
@@ -80,6 +95,9 @@ function theFormHtml(w){
     +   vnF('Hạn mức thẻ <span class="mp-hint">(không bắt buộc)</span>', dmMoney('dm_vi_hm', d.hanMucThe), '', 'Dư nợ vượt hạn mức sẽ được cảnh báo khi ghi chi.')
     +   vnF('Ngày sao kê hằng tháng', ngayIn('dm_vi_sk', d.ngaySaoKe), '', 'Ngày ngân hàng chốt dư nợ để bạn trả.')
     +   vnF('Ngày đến hạn thanh toán', ngayIn('dm_vi_ht', d.ngayTraThe), '', 'Hạn trả sau mỗi kỳ sao kê.')
+    +   '<div class="vn-2">' + vnF('Tối thiểu <span class="mp-hint">(% sao kê)</span>', '<input type="number" id="dm_vi_tt" min="0" max="100" step="0.5" inputmode="decimal" value="'+(d.tyLeToiThieu || '')+'" placeholder="VD: 5">')
+    +   vnF('Lãi suất <span class="mp-hint">(%/năm)</span>', '<input type="number" id="dm_vi_lai" min="0" max="100" step="0.1" inputmode="decimal" value="'+(d.laiSuatThe || '')+'" placeholder="VD: 30">') + '</div>'
+    +   '<div class="vn-hint">Tùy chọn. Nhập thì thẻ hiện số thanh toán tối thiểu và lãi ƯỚC TÍNH nếu chỉ trả tối thiểu (mỗi ngân hàng một khác, đây không phải số ngân hàng tính).</div>'
     +   '<div class="vn-hint">Thẻ đang nợ từ trước khi dùng sổ: nhập số dư đầu kỳ là số ÂM (VD -3.000.000).</div>'
     + '</div>';
 }
@@ -87,11 +105,14 @@ function theFormHtml(w){
 function theDocForm(w){
   var g = function(id){ var e = document.getElementById(id); return e ? e.value : ''; };
   var bat = !!(document.getElementById('dm_vi_the') || {}).checked;
-  if (!bat){ delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe; return ''; }
+  if (!bat){ delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe; delete w.tyLeToiThieu; delete w.laiSuatThe; return ''; }
   var sk = Math.round(num(g('dm_vi_sk'))), ht = Math.round(num(g('dm_vi_ht')));
   if (!(sk >= 1 && sk <= 31) || !(ht >= 1 && ht <= 31)) return 'Nhập ngày sao kê và ngày đến hạn (từ 1 đến 31).';
   w.the = true; w.deDanh = false;
   w.hanMucThe = numNonNeg(docSo(g('dm_vi_hm'))); w.ngaySaoKe = sk; w.ngayTraThe = ht;
+  var tl = Math.min(100, numNonNeg(g('dm_vi_tt'))), lai = Math.min(100, numNonNeg(g('dm_vi_lai')));
+  if (tl > 0) w.tyLeToiThieu = tl; else delete w.tyLeToiThieu;
+  if (lai > 0) w.laiSuatThe = lai; else delete w.laiSuatThe;
   return '';
 }
 
@@ -106,10 +127,18 @@ function theTraSheetHtml(f){
   var h = '<div class="vn-sub">Dư nợ hiện tại: <b>'+fmt(Math.round(t.duNo))+'</b>'
     + (t.soSaoKe > 0 ? ' · sao kê '+ngayNganVN(t.nsk)+': <b>'+fmt(Math.round(t.soSaoKe))+'</b>, còn phải trả <b>'+fmt(Math.round(t.conPhaiTra))+'</b> (hạn '+ngayNganVN(t.han)+')' : '')+'</div>'
     + vnF('Trả từ ví', '<select id="tt_tu">'+nguon.map(function(x){ return '<option value="'+esc(x.id)+'"'+(x.id === tuMd ? ' selected' : '')+'>'+esc(x.ten)+'</option>'; }).join('')+'</select>')
-    + vnF('Số tiền', dmMoney('tt_tien', Math.round(t.conPhaiTra > 0 ? t.conPhaiTra : 0)), '', 'Điền sẵn số còn phải trả của kỳ sao kê. Muốn trả tối thiểu hoặc trả hết dư nợ thì sửa số.')
+    + vnF('Số tiền', dmMoney('tt_tien', Math.round(t.conPhaiTra > 0 ? t.conPhaiTra : 0)), '', 'Điền sẵn số còn phải trả của kỳ sao kê. Muốn trả tối thiểu hoặc trả hết dư nợ thì bấm nút bên dưới hoặc sửa số.')
+    + '<div class="cc-btns" style="margin:-4px 0 10px">'
+    + (t.toiThieu != null ? '<button type="button" class="btn secondary sm" data-act="theDien" data-v="'+Math.round(t.toiThieu)+'">Tối thiểu '+fmt(Math.round(t.toiThieu))+'</button>' : '')
+    + '<button type="button" class="btn secondary sm" data-act="theDien" data-v="'+Math.round(t.conPhaiTra)+'">Còn phải trả '+fmt(Math.round(t.conPhaiTra))+'</button>'
+    + '<button type="button" class="btn secondary sm" data-act="theDien" data-v="'+Math.round(t.duNo)+'">Hết dư nợ '+fmt(Math.round(t.duNo))+'</button></div>'
     + vnF('Ngày', '<input type="date" id="tt_ngay" value="'+todayStr()+'">')
     + '<div class="vn-hint">Thanh toán thẻ là CHUYỂN giữa các ví: không tính là chi (khoản quẹt thẻ đã tính vào chi lúc mua), không đổi tổng số dư.</div>'
-    + giaiThichSo([{ ten: 'Còn phải trả', ct: 'Dư nợ chốt ngày sao kê − tiền đã chuyển vào thẻ sau ngày đó (không vượt dư nợ hiện tại).',
+    + giaiThichSo([t.toiThieu != null ? { ten: 'Thanh toán tối thiểu', ct: 'Số sao kê × tỉ lệ tối thiểu bạn đặt cho thẻ, trừ phần đã trả sau sao kê, không vượt số còn phải trả. Mỗi ngân hàng một khác nên đây là số ước tính.',
+        pt: soGt(t.soSaoKe) + ' × ' + theSoChu(t.tyLeToiThieu) + '% = ' + soGt(t.soSaoKe * t.tyLeToiThieu / 100) + ' · ' + ptCong([t.soSaoKe * t.tyLeToiThieu / 100, -t.daTra], Math.max(0, t.soSaoKe * t.tyLeToiThieu / 100 - t.daTra)) } : null,
+      t.laiUocTinh != null ? { ten: 'Lãi ước tính nếu chỉ trả tối thiểu', ct: 'Phần còn phải trả sau khi trả tối thiểu × lãi suất năm ÷ 12, cho MỘT tháng. Ngân hàng thật tính lãi theo ngày kể từ ngày mua và có phí trả chậm, nên đây chỉ để thấy cái giá của việc trả thiếu.',
+        pt: '(' + soGt(t.conPhaiTra) + ' − ' + soGt(t.toiThieu) + ') × ' + theSoChu(t.laiSuat) + '% ÷ 12 = ' + soGt(t.laiUocTinh) } : null,
+      { ten: 'Còn phải trả', ct: 'Dư nợ chốt ngày sao kê − tiền đã chuyển vào thẻ sau ngày đó (không vượt dư nợ hiện tại).',
         pt: ptCong([t.soSaoKe, -t.daTra], Math.max(0, t.soSaoKe - t.daTra)) + (t.conPhaiTra < t.soSaoKe - t.daTra ? ' → tối đa bằng dư nợ hiện tại ' + soGt(t.duNo) : '') },
       { ten: 'Dư nợ hiện tại', ct: 'Số dư ví thẻ đang âm bao nhiêu (quẹt thẻ là chi ghi vào ví thẻ).', pt: 'số dư ví ' + soGt(soDuTheoVi(w.id, todayStr())) + (soDuTheoVi(w.id, todayStr()) < 0 ? ' → dư nợ ' + soGt(t.duNo) : ' → không còn nợ') }], 'Cách tính các số này');
   return vnSheetKhung('Thanh toán thẻ ' + esc(w.ten), h, 'Thanh toán', 'theTraLuu', 'dmHuy');
@@ -118,6 +147,10 @@ function theTraSheetHtml(f){
 function handleTheAction(act, el){
   if (act === 'theTra'){
     state.dmForm = { loai: 'thanhtoanthe', id: el.getAttribute('data-id') }; renderDanhMuc(); return true;
+  }
+  if (act === 'theDien'){
+    var o = document.getElementById('tt_tien'); if (o) o.value = veSo(num(el.getAttribute('data-v')));
+    return true;
   }
   if (act !== 'theTraLuu') return false;
   var f = state.dmForm, w = f && walletById(f.id);

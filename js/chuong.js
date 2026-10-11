@@ -64,7 +64,7 @@ function cbTatCa(homNay){
   theSapDenHan(homNay).forEach(function(x){
     var g = giaiDoan(x.t.han);
     them({ loai: 'the', key: 'the:' + x.w.id + ':' + x.t.han + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.t.han, tieu: 'Thẻ ' + x.w.ten,
-           phu: 'Thanh toán thẻ · ' + cbNhan(x.t.soNgay) + ' (hạn ' + ngayNganVN(x.t.han) + ')', tien: fmt(Math.round(x.t.conPhaiTra)), dich: { loai: 'the', id: x.w.id } });
+           phu: 'Thanh toán thẻ · ' + cbNhan(x.t.soNgay) + ' (hạn ' + ngayNganVN(x.t.han) + ')' + (x.t.toiThieu != null && x.t.toiThieu > 0 ? ' · tối thiểu ' + fmt(Math.round(x.t.toiThieu)) : ''), tien: fmt(Math.round(x.t.conPhaiTra)), dich: { loai: 'the', id: x.w.id } });
   });
   // 5. ví có thể thiếu tiền (cần từ 2 ví trở lên)
   tnViSapThieu(homNay, TN_SO_NGAY).forEach(function(x){

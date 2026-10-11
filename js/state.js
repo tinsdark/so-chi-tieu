@@ -678,8 +678,10 @@ function normalizeData(d){
       w.ngaySaoKe = Math.max(1, Math.min(31, Math.round(num(w.ngaySaoKe)) || 1));
       w.ngayTraThe = Math.max(1, Math.min(31, Math.round(num(w.ngayTraThe)) || 1));
       w.deDanh = false;
+      w.tyLeToiThieu = Math.min(100, numNonNeg(w.tyLeToiThieu)); if (!(w.tyLeToiThieu > 0)) delete w.tyLeToiThieu;
+      w.laiSuatThe = Math.min(100, numNonNeg(w.laiSuatThe)); if (!(w.laiSuatThe > 0)) delete w.laiSuatThe;
     } else {
-      delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe;
+      delete w.the; delete w.hanMucThe; delete w.ngaySaoKe; delete w.ngayTraThe; delete w.tyLeToiThieu; delete w.laiSuatThe;
     }
     if (!w.ten) w.ten = 'Ví';
     if (!w.id) w.id = 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
