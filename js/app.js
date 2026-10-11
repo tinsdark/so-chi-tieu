@@ -107,7 +107,7 @@ document.addEventListener('click', function(ev){
 
 // chuyển tab: dùng chung cho click vào thanh tab và phím tắt 1-5
 // Đổi tab: nội dung mờ dần vào (motionChuyenTab ở motion.js)
-var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'danhmuc', 'congcu'];
+var THU_TU_TAB = ['sotay', 'dongtien', 'baocao', 'vayno', 'congcu', 'danhmuc'];
 function chuyenTab(tab){
   var cu = state.tab;
   var lam = function(){
@@ -122,13 +122,13 @@ function chuyenTab(tab){
 /* ---------------- phím tắt (desktop) ----------------
    Không bắt phím khi: đang gõ trong ô nhập/chọn (isTypingNow), đang mở hộp thoại,
    giữ Ctrl/Alt/Cmd (để không cướp phím tắt của trình duyệt), chưa đăng nhập. */
-var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'danhmuc', '6':'congcu' };
+var PHIM_TAT_TAB = { '1':'sotay', '2':'dongtien', '3':'baocao', '4':'vayno', '5':'congcu', '6':'danhmuc' };
 function hienPhimTat(){
   moHoiThoai({
     tieuDe: 'Phím tắt',
     noiDung: 'N — thêm giao dịch (nhảy tới form ở Sổ tay)\n'
       + '/ — tìm trong Sổ tay\n'
-      + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Danh mục · Công cụ\n'
+      + '1 · 2 · 3 · 4 · 5 · 6 — Sổ tay · Dòng tiền · Báo cáo · Vay-Nợ · Công cụ · Danh mục\n'
       + '? — mở bảng này\n'
       + 'Esc — đóng hộp thoại\n\n'
       + 'Phím tắt không hoạt động khi đang gõ trong một ô nhập.',

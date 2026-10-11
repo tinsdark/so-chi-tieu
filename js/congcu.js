@@ -1,6 +1,6 @@
 "use strict";
 /* ====================================================================
-   congcu.js — tab CÔNG CỤ (phím 6). Hiện có thẻ "Muốn mua" (gộp "Mua được không?" và danh sách món muốn mua).
+   congcu.js — tab CÔNG CỤ (phím 5). Hiện có thẻ "Muốn mua" (gộp "Mua được không?" và danh sách món muốn mua).
    Cần state.js, ui.js, vayno.js, sotay.js, danhmuc.js, theongay.js load trước (dùng tnLichTien, tieuMoiNgay, mucTieuTienDo, dkCatOptions).
 
    MUỐN MUA. Hỏi "mua món này được không" TRƯỚC khi tiêu. Nhập tên + giá (+ trả góp) -> app chèn khoản chi đó vào lịch tiền
