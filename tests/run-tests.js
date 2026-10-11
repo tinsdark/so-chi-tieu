@@ -1704,7 +1704,8 @@ test('tongQuanHtml: số dư, thu/chi, còn lại theo chỉ tiêu, chip việc 
   var h = ctx.tongQuanHtml('2026-10', 0, 700000, 3000000, 2300000, false);
   ok(h.indexOf('Số dư hiện tại') >= 0, 'tháng này gọi là "hiện tại"');
   ok(h.indexOf(ctx.fmt(2300000)) >= 0, 'số dư');
-  ok(h.indexOf('còn ' + ctx.fmt(500000)) >= 0, 'đã chi 700k / chỉ tiêu 1,2tr -> còn 500k: ' + h);
+  // Ăn có định kỳ (Tiền net) = khoản cố định -> thanh hạn mức chỉ còn Xăng: 300k / 200k -> vượt 100k
+  ok(h.indexOf('Chi hằng ngày theo hạn mức') >= 0 && h.indexOf('vượt ' + ctx.fmt(100000)) >= 0 && h.indexOf(ctx.fmt(300000) + ' / ' + ctx.fmt(200000)) >= 0, 'thanh hạn mức chỉ tính chi hằng ngày');
   ok(h.indexOf('1 khoản định kỳ đến hạn') >= 0, 'chip định kỳ');
   ok(h.indexOf('1 khoản vay/nợ sắp đến hạn') >= 0, 'chip vay nợ');
   ok(h.indexOf('1 danh mục vượt hạn mức') >= 0, 'Xăng 300k > 200k');
@@ -3720,6 +3721,92 @@ test('thẻ tổng quan Sổ tay: tháng này có khối "Hôm nay còn tiêu đ
   var h = ctx.tongQuanHtml('2026-10', 0, 0, 0, 0, false);
   ok(h.indexOf('Hôm nay còn tiêu được') >= 0 && h.indexOf('Khoản cố định còn phải ra') >= 0, 'tháng hiện tại');
   ok(ctx.tongQuanHtml('2026-09', 0, 0, 0, 0, false).indexOf('Hôm nay còn tiêu được') < 0, 'tháng cũ');
+});
+
+/* ==================================================================== */
+group('Tách chi cố định khỏi chi hằng ngày (Báo cáo, Dòng tiền, Sổ tay) + quá hạn nhiều kỳ (Vay - Nợ)');
+
+// Hôm nay 11/10/2026. Ăn 2,5tr + Xăng 0,5tr = hạn mức hằng ngày 3tr; Tiền nhà 3,5tr (có ngày chi 5) đã trả ngày 5.
+// Vay anh Chiến 51tr không lãi, 17 kỳ × 3tr, kỳ 1 = 10/09, kỳ 2 = 10/10: chưa trả kỳ nào -> trễ 2 kỳ = 6tr.
+function cdData(){
+  var j = {}, add = function(d, cat, v){
+    j[d] = j[d] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] };
+    j[d].chi[cat] = (j[d].chi[cat] || 0) + v;
+    j[d].items.push({ iid: d + cat, kind: 'chi', catId: cat, soTien: v, ghiChu: '', walletId: 'w_chinh' });
+  };
+  ['02', '04', '06', '08', '10'].forEach(function(dd){ add('2026-10-' + dd, 'an', 60000); });
+  add('2026-10-03', 'xang', 80000); add('2026-10-05', 'nha', 3500000);
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: 20000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' };
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 2500000 }, { id: 'xang', ten: 'Xăng', chiTieu: 500000 },
+                      { id: 'nha', ten: 'Tiền nhà', chiTieu: 3500000, ngay: 5 }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }];
+  d.vayNo.vayNoPhaiTra = [{ id: 'v1', ten: 'Vay anh Chiến', loaiVay: 'nguoi_than', hinhThuc: 'khong_lai', soTienGoc: 51000000, soThangVay: 17,
+                            ngayVay: '2026-08-10', ngayTraHangThang: 10, walletId: 'w_chinh', traNo: [], trangThai: 'dang_vay' }];
+  setToday('2026-10-11');
+  return loadData(d);
+}
+
+test('A1 Báo cáo thẻ đầu: "giữ nhịp" so chi HẰNG NGÀY với hạn mức hằng ngày, không báo vượt vì trả nợ / tiền nhà', function(){
+  cdData();
+  var tong = ctx.bdUocTinhChiThang('2026-10', 11).tong, hn = ctx.bdUocTinhChiHangNgay('2026-10', 11);
+  ok(tong > 3000000, 'tổng ước tính (gồm 6tr trả nợ chưa ghi) lớn hơn hạn mức: ' + tong);
+  eq(hn.daChi, 380000, 'chi hằng ngày tới hôm nay = 5×60k + 80k');
+  near(hn.tong, 380000 + 380000 / 11 * 20, 1, 'đã chi + nhịp ngày thường × 20 ngày còn lại');
+  var h = ctx.baoCaoDauHtml('2026-10');
+  ok(h.indexOf('Chi hằng ngày theo hạn mức') > 0 && h.indexOf(ctx.fmt(380000) + '</b> / ' + ctx.fmt(3000000)) > 0, 'dòng chi hằng ngày / hạn mức');
+  ok(h.indexOf('Giữ nhịp này') > 0 && h.indexOf('còn dư') > 0 && h.indexOf('và vượt') < 0, 'không còn cảnh báo vượt giả');
+  ok(h.indexOf(ctx.fmt(3880000)) > 0, 'số to vẫn là TỔNG đã chi thật (3,5tr tiền nhà + 380k = 3.880.000)');
+  ok(h.indexOf('danh mục vượt') < 0, 'không có chip vượt');
+});
+test('A2 thẻ Hạn mức (Báo cáo): Tiền nhà trả đủ nằm ở nhóm "Cố định", không ở "Cần chú ý"; vòng % chỉ tính chi hằng ngày', function(){
+  cdData();
+  var r = ctx.hanMucThangRows('2026-10');
+  eq(r.filter(function(x){ return x.coDinh; }).map(function(x){ return x.id; }).join(), 'nha');
+  var h = ctx.hanMucThangHtml('2026-10');
+  ok(h.indexOf('Cần chú ý') < 0, 'không có gì cần chú ý');
+  ok(h.indexOf('Cố định · 1') > 0 && h.indexOf('đã chi đủ') > h.indexOf('Cố định · 1'), 'Tiền nhà ở nhóm cố định, đã chi đủ');
+  ok(h.indexOf('13%') > 0, 'vòng % = 380k / 3tr = 13%');
+  var stack = h.slice(h.indexOf('hm-stack-l'), h.indexOf('hm-stack-l') + 400);
+  ok(stack.indexOf('Tiền nhà') < 0 && stack.indexOf('Ăn') >= 0, 'thanh chia danh mục chỉ có chi hằng ngày');
+});
+test('A2/A3 Dòng tiền: nhịp chỉ xét chi hằng ngày; khoản cố định thành nhóm riêng, có thanh "Chi cố định"', function(){
+  cdData();
+  var d = ctx.dtThangDuLieu('2026-10');
+  eq(d.chiActHN, 380000); eq(d.chiPlanHN, 3000000); eq(d.chiActCD, 3500000); eq(d.chiPlanCD, 3500000);
+  eq(d.chiAct, d.chiActHN + d.chiActCD, 'tổng chi không đổi');
+  var gt = ctx.dtGiaiThichHtml(d);
+  ok(gt.indexOf('Chi hằng ngày đang dưới nhịp') >= 0 && gt.indexOf('vượt nhịp') < 0, gt);
+  var c = ctx.dtChiCardHtml(d);
+  ok(c.indexOf('Cố định · 1') > 0 && c.indexOf('Cần chú ý') < 0 && c.indexOf('đã chi đủ') > 0, 'Tiền nhà không bị cảnh báo');
+  var dau = ctx.dtDauHtml(d, null, '2026-08', '2026-12');
+  ok(dau.indexOf('Chi hằng ngày') > 0 && dau.indexOf('Chi cố định') > 0, 'thẻ đầu tách 2 thanh');
+});
+test('A4 Phân tích / top ngày: trung bình và ngày chi nhiều nhất chỉ tính chi hằng ngày', function(){
+  cdData();
+  var cur = ctx.bdThang('2026-10', 11);
+  eq(cur.tongChi, 3880000); eq(cur.tongChiHN, 380000); eq(cur.chiHN[4], 0, 'ngày 5 (tiền nhà) không có chi hằng ngày');
+  ctx.state.bdTab = 'tq';
+  var h = ctx.bdTongQuanHtml('2026-10');
+  ok(h.indexOf('Chi hằng ngày trung bình <b>' + ctx.fmt(Math.round(380000 / 11)) + '/ngày') > 0, 'TB 34.545/ngày');
+  ok(h.indexOf('nhiều nhất 03/10') > 0 && h.indexOf('không tính ' + ctx.fmt(3500000) + ' khoản cố định') > 0, 'ngày nhiều nhất là 03/10 (xăng), ghi rõ phần cố định bị bỏ');
+  var top = h.slice(h.indexOf('Top ngày chi nhiều'));
+  ok(top.indexOf('03/10 · Xăng') > 0 && top.indexOf('05/10') < 0, 'top ngày không có ngày trả tiền nhà');
+  ok(h.indexOf('chi hằng ngày ≈') > 0, 'ước tính so hạn mức bằng chi hằng ngày');
+  setToday('2026-10-01');
+});
+test('B1 Vay - Nợ: trễ 2 kỳ thì thẻ khoản vay và "Sắp đến hạn" ghi đủ 6tr, không chỉ 3tr của kỳ cũ nhất', function(){
+  cdData();
+  var v = ctx.state.data.vayNo.vayNoPhaiTra[0], q = ctx.kyQuaHan(v, '2026-10-11');
+  eq(q.n, 2); eq(q.tong, 6000000); eq(q.cuNhat, '2026-09-10');
+  var h = ctx.vnVayCardHtml(v);
+  ok(h.indexOf('Quá hạn 2 kỳ') > 0 && h.indexOf(ctx.fmt(6000000)) > 0 && h.indexOf('Kỳ tới') < 0, 'thẻ khoản vay');
+  var ds = ctx.danhSachSapDenHan(7);
+  eq(ds.length, 1); eq(ds[0].soTien, 6000000); eq(ds[0].soKy, 2);
+  // chỉ trễ 1 kỳ: nhãn "Kỳ quá hạn" thay cho "Kỳ tới"
+  setToday('2026-09-15'); q = ctx.kyQuaHan(v);
+  eq(q.n, 1); ok(ctx.vnVayCardHtml(v).indexOf('Kỳ quá hạn') > 0); eq(ctx.danhSachSapDenHan(7)[0].soTien, 3000000);
+  setToday('2026-09-05'); ok(ctx.vnVayCardHtml(v).indexOf('Kỳ tới') > 0, 'chưa tới hạn: vẫn là "Kỳ tới"');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */

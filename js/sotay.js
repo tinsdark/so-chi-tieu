@@ -226,7 +226,7 @@ function qaDongSheet(){
 function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   var laThangNay = (mk === monthKey(todayStr()));
   var so = function(v){ return beforeLock ? '—' : fmt(Math.round(v)); };
-  var rows = hanMucThangRows(mk);
+  var rows = hanMucThangRows(mk).filter(function(r){ return !r.coDinh; });      // khoản cố định không vào thanh hạn mức / chip vượt
   var tongDa = 0, tongCap = 0;
   rows.forEach(function(r){ tongDa += r.da; tongCap += r.cap; });
   var chenh = tongThu - tongChi, tongLuong = tongThu + tongChi;
@@ -246,7 +246,7 @@ function tongQuanHtml(mk, tongThu, tongChi, duDau, duCuoi, beforeLock){
   if (rows.length){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
     var muc = hanMucMuc(pct);
-    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi theo hạn mức</span><span>'
+    h += '<div class="hero-bud"><div class="hero-bud-top"><span>Chi hằng ngày theo hạn mức</span><span>'
       + (tongDa > tongCap ? 'vượt ' + fmt(Math.round(tongDa - tongCap)) : 'còn ' + fmt(Math.round(tongCap - tongDa))) + '</span></div>'
       + '<div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.min(100, Math.round(pct * 100))+'" aria-label="Đã chi so với hạn mức tháng">'
       + '<i class="'+muc+'" style="width:'+Math.min(100, Math.round(pct * 100))+'%"></i></div>'
@@ -785,6 +785,7 @@ function viSoDuCardHtml(mk){
    đặt "chỉ tiêu/tháng" ở tab Danh mục. Thuần hiển thị: chỉ ĐỌC categories +
    journal, không ghi gì. Danh mục khongDuTru (Cho vay...) bị loại vì không
    phải chi tiêu thật. Sắp theo % giảm dần để cái sắp/đã vượt nằm trên cùng.
+   r.coDinh = khoản cố định (catChiLaCoDinh): KHÔNG tính vào % đã dùng / nhịp / cảnh báo vượt, chỉ hiện riêng.
    ==================================================================== */
 function hanMucThangRows(mk){
   var rows = [];
@@ -792,7 +793,7 @@ function hanMucThangRows(mk){
     var cap = num(c.chiTieu);
     if (cap <= 0 || c.khongDuTru) return;
     var da = actualCatInMonth('chi', c.id, mk);
-    rows.push({ id: c.id, ten: c.ten, da: da, cap: cap, pct: da / cap });
+    rows.push({ id: c.id, ten: c.ten, da: da, cap: cap, pct: da / cap, coDinh: catChiLaCoDinh(c) });
   });
   rows.sort(function(a, b){ return b.pct - a.pct; });
   return rows;
@@ -809,24 +810,43 @@ function hanMucMuc(pct){ return pct > 1 ? 'over' : (pct >= 0.8 ? 'warn' : 'ok');
    tháng", hoặc có giao dịch định kỳ đang bật. Danh mục hệ thống (Cho vay, Trả nợ...) và "Không tính dự kiến" không vào.
    Công thức: mức/ngày = (tổng hạn mức tiêu hằng ngày − đã chi TRƯỚC hôm nay) ÷ số ngày còn lại tính cả hôm nay.
    Dùng số đầu ngày nên cả ngày không đổi; tiêu bao nhiêu hôm nay chỉ làm "còn tiêu được" giảm. Danh mục không đặt hạn mức
-   không có trong con số (giống thẻ "Chi theo hạn mức"). Chỉ ĐỌC dữ liệu. null = không có gì để tính.
+   không có trong con số (giống thanh "Chi hằng ngày theo hạn mức"). Chỉ ĐỌC dữ liệu. null = không có gì để tính.
    ==================================================================== */
 function catChiCoDinh(c){
   return !!(c.coDinhChiTieu || catNgayHan(c)
     || (state.data.dinhKy || []).some(function(k){ return k.bat && k.kind === 'chi' && k.catId === c.id; }));
 }
+// Quy tắc DÙNG CHUNG cho mọi số "chi hằng ngày" (Sổ tay, Báo cáo, Dòng tiền): chi CỐ ĐỊNH = danh mục hệ thống
+// (Trả nợ, Cho vay, Điều chỉnh số dư) hoặc catChiCoDinh. Mọi danh mục chi còn lại là chi HẰNG NGÀY.
+function catChiLaCoDinh(c){ return !!(c && (CAT_HE_THONG.chi[c.id] || catChiCoDinh(c))); }
+// theo id; danh mục đã xóa nhưng còn số liệu thì coi là chi hằng ngày
+function catChiHangNgay(id){
+  if (CAT_HE_THONG.chi[id]) return false;
+  var c = (state.data.categories.chi || []).filter(function(x){ return x.id === id; })[0];
+  return !c || !catChiCoDinh(c);
+}
+// khoản cố định CÒN PHẢI RA trong tháng mk: { tong, ds: [{ten, con}] } (lớn nhất trước)
+// mỗi danh mục cố định: phần hạn mức chưa chi, hoặc khoản định kỳ chưa ghi nếu lớn hơn (cùng một khoản, không cộng cả hai);
+// cộng kỳ trả nợ đã biết trước mà chưa ghi. Danh mục "Không tính dự kiến" không tính.
+function chiCoDinhConLai(mk){
+  var ds = [];
+  (state.data.categories.chi || []).forEach(function(c){
+    if (c.khongDuTru || CAT_HE_THONG.chi[c.id] || !catChiCoDinh(c)) return;
+    var con = Math.max(Math.max(0, num(c.chiTieu) - actualCatInMonth('chi', c.id, mk)), dinhKyChuaGhiThang(mk, 'chi', c.id));
+    if (con > 0) ds.push({ ten: c.ten, con: con });
+  });
+  var traNo = bietTruocChuaGhi('chi', 'traNo', mk);
+  if (traNo > 0) ds.push({ ten: (catTen('chi', 'traNo').charAt(0) === '(' ? 'Trả nợ' : catTen('chi', 'traNo')), con: traNo });
+  var tong = 0; ds.forEach(function(x){ tong += x.con; });
+  ds.sort(function(a, b){ return b.con - a.con; });
+  return { tong: tong, ds: ds };
+}
 function tieuMoiNgay(homNay){
   homNay = homNay || todayStr();
-  var mk = monthKey(homNay), he = CAT_HE_THONG.chi || {}, bien = {}, cap = 0, coDinh = [];
+  var mk = monthKey(homNay), bien = {}, cap = 0;
   (state.data.categories.chi || []).forEach(function(c){
     var hm = num(c.chiTieu);
-    if (c.khongDuTru || he[c.id]) return;
-    if (catChiCoDinh(c)){
-      // còn phải ra = phần hạn mức chưa chi, hoặc khoản định kỳ chưa ghi nếu lớn hơn (không cộng cả hai: cùng một khoản)
-      var con = Math.max(Math.max(0, hm - actualCatInMonth('chi', c.id, mk)), dinhKyChuaGhiThang(mk, 'chi', c.id));
-      if (con > 0) coDinh.push({ ten: c.ten, con: con });
-      return;
-    }
+    if (c.khongDuTru || catChiLaCoDinh(c)) return;
     if (hm > 0){ bien[c.id] = true; cap += hm; }
   });
   if (cap <= 0) return null;
@@ -837,14 +857,10 @@ function tieuMoiNgay(homNay){
     Object.keys(bien).forEach(function(id){ if (d === homNay) daHomNay += num(chi[id]); else daTruoc += num(chi[id]); });
   });
   var soNgay = daysInMonth(mk) - parseInt(homNay.slice(8, 10), 10) + 1;
-  var con = cap - daTruoc, muc = Math.max(0, con) / soNgay;
-  var traNo = bietTruocChuaGhi('chi', 'traNo', mk);
-  if (traNo > 0) coDinh.push({ ten: (catTen('chi', 'traNo').charAt(0) === '(' ? 'Trả nợ' : catTen('chi', 'traNo')), con: traNo });
-  var tong = 0; coDinh.forEach(function(x){ tong += x.con; });
-  coDinh.sort(function(a, b){ return b.con - a.con; });
+  var con = cap - daTruoc, muc = Math.max(0, con) / soNgay, cd = chiCoDinhConLai(mk);
   return { cap: cap, daTruoc: daTruoc, daHomNay: daHomNay, soNgay: soNgay, muc: muc,
            honNayCon: muc - daHomNay, het: daTruoc + daHomNay >= cap, vuot: Math.max(0, daTruoc + daHomNay - cap),
-           coDinhCon: tong, coDinh: coDinh };
+           coDinhCon: cd.tong, coDinh: cd.ds };
 }
 function tieuMoiNgayHtml(homNay){
   var t = tieuMoiNgay(homNay);
@@ -862,8 +878,10 @@ function tieuMoiNgayHtml(homNay){
   return h + '</div>';
 }
 function hanMucThangHtml(mk){
-  var rows = hanMucThangRows(mk);
-  if (!rows.length) return '';
+  var tat = hanMucThangRows(mk);
+  if (!tat.length) return '';
+  // khoản cố định (tiền nhà, trả nợ...) tách ra nhóm riêng: trả đủ là bình thường, không phải "cần chú ý"
+  var rows = tat.filter(function(r){ return !r.coDinh; }), coDinh = tat.filter(function(r){ return r.coDinh; });
   var nhip = bcNhip(mk), cur = bdThang(mk), cap = 0, da = 0;
   rows.forEach(function(r){ cap += r.cap; da += r.da; });
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
@@ -872,18 +890,22 @@ function hanMucThangHtml(mk){
   var pctAll = cap > 0 ? da / cap : 0;
   var h = '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h"><span>Hạn mức '+monthLabel(mk).toLowerCase()+'</span>'
     + (nVuot ? '<span class="hm-badge over">'+nVuot+' danh mục vượt</span>' : '') + '</h3>';
-  // tóm tắt: vòng % đã dùng + thanh chia theo danh mục (tỉ trọng trong tổng chi)
-  var chia = bdXepCat('chi', cur.theoCat, null, 0), tong = 0;
-  chia.forEach(function(c){ tong += c.v; });
-  h += '<div class="hm-sum">' + bcVong(pctAll, hanMucMuc(pctAll), Math.round(pctAll * 100) + '%', 'đã dùng') + '<div class="hm-sum-r">';
-  if (tong > 0){
-    h += '<div class="hm-sum-t">Chi theo danh mục</div><div class="hm-stack" aria-hidden="true">'
-      + chia.map(function(c){ return '<i style="flex:'+c.v+';background:'+c.mau+'"></i>'; }).join('') + '</div><div class="hm-stack-l">'
-      + chia.slice(0, 3).map(function(c){ return '<span><i style="background:'+c.mau+'"></i>'+esc(c.ten)+' '+Math.round(c.v / tong * 100)+'%</span>'; }).join('') + '</div>';
-  } else {
-    h += '<div class="hm-sum-t">Chưa có khoản chi nào trong tháng này</div>';
+  // tóm tắt (chỉ chi hằng ngày): vòng % đã dùng + thanh chia theo danh mục (tỉ trọng trong chi hằng ngày)
+  if (rows.length){
+    var theoHN = {};
+    Object.keys(cur.theoCat).forEach(function(k){ if (catChiHangNgay(k)) theoHN[k] = cur.theoCat[k]; });
+    var chia = bdXepCat('chi', theoHN, null, 0), tong = 0;
+    chia.forEach(function(c){ tong += c.v; });
+    h += '<div class="hm-sum">' + bcVong(pctAll, hanMucMuc(pctAll), Math.round(pctAll * 100) + '%', 'đã dùng') + '<div class="hm-sum-r">';
+    if (tong > 0){
+      h += '<div class="hm-sum-t">Chi hằng ngày theo danh mục</div><div class="hm-stack" aria-hidden="true">'
+        + chia.map(function(c){ return '<i style="flex:'+c.v+';background:'+c.mau+'"></i>'; }).join('') + '</div><div class="hm-stack-l">'
+        + chia.slice(0, 3).map(function(c){ return '<span><i style="background:'+c.mau+'"></i>'+esc(c.ten)+' '+Math.round(c.v / tong * 100)+'%</span>'; }).join('') + '</div>';
+    } else {
+      h += '<div class="hm-sum-t">Chưa có khoản chi hằng ngày nào trong tháng này</div>';
+    }
+    h += '</div></div>';
   }
-  h += '</div></div>';
   if (chuY.length){
     h += '<div class="hm-sec"><b>Cần chú ý · '+chuY.length+'</b>'
       + (nhip.dangChay ? '<span class="hm-leg"><i class="tk"></i> nhịp hôm nay <i class="en"></i> hạn mức</span>' : '') + '</div><div class="hm-cg">';
@@ -911,6 +933,17 @@ function hanMucThangHtml(mk){
     });
     h += '</div>';
     if (on.length > 3) h += '<button type="button" class="hm-more" data-act="hmXem">'+(state.hmMoHet ? 'Thu gọn' : 'Xem thêm '+(on.length - 3))+'</button>';
+  }
+  if (coDinh.length){
+    h += '<div class="hm-sec"><b>Cố định · '+coDinh.length+'</b></div><div class="hm-og">';
+    coDinh.forEach(function(r){
+      var tt = r.da > r.cap ? 'nhiều hơn '+fmt(Math.round(r.da - r.cap)) : (r.da >= r.cap ? 'đã chi đủ' : (r.da > 0 ? 'còn '+fmt(Math.round(r.cap - r.da)) : 'chưa chi'));
+      h += '<div class="hm-o cd"><span class="nm">'+catDot('chi', r.id)+'<span>'+esc(r.ten)+'</span></span>'
+        + '<span class="cl">'+tt.replace(/\s*₫$/, '')+'</span>'
+        + '<span class="mb"><i style="width:'+Math.min(100, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
+        + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
+    });
+    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ, có ngày chi hằng tháng, có định kỳ, "Cố định theo Hạn mức") không tính vào % đã dùng và cảnh báo ở trên.</div>';
   }
   return h + '</div>';
 }
