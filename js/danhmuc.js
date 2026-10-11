@@ -216,17 +216,6 @@ function dkCardHtml(){
       + '<span class="dm-main"><b class="dm-n">'+esc(k.ten)+'</b><span class="dm-s">'+(thu ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · <span style="white-space:nowrap">ngày '+k.ngay+'</span></span></span>'
       + '<span class="dm-v"><b class="'+(thu ? 'thu' : 'chi')+'">'+(thu ? '+' : '−')+fmt(Math.round(k.soTien))+'</b></span>'+dmGo()+'</div>';
   });
-  var gy = dinhKyGoiY();
-  if (gy.length){
-    h += '<div class="dm-sub" style="margin-top:12px"><b>Gợi ý từ lịch sử</b> · khoản lặp mỗi tháng nhưng chưa có ở đây</div>';
-    gy.slice(0, 5).forEach(function(g){
-      var thu = g.kind === 'thu';
-      h += '<div class="dm-row"><span class="dm-main"><b class="dm-n">'+esc(g.ten)+'</b><span class="dm-s">'+esc(catTen(g.kind, g.catId))+' · khoảng ngày '+g.ngay+' · '+g.n+' tháng liền</span></span>'
-        + '<span class="dm-v"><b class="'+(thu ? 'thu' : 'chi')+'">'+(thu ? '+' : '−')+fmt(g.soTien)+'</b></span>'
-        + '<button class="btn secondary sm" data-act="dkGoiYThem" data-key="'+esc(g.key)+'">Thêm</button>'
-        + '<button class="btn secondary sm" data-act="dkGoiYBo" data-key="'+esc(g.key)+'" aria-label="Bỏ gợi ý '+esc(g.ten)+'">Bỏ</button></div>';
-    });
-  }
   return h + ghiChuGon('Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.' + dmDinhKyViDu(), 'Giao dịch định kỳ hoạt động thế nào?') + '</div>';
 }
 
@@ -722,21 +711,6 @@ function handleDanhMucAction(act, el){
   } else if (act === 'dkThem'){
     state.dkForm = { id: '' }; renderDanhMuc();
     var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();
-  } else if (act === 'dkGoiYThem'){
-    var gyT = dinhKyGoiY().find(function(g){ return g.key === el.getAttribute('data-key'); });
-    if (!gyT) return true;
-    state.data.dinhKy.push({ id: 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ten: gyT.ten, kind: gyT.kind,
-      catId: gyT.catId, soTien: gyT.soTien, ngay: gyT.ngay, walletId: walletById(gyT.walletId) ? gyT.walletId : viMacDinhId(), ghiChu: '', bat: true, bo: [] });
-    scheduleSave(); renderDanhMuc();
-    toast('Đã thêm "'+gyT.ten+'" vào giao dịch định kỳ. Vào sửa nếu số tiền hay ngày chưa đúng.');
-  } else if (act === 'dkGoiYBo'){
-    var gyKey = el.getAttribute('data-key');
-    state.data.settings.dkBoGoiY = (state.data.settings.dkBoGoiY || []).concat([gyKey]);
-    scheduleSave(); renderDanhMuc();
-    toast('Đã bỏ gợi ý.', { hoanTac: function(){
-      state.data.settings.dkBoGoiY = (state.data.settings.dkBoGoiY || []).filter(function(k){ return k !== gyKey; });
-      scheduleSave(); renderDanhMuc();
-    } });
   } else if (act === 'dkSua'){
     state.dkForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
   } else if (act === 'dkHuy'){

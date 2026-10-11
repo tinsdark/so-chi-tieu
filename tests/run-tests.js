@@ -997,23 +997,6 @@ test('dinhKyDenHan: ngày 31 co về cuối tháng ngắn', function(){
   eq(r.length, 1); eq(r[0].han, '2026-11-30');
 });
 
-test('dinhKyGoiY: khoản lặp 3 tháng được gợi ý; khoản lệch tiền / đã có định kỳ / đã bỏ thì không', function(){
-  var d = dataDinhKy();
-  d.dinhKy = [{ id:'k1', ten:'Lương', kind:'thu', catId:'luong', soTien:10000000, ngay:5 }];
-  d.categories.chi.push({id:'an',ten:'Ăn',chiTieu:0});
-  d.journal = {};
-  ['2026-08','2026-09','2026-10'].forEach(function(mk, i){
-    d.journal[mk+'-06'] = { thu:{}, chi:{ net: 200000 }, refs:[], ghiChu:'', items:[{ iid:'a'+i, kind:'chi', catId:'net', soTien:200000, ghiChu:'Net FPT T'+(i+8), walletId:'w_chinh' }] };
-    d.journal[mk+'-10'] = { thu:{}, chi:{ an: 50000*(i+1)*3 }, refs:[], ghiChu:'', items:[{ iid:'b'+i, kind:'chi', catId:'an', soTien:50000*(i+1)*3, ghiChu:'ăn', walletId:'w_chinh' }] };
-  });
-  loadData(d);
-  var r = ctx.dinhKyGoiY('2026-10-15');
-  eq(r.length, 1, 'chỉ Net'); eq(r[0].catId, 'net'); eq(r[0].soTien, 200000); eq(r[0].ngay, 6); eq(r[0].n, 3);
-  state_set_bo(r[0].key);
-  eq(ctx.dinhKyGoiY('2026-10-15').length, 0, 'đã bỏ');
-});
-function state_set_bo(k){ ctx.state.data.settings.dkBoGoiY = [k]; }
-
 test('dinhKyGhi: tạo đúng dòng, mang dkId, cộng đúng tiền, hết nhắc sau khi ghi', function(){
   loadData(dataDinhKy());
   var dk = ctx.state.data.dinhKy[0];
