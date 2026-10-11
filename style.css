@@ -1645,3 +1645,10 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .ht-mt{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ht-mt .ic{width:15px;height:15px}
 .ht-mt:disabled{opacity:.35;cursor:default}
+
+/* ---- Điều đáng chú ý (Báo cáo) ---- */
+.dn-ds{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.dn-ds li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5}
+.dn-ds li i{flex:0 0 9px;height:9px;border-radius:99px;margin-top:7px;background:var(--muted)}
+.dn-ds li.dn-tot i{background:var(--green)}.dn-ds li.dn-xau i{background:var(--red)}
+.dn-ds li b{font-weight:700}

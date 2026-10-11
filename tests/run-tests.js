@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'chuong.js', 'hienthi.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -4952,6 +4952,66 @@ test('Hiển thị: công tắc bật = hiện; thông báo bị tắt thì chu�
   ok(/data-act="htLen" data-nhom="baocao" data-id="diemnhan"[^>]*disabled/.test(h), 'thẻ đầu danh sách: mũi tên lên bị khóa'); ok(h.indexOf('data-act="htLen" data-nhom="sotay"') < 0, 'thẻ trong thẻ đầu Sổ tay không có mũi tên');
   ok(/data-act="htAn" data-nhom="baocao" data-id="bieudo" checked/.test(h), 'đang hiện thì có tích'); ctx.htDatAn('baocao', 'bieudo', true); ok(!/data-act="htAn" data-nhom="baocao" data-id="bieudo" checked/.test(ctx.hienThiHtml()), 'ẩn thì không tích');
   htSach(); setToday('2026-10-01'); ctx.state.dmTab = 'danhmuc';
+});
+
+/* ==================================================================== */
+group('Điều đáng chú ý (diemnhan.js)');
+
+function dataDN(over){
+  var j = {}, n = 0, add = function(ng, kind, cat, v, gc){ j[ng] = j[ng] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; j[ng][kind][cat] = (j[ng][kind][cat] || 0) + v;
+    j[ng].items.push({ iid: 'n' + (n++), kind: kind, catId: cat, soTien: v, ghiChu: gc || '', walletId: 'w_chinh' }); };
+  // T7, T8, T9: mỗi tháng chi Ăn 1.000.000 (ngày 05) và Xăng 300.000 (ngày 10); thu lương 15.000.000
+  ['2026-07', '2026-08', '2026-09'].forEach(function(mk){ add(mk + '-01', 'thu', 'luong', 15000000, 'Lương'); add(mk + '-05', 'chi', 'an', 1000000, 'ăn'); add(mk + '-10', 'chi', 'xang', 300000, 'xăng'); });
+  // T10 (tới ngày 18): Ăn nhiều hơn hẳn, thêm một khoản lớn
+  add('2026-10-01', 'thu', 'luong', 15000000, 'Lương'); add('2026-10-05', 'chi', 'an', 1800000, 'ăn'); add('2026-10-08', 'chi', 'an', 200000, 'ăn'); add('2026-10-10', 'chi', 'xang', 300000, 'xăng');
+  add('2026-10-12', 'chi', 'an', 60000, 'cà phê'); add('2026-10-13', 'chi', 'an', 50000, 'cà phê'); add('2026-10-14', 'chi', 'an', 70000, 'cơm'); add('2026-10-15', 'chi', 'an', 2500000, 'Mua loa');
+  var d = baseData({ journal: j, settings: { soDuDauKy: 0, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' } });
+  d.categories.chi = [{ id: 'an', ten: 'Ăn uống', chiTieu: 0 }, { id: 'xang', ten: 'Xăng', chiTieu: 0 }];
+  if (over) over(d);
+  setToday('2026-10-18'); return loadData(d);
+}
+function dnCo(ds, id){ return ds.filter(function(x){ return x.id === id; })[0]; }
+test('dnTatCa (tháng đang chạy): so CÙNG KỲ với TB 3 tháng trước; danh mục tăng mạnh; khoản chi lớn nhất; tối đa 5 câu, sắp theo điểm', function(){
+  dataDN();
+  var ds = ctx.dnTatCa('2026-10', '2026-10-18');
+  var chi = dnCo(ds, 'chi'); ok(chi && chi.tone === 'xau', 'chi tăng'); ok(chi.html.indexOf('tăng') > 0 && chi.html.indexOf('tới ngày 18') > 0, chi.html);
+  // T10 tới 18: ăn 1.8tr+0,2tr+60k+50k+70k+2,5tr = 4.68tr, xăng 0,3tr -> 4.98tr; TB 3 tháng cùng kỳ (tới ngày 18) = 1.3tr
+  ok(chi.html.indexOf('4.980.000') > 0 && chi.html.indexOf('1.300.000') > 0, 'số thật: ' + chi.html);
+  ok(chi.pt.indexOf('1.300.000 + 1.300.000 + 1.300.000 = 3.900.000 ÷ 3 = 1.300.000') >= 0, chi.pt);
+  var cat = dnCo(ds, 'cat'); ok(cat && cat.html.indexOf('Ăn uống') > 0, 'Ăn uống tăng mạnh nhất');
+  var lon = dnCo(ds, 'lon'); ok(lon && lon.html.indexOf('2.500.000') > 0 && lon.html.indexOf('Mua loa') > 0, 'khoản lớn nhất: ' + (lon && lon.html));
+  ok(ds.length <= 5 && ds.every(function(x, i){ return i === 0 || ds[i - 1].diem >= x.diem; }), 'tối đa 5, sắp theo điểm');
+  var duN = dnCo(ds, 'du'); ok(duN && duN.tone === 'tot' && duN.html.indexOf('10.020.000') > 0 && duN.html.indexOf('67%') > 0, 'đã qua ngày 15: có câu "để dành": ' + (duN && duN.html));
+});
+test('dnTatCa: dư thật (để dành / chi vượt thu); tháng đã kết thúc so cả tháng; không đủ dữ liệu thì im lặng', function(){
+  dataDN();
+  var t9 = ctx.dnTatCa('2026-09', '2026-10-18'), du = dnCo(t9, 'du');
+  ok(du && du.tone === 'tot' && du.html.indexOf('13.700.000') > 0 && du.html.indexOf('91%') > 0, 'T9: thu 15tr − chi 1,3tr = 13,7tr = 91% thu nhập: ' + (du && du.html));
+  eq(du.pt, '15.000.000 − 1.300.000 = 13.700.000 · 13.700.000 ÷ 15.000.000 = 91%');
+  dataDN(function(d){ d.journal['2026-09-20'] = { thu: {}, chi: { an: 16000000 }, ghiChu: '', refs: [], items: [{ iid: 'big', kind: 'chi', catId: 'an', soTien: 16000000, ghiChu: 'x', walletId: 'w_chinh' }] }; });
+  var xau = dnCo(ctx.dnTatCa('2026-09', '2026-10-18'), 'du'); ok(xau && xau.tone === 'xau' && xau.diem === 90 && xau.html.indexOf('vượt thu nhập 2.300.000') > 0, 'chi 17,3tr > thu 15tr: ' + (xau && xau.html));
+  dataDN(function(d){ d.journal = { '2026-10-02': { thu: {}, chi: { an: 50000 }, ghiChu: '', refs: [], items: [{ iid: 'a', kind: 'chi', catId: 'an', soTien: 50000, ghiChu: '', walletId: 'w_chinh' }] } }; });
+  eq(ctx.dnTatCa('2026-10', '2026-10-18').length, 0, 'chưa có tháng trước, chưa có thu, ghi thưa: không có câu nào (không khen / chê khi thiếu dữ liệu)');
+  eq(ctx.dnTatCa('2026-05', '2026-10-18').length, 0, 'tháng trống');
+  setToday('2026-10-01');
+});
+test('dnTatCa: lời hứa đang giữ / vừa phá; giờ công; mọi phép cộng trong "Cách tính" đúng', function(){
+  dataDN(function(d){
+    d.loiHua = [{ id: 'h1', catId: 'xang', kieu: 'lan', gioiHan: 5, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'Đi xe buýt bớt' },
+                { id: 'h2', catId: 'an', kieu: 'tien', gioiHan: 1000000, tuNgay: '2026-10-01', denNgay: '2026-10-31', cau: 'Ăn ngoài vừa phải' }];
+    d.settings.gioCong = { thuNhapThang: 17600000, gioThang: 176 }; });
+  var ds = ctx.dnTatCa('2026-10', '2026-10-18');
+  var giu = dnCo(ds, 'huah1'); ok(giu && giu.tone === 'tot' && giu.html.indexOf('18 ngày') > 0, 'giữ lời hứa 18 ngày: ' + (giu && giu.html));
+  var pha = dnCo(ds, 'huah2'); ok(pha && pha.tone === 'xau' && pha.html.indexOf('15/10') < 0 && pha.html.indexOf('Ăn ngoài vừa phải') > 0, 'phá lời hứa tiền: ' + (pha && pha.html));
+  var gio = dnCo(ctx.dnTatCa('2026-10', '2026-10-18', true), 'gio'); ok(gio && gio.html.indexOf('giờ') > 0 && gio.html.indexOf('Ăn uống') > 0, 'giờ công (lấy đủ mọi câu): ' + (gio && gio.html));
+  var h = ctx.dnCardHtml('2026-10'); ok(h.indexOf('id="cardDiemNhan"') > 0 && h.indexOf('<li class="dn-') > 0 && h.indexOf('Cách tính các số này') > 0, 'thẻ có câu + cách tính');
+  eq(kiemPhepCong(h).loi.join(' | '), '', 'phép cộng trong giải thích đúng');
+  eq((h.match(/<li class="dn-/g) || []).length <= 5, true);
+  ctx.htDatAn('baocao', 'diemnhan', true); eq(ctx.dnCardHtml('2026-10'), '', 'ẩn ở Cài đặt → Hiển thị thì không vẽ'); htSach();
+  var root = { innerHTML: '' }; ctx.state.soTayMonth = '2026-10';
+  voiDom({ tabContent: root }, null, function(){ ctx.renderBaoCao(); });
+  ok(root.innerHTML.indexOf('id="cardDiemNhan"') > root.innerHTML.indexOf('id="bcDau"') && root.innerHTML.indexOf('id="cardDiemNhan"') < root.innerHTML.indexOf('id="cardHanMuc"'), 'nằm ngay sau thẻ đầu của Báo cáo, trước Hạn mức');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */
