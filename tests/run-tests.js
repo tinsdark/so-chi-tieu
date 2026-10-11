@@ -3973,7 +3973,7 @@ test('tongKetCardHtml: đủ các dòng, tháng chưa kết thúc thì rỗng; c
   tkData();
   var h = ctx.tongKetCardHtml('2026-10');
   ok(h.indexOf('id="cardTongKet"') > 0 && h.indexOf('Tổng kết tháng 10/2026') > 0, 'tiêu đề');
-  ok(h.indexOf('Thu − Chi') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
+  ok(h.indexOf('Dư thật') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
   ok(h.indexOf('Trả nợ') > 0 && h.indexOf('Tài sản ròng cuối tháng') > 0 && h.indexOf('Tăng mạnh nhất') > 0 && h.indexOf('Ăn') > 0, 'nợ, tài sản ròng, danh mục tăng');
   eq(ctx.tongKetCardHtml('2026-11'), '');
   tkData(function(d){ d.categories.chi[0].chiTieu = 0; });
@@ -4004,6 +4004,84 @@ test('tháng TRƯỚC mốc bắt đầu sổ vẫn tổng kết được (chỉ
   var r10 = ctx.tongKetThang('2026-10');
   ok(r10.rong != null && r10.rongTruoc === null, 'tháng 10 (đúng mốc): có tài sản ròng, không có tháng trước để so');
   ok(ctx.tongKetCardHtml('2026-10').indexOf('Tài sản ròng cuối tháng') > 0 && ctx.tongKetCardHtml('2026-10').indexOf('so với tháng trước') < 0);
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
+group('Thu chi thật: tách vay nợ khỏi thu nhập / chi tiêu');
+
+// Giống ca của người dùng: lương 1tr, chi tiêu 1,2tr, VAY 50tr, tất toán 21,6tr + trả nợ 8,3tr, cho vay 2tr, thu hồi 0,5tr, điều chỉnh số dư 100k.
+function tcData(){
+  var j = {};
+  j['2026-10-02'] = { thu: { luong: 1000000 }, chi: { an: 400000, nha: 800000 }, ghiChu: '', refs: [], items: [
+    { iid: 'a', kind: 'thu', catId: 'luong', soTien: 1000000, ghiChu: '', walletId: 'w_chinh' },
+    { iid: 'b', kind: 'chi', catId: 'an', soTien: 400000, ghiChu: '', walletId: 'w_chinh' },
+    { iid: 'c', kind: 'chi', catId: 'nha', soTien: 800000, ghiChu: '', walletId: 'w_chinh' }] };
+  j['2026-10-05'] = { thu: { nhanTienVay: 50000000, thuHoiChoVay: 500000, dieuChinh: 100000 }, chi: { traNo: 29900000, choVay: 2000000, dieuChinh: 40000 },
+    ghiChu: '', refs: [], items: [] };
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' };
+  d.categories.thu = [{ id: 'luong', ten: 'Lương', chiTieu: 0 }];
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 3000000 }, { id: 'nha', ten: 'Nhà', chiTieu: 800000, khoanCoDinh: true }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }];
+  setToday('2026-10-11');
+  return loadData(d);
+}
+test('bdThang: thu / chi THẬT không gồm nhận vay, thu hồi, cho vay, trả nợ, điều chỉnh; vayNo tách riêng; số dư vẫn tính từ TỔNG', function(){
+  tcData();
+  var c = ctx.bdThang('2026-10');
+  eq(c.tongThuThat, 1000000, 'thu nhập thật = lương'); eq(c.tongChiThat, 1200000, 'chi tiêu thật = ăn + nhà');
+  eq(c.tongThu, 51600000, 'tổng thu cũ gồm vay + thu hồi + điều chỉnh'); eq(c.tongChi, 33140000, 'tổng chi cũ gồm trả nợ + cho vay + điều chỉnh');
+  eq(c.vayNo.vay, 50000000); eq(c.vayNo.thuHoi, 500000); eq(c.vayNo.choVay, 2000000); eq(c.vayNo.traNo, 29900000);
+  eq(c.thuThat[4], 0, 'ngày 5 chỉ có vay nợ: thu thật 0'); eq(c.chiThat[4], 0); eq(c.chiThat[1], 1200000);
+  eq(Object.keys(c.theoCatThat).sort().join(), 'an,nha', 'danh mục chi thật không có Trả nợ / Cho vay / Điều chỉnh');
+  eq(Object.keys(c.theoCatThuThat).join(), 'luong');
+  eq(ctx.balanceAt('2026-10-31'), 51600000 - 33140000, 'số dư ví vẫn tính từ tổng');
+});
+test('Sổ tay thẻ đầu: Thu nhập / Chi tiêu / Dư thật + dòng Vay nợ riêng; Số dư vẫn là số dư thật của ví', function(){
+  tcData();
+  var h = ctx.tongQuanHtml('2026-10', 51600000, 33140000, 0, 18460000, false);
+  ok(h.indexOf('Thu nhập') > 0 && h.indexOf('Chi tiêu') > 0 && h.indexOf('Dư thật') > 0 && h.indexOf('Tổng thu') < 0 && h.indexOf('Chênh lệch') < 0, 'nhãn mới');
+  ok(h.indexOf('−' + ctx.fmt(200000)) > 0, 'dư thật = 1tr − 1,2tr = −200.000 (không phải +18,4tr)');
+  ok(h.indexOf('Vay nợ') > 0 && h.indexOf('vào <b>' + ctx.fmt(50500000).replace(' ₫', '')) > 0 || h.indexOf(ctx.fmt(50500000)) > 0, 'vào = vay 50tr + thu hồi 0,5tr');
+  ok(h.indexOf(ctx.fmt(31900000)) > 0, 'ra = trả nợ 29,9tr + cho vay 2tr');
+  ok(h.indexOf(ctx.fmt(18460000)) > 0, 'số dư hiện tại giữ nguyên');
+  setToday('2026-10-01');
+});
+test('Báo cáo: thẻ đầu, KPI, phân tích, danh mục, xu hướng đều dùng chi tiêu thật; Trả nợ không còn là một lát "chi theo danh mục"', function(){
+  tcData();
+  var dau = ctx.baoCaoDauHtml('2026-10');
+  ok(dau.indexOf(ctx.fmt(1200000)) > 0 && dau.indexOf('Chưa tính ' + ctx.fmt(31900000) + ' trả nợ / cho vay') > 0, 'số to = chi tiêu thật + ghi chú phần tính riêng');
+  ctx.state.bdTab = 'tq';
+  var tq = ctx.bdTongQuanHtml('2026-10');
+  ok(tq.indexOf('Thu nhập') > 0 && tq.indexOf('Chi tiêu') > 0 && tq.indexOf('Vay nợ') > 0, 'KPI + dòng vay nợ');
+  ctx.state.bdTab = 'dm'; ctx.state.bdMode = 'thanh';
+  var dm = ctx.bdDanhMucHtml('2026-10');
+  ok(dm.indexOf('Trả nợ') < 0 && dm.indexOf('Cho vay') < 0 && dm.indexOf('Ăn') > 0, 'danh mục không có Trả nợ');
+  ok(dm.indexOf('Nhận tiền vay') < 0 && dm.indexOf('Lương') > 0, 'thu theo danh mục không có Nhận tiền vay');
+  var x = ctx.bdXuHuongHtml('2026-10');
+  ok(x.indexOf(ctx.fmt(1000000).replace(' ₫', '')) >= 0 || x.length > 0, 'xu hướng vẽ được');
+  var u = ctx.bdUocTinhChiThang('2026-10', 11);
+  eq(u.daChi, 1200000, 'ước tính chi: đã chi thường xuyên'); eq(u.bietTruoc, 0, 'không cộng trả nợ biết trước');
+  ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; setToday('2026-10-01');
+});
+test('Tổng kết tháng: Dư thật, chi cố định không gồm trả nợ, dòng Trả nợ tính riêng kèm vay thêm', function(){
+  tcData(); setToday('2026-11-03');
+  var r = ctx.tongKetThang('2026-10');
+  eq(r.thu, 1000000); eq(r.chi, 1200000); eq(r.coDinh, 800000, 'chỉ khoản cố định thật (Nhà)'); eq(r.traNo, 29900000);
+  var h = ctx.tongKetCardHtml('2026-10');
+  ok(h.indexOf('Dư thật') > 0 && h.indexOf('Thu − Chi') < 0 && h.indexOf('chưa tính vay nợ') > 0, 'dư thật');
+  ok(h.indexOf('Trả nợ (tính riêng)') > 0 && h.indexOf('vay thêm ' + ctx.fmt(50000000)) > 0, 'dòng nợ kèm vay thêm');
+  setToday('2026-10-01');
+});
+test('Sổ tay: so sánh cùng kỳ dùng chi tiêu thật (trả nợ lớn không làm "chi nhiều hơn 2335%")', function(){
+  var j = {};
+  j['2026-09-02'] = { thu: {}, chi: { an: 100000 }, ghiChu: '', refs: [], items: [{ iid: 'p', kind: 'chi', catId: 'an', soTien: 100000, ghiChu: '', walletId: 'w_chinh' }] };
+  j['2026-10-02'] = { thu: {}, chi: { an: 100000, traNo: 40000000 }, ghiChu: '', refs: [], items: [{ iid: 'q', kind: 'chi', catId: 'an', soTien: 100000, ghiChu: '', walletId: 'w_chinh' }] };
+  var d = baseData({ journal: j }); d.settings = { soDuDauKy: 0, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' };
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 0 }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }];
+  setToday('2026-10-10'); loadData(d);
+  var h = ctx.tongQuanSoSanhHtml('2026-10', 100000, false);
+  ok(h.indexOf('Chi gần bằng') > 0 && h.indexOf('nhiều hơn') < 0, h);
   setToday('2026-10-01');
 });
 

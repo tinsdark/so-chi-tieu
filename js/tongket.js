@@ -21,8 +21,9 @@ function tongKetThang(mk){
   if (!cur.coDl) return null;
   var prevMk = bdThangTruoc(mk), prev = bdThang(prevMk);
   var coSoDu = !start || mk >= start, coSoDuTruoc = !start || prevMk >= start;
-  var r = { mk: mk, prevMk: prevMk, soNgay: cur.soNgay, thu: cur.tongThu, chi: cur.tongChi, hangNgay: cur.tongChiHN,
-            coDinh: cur.tongChi - cur.tongChiHN, traNo: num(cur.theoCat.traNo), cap: hanMucHangNgay().cap,
+  // thu / chi THẬT (không gồm vay nợ, xem bdThang); phần vay nợ tính riêng ở r.vayNo
+  var r = { mk: mk, prevMk: prevMk, soNgay: cur.soNgay, thu: cur.tongThuThat, chi: cur.tongChiThat, hangNgay: cur.tongChiHN,
+            coDinh: cur.tongChiThat - cur.tongChiHN, traNo: cur.vayNo.traNo, vayNo: cur.vayNo, cap: hanMucHangNgay().cap,
             ngayOk: null, tang: null, no: null, noTruoc: null, rong: null, rongTruoc: null };
   // số ngày chi hằng ngày không vượt mức (không chi gì cũng là trong mức)
   var t = tnNgayThang(mk + '-' + pad2(cur.soNgay));
@@ -51,7 +52,7 @@ function tongKetCardHtml(mk){
   if (!r) return '';
   var cl = r.thu - r.chi, ten = parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(0, 4);
   var h = '<div class="card bc-card" id="cardTongKet"><h3 class="bc-h"><span>Tổng kết tháng '+ten+'</span></h3>'
-    + tkDong('Thu − Chi', (cl > 0 ? '+' : (cl < 0 ? '−' : '')) + bdTien(Math.abs(cl)), 'Thu ' + bdTien(r.thu) + ' · chi ' + bdTien(r.chi), cl >= 0 ? 'thu' : 'chi');
+    + tkDong('Dư thật', (cl > 0 ? '+' : (cl < 0 ? '−' : '')) + bdTien(Math.abs(cl)), 'Thu nhập ' + bdTien(r.thu) + ' · chi tiêu ' + bdTien(r.chi) + ' (chưa tính vay nợ)', cl >= 0 ? 'thu' : 'chi');
   if (r.cap > 0){
     var tt = r.ngayOk != null ? r.ngayOk + '/' + r.soNgay + ' ngày trong mức · ' : '';
     var pct = Math.round(r.hangNgay / r.cap * 100);
@@ -59,10 +60,10 @@ function tongKetCardHtml(mk){
   } else {
     h += tkDong('Chi hằng ngày', bdTien(r.hangNgay), 'chưa đặt hạn mức');
   }
-  if (r.coDinh > 0.5) h += tkDong('Chi cố định', bdTien(r.coDinh), 'tiền nhà, trả nợ và các khoản bật "Khoản cố định"');
-  if (r.traNo > 0.5 || r.no > 0.5){
+  if (r.coDinh > 0.5) h += tkDong('Chi cố định', bdTien(r.coDinh), 'tiền nhà và các khoản bật "Khoản cố định"');
+  if (r.traNo > 0.5 || r.no > 0.5 || r.vayNo.vay > 0.5){
     var giam = r.noTruoc != null ? r.noTruoc - r.no : null;
-    h += tkDong('Trả nợ', bdTien(r.traNo), 'nợ gốc còn ' + bdTien(r.no)
+    h += tkDong('Trả nợ (tính riêng)', bdTien(r.traNo), (r.vayNo.vay > 0.5 ? 'vay thêm ' + bdTien(r.vayNo.vay) + ' · ' : '') + 'nợ gốc còn ' + bdTien(r.no)
       + (giam != null && Math.abs(giam) >= 1 ? (giam > 0 ? ', giảm ' : ', tăng ') + bdTien(Math.abs(giam)) + ' so với đầu tháng' : ''));
   }
   if (r.rong != null){
