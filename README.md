@@ -152,6 +152,7 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 - **Lời giải thích nào cũng phải có số thật.** Con số mới được tính toán thì thêm `giaiThichSo([{ ten, ct, pt }], 'Cách tính các số này')` với `pt` là phép tính bằng số đang hiện (dùng `ptCong`, `soGt`); ghi chú giải thích khái niệm thì thêm `gtViDu([...])` ("Với số của bạn"). Không viết lời giải thích chung chung mà không có số. Có test (`kiemPhepCong` trong tests/run-tests.js) kiểm mọi phép cộng / trừ trong giải thích đúng về số học.
 
+- Mũi tên theo hướng tiền / dữ liệu so với app: **khoản chi và Xuất Excel hướng lên** (đi ra), **khoản thu và Nhập từ file hướng xuống** (đi vào). Icon `arrow-up` / `arrow-down` ở `sotay.js`; mũi tên ở dòng "Chi nhiều / ít hơn X%" là tăng / giảm, không theo quy ước này.
 - Màu: thu xanh, chi đỏ trầm, trả nợ / sắp đến hạn hổ phách. Chữ phần trăm để màu trung tính.
 - Tiền hiện đầy đủ (`4.769.960`), không viết tắt "tr" / "k" (trừ trục biểu đồ).
 - Danh sách dài dùng thẻ + nút "Xem thêm / Xem tất cả" thay cho bảng cuộn lồng nhau; dưới 375px bớt cột phụ.
