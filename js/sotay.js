@@ -839,14 +839,19 @@ function chiCoDinhConLai(mk){
   ds.sort(function(a, b){ return b.con - a.con; });
   return { tong: tong, ds: ds };
 }
-function tieuMoiNgay(homNay){
-  homNay = homNay || todayStr();
-  var mk = monthKey(homNay), bien = {}, cap = 0;
+// các danh mục TIÊU HẰNG NGÀY có hạn mức: { bien: {id: true}, cap: tổng hạn mức/tháng } (dùng chung với theongay.js)
+function hanMucHangNgay(){
+  var bien = {}, cap = 0;
   (state.data.categories.chi || []).forEach(function(c){
     var hm = num(c.chiTieu);
     if (c.khongDuTru || catChiLaCoDinh(c)) return;
     if (hm > 0){ bien[c.id] = true; cap += hm; }
   });
+  return { bien: bien, cap: cap };
+}
+function tieuMoiNgay(homNay){
+  homNay = homNay || todayStr();
+  var mk = monthKey(homNay), hn = hanMucHangNgay(), bien = hn.bien, cap = hn.cap;
   if (cap <= 0) return null;
   var daTruoc = 0, daHomNay = 0;
   Object.keys(state.data.journal).forEach(function(d){
@@ -873,7 +878,7 @@ function tieuMoiNgayHtml(homNay){
       + t.coDinh.slice(0, 3).map(function(x){ return esc(x.ten); }).join(', ') + (t.coDinh.length > 3 ? '...' : '')
       + ') — không tính vào mức trên</div>';
   }
-  return h + '</div>';
+  return h + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);
@@ -1472,6 +1477,10 @@ function handleSoTayAction(act, el){
     } });
   } else if (act === 'goDanhMuc'){
     chuyenTab('danhmuc');
+  } else if (act === 'goTheoNgay'){
+    state.dtTheoNgay = true; state.dtMoPhong = false;
+    chuyenTab('dongtien');
+    if (window.scrollTo) window.scrollTo({ top: 0 });
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';
     document.querySelectorAll('.tab').forEach(function(t){

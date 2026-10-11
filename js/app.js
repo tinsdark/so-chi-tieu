@@ -42,7 +42,7 @@ function renderAll(){
   var tcBusy = document.getElementById('tabContent');
   if (tcBusy) tcBusy.removeAttribute('aria-busy');
   if (state.tab === 'sotay') renderSoTay();
-  else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else renderDongTien(); }
+  else if (state.tab === 'dongtien'){ if (state.dtMoPhong) renderMoPhong(); else if (state.dtTheoNgay) renderTheoNgay(); else renderDongTien(); }
   else if (state.tab === 'baocao') renderBaoCao();
   else if (state.tab === 'vayno') renderVayNo();
   else renderDanhMuc();
@@ -191,13 +191,14 @@ document.addEventListener('keydown', function(ev){
 // xoay ngang / đổi cỡ cửa sổ qua mốc 700px: Dòng tiền đổi giữa "bảng cả năm" và "1 tháng" nên phải vẽ lại
 (function(){
   var mq = window.matchMedia && window.matchMedia('(max-width:700px)');
-  var khi = function(){ if (state.data && state.tab === 'dongtien' && !state.dtMoPhong) renderDongTien(); };
+  var khi = function(){ if (state.data && state.tab === 'dongtien' && !state.dtMoPhong && !state.dtTheoNgay) renderDongTien(); };
   if (mq && mq.addEventListener) mq.addEventListener('change', khi);
 })();
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
 document.getElementById('btnTheme').addEventListener('click', doiTheme);
+document.getElementById('btnAnSo').addEventListener('click', doiAnSo);
 
 document.getElementById('btnRefresh').addEventListener('click', async function(){
   if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
@@ -231,6 +232,7 @@ function handleAction(act, el){
   if (handleLichAction(act, el)) return;
   if (handleNguoiAction(act, el)) return;
   if (handleDongTienAction(act, el)) return;
+  if (handleTheoNgayAction(act, el)) return;
   if (handleVayNoAction(act, el)) return;
   if (handleDoiSoatAction(act, el)) return;
   if (handleTheAction(act, el)) return;

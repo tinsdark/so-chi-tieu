@@ -334,6 +334,56 @@ document.addEventListener('pointerdown', function(ev){
   el.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
+/* ---------------- ẩn số tiền ----------------
+   Nút con mắt trên đầu trang. Riêng từng máy (localStorage, như chế độ tối), không vào data/Drive.
+   Che ở tầng HIỂN THỊ: quét chữ trên màn hình (anSoChuoi ở state.js) + MutationObserver che mọi thứ vẽ ra sau đó
+   (đổi tab, bảng trượt, toast, chú thích biểu đồ). Ô nhập tiền vẫn hiện số thật vì đang gõ. */
+var AN_SO_KEY = 'chitieu_an_so';
+var _anSo = false, _anSoObs = null;
+try { _anSo = localStorage.getItem(AN_SO_KEY) === '1'; } catch(e){}
+function anSoDangBat(){ return _anSo; }
+function anSoQuet(goc){
+  if (!_anSo || !goc || !document.createTreeWalker) return;
+  var w = document.createTreeWalker(goc, 4 /* NodeFilter.SHOW_TEXT */, null), n, ds = [];
+  while ((n = w.nextNode())) ds.push(n);
+  ds.forEach(function(t){
+    var p = t.parentNode;
+    if (!p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA') return;
+    var moi = anSoChuoi(t.nodeValue);
+    if (moi !== t.nodeValue) t.nodeValue = moi;
+  });
+}
+function apDungAnSo(){
+  var btn = document.getElementById('btnAnSo');
+  if (btn){
+    btn.innerHTML = icon(_anSo ? 'eye-off' : 'eye');
+    btn.setAttribute('aria-pressed', String(_anSo));
+    btn.setAttribute('aria-label', _anSo ? 'Đang ẩn số tiền — bấm để hiện' : 'Ẩn số tiền');
+    btn.title = btn.getAttribute('aria-label');
+  }
+  if (_anSo && !_anSoObs && window.MutationObserver && document.body){
+    _anSoObs = new MutationObserver(function(ms){
+      ms.forEach(function(m){
+        if (m.type === 'characterData'){ anSoQuet(m.target.parentNode); return; }
+        for (var i = 0; i < m.addedNodes.length; i++){
+          var x = m.addedNodes[i];
+          anSoQuet(x.nodeType === 3 ? x.parentNode : x);
+        }
+      });
+    });
+    _anSoObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+  if (!_anSo && _anSoObs){ _anSoObs.disconnect(); _anSoObs = null; }
+  if (_anSo) anSoQuet(document.body);
+}
+function doiAnSo(){
+  _anSo = !_anSo;
+  try { localStorage.setItem(AN_SO_KEY, _anSo ? '1' : '0'); } catch(e){}
+  apDungAnSo();
+  if (!_anSo && state.data) renderAll();      // hiện lại: vẽ lại để có số thật (chữ đã che không khôi phục được)
+}
+apDungAnSo();
+
 /* ---------------- chế độ tối ----------------
    Lưu ở localStorage (riêng từng máy, không đi vào data/Drive — đây là
    thiết lập của thiết bị, không phải dữ liệu chi tiêu). */

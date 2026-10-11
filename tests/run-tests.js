@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -3835,6 +3835,100 @@ test('form danh mục: công tắc "Khoản cố định" chỉ có ở danh m�
   ok(ctx.catSheetHtml({ loai: 'cat', kind: 'thu', id: 'luong' }).indexOf('dm_kcd') < 0, 'thu: không có');
   ctx.state.data.categories.chi.push({ id: 'traNo', ten: 'Trả nợ', chiTieu: 0 });
   ok(ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'traNo' }).indexOf('dm_kcd') < 0, 'hệ thống: không có');
+});
+
+/* ==================================================================== */
+group('Dòng tiền · Theo ngày (theongay.js) + ẩn số tiền');
+
+// Hôm nay 11/10/2026 (tháng 31 ngày). Chi hằng ngày: Ăn hạn mức 3,1tr. Cố định: Tiền nhà 3,5tr ngày 5 (đã trả 05/10),
+// Điện 500k ngày 20 (chưa trả), Gửi mẹ 2tr không có ngày. Lương 14tr ngày 1 (đã ghi 01/10).
+// Vay 6tr không lãi 6 kỳ, kỳ 1 = 10/10 (quá hạn), kỳ 2 = 10/11 (ngoài 30 ngày: 11/10 → 09/11).
+function tndData(soDuDauKy, over){
+  var j = {}, add = function(d, kind, cat, v){
+    j[d] = j[d] || { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] };
+    j[d][kind][cat] = (j[d][kind][cat] || 0) + v;
+    j[d].items.push({ iid: d + kind + cat + v, kind: kind, catId: cat, soTien: v, ghiChu: '', walletId: 'w_chinh' });
+  };
+  add('2026-10-01', 'thu', 'luong', 14000000);
+  add('2026-10-02', 'chi', 'an', 200000); add('2026-10-05', 'chi', 'an', 50000); add('2026-10-08', 'chi', 'an', 300000); add('2026-10-11', 'chi', 'an', 30000);
+  add('2026-10-05', 'chi', 'nha', 3500000);
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: soDuDauKy, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' };
+  d.categories = { thu: [{ id: 'luong', ten: 'Lương', chiTieu: 14000000, ngay: 1 }],
+    chi: [{ id: 'an', ten: 'Ăn', chiTieu: 3100000 }, { id: 'nha', ten: 'Tiền nhà', chiTieu: 3500000, ngay: 5 },
+          { id: 'dien', ten: 'Điện', chiTieu: 500000, ngay: 20 }, { id: 'me', ten: 'Gửi mẹ', chiTieu: 2000000, khoanCoDinh: true },
+          { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }] };
+  d.vayNo.vayNoPhaiTra = [{ id: 'v1', ten: 'Vay xe', loaiVay: 'ngan_hang', hinhThuc: 'khong_lai', soTienGoc: 6000000, soThangVay: 6,
+                            ngayVay: '2026-09-10', ngayTraHangThang: 10, walletId: 'w_chinh', traNo: [], trangThai: 'dang_vay' }];
+  if (over) over(d);
+  setToday('2026-10-11');
+  return loadData(d);
+}
+
+test('tnNgayThang: mức từng ngày, ngày vượt, chuỗi tới hôm qua, dư so với nhịp đều', function(){
+  tndData(5000000);
+  var t = ctx.tnNgayThang('2026-10-11');
+  eq(t.cap, 3100000, 'chỉ Ăn'); eq(t.den, 11); eq(t.soQua, 10);
+  near(t.ngay[0].muc, 100000, 0.01, 'ngày 1: 3,1tr / 31');
+  eq(t.ngay[1].ok, false, 'ngày 2 chi 200k > ~103k'); eq(t.ngay[7].ok, false, 'ngày 8 chi 300k > ~118k'); eq(t.ngay[4].ok, true);
+  eq(t.soOk, 8, '10 ngày đã qua, vượt 2'); eq(t.chuoi, 2, 'ngày 9, 10 trong mức; ngày 8 vượt');
+  near(t.deu, 3100000 * 10 / 31 - 550000, 0.5, 'dư 450.000 so với nhịp đều');
+  near(t.ngay[10].muc, ctx.tieuMoiNgay('2026-10-11').muc, 0.01, 'mức hôm nay khớp "Hôm nay còn tiêu được"');
+  tndData(5000000, function(d){ d.categories.chi[0].chiTieu = 0; });
+  eq(ctx.tnNgayThang('2026-10-11'), null, 'chưa có hạn mức hằng ngày');
+});
+test('tnLichTien: tiền vào / ra đúng ngày, số dư từng ngày, ngày thấp nhất', function(){
+  tndData(5000000);
+  var L = ctx.tnLichTien('2026-10-11');
+  eq(L.ngay.length, 30); eq(L.ngay[29].ngay, '2026-11-09');
+  eq(L.dau, 5000000 + 14000000 - 3500000 - 580000, 'tổng số dư hết hôm nay');
+  var ngay = function(n){ return L.ngay.filter(function(r){ return r.ngay === n; })[0]; };
+  var ten = function(arr){ return arr.map(function(e){ return e.ten + ' ' + e.soTien; }).sort().join(' | '); };
+  eq(ten(ngay('2026-10-11').ra), 'Gửi mẹ (chưa có ngày chi) 2000000 | Trả nợ: Vay xe · kỳ 1 (quá hạn) 1000000', 'hôm nay: kỳ quá hạn + khoản cố định chưa có ngày');
+  near(ngay('2026-10-11').chiNgay, (3100000 - 550000) / 21 - 30000, 0.01, 'hôm nay chỉ trừ phần còn tiêu được');
+  eq(ten(ngay('2026-10-20').ra), 'Điện 500000');
+  eq(ngay('2026-10-05'), undefined, 'ngày đã qua không có trong lịch');
+  eq(ten(ngay('2026-11-01').vao), 'Lương 14000000', 'lương tháng sau'); eq(ten(ngay('2026-11-01').ra), 'Gửi mẹ (chưa có ngày chi) 2000000');
+  eq(ten(ngay('2026-11-05').ra), 'Tiền nhà 3500000', 'tiền nhà tháng 10 đã trả, tháng 11 vào ngày 5');
+  near(ngay('2026-11-02').chiNgay, 3100000 / 30, 0.01, 'tháng sau: hạn mức ÷ 30');
+  ok(L.ngay.every(function(r){ return r.ra.every(function(e){ return e.ten.indexOf('Vay xe') < 0 || r.ngay === '2026-10-11'; }); }), 'kỳ 2 (10/11) ngoài 30 ngày');
+  eq(L.thap.ngay, '2026-10-31', 'thấp nhất trước ngày lương'); near(L.thap.cuoi, 8900000, 1);
+  near(L.ngay[29].cuoi, 16470000, 1, 'cuối kỳ');
+  eq(L.am, null);
+});
+test('tnLichTien: báo ngày bắt đầu âm; lương quá ngày chưa ghi thì KHÔNG giả định là có (ghi chú lại)', function(){
+  tndData(-6000000);
+  var L = ctx.tnLichTien('2026-10-11');
+  eq(L.am.ngay, '2026-10-18', 'ngày đầu tiên âm');
+  var h = ctx.tnLichTienHtml(L);
+  ok(h.indexOf('Có thể thiếu tiền từ 18/10') > 0, 'cảnh báo thiếu tiền');
+  tndData(5000000, function(d){ delete d.journal['2026-10-01']; });
+  L = ctx.tnLichTien('2026-10-11');
+  ok(L.ghiChu.join().indexOf('Lương (ngày 01/10) chưa ghi') >= 0, 'ghi chú lương chưa ghi');
+  ok(L.ngay.every(function(r){ return r.ngay === '2026-11-01' || r.vao.length === 0; }), 'không cộng lương tháng 10 vào ngày nào');
+});
+test('Dòng tiền có 3 chế độ: Theo ngày | Theo tháng | Mô phỏng; Theo ngày vẽ đủ 3 thẻ; Sổ tay có link sang', function(){
+  tndData(5000000);
+  ctx.state.dtMoPhong = false; ctx.state.dtTheoNgay = true;
+  var c = ctx.dtCheDoHtml();
+  ok(c.indexOf('data-v="ngay" class="on"') > 0 && c.indexOf('Theo tháng') > 0 && c.indexOf('Mô phỏng') > 0, c);
+  var root = { innerHTML: '' };
+  voiDom({ tabContent: root }, null, function(){ ctx.renderTheoNgay(); });
+  ok(root.innerHTML.indexOf('id="tnHomNay"') > 0 && root.innerHTML.indexOf('id="tnTungNgay"') > 0 && root.innerHTML.indexOf('id="tnLichTien"') > 0, 'đủ 3 thẻ');
+  ok(root.innerHTML.indexOf('2 ngày') > 0 && root.innerHTML.indexOf('8/10 ngày trong mức') > 0, 'chuỗi + số ngày trong mức');
+  ok(root.innerHTML.indexOf('Thấp nhất') > 0 && root.innerHTML.indexOf('Thứ Bảy 31/10') > 0, 'ngày thấp nhất');
+  ctx.state.dtTheoNgay = false;
+  ok(ctx.dtCheDoHtml().indexOf('data-v="tt" class="on"') > 0, 'mặc định Theo tháng');
+  ok(ctx.tieuMoiNgayHtml('2026-10-11').indexOf('data-act="goTheoNgay"') > 0, 'Sổ tay: Xem theo ngày');
+  setToday('2026-10-01');
+});
+test('ẩn số tiền: che số tiền, giữ ngày / % / số ngày; fmt() KHÔNG đổi (ghi chú lưu vào dữ liệu vẫn có số thật)', function(){
+  var a = ctx.anSoChuoi;
+  eq(a('Còn 1.234.000 ₫'), 'Còn ••••• ₫'); eq(a('−3.500.000 ₫'), '••••• ₫'); eq(a('0 ₫'), '••••• ₫');
+  eq(a('còn 125.000'), 'còn •••••'); eq(a('trục 350k · 1,2tr · 2 tỷ'), 'trục ••••• · ••••• · •••••');
+  eq(a('Tháng 10/2026 · 29% · còn 21 ngày · 14:08 · Kỳ 3'), 'Tháng 10/2026 · 29% · còn 21 ngày · 14:08 · Kỳ 3');
+  eq(a('Tiền nhà · 2 khoản'), 'Tiền nhà · 2 khoản');
+  eq(ctx.fmt(1234000), '1.234.000 ₫', 'fmt giữ nguyên');
 });
 
 /* ==================================================================== */

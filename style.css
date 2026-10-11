@@ -51,9 +51,9 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
 button{cursor:pointer;font-family:inherit}
-#btnRefresh,#btnTheme,#btnPhimTat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
-#btnRefresh:hover,#btnTheme:hover,#btnPhimTat:hover{background:var(--hover)}
-#btnTheme,#btnPhimTat{padding:6px 10px;font-size:15px;line-height:1}
+#btnRefresh,#btnTheme,#btnAnSo,#btnPhimTat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
+#btnRefresh:hover,#btnTheme:hover,#btnAnSo:hover,#btnPhimTat:hover{background:var(--hover)}
+#btnTheme,#btnAnSo,#btnPhimTat{padding:6px 10px;font-size:15px;line-height:1}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);position:sticky;top:var(--header-h,52px);background:var(--bg);z-index:19}
 .tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tab.active{color:var(--primary-d);border-bottom-color:var(--primary)}
@@ -438,7 +438,7 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .tab-ico .ic{width:22px;height:22px}
 .icon-btn .ic{width:18px;height:18px;vertical-align:middle}
 .btn .ic,.hero-chip .ic{width:1.05em;height:1.05em;margin-right:3px}
-#btnTheme .ic,#btnRefresh .ic{width:18px;height:18px;vertical-align:middle}
+#btnTheme .ic,#btnAnSo .ic,#btnRefresh .ic{width:18px;height:18px;vertical-align:middle}
 .toast-ico .ic{width:16px;height:16px;vertical-align:-3px}
 .toast-x .ic{width:14px;height:14px;vertical-align:middle}
 .ios-hint-x .ic{width:16px;height:16px;vertical-align:middle}
@@ -1454,3 +1454,41 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .ds-dc{width:100%;margin-top:10px}
 .ds-ls{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:13.5px;border-top:1px solid var(--border)}
 .dm-row .btn.sm{flex:0 0 auto}
+
+/* ---- Dòng tiền · Theo ngày (theongay.js), tiền tố tn- ---- */
+.hero-link{display:inline-flex;align-items:center;gap:2px;margin-top:6px;padding:0;border:none;background:none;font-size:12.5px;font-weight:600;color:var(--primary)}
+.hero-link .ic.r{width:14px;height:14px;transform:rotate(-90deg)}
+.tn-hero .bc-v.am{color:var(--red)}
+.dt-mode button{white-space:nowrap;padding-left:6px;padding-right:6px}
+.tn-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.tn-stats>div{background:var(--hover);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0}
+.tn-stats small{font-size:11.5px;color:var(--muted);font-weight:600}
+.tn-stats b{font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-stats b.thu{color:var(--green)} .tn-stats b.chi{color:var(--red)}
+.tn-stats span{font-size:11px;color:var(--muted)}
+.tn-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.tn-wd{font-size:11px;color:var(--muted);text-align:center;font-weight:600}
+.tn-d{aspect-ratio:1;border-radius:9px;border:1px solid transparent;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0;color:var(--text);background:var(--hover)}
+.tn-d.ok{background:var(--thu-bg);color:var(--green)}
+.tn-d.vuot{background:var(--chi-bg);color:var(--red)}
+.tn-d.nay{background:var(--card);border-color:var(--primary);color:var(--primary)}
+.tn-d.sau{background:none;border:1px dashed var(--border);color:var(--muted);font-weight:500}
+.tn-d.sel{box-shadow:0 0 0 2px var(--text)}
+.tn-ct{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--hover);font-size:12.5px}
+.tn-ct b.thu{color:var(--green)} .tn-ct b.chi{color:var(--red)}
+.tn-leg{display:flex;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted)}
+.tn-leg span{display:inline-flex;align-items:center;gap:5px}
+.tn-leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.tn-leg i.ok{background:var(--thu-bg);border:1px solid var(--green)} .tn-leg i.vuot{background:var(--chi-bg);border:1px solid var(--red)} .tn-leg i.nay{border:1px solid var(--primary)}
+.tn-thap{font-size:13.5px}
+.tn-thap b{font-variant-numeric:tabular-nums} .tn-thap b.chi{color:var(--red)}
+.tn-canh{display:flex;align-items:center;gap:6px;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--chi-bg);color:var(--red);font-size:12.5px;font-weight:600}
+.tn-canh .ic{width:16px;height:16px;flex:0 0 16px}
+.tn-evs{display:grid;margin-top:12px}
+.tn-ev{padding:10px 0;border-top:1px solid var(--border)}
+.tn-ev:first-child{border-top:none}
+.tn-ev-h{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:4px}
+.tn-ev-h span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap} .tn-ev-h span.chi{color:var(--red)}
+.tn-ev-r{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:2px 0}
+.tn-ev-r span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.tn-ev-r b{font-variant-numeric:tabular-nums;white-space:nowrap} .tn-ev-r b.thu{color:var(--green)} .tn-ev-r b.chi{color:var(--red)}
