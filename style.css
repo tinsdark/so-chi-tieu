@@ -1523,3 +1523,16 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .gt-vd-h{font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:6px}
 
 .dt-tag.vay{background:var(--warn-bg);color:var(--warn-tx)}
+
+/* ---- tổng kết quả tìm / lọc ở Chi tiết theo ngày (locTongKetHtml) ---- */
+.loc-tong{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--hover);font-size:13px}
+.loc-tong b.chi{color:var(--red)} .loc-tong b.thu{color:var(--green)}
+.loc-tong-2{margin-top:3px;font-size:12px;color:var(--muted)}
+.loc-tong .giai-thich{margin:6px 0 0}
+
+/* ---- Theo ngày: bộ chọn ví + cảnh báo ví thiếu tiền (theongay.js) ---- */
+.tn-vi{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.tn-vi-b{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:99px;padding:6px 12px;font-size:12.5px;font-weight:600;min-height:34px}
+.tn-vi-b.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.tn-canh>span{min-width:0}
+.tn-chuyen{margin-top:8px}

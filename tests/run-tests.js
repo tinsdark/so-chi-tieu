@@ -4204,6 +4204,99 @@ test('Sổ tay: tiêu đề khoản do Vay - Nợ sinh ra không lặp nhãn ("T
 });
 
 /* ==================================================================== */
+group('Lịch tiền theo từng ví (ví thiếu tiền) + tổng kết quả tìm kiếm');
+
+// Hôm nay 11/10/2026. Techcombank (w1) 2tr, Tiền mặt (w2) 10tr -> TỔNG 12tr, đủ. Trả nợ 3tr/kỳ từ Techcombank, kỳ 1 = 28/10.
+// Thẻ (wt) nợ 1tr, sao kê 25, hạn 15 -> 15/10 phải trả 1tr. Chuyển ví đã ghi trước: 20/10 Tiền mặt -> Techcombank 1,5tr.
+// Chi hằng ngày tháng này đều bằng Tiền mặt (ví w2).
+function pwData(over){
+  var j = {};
+  j['2026-10-05'] = { thu: {}, chi: { an: 100000 }, ghiChu: '', refs: [], items: [{ iid: 'x1', kind: 'chi', catId: 'an', soTien: 100000, ghiChu: 'Ăn', walletId: 'w2' }] };
+  j['2026-09-20'] = { thu: {}, chi: { an: 1000000 }, ghiChu: '', refs: [], items: [{ iid: 'x2', kind: 'chi', catId: 'an', soTien: 1000000, ghiChu: 'Quẹt thẻ', walletId: 'wt' }] };
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: 12000000, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' };
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 0 }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }];
+  d.wallets = [{ id: 'w1', ten: 'Techcombank', soDuDauKy: 2000000 }, { id: 'w2', ten: 'Tiền mặt', soDuDauKy: 10000000 },
+               { id: 'wt', ten: 'Thẻ VPBank', soDuDauKy: 0, the: true, hanMucThe: 20000000, ngaySaoKe: 25, ngayTraThe: 15 }];
+  d.chuyenVi = [{ id: 'ct1', ngay: '2026-10-20', tuVi: 'w2', denVi: 'w1', soTien: 1500000, ghiChu: '' }];
+  d.vayNo.vayNoPhaiTra = [{ id: 'v1', ten: 'Vay A', loaiVay: 'ngan_hang', hinhThuc: 'khong_lai', soTienGoc: 12000000, soThangVay: 4,
+                            ngayVay: '2026-09-20', ngayTraHangThang: 28, walletId: 'w1', traNo: [], trangThai: 'dang_vay' }];
+  d.settings.viMacDinh = 'w1';
+  if (over) over(d);
+  setToday('2026-10-11');
+  return loadData(d);
+}
+test('tnLichTien theo ví: Techcombank thiếu tiền ngày trả nợ dù TỔNG các ví vẫn đủ; số liệu từng ví', function(){
+  pwData();
+  var T = ctx.tnLichTien('2026-10-11', 30), W1 = ctx.tnLichTien('2026-10-11', 30, 'w1'), W2 = ctx.tnLichTien('2026-10-11', 30, 'w2');
+  eq(T.am, null, 'tổng 12tr đủ trả nợ'); eq(T.viId, '');
+  eq(W1.dau, 2000000, 'Techcombank hôm nay 2tr'); eq(W1.am.ngay, '2026-10-28', 'âm đúng ngày trả kỳ 1');
+  eq(W1.thap.cuoi, 2000000 - 1000000 + 1500000 - 3000000, 'trừ thẻ 15/10, cộng chuyển 20/10, trừ nợ 28/10 = −500.000');
+  var ngay = function(L, n){ return L.ngay.filter(function(r){ return r.ngay === n; })[0]; };
+  eq(ngay(W1, '2026-10-15').ra[0].ten, 'Thanh toán thẻ Thẻ VPBank (giả định trả từ ví này)'); eq(ngay(W1, '2026-10-15').ra[0].soTien, 1000000);
+  eq(ngay(W1, '2026-10-20').vao[0].ten, 'Nhận từ Tiền mặt'); eq(ngay(W1, '2026-10-28').ra[0].ten, 'Trả nợ: Vay A · kỳ 1');
+  eq(W1.ngay.every(function(r){ return r.chiNgay === 0; }), true, 'chi hằng ngày đều bằng Tiền mặt nên Techcombank không bị trừ');
+  eq(W2.dau, 10000000 - 100000, 'Tiền mặt 10tr trừ 100k đã chi 05/10'); eq(W2.am, null); eq(ngay(W2, '2026-10-20').ra[0].ten, 'Chuyển sang Techcombank');
+  ok(W2.ngay.some(function(r){ return r.chiNgay > 0; }), 'Tiền mặt gánh chi hằng ngày');
+  ok(W2.ngay.every(function(r){ return r.ra.every(function(e){ return e.ten.indexOf('Trả nợ') < 0 && e.ten.indexOf('Thanh toán thẻ') < 0; }); }), 'khoản của ví khác không lẫn sang');
+  eq(ctx.tnLichTien('2026-10-11', 30).thap.cuoi, T.thap.cuoi, 'chế độ Tổng không đổi');
+});
+test('tnTiLeViHangNgay: chia theo ví đã dùng trong 30 ngày qua; chưa có dữ liệu thì ví mặc định; chi trên thẻ chiếm phần của thẻ', function(){
+  pwData();
+  var t = ctx.tnTiLeViHangNgay('2026-10-11');
+  near(t.w2, 100000 / 1100000, 1e-6, 'tiền mặt 100k'); near(t.wt, 1000000 / 1100000, 1e-6, 'thẻ 1tr (quẹt 20/9, trong 30 ngày)');
+  pwData(function(d){ d.journal = {}; });
+  var r = ctx.tnTiLeViHangNgay('2026-10-11'); eq(r.w1, 1, 'ví mặc định');
+});
+test('tnViSapThieu + chip Sổ tay + giao diện: cảnh báo ví thiếu, nút Chuyển điền sẵn số; chỉ ví thường, cần từ 2 ví', function(){
+  pwData();
+  var ds = ctx.tnViSapThieu('2026-10-11', 30);
+  eq(ds.length, 1); eq(ds[0].w.id, 'w1');
+  var h = ctx.tongQuanHtml('2026-10', 0, 0, 0, 12000000, false);
+  ok(h.indexOf('data-act="goViThieu" data-id="w1"') > 0 && h.indexOf('Ví Techcombank có thể thiếu tiền từ 28/10') > 0, 'chip ở Sổ tay');
+  var L = ctx.tnLichTien('2026-10-11', 30, 'w1'), ui = ctx.tnLichTienHtml(L);
+  ok(ui.indexOf('Techcombank · 30 ngày tới') > 0 && ui.indexOf('data-act="tnVi"') > 0, 'tiêu đề + bộ chọn ví');
+  ok(ui.indexOf('Ví Techcombank có thể thiếu tiền từ <b>28/10</b> khi Trả nợ: Vay A · kỳ 1 3.000.000') > 0, 'nói rõ khoản nào làm ví âm');
+  ok(ui.indexOf('cần chuyển vào ví này ít nhất 500.000 ₫ trước 28/10') > 0 && ui.indexOf('data-act="tnChuyenVi" data-id="w1" data-tien="500000"') > 0, 'nút chuyển điền sẵn 500.000');
+  ok(ui.indexOf('Thẻ VPBank') < 0 || ui.indexOf('data-id="wt"') < 0, 'bộ chọn không có ví thẻ');
+  ok(ctx.tnLichTienHtml(ctx.tnLichTien('2026-10-11', 30)).indexOf('data-act="tnVi" data-id="" aria-pressed="true"') > 0, 'chế độ Tổng: nút Tổng đang chọn');
+  eq(kiemPhepCong(ui).loi.join(' | '), '');
+  pwData(function(d){ d.wallets = [d.wallets[0]]; });
+  eq(ctx.tnViSapThieu('2026-10-11', 30).length, 0, 'chỉ 1 ví: không có cảnh báo theo ví');
+  pwData(function(d){ d.vayNo.vayNoPhaiTra = []; });
+  eq(ctx.tnViSapThieu('2026-10-11', 30).length, 0, 'không có khoản trả lớn: các ví đều đủ');
+  setToday('2026-10-01');
+});
+test('form Chuyển ví ở Sổ tay điền sẵn ví nhận và số cần chuyển khi đi từ cảnh báo', function(){
+  pwData(); ctx.state.viFormOpen = true; ctx.state.viChuyenGoiY = { den: 'w1', tien: 500000 };
+  var h = ctx.viSoDuCardHtml('2026-10');
+  ok(/id="vi_den">[\s\S]*value="w1" selected/.test(h) && /id="vi_tien" placeholder="0" value="500\.?000"/.test(h), 'ví nhận = Techcombank, số = 500.000');
+  ok(/id="vi_tu">[\s\S]*value="w2" selected/.test(h), 'ví đi là ví khác (Tiền mặt)');
+  ctx.state.viChuyenGoiY = null; ctx.state.viFormOpen = false; setToday('2026-10-01');
+});
+test('locTongKet: cộng đúng các DÒNG khớp từ khóa / danh mục (không phải cả ngày), so với tháng trước', function(){
+  var j = {}, it = function(id, kind, cat, v, ghi){ return { iid: id, kind: kind, catId: cat, soTien: v, ghiChu: ghi, walletId: 'w_chinh' }; };
+  j['2026-10-02'] = { thu: {}, chi: { an: 60000 }, ghiChu: '', refs: [], items: [it('a', 'chi', 'an', 60000, 'Coffee')] };
+  j['2026-10-05'] = { thu: {}, chi: { an: 30000 }, ghiChu: '', refs: [], items: [it('b', 'chi', 'an', 15000, 'Coffee'), it('c', 'chi', 'an', 15000, 'Ăn trưa')] };
+  j['2026-09-10'] = { thu: {}, chi: { an: 50000 }, ghiChu: '', refs: [], items: [it('d', 'chi', 'an', 50000, 'coffee sữa')] };
+  var d = baseData({ journal: j }); d.settings = { soDuDauKy: 0, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' };
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 0 }];
+  setToday('2026-10-11'); loadData(d);
+  var oct = ['2026-10-02', '2026-10-05'];
+  var r = ctx.locTongKet(oct, 'coffee', ['']);
+  eq(r.n, 2); eq(r.chi, 75000, 'chỉ 2 dòng Coffee, không cộng "Ăn trưa" cùng ngày 05/10'); eq(r.ngay, 2);
+  eq(ctx.locTongKet(oct, '', ['chi', 'an']).chi, 90000, 'lọc danh mục: cả 3 dòng'); eq(ctx.locTongKet(oct, 'trưa', ['']).chi, 15000);
+  ctx.state.soTaySearch = 'coffee'; ctx.state.soTayCat = '';
+  var h = ctx.locTongKetHtml(oct, false, '2026-10');
+  ok(h.indexOf('2 khoản</b> trong 2 ngày') > 0 && h.indexOf('75.000') > 0 && h.indexOf('TB 37.500') > 0, 'dòng tổng');
+  ok(h.indexOf('Tháng 9: 1 khoản · 50.000 ₫ (+50%)') > 0, 'so tháng trước: 75.000 so với 50.000');
+  ok(h.indexOf('75.000 ÷ 2 khoản = 37.500/khoản') > 0, 'giải thích có phép tính');
+  ok(ctx.locTongKetHtml(oct, true, '2026-10').indexOf('Tháng 9') < 0, 'khoảng ngày tùy chọn: không so tháng trước');
+  ctx.state.soTaySearch = ''; ctx.state.soTayCat = ''; eq(ctx.locTongKetHtml(oct, false, '2026-10'), '', 'không lọc thì không có dòng tổng');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

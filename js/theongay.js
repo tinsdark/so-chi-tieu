@@ -58,16 +58,22 @@ function tnNgayThang(homNay){
    − chi hằng ngày: hôm nay = phần còn tiêu được; ngày sau = mức/ngày; tháng sau = hạn mức ÷ số ngày tháng đó.
      Chưa có hạn mức thì dùng nhịp chi hằng ngày thực tế của tháng này.
    Thanh toán thẻ là chuyển ví nên không đổi tổng, không có ở đây. */
-function tnLichTien(homNay, soNgay){
-  homNay = homNay || todayStr(); soNgay = soNgay || TN_SO_NGAY;
+/* viId (tùy chọn): '' = TỔNG các ví (mặc định). Có viId = lịch tiền của RIÊNG ví đó: mỗi khoản thu / chi đi theo ví của nó (khoản vay, định kỳ, dòng
+   đã ghi trước; khoản không có ví thì tính vào ví mặc định), chuyển ví đã ghi trước tính hai đầu, thanh toán thẻ tính vào ví mặc định (không
+   phải thẻ) vì chưa biết sẽ trả từ ví nào, và chi hằng ngày chia theo TỈ LỆ ví đó trong chi hằng ngày 30 ngày qua (tnTiLeViHangNgay).
+   Mục đích: biết ví nào sẽ THIẾU TIỀN trước ngày trả nợ dù tổng các ví vẫn đủ. */
+function tnLichTien(homNay, soNgay, viId){
+  homNay = homNay || todayStr(); soNgay = soNgay || TN_SO_NGAY; viId = viId || '';
   var cuoi = tnNgayCong(homNay, soNgay - 1), ds = {}, ngayList = [], thangs = [], ghiChu = [], d = state.data;
+  var macDinh = viMacDinhId(), tiLe = viId ? tnTiLeViHangNgay(homNay) : null;
   for (var i = 0; i < soNgay; i++){
     var n = tnNgayCong(homNay, i);
     ngayList.push(n); ds[n] = { vao: [], ra: [] };
     if (thangs.indexOf(monthKey(n)) < 0) thangs.push(monthKey(n));
   }
-  var them = function(ngay, loai, ten, soTien){
+  var them = function(ngay, loai, ten, soTien, vi){
     if (!(soTien > 0.5)) return;
+    if (viId && (vi || macDinh) !== viId) return;           // chế độ 1 ví: chỉ giữ khoản của ví đó
     if (ngay < homNay) ngay = homNay;
     if (ngay > cuoi) return;
     ds[ngay][loai].push({ ten: ten, soTien: soTien });
@@ -76,16 +82,41 @@ function tnLichTien(homNay, soNgay){
   ngayList.forEach(function(n){
     var e = d.journal[n];
     if (n === homNay || !e) return;
-    them(n, 'vao', 'Khoản thu đã ghi trước', thuTotal(e));
-    them(n, 'ra', 'Khoản chi đã ghi trước', chiTotal(e));
+    if (!viId){
+      them(n, 'vao', 'Khoản thu đã ghi trước', thuTotal(e));
+      them(n, 'ra', 'Khoản chi đã ghi trước', chiTotal(e));
+      return;
+    }
+    entryItems(e).forEach(function(it){
+      them(n, it.kind === 'thu' ? 'vao' : 'ra', 'Đã ghi trước: ' + (it.ghiChu || catTen(it.kind, it.catId)), num(it.soTien), viCuaItem(it));
+    });
+    (e.refs || []).forEach(function(rf){
+      var m = REF_MAP[rf.loai];
+      if (m) them(n, m.kind === 'thu' ? 'vao' : 'ra', 'Đã ghi trước: ' + (REF_LABEL[rf.loai] || rf.loai) + (rf.note ? ' — ' + rf.note : ''), num(rf.soTien), viCuaRef(rf));
+    });
   });
+  if (viId){
+    // chuyển ví đã ghi trước cho ngày sau hôm nay: ra khỏi ví đi, vào ví đến (tổng các ví không đổi nên chế độ Tổng bỏ qua)
+    (d.chuyenVi || []).forEach(function(t){
+      if (t.ngay <= homNay) return;
+      if (t.tuVi === viId) them(t.ngay, 'ra', 'Chuyển sang ' + viTen(t.denVi) + (t.ghiChu ? ' — ' + t.ghiChu : ''), num(t.soTien), viId);
+      if (t.denVi === viId) them(t.ngay, 'vao', 'Nhận từ ' + viTen(t.tuVi) + (t.ghiChu ? ' — ' + t.ghiChu : ''), num(t.soTien), viId);
+    });
+    // thanh toán thẻ tín dụng đến hạn: chưa biết trả từ ví nào -> giả định ví mặc định (nếu không phải thẻ, không thì ví thường đầu tiên)
+    var nguon = (walletById(macDinh) && !viLaThe(walletById(macDinh))) ? macDinh : ((d.wallets || []).filter(function(w){ return !viLaThe(w); })[0] || {}).id;
+    if (nguon === viId) (d.wallets || []).forEach(function(w){
+      if (!viLaThe(w)) return;
+      var tt = theTinh(w, homNay);
+      if (tt.conPhaiTra > 0) them(tt.han, 'ra', 'Thanh toán thẻ ' + w.ten + ' (giả định trả từ ví này)', tt.conPhaiTra, viId);
+    });
+  }
   // trả nợ theo lịch
   (d.vayNo.vayNoPhaiTra || []).forEach(function(loan){
     if (!loanIsActive(loan) || loan.tatToan) return;
     var sch = tinhLichTraNo(loan);
     sch.forEach(function(row, k){
       if (kyDaDong(loan, k)) return;
-      them(row.ngayTra, 'ra', 'Trả nợ: ' + loan.ten + ' · kỳ ' + (k + 1) + (row.ngayTra < homNay ? ' (quá hạn)' : ''), conThieuKy(loan, k, sch));
+      them(row.ngayTra, 'ra', 'Trả nợ: ' + loan.ten + ' · kỳ ' + (k + 1) + (row.ngayTra < homNay ? ' (quá hạn)' : ''), conThieuKy(loan, k, sch), loan.walletId);
     });
   });
   // thu hồi cho vay đúng hẹn
@@ -94,7 +125,7 @@ function tnLichTien(homNay, soNgay){
     var cl = conLaiPhaiThu(c);
     if (cl <= 0) return;
     if (c.ngayDuKienThu < homNay){ ghiChu.push('Chưa tính khoản cho vay quá hẹn: ' + c.ten + ' ' + fmt(Math.round(cl)) + '.'); return; }
-    them(c.ngayDuKienThu, 'vao', 'Thu nợ: ' + c.ten, cl);
+    them(c.ngayDuKienThu, 'vao', 'Thu nợ: ' + c.ten, cl, c.walletId);
   });
   var dkCua = function(kind, catId){
     return (d.dinhKy || []).filter(function(k){ return k.bat && k.kind === kind && k.catId === catId && num(k.soTien) > 0; });
@@ -109,13 +140,13 @@ function tnLichTien(homNay, soNgay){
         if (da >= tongDk) return;                       // tháng này đã chi đủ (kể cả ghi tay không qua nút định kỳ)
         dks.forEach(function(k){
           if ((k.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(k, mk)) return;
-          them(ngayTraCuaKy(mk, k.ngay), 'ra', k.ten || c.ten, num(k.soTien));
+          them(ngayTraCuaKy(mk, k.ngay), 'ra', k.ten || c.ten, num(k.soTien), k.walletId);
         });
         return;
       }
       var con = num(c.chiTieu) - da, nh = catNgayHan(c);
       if (con <= 0) return;
-      them(nh ? ngayTraCuaKy(mk, nh) : (mk === monthKey(homNay) ? homNay : mk + '-01'), 'ra', c.ten + (nh ? '' : ' (chưa có ngày chi)'), con);
+      them(nh ? ngayTraCuaKy(mk, nh) : (mk === monthKey(homNay) ? homNay : mk + '-01'), 'ra', c.ten + (nh ? '' : ' (chưa có ngày chi)'), con);   // không có ví riêng -> ví mặc định
     });
     // khoản thu có ngày
     (d.categories.thu || []).forEach(function(c){
@@ -124,7 +155,7 @@ function tnLichTien(homNay, soNgay){
       if (dks.length){
         dks.forEach(function(k){
           if ((k.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(k, mk)) return;
-          ds2.push({ ngay: ngayTraCuaKy(mk, k.ngay), ten: k.ten || c.ten, soTien: num(k.soTien) });
+          ds2.push({ ngay: ngayTraCuaKy(mk, k.ngay), ten: k.ten || c.ten, soTien: num(k.soTien), vi: k.walletId });
         });
       } else {
         var nh = catNgayHan(c), con = num(c.chiTieu) - actualCatInMonth('thu', c.id, mk);
@@ -132,7 +163,7 @@ function tnLichTien(homNay, soNgay){
       }
       ds2.forEach(function(x){
         if (x.ngay < homNay){ ghiChu.push(x.ten + ' (ngày ' + ngayNganVN(x.ngay) + ') chưa ghi nên chưa tính.'); return; }
-        them(x.ngay, 'vao', x.ten, x.soTien);
+        them(x.ngay, 'vao', x.ten, x.soTien, x.vi);
       });
     });
   });
@@ -145,11 +176,14 @@ function tnLichTien(homNay, soNgay){
     conHomNay = Math.max(0, nhip - cur.chiHN[cur.chiHN.length - 1]);
   }
   var chiNgay = function(n){
-    if (n === homNay) return conHomNay;
-    if (!tm) return nhip;
-    return monthKey(n) === monthKey(homNay) ? tm.muc : hn.cap / daysInMonth(monthKey(n));
+    var v = n === homNay ? conHomNay : (!tm ? nhip : (monthKey(n) === monthKey(homNay) ? tm.muc : hn.cap / daysInMonth(monthKey(n))));
+    return viId ? v * (tiLe[viId] || 0) : v;               // chế độ 1 ví: chỉ phần chi hằng ngày của ví đó
   };
-  var dau = balanceAt(homNay), bal = dau, out = [], thap = null, am = null;
+  if (viId){
+    var tl = Object.keys(tiLe).filter(function(k){ return tiLe[k] > 0.005; }).map(function(k){ return viTen(k) + ' ' + Math.round(tiLe[k] * 100) + '%'; });
+    ghiChu.push('Chi hằng ngày chia theo tỉ lệ dùng 30 ngày qua: ' + (tl.length ? tl.join(' · ') : 'chưa có dữ liệu → tính vào ví mặc định') + '.');
+  }
+  var dau = viId ? soDuTheoVi(viId, homNay) : balanceAt(homNay), bal = dau, out = [], thap = null, am = null;
   ngayList.forEach(function(n){
     var x = ds[n], vao = 0, ra = 0, c = chiNgay(n);
     x.vao.forEach(function(e){ vao += e.soTien; }); x.ra.forEach(function(e){ ra += e.soTien; });
@@ -159,7 +193,35 @@ function tnLichTien(homNay, soNgay){
     if (!thap || bal < thap.cuoi) thap = r;
     if (!am && bal < -0.5) am = r;
   });
-  return { dau: dau, ngay: out, thap: thap, am: am, ghiChu: ghiChu, theoNhip: !tm, mucNgay: tm ? tm.muc : nhip };
+  return { dau: dau, ngay: out, thap: thap, am: am, ghiChu: ghiChu, theoNhip: !tm, mucNgay: tm ? tm.muc : nhip, viId: viId, tiLe: tiLe };
+}
+// tỉ lệ từng ví trong CHI HẰNG NGÀY của 30 ngày trước hôm nay: { walletId: 0..1 } (cộng lại = 1); chưa có chi nào -> toàn bộ vào ví mặc định.
+// Đây là ước lượng: không biết ngày mai mày sẽ tiêu bằng ví nào.
+function tnTiLeViHangNgay(homNay){
+  var tu = tnNgayCong(homNay, -30), m = {}, tong = 0;
+  Object.keys(state.data.journal).forEach(function(n){
+    if (n < tu || n >= homNay) return;
+    entryItems(state.data.journal[n]).forEach(function(it){
+      if (it.kind !== 'chi' || !catChiHangNgay(it.catId)) return;
+      var w = viCuaItem(it), v = num(it.soTien);
+      m[w] = (m[w] || 0) + v; tong += v;
+    });
+  });
+  var r = {};
+  if (!(tong > 0)){ r[viMacDinhId()] = 1; return r; }
+  Object.keys(m).forEach(function(k){ r[k] = m[k] / tong; });
+  return r;
+}
+// các ví (không phải thẻ) có thể THIẾU TIỀN trong N ngày tới: [{ w, L }], L = lịch tiền riêng của ví (L.am = ngày đầu tiên âm). Cần từ 2 ví trở lên.
+function tnViSapThieu(homNay, soNgay){
+  var ws = (state.data.wallets || []).filter(function(w){ return !viLaThe(w); });
+  if ((state.data.wallets || []).length < 2) return [];
+  var out = [];
+  ws.forEach(function(w){
+    var L = tnLichTien(homNay, soNgay, w.id);
+    if (L.am) out.push({ w: w, L: L });
+  });
+  return out;
 }
 
 /* ---- giao diện ---- */
@@ -223,10 +285,27 @@ function tnLichThangHtml(t){
       pt: '(' + soGt(t.cap) + ' − ' + soGt(s.da) + ') ÷ ' + (t.soNgay - sel + 1) + ' = ' + soGt(s.muc) + '; chi ' + soGt(s.chi) + (s.chi <= s.muc + 0.5 ? ' ≤ mức → trong mức' : ' > mức → vượt ' + soGt(s.chi - s.muc)) }], 'Cách tính ngày này');
   return h + '</div>';
 }
+// bộ chọn Tổng / từng ví (không gồm thẻ tín dụng): chỉ hiện khi có từ 2 ví
+function tnViChonHtml(viId){
+  var ws = (state.data.wallets || []).filter(function(w){ return !viLaThe(w); });
+  if ((state.data.wallets || []).length < 2 || !ws.length) return '';
+  var nut = function(id, ten){ return '<button type="button" class="tn-vi-b'+(id === viId ? ' on' : '')+'" data-act="tnVi" data-id="'+esc(id)+'" aria-pressed="'+(id === viId)+'">'+esc(ten)+'</button>'; };
+  return '<div class="tn-vi" role="group" aria-label="Xem theo ví">' + nut('', 'Tổng') + ws.map(function(w){ return nut(w.id, w.ten); }).join('') + '</div>';
+}
 function tnLichTienHtml(L){
-  var h = '<div class="card bc-card" id="tnLichTien"><h3 class="bc-h"><span>Tiền '+TN_SO_NGAY+' ngày tới</span><span class="bc-h-s">hôm nay '+fmt(Math.round(L.dau))+'</span></h3>';
+  var h = '<div class="card bc-card" id="tnLichTien"><h3 class="bc-h"><span>'+(L.viId ? esc(viTen(L.viId))+' · ' : 'Tiền ')+TN_SO_NGAY+' ngày tới</span><span class="bc-h-s">hôm nay '+fmt(Math.round(L.dau))+'</span></h3>';
+  h += tnViChonHtml(L.viId);
   h += '<div class="tn-thap">Thấp nhất <b class="'+(L.thap.cuoi < 0 ? 'chi' : '')+'">'+fmt(Math.round(L.thap.cuoi))+'</b> vào <b>'+tnThu(L.thap.ngay)+' '+ngayNganVN(L.thap.ngay)+'</b></div>';
-  if (L.am) h += '<div class="tn-canh">'+icon('alert')+' Có thể thiếu tiền từ '+ngayNganVN(L.am.ngay)+' (âm '+fmt(Math.round(-L.am.cuoi))+')</div>';
+  if (L.am && L.viId){
+    // 1 ví thiếu tiền: nói rõ khoản nào làm ví âm và cần chuyển vào bao nhiêu trước ngày nào
+    var can = Math.max(0, -L.thap.cuoi), kh = L.am.ra.slice().sort(function(a, b){ return b.soTien - a.soTien; })[0];
+    h += '<div class="tn-canh">'+icon('alert')+'<span>Ví '+esc(viTen(L.viId))+' có thể thiếu tiền từ <b>'+ngayNganVN(L.am.ngay)+'</b>'
+      + (kh ? ' khi ' + esc(kh.ten) + ' ' + fmt(Math.round(kh.soTien)) : '')
+      + '. Thấp nhất âm ' + fmt(Math.round(can)) + ' vào ' + ngayNganVN(L.thap.ngay) + ': cần chuyển vào ví này ít nhất ' + fmt(Math.ceil(can)) + ' trước ' + ngayNganVN(L.am.ngay) + '.</span></div>'
+      + '<button type="button" class="btn secondary sm tn-chuyen" data-act="tnChuyenVi" data-id="'+esc(L.viId)+'" data-tien="'+Math.ceil(can)+'" data-ngay="'+L.am.ngay+'">'+icon('transfer')+' Chuyển '+fmt(Math.ceil(can))+' vào ví này</button>';
+  } else if (L.am){
+    h += '<div class="tn-canh">'+icon('alert')+' Có thể thiếu tiền từ '+ngayNganVN(L.am.ngay)+' (âm '+fmt(Math.round(-L.am.cuoi))+')</div>';
+  }
   var labels = L.ngay.map(function(r){ return r.ngay.slice(8, 10) + '/' + r.ngay.slice(5, 7); });
   h += '<div class="bd-box" style="margin-top:10px">' + bdLine({ W: 350, H: 170, labels: labels,
       series: [{ ten: 'Số dư', vals: L.ngay.map(function(r){ return Math.round(r.cuoi); }), cls: L.am ? 'chi' : 'thu', fill: true }],
@@ -265,6 +344,8 @@ function tnLichTienGiaiThichHtml(L){
     { ten: 'Số dư ngày cuối (' + ngayNganVN(cuoi.ngay) + ')', ct: 'Tổng số dư các ví hết hôm nay (gồm ví để dành, đã trừ dư nợ thẻ) + khoản thu có ngày − khoản chi có ngày − chi hằng ngày.',
       pt: ptCong([L.dau, vao, -ra, -chi], cuoi.cuoi) },
     { ten: 'Ngày thấp nhất (' + ngayNganVN(L.thap.ngay) + ')', ct: 'Cùng phép tính, cộng dồn tới ngày đó.', pt: ptCong([L.dau, vaoT, -raT, -chiT], L.thap.cuoi) },
+    L.viId ? { ten: 'Phạm vi: ví ' + esc(viTen(L.viId)), ct: 'Chỉ tính khoản thu / chi của ví này (khoản không có ví riêng tính vào ví mặc định), chuyển ví đã ghi trước, và thanh toán thẻ (giả định trả từ ví mặc định). Chi hằng ngày nhân với tỉ lệ ví này trong chi hằng ngày 30 ngày qua.',
+      pt: 'tỉ lệ chi hằng ngày: ' + Object.keys(L.tiLe || {}).map(function(k){ return esc(viTen(k)) + ' ' + Math.round(L.tiLe[k] * 100) + '%'; }).join(' · ') } : null,
     { ten: 'Chi hằng ngày', ct: L.theoNhip ? 'Theo nhịp chi thực tế tháng này vì chưa đặt hạn mức: hôm nay = nhịp − đã tiêu hôm nay.' : 'Hôm nay = phần còn tiêu được; các ngày còn lại của tháng = mức mỗi ngày; tháng sau = hạn mức ÷ số ngày của tháng đó.', pt: ptChi },
     { ten: 'Khoản thu / chi có ngày', ct: 'Lương và khoản thu có ngày (ngày đã qua mà chưa ghi thì không tính), trả nợ theo lịch (kỳ quá hạn tính vào hôm nay), khoản cố định theo định kỳ hoặc "Ngày chi hằng tháng" (chưa có ngày thì tính vào hôm nay / ngày 1 tháng sau), thu hồi cho vay đúng hẹn, khoản đã ghi trước. Thanh toán thẻ là chuyển giữa các ví nên không đổi tổng.',
       pt: 'vào ' + soGt(vao) + ' · ra ' + soGt(ra) }
@@ -273,7 +354,9 @@ function tnLichTienGiaiThichHtml(L){
 
 function renderTheoNgay(){
   var root = document.getElementById('tabContent');
-  var hom = todayStr(), t = tnNgayThang(hom), tm = tieuMoiNgay(hom), L = tnLichTien(hom);
+  var hom = todayStr(), t = tnNgayThang(hom), tm = tieuMoiNgay(hom);
+  if (state.tnVi && (!walletById(state.tnVi) || viLaThe(walletById(state.tnVi)))) state.tnVi = '';       // ví đã xóa / là thẻ: về Tổng
+  var L = tnLichTien(hom, undefined, state.tnVi || '');
   root.innerHTML = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">' + tnHomNayHtml(t, tm) + tnLichThangHtml(t)
     + '</div><div class="cot-phai">' + tnLichTienHtml(L) + '</div></div>';
   if (typeof mpSheetVe === 'function') mpSheetVe();
@@ -281,5 +364,12 @@ function renderTheoNgay(){
 function handleTheoNgayAction(act, el){
   if (act === 'tnNgay'){ state.tnNgay = el.getAttribute('data-ngay'); renderTheoNgay(); return true; }
   if (act === 'tnHet'){ state.tnHet = !state.tnHet; renderTheoNgay(); return true; }
+  if (act === 'tnVi'){ state.tnVi = el.getAttribute('data-id') || ''; state.tnHet = false; renderTheoNgay(); return true; }
+  if (act === 'tnChuyenVi'){
+    // mở form Chuyển ví ở Sổ tay, điền sẵn ví nhận và số cần chuyển (viSoDuCardHtml đọc state.viChuyenGoiY)
+    state.viChuyenGoiY = { den: el.getAttribute('data-id'), tien: parseInt(el.getAttribute('data-tien'), 10) || 0 };
+    state.viFormOpen = true; state.soTayMonth = monthKey(todayStr());
+    chuyenTab('sotay'); return true;
+  }
   return false;
 }

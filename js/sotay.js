@@ -263,12 +263,15 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
   var nVn = danhSachSapDenHan(7).length;
   var nHan = dsCatSapDenHan().length;
   var nVuot = rows.filter(function(r){ return r.pct > 1; }).length;
-  var nThe = theSapDenHan().length, mkTk = tkGoiY();
+  var nThe = theSapDenHan().length, mkTk = tkGoiY(), viThieu = laThangNay ? tnViSapThieu(todayStr(), TN_SO_NGAY) : [];
   var chips = '';
   if (nDk) chips += '<button type="button" class="hero-chip" data-act="tqCuon" data-to="cardDinhKy">'+icon('repeat')+' '+nDk+' khoản định kỳ đến hạn</button>';
   if (nHan) chips += '<button type="button" class="hero-chip" data-act="hanMo">'+icon('clock')+' '+nHan+' khoản thu/chi sắp đến hạn</button>';
   if (nVn) chips += '<button type="button" class="hero-chip" data-act="goVayNo">'+icon('clock')+' '+nVn+' khoản vay/nợ sắp đến hạn</button>';
   if (mkTk && laThangNay) chips += '<button type="button" class="hero-chip" data-act="goTongKet" data-mk="'+mkTk+'">'+icon('pie')+' Tổng kết tháng '+parseInt(mkTk.slice(5, 7), 10)+' <span aria-hidden="true">›</span></button>';
+  viThieu.slice(0, 2).forEach(function(x){
+    chips += '<button type="button" class="hero-chip" data-act="goViThieu" data-id="'+esc(x.w.id)+'">'+icon('alert')+' Ví '+esc(x.w.ten)+' có thể thiếu tiền từ '+ngayNganVN(x.L.am.ngay)+'</button>';
+  });
   if (nThe) chips += '<button type="button" class="hero-chip" data-act="goDanhMuc">'+icon('clock')+' '+nThe+' thẻ sắp đến hạn thanh toán</button>';
   if (nVuot) chips += '<button type="button" class="hero-chip" data-act="goBaoCao" data-to="cardHanMuc">'+icon('alert')+' '+nVuot+' danh mục vượt hạn mức</button>';
   h += chips ? '<div class="hero-chips">'+chips+'</div>' : '<div class="hero-ok">'+icon('check')+' Không có khoản nào cần xử lý</div>';
@@ -677,6 +680,58 @@ function dlNgayHtml(d, kemNam){
   refs.forEach(function(r){ h += dlRefHtml(r); });
   return h + '</div></section>';
 }
+/* TỔNG KẾT QUẢ TÌM / LỌC: cộng đúng các DÒNG (dòng nhập tay và khoản do Vay - Nợ sinh ra) khớp từ khóa và / hoặc danh mục, không phải cả ngày
+   có dòng khớp. Cùng cách khớp với bộ lọc ở renderSoTay: từ khóa tìm trong ghi chú của dòng và nhãn (khoản Vay - Nợ: trong ghi chú của nó).
+   Trả { n: số dòng, ngay: số ngày có dòng khớp, chi, thu }. */
+function locTongKet(dates, kw, catSel){
+  var r = { n: 0, ngay: 0, chi: 0, thu: 0 }, cat = (catSel && catSel.length === 2 && catSel[1]) ? catSel : null;
+  dates.forEach(function(d){
+    var e = state.data.journal[d], co = false;
+    var them = function(kind, catId, soTien){
+      if (cat && !(kind === cat[0] && catId === cat[1])) return;
+      r.n++; co = true;
+      if (kind === 'thu') r.thu += num(soTien); else r.chi += num(soTien);
+    };
+    entryItems(e).forEach(function(it){
+      if (kw && (it.ghiChu || '').toLowerCase().indexOf(kw) === -1 && nhanChuoi(it).toLowerCase().indexOf(kw) === -1) return;
+      them(it.kind, it.catId, it.soTien);
+    });
+    (e.refs || []).forEach(function(rf){
+      var m = REF_MAP[rf.loai];
+      if (!m || (kw && String(rf.note || '').toLowerCase().indexOf(kw) === -1)) return;
+      them(m.kind, m.cat, rf.soTien);
+    });
+    if (co) r.ngay++;
+  });
+  return r;
+}
+function locTongKetHtml(displayDates, hasRange, mk){
+  var kw = (state.soTaySearch || '').trim().toLowerCase(), catSel = (state.soTayCat || '').split(':');
+  var coCat = catSel.length === 2 && !!catSel[1];
+  if (!(kw || coCat) || !displayDates.length) return '';
+  var r = locTongKet(displayDates, kw, catSel);
+  if (!r.n) return '';
+  var nhan = (kw ? '"' + esc(state.soTaySearch.trim()) + '"' : '') + (kw && coCat ? ' · ' : '') + (coCat ? esc(catTenTheoId(catSel[0], catSel[1])) : '');
+  var laThu = r.thu > 0 && r.chi === 0, chinh = laThu ? r.thu : r.chi, lop = laThu ? 'thu' : 'chi';
+  var h = '<div class="loc-tong"><div class="loc-tong-1"><b>' + nhan + '</b>: <b>' + r.n + ' khoản</b> trong ' + r.ngay + ' ngày · '
+    + (laThu ? 'thu' : 'chi') + ' <b class="' + lop + '">' + fmt(Math.round(chinh)) + '</b>'
+    + (r.thu > 0 && r.chi > 0 ? ' · thu <b class="thu">' + fmt(Math.round(r.thu)) + '</b>' : '')
+    + ' · TB ' + fmt(Math.round(chinh / r.n)) + '/khoản</div>';
+  var truoc = null;
+  if (!hasRange){
+    var pm = monthKeyAdd(mk, -1);
+    truoc = locTongKet(Object.keys(state.data.journal).filter(function(d){ return monthKey(d) === pm; }), kw, catSel);
+    var tr = laThu ? truoc.thu : truoc.chi;
+    if (truoc.n) {
+      var pct = bdPhanTram(chinh, tr);
+      h += '<div class="loc-tong-2">Tháng ' + parseInt(pm.slice(5), 10) + ': ' + truoc.n + ' khoản · ' + fmt(Math.round(tr))
+        + (pct != null && Math.abs(pct) >= 1 ? ' (' + (pct > 0 ? '+' : '−') + Math.abs(pct) + '%)' : '') + '</div>';
+    }
+  }
+  h += giaiThichSo([{ ten: 'Tổng', ct: 'Cộng các DÒNG khớp ' + (kw ? 'từ khóa' : '') + (kw && coCat ? ' và ' : '') + (coCat ? 'danh mục' : '') + ' trong các ngày đang hiện (không phải cả ngày có dòng khớp). TB = tổng ÷ số khoản.',
+    pt: soGt(chinh) + ' ÷ ' + r.n + ' khoản = ' + soGt(chinh / r.n) + '/khoản' + (truoc && truoc.n ? ' · tháng trước ' + soGt(laThu ? truoc.thu : truoc.chi) + ' (' + truoc.n + ' khoản)' : '') }], 'Cách tính');
+  return h + '</div>';
+}
 // tiêu đề "Chi tiết theo ngày" + 3 nút (tìm & lọc, xuất Excel, nhập từ file) + bộ lọc + danh sách nhóm ngày
 function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
   var h = '<div class="dl"><div class="dl-bar"><h3>Chi tiết theo ngày</h3><div class="dl-tools">'
@@ -696,13 +751,7 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
   if (hasRange){
     h += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' → '+state.soTayTo+'), danh sách dưới không theo tháng đang chọn ở trên nữa.</div>';
   }
-  if (catSel.length === 2 && catSel[1] && displayDates.length){
-    var tongCat = 0;
-    displayDates.forEach(function(d){ tongCat += num((state.data.journal[d][catSel[0]] || {})[catSel[1]]); });
-    h += '<div class="empty" style="padding:0 0 8px">'+displayDates.length+' ngày có '
-      + (catSel[0] === 'thu' ? 'thu' : 'chi') + ' "'+esc(catTenTheoId(catSel[0], catSel[1]))+'" · tổng '
-      + '<b style="color:var(--'+(catSel[0] === 'thu' ? 'green' : 'red')+')">'+fmt(Math.round(tongCat))+'</b></div>';
-  }
+  h += locTongKetHtml(displayDates, hasRange, mk);
   if (!displayDates.length){
     h += filterActive
       ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
@@ -799,10 +848,15 @@ function viSoDuCardHtml(mk){
   if (state.viFormOpen){
     var tuMd = walletById(viDienSan()) ? viDienSan() : ws[0].id;
     var denMd = (ws.find(function(w){ return w.id !== tuMd; }) || ws[1]).id;
+    var gy = state.viChuyenGoiY;                // gợi ý từ cảnh báo "ví thiếu tiền" (theongay.js): ví nhận + số cần chuyển
+    if (gy && walletById(gy.den)){
+      denMd = gy.den;
+      if (tuMd === denMd) tuMd = (ws.find(function(w){ return w.id !== denMd && !viLaThe(w); }) || ws.find(function(w){ return w.id !== denMd; })).id;
+    }
     h += '<div class="vi-form"><div class="form-row">'
       + '<div><label>Từ ví</label><select id="vi_tu">'+viOptionsHtml(tuMd)+'</select></div>'
       + '<div><label>Sang ví</label><select id="vi_den">'+viOptionsHtml(denMd)+'</select></div>'
-      + '<div><label>Số tiền</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vi_tien" placeholder="0"></div>'
+      + '<div><label>Số tiền</label><input type="text" inputmode="numeric" autocomplete="off" class="money" id="vi_tien" placeholder="0" value="'+(gy && gy.tien > 0 ? veSo(gy.tien) : '')+'"></div>'
       + '<div><label>Ngày</label><input type="date" id="vi_ngay" value="'+todayStr()+'"></div>'
       + '<div><label>Ghi chú</label><input type="text" id="vi_ghichu" placeholder="Rút tiền, nạp ví..."></div>'
       + '</div><div style="display:flex;gap:8px;margin-bottom:6px">'
@@ -1433,10 +1487,10 @@ function handleSoTayAction(act, el){
       scheduleSave(); renderSoTay();
     } });
   } else if (act === 'viChuyenMo'){
-    state.viFormOpen = !state.viFormOpen;
+    state.viFormOpen = !state.viFormOpen; state.viChuyenGoiY = null;
     renderSoTay();
   } else if (act === 'viChuyenHuy'){
-    state.viFormOpen = false;
+    state.viFormOpen = false; state.viChuyenGoiY = null;
     renderSoTay();
   } else if (act === 'viChuyenLuu'){
     var ctTu = (document.getElementById('vi_tu') || {}).value;
@@ -1447,7 +1501,7 @@ function handleSoTayAction(act, el){
     if (ctTu === ctDen){ toast('Ví đi và ví đến phải khác nhau.', { loai:'warn' }); return true; }
     if (ctTien <= 0){ toast('Số tiền chuyển phải lớn hơn 0.', { loai:'warn' }); return true; }
     if (!chuyenViThem(ctNgay, ctTu, ctDen, ctTien, ctGhi)){ toast('Không tạo được lần chuyển này.', { loai:'err' }); return true; }
-    state.viFormOpen = false;
+    state.viFormOpen = false; state.viChuyenGoiY = null;
     scheduleSave();
     renderSoTay();
     toast('Đã chuyển '+fmt(Math.round(ctTien))+' từ "'+viTen(ctTu)+'" sang "'+viTen(ctDen)+'".');
@@ -1520,6 +1574,9 @@ function handleSoTayAction(act, el){
       renderSoTay();
       toast('Đã hoàn tác.');
     } });
+  } else if (act === 'goViThieu'){
+    state.tnVi = el.getAttribute('data-id') || ''; state.dtTheoNgay = true; state.dtMoPhong = false;
+    chuyenTab('dongtien');
   } else if (act === 'goTongKet'){
     state.soTayMonth = el.getAttribute('data-mk') || state.soTayMonth;
     chuyenTab('baocao');
