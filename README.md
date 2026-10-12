@@ -226,6 +226,9 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 - **Huy hiệu số trên biểu tượng app** (số khoản sắp tới hạn). **Chưa chắc** iOS hỗ trợ ổn cho web app khi chưa có đẩy thông báo, cần thử.
 - **Sổ tiết kiệm có kỳ hạn** (lãi suất, ngày đáo hạn, tự tính lãi) và **vàng / chứng khoán** vào tài sản ròng. Giá nhập tay vì không có server.
 - **Đa tiền tệ**, chỉ đáng khi có chi tiêu bằng ngoại tệ.
+- **Sổ Hụi (chơi họ):** tạo dây hụi (số chân, mệnh giá, kỳ, hụi sống / chết, là chân hay chủ hụi), mỗi kỳ nhập ai hốt và lãi bỏ, app tính số phải đóng, ghi vào Sổ tay, nhắc ở chuông, và cuối dây cho biết **lãi suất thực theo năm**. Luật mỗi nhóm một kiểu nên cần vài chế độ cố định + nhập tay phần chênh.
+- **"Vì sao?" (giải thích chênh lệch):** cạnh mọi so sánh với tháng trước có nút tách phần chênh thành nguyên nhân thật: nhiều lần hơn / mỗi lần đắt hơn / có khoản lớn đột xuất, vẽ dạng biểu đồ cầu. Phần "đắt hơn" phụ thuộc ghi chú nhất quán nên kém chắc hơn.
+- **"Lương tự trả" cho thu nhập không đều** (tài xế, shipper, bán hàng online, freelancer): tính một mức lương ổn định an toàn, tháng dư chảy vào ví đệm, tháng thiếu ví đệm bù. Chưa chốt cách tính mức ổn định (trung bình thấp nhất, trung vị hay phân vị 25).
 
 ### 7.3. Đã cân nhắc, quyết định không làm
 
@@ -233,5 +236,8 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 - **Giao dịch định kỳ tự ghi:** giữ nhắc rồi ghi tay, vì số tiền nhiều khoản không cố định.
 - **Mẫu giao dịch / yêu thích** ở Ghi nhanh: giữ ghi tay cho khỏi rối giao diện.
 - **Dùng chung sổ nhiều người:** rủi ro xung đột ghi chồng, bỏ.
+- **Quét QR VietQR để ghi khoản chi:** người dùng đã quét trong app ngân hàng rồi, quét thêm lần nữa ở sổ là thêm thao tác; mã cố định không có số tiền nên gần như không đỡ gì. Hướng "bắt khoản chi tại nơi nó xảy ra" (mục 7.1 số 2) đáng hơn.
+- **Sổ gia đình ghép từ các sổ riêng** (xuất bản chia sẻ qua Zalo): gần với "dùng chung sổ", bỏ.
+- **Máy tính Gross → Net và thuế TNCN:** biểu thuế / mức giảm trừ đổi liên tục, không tự kiểm chứng được số hiện hành, bỏ.
 
 Phần này ghi lại khi có ý tưởng mới.
