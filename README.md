@@ -62,7 +62,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, xem danh sách và **khôi phục** một bản ngay trong tab Cài đặt. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
-- **Giao diện** sáng/tối, tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
+- **Giao diện** sáng / tối / tự động theo điện thoại (chọn ở **Cài đặt → Ứng dụng → thẻ "Giao diện và làm mới"**, cùng nút **Làm mới dữ liệu**; header chỉ còn tìm kiếm, thông báo, ẩn số), tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
 - **Biểu đồ tự vẽ bằng SVG**, không dùng thư viện biểu đồ, nên xem được cả khi offline.
 - Có trang [Chính sách quyền riêng tư](privacy.html).
 
@@ -186,6 +186,8 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - **Lời giải thích nào cũng phải có số thật.** Con số mới được tính toán thì thêm `giaiThichSo([{ ten, ct, pt }], 'Cách tính các số này')` với `pt` là phép tính bằng số đang hiện (dùng `ptCong`, `soGt`); ghi chú giải thích khái niệm thì thêm `gtViDu([...])` ("Với số của bạn"). Không viết lời giải thích chung chung mà không có số. Có test (`kiemPhepCong` trong tests/run-tests.js) kiểm mọi phép cộng / trừ trong giải thích đúng về số học.
 
 - Màu: thu xanh, chi đỏ trầm, trả nợ / sắp đến hạn hổ phách. Chữ phần trăm để màu trung tính.
+- **Màu hành động tách khỏi màu "chi".** Mọi thứ BẤM ĐƯỢC hoặc ĐANG CHỌN (nút chính, tab đang chọn, liên kết, ô / đoạn chọn đang bật, vòng focus, nút Ghi nhanh) dùng `--action` (nâu cà phê đậm ở sáng, kem vàng ở tối; chữ trên nền đặc là `--action-tx`, hover là `--action-d`). Đỏ (`--red`, `--chi-solid`) chỉ có nghĩa "chi / vượt mức / nguy hiểm", xanh chỉ "thu". `--primary` / `--primary-d` (đỏ gạch) giữ cho tên app, dòng số dư và tiêu đề nhóm; đừng dùng cho nút hay liên kết mới.
+- **Báo cáo gập thẻ.** Tab Báo cáo giữ `BC_GIU` (3) thẻ đầu, gập phần còn lại sau nút "Xem thêm N thẻ: …" (`#bcExtra`, `state.bcMo`, không lưu); chỉ còn dư 1 thẻ thì không gập. Có hàng chip nhảy nhanh tới từng thẻ đang hiện (dùng `tqCuon`, tự mở phần gập nếu thẻ nằm trong đó). Màn rộng ≥ 1024px hiện hết, chip và nút ẩn. Thẻ mới thêm vào Báo cáo cần có id (`BC_DICH` trong `bieudo.js`) và tên chip (`BC_NHAN`).
 - Tiền hiện đầy đủ (`4.769.960`), không viết tắt "tr" / "k" (trừ trục biểu đồ).
 - Danh sách dài dùng thẻ + nút "Xem thêm / Xem tất cả" thay cho bảng cuộn lồng nhau; dưới 375px bớt cột phụ.
 - Thêm / sửa qua bảng trượt: khung `.qa-sheet` (Sổ tay), `.vn-sheet` (Vay - Nợ, Danh mục). Bảng nằm ngoài `#tabContent` và giữ nguyên DOM khi vẽ lại trang, nên đồng bộ Drive không làm mất ô đang gõ.

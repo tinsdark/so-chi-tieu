@@ -799,8 +799,42 @@ function renderBaoCao(){
     tet: tetCardHtml(),                        // chỉ có khi sắp Tết (tet.js)
     nhan: nhanCardHtml()
   };
-  var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);
-  htHien('baocao').forEach(function(id){ if (the[id] != null) html += the[id]; });
-  html += '</div><div class="cot-phai">' + (htAn('baocao', 'bieudo') ? '' : bieuDoCardHtml(mk)) + '</div></div>';
+  // Báo cáo có nhiều thẻ nên dài: giữ BC_GIU thẻ đầu, gập phần còn lại sau nút "Xem thêm", kèm hàng chip nhảy nhanh tới từng thẻ.
+  // Màn rộng (>= 1024px) hiện hết như cũ (CSS ẩn chip và nút).
+  var ids = htHien('baocao').filter(function(id){ return the[id] != null && the[id] !== ''; });
+  var giu = ids.slice(0, BC_GIU), them = ids.slice(BC_GIU);
+  if (them.length < 2){ giu = ids; them = []; }       // chỉ dư 1 thẻ thì không đáng gập
+  var coBd = !htAn('baocao', 'bieudo');
+  var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk) + bcChipsHtml(ids, coBd);
+  giu.forEach(function(id){ html += the[id]; });
+  if (them.length){
+    html += '<div class="bc-extra' + (state.bcMo ? '' : ' dong') + '" id="bcExtra">' + them.map(function(id){ return the[id]; }).join('') + '</div>'
+      + '<button type="button" class="btn secondary bc-more" id="bcMore" data-act="bcMo" data-them="' + them.map(function(id){ return BC_NHAN[id]; }).join(', ') + '" aria-expanded="' + !!state.bcMo + '" aria-controls="bcExtra">'
+      + bcNutChu(them.map(function(id){ return BC_NHAN[id]; }), !!state.bcMo) + '</button>';
+  }
+  html += '</div><div class="cot-phai">' + (coBd ? bieuDoCardHtml(mk) : '') + '</div></div>';
   root.innerHTML = html;
+}
+var BC_GIU = 3;
+var BC_NHAN = { ngaytudo: 'Ngày tự do', diemnhan: 'Điều đáng chú ý', tongket: 'Tổng kết', hanmuc: 'Hạn mức', taisan: 'Tài sản ròng', muctieu: 'Mục tiêu', tet: 'Tết', nhan: 'Nhãn' };
+var BC_DICH = { ngaytudo: 'cardNgayTuDo', diemnhan: 'cardDiemNhan', tongket: 'cardTongKet', hanmuc: 'cardHanMuc', taisan: 'cardTaiSanRong', muctieu: 'cardMucTieu', tet: 'cardTet', nhan: 'cardNhan' };
+function bcNutChu(tens, mo){ return mo ? 'Thu gọn ⌃' : 'Xem thêm ' + tens.length + ' thẻ: ' + tens.join(', ') + ' ⌄'; }
+// hàng chip nhảy nhanh tới từng thẻ đang hiện (dùng lại tqCuon, tự mở phần gập nếu thẻ nằm trong đó)
+function bcChipsHtml(ids, coBd){
+  var ds = ids.map(function(id){ return [BC_NHAN[id], BC_DICH[id]]; });
+  if (coBd) ds.push(['Biểu đồ', 'bieuDoCard']);
+  if (ds.length < 3) return '';
+  return '<div class="bc-jump" role="navigation" aria-label="Nhảy tới thẻ">' + ds.map(function(d){
+    return '<button type="button" data-act="tqCuon" data-to="' + d[1] + '">' + d[0] + '</button>';
+  }).join('') + '</div>';
+}
+// mở / gập phần thẻ phụ mà không vẽ lại cả tab (giữ vị trí cuộn)
+function bcDatMo(mo){
+  state.bcMo = !!mo;
+  var ex = document.getElementById('bcExtra'), nut = document.getElementById('bcMore');
+  if (ex) ex.classList.toggle('dong', !mo);
+  if (nut){
+    nut.setAttribute('aria-expanded', String(!!mo));
+    nut.textContent = bcNutChu((nut.getAttribute('data-them') || '').split(', '), !!mo);
+  }
 }

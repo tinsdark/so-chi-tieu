@@ -1323,8 +1323,11 @@ function handleSoTayAction(act, el){
       var dichBC = document.getElementById(toBC);
       if (dichBC && dichBC.scrollIntoView) dichBC.scrollIntoView({ behavior:'smooth', block:'start' });
     }, 320);
+  } else if (act === 'bcMo'){
+    bcDatMo(!state.bcMo);
   } else if (act === 'tqCuon'){
     var dich = document.getElementById(el.getAttribute('data-to') || '');
+    if (dich && dich.closest && dich.closest('#bcExtra.dong')) bcDatMo(true);     // thẻ đang nằm trong phần gập của Báo cáo: mở ra trước
     if (dich && dich.scrollIntoView) dich.scrollIntoView({ behavior:'smooth', block:'start' });
   } else if (act === 'formToggle'){
     state.fullFormOpen = !state.fullFormOpen;

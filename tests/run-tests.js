@@ -5577,6 +5577,71 @@ test('tetTaoMt: tạo mục tiêu "Quỹ Tết 2027" bằng số gợi ý, hạn
   setToday('2026-10-01');
 });
 
+group('UX: màu hành động, header gọn, Báo cáo gập thẻ');
+test('index.html: header không còn nút đổi giao diện / làm mới; không còn mã nào gọi hai nút đó', function(){
+  var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  ok(html.indexOf('id="btnTheme"') < 0 && html.indexOf('id="btnRefresh"') < 0, 'đã bỏ khỏi header');
+  ['app.js', 'motion.js', 'ui.js'].forEach(function(f){
+    var js = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
+    ok(js.indexOf("getElementById('btnTheme')") < 0 && js.indexOf("getElementById('btnRefresh')") < 0, f + ' không còn tham chiếu nút đã bỏ');
+  });
+  ok(fs.readFileSync(path.join(JS_DIR, 'motion.js'), 'utf8').indexOf('lamMoiDuLieu()') > 0, 'kéo xuống làm mới gọi thẳng hàm làm mới');
+});
+test('Cài đặt → Ứng dụng: thẻ "Giao diện và làm mới" đứng đầu, 3 lựa chọn, mặc định Tự động, nút làm mới', function(){
+  loadData(baseData({})); ctx.state.offline = false;
+  var h = ctx.giaoDienCardHtml();
+  ok(h.indexOf('Giao diện và làm mới') > 0, 'tiêu đề');
+  ['auto', 'light', 'dark'].forEach(function(v){ ok(h.indexOf('data-act="themeDat" data-v="' + v + '"') > 0, 'có lựa chọn ' + v); });
+  ok(h.indexOf('data-v="auto" class="on" aria-pressed="true"') > 0 && h.indexOf('data-v="dark" class="" aria-pressed="false"') > 0, 'mặc định Tự động');
+  ok(h.indexOf('data-act="lamMoi"') > 0 && h.indexOf('>Làm mới<') > 0, 'nút làm mới');
+  ctx.state.offline = true; ok(ctx.giaoDienCardHtml().indexOf('>Đăng nhập<') > 0, 'đang dùng bản lưu trên máy thì nút là Đăng nhập'); ctx.state.offline = false;
+  var src = fs.readFileSync(path.join(JS_DIR, 'danhmuc.js'), 'utf8');
+  ok(src.indexOf("giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml()") > 0, 'phần Ứng dụng: thẻ này đứng đầu');
+  ok(ctx.dmPhanHtml('tien').indexOf('Giao diện và làm mới') < 0 && ctx.dmPhanHtml('danhmuc').indexOf('Giao diện và làm mới') < 0, 'không lẫn sang phần khác');
+});
+test('style.css: có màu hành động tách khỏi đỏ; --primary chỉ còn cho tên app, dòng số dư, tiêu đề nhóm', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  ok(/--action:#[0-9a-f]{6}; --action-d:#[0-9a-f]{6}; --action-tx:#[0-9a-f]{6};/.test(css), 'sáng có --action / --action-d / --action-tx');
+  var toi = css.slice(css.indexOf('[data-theme="dark"]{')); ok(/--action:#[0-9a-f]{6};/.test(toi.slice(0, 2500)), 'tối có --action riêng');
+  var con = (css.match(/var\(--primary(-d)?\)/g) || []).length; ok(con <= 6, 'chỗ còn dùng primary: ' + con);
+  ok(css.indexOf('.btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--action-tx);background:var(--action)}') >= 0, 'nút chính dùng màu hành động');
+  ok(css.indexOf('[data-theme="dark"] .btn{background:var(--chi-solid)}') < 0, 'bỏ ghi đè đỏ ở chế độ tối');
+  ok(css.indexOf('.qa-save.chi{background:var(--chi-solid)}') > 0 && css.indexOf('.qa-save.thu{background:var(--thu-solid)}') > 0, 'nút Lưu khoản chi / thu vẫn giữ màu ngữ nghĩa');
+});
+function baoCaoVe(){
+  var rd = { innerHTML: '' };
+  voiDom({ tabContent: rd }, null, function(){ ctx.renderBaoCao(); });
+  return rd.innerHTML;
+}
+test('Báo cáo: giữ 3 thẻ đầu, gập phần còn lại sau nút "Xem thêm", có hàng chip nhảy nhanh', function(){
+  htSach(); tcData(); setToday('2026-10-11'); ctx.state.bcMo = false; ctx.state.soTayMonth = '2026-10';
+  var h = baoCaoVe();
+  ok(h.indexOf('class="bc-jump"') > 0 && h.indexOf('data-act="tqCuon" data-to="cardNgayTuDo"') > 0 && h.indexOf('data-to="bieuDoCard"') > 0, 'hàng chip có Ngày tự do và Biểu đồ');
+  var iEx = h.indexOf('id="bcExtra"'); ok(iEx > 0 && h.indexOf('class="bc-extra dong"') > 0, 'phần gập có sẵn và đang gập');
+  ok(h.indexOf('id="cardNgayTuDo"') > 0 && h.indexOf('id="cardNgayTuDo"') < iEx, 'Ngày tự do (thẻ đầu) nằm ngoài phần gập');
+  ok(h.indexOf('id="cardNhan"') > iEx, 'thẻ cuối (Nhãn) nằm trong phần gập');
+  ok(h.indexOf('data-act="bcMo"') > iEx && h.indexOf('Xem thêm ') > 0 && h.indexOf('aria-expanded="false"') > 0, 'nút Xem thêm sau phần gập');
+  ctx.state.bcMo = true; var h2 = baoCaoVe(); ok(h2.indexOf('class="bc-extra"') > 0 && h2.indexOf('Thu gọn') > 0 && h2.indexOf('aria-expanded="true"') > 0, 'đã mở thì hiện hết, nút là Thu gọn');
+  ctx.state.bcMo = false; htSach();
+});
+test('Báo cáo: ít thẻ thì không gập; thẻ bị ẩn ở Hiển thị không có chip', function(){
+  htSach(); tcData(); setToday('2026-10-11'); ctx.state.bcMo = false; ctx.state.soTayMonth = '2026-10';
+  ['tet', 'nhan', 'taisan', 'hanmuc', 'diemnhan', 'tongket', 'muctieu'].forEach(function(id){ ctx.htDatAn('baocao', id, true); });
+  var h = baoCaoVe(); ok(h.indexOf('id="bcExtra"') < 0 && h.indexOf('data-act="bcMo"') < 0, 'chỉ còn Ngày tự do + biểu đồ: không gập');
+  ok(h.indexOf('data-to="cardHanMuc"') < 0 && h.indexOf('data-to="cardNhan"') < 0, 'thẻ đã ẩn không có chip');
+  htSach();
+});
+test('bcDatMo + tqCuon: bấm chip tới thẻ đang gập thì mở phần gập trước; đổi chữ nút và aria-expanded', function(){
+  var cls = {}, nut = { attrs: {}, textContent: '', setAttribute: function(k, v){ this.attrs[k] = v; }, getAttribute: function(k){ return k === 'data-them' ? 'Hạn mức, Tài sản ròng, Nhãn' : null; } };
+  var ex = { classList: { toggle: function(c, on){ cls[c] = on; } } };
+  var cuon = 0, dich = { closest: function(s){ return s === '#bcExtra.dong' ? ex : null; }, scrollIntoView: function(){ cuon++; } };
+  ctx.state.bcMo = false;
+  voiDom({ bcExtra: ex, bcMore: nut, cardNhan: dich }, null, function(){ ctx.handleSoTayAction('tqCuon', elAct({ 'data-to': 'cardNhan' })); });
+  eq(ctx.state.bcMo, true, 'đã mở phần gập'); eq(cls.dong, false, 'bỏ lớp dong'); eq(nut.attrs['aria-expanded'], 'true'); eq(nut.textContent, 'Thu gọn ⌃'); eq(cuon, 1, 'rồi mới cuộn tới thẻ');
+  voiDom({ bcExtra: ex, bcMore: nut }, null, function(){ ctx.handleSoTayAction('bcMo', elAct({})); });
+  eq(ctx.state.bcMo, false); eq(cls.dong, true); eq(nut.textContent, 'Xem thêm 3 thẻ: Hạn mức, Tài sản ròng, Nhãn ⌄', 'chữ nút liệt kê các thẻ đang gập');
+});
+
 /* ==================================================================== */
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');

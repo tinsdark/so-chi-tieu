@@ -402,17 +402,10 @@ function apDungTheme(){
   var t = themeHienTai();
   var thuc = themeThucTe(t);
   document.documentElement.setAttribute('data-theme', thuc);
-  var btn = document.getElementById('btnTheme');
-  if (btn){
-    btn.innerHTML = icon(t === 'auto' ? 'contrast' : (t === 'dark' ? 'moon' : 'sun'));
-    btn.setAttribute('aria-label', 'Giao diện: ' + (t==='auto'?'theo hệ thống':(t==='dark'?'tối':'sáng')) + ' — bấm để đổi');
-    btn.title = btn.getAttribute('aria-label');
-  }
 }
-function doiTheme(){
-  var vong = ['auto','light','dark'];
-  var i = vong.indexOf(themeHienTai());
-  var moi = vong[(i + 1) % vong.length];
+// chọn giao diện: 'auto' (theo hệ thống) | 'light' | 'dark'. Chọn ở Cài đặt → Ứng dụng → "Giao diện và làm mới" (giaoDienCardHtml)
+function datTheme(moi){
+  if (['auto', 'light', 'dark'].indexOf(moi) < 0) return;
   try { localStorage.setItem(THEME_KEY, moi); } catch(e){}
   apDungTheme();
   if (state.data) renderAll();     // vẽ lại biểu đồ với màu mới

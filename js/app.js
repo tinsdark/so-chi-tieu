@@ -185,17 +185,17 @@ document.addEventListener('keydown', function(ev){
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
 document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
-document.getElementById('btnTheme').addEventListener('click', doiTheme);
 document.getElementById('btnAnSo').addEventListener('click', doiAnSo);
 
-document.getElementById('btnRefresh').addEventListener('click', async function(){
+// làm mới dữ liệu từ Drive: nút ở Cài đặt → Ứng dụng ("lamMoi") và kéo xuống ở đầu trang (motion.js)
+async function lamMoiDuLieu(){
   if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
   state.errorMsg = null;
   var tuLoi = state.taiLoi;                   // lần trước tải lỗi: các sửa trong lúc đó chỉ nằm ở nháp trên máy
   var ok = await driveLoad();
   renderAll();
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
-});
+}
 
 document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleNgayTuDoInput(ev.target); handleCongCuInput(ev.target); handleTimInput(ev.target); });
 

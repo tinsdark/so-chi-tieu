@@ -32,7 +32,7 @@ function attachCatDragDrop(){
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       clearCatDropHint();
-      if (item.getAttribute('data-id') !== dragCat.id) item.style.boxShadow = 'inset 0 0 0 2px var(--primary)';
+      if (item.getAttribute('data-id') !== dragCat.id) item.style.boxShadow = 'inset 0 0 0 2px var(--action)';
     });
     item.addEventListener('drop', function(e){
       if (!dragCat || dragCat.kind !== item.getAttribute('data-kind')) return;
@@ -237,6 +237,18 @@ function chotCardHtml(){
 }
 
 /* ---- Cài lên màn hình chính (PWA): hướng dẫn theo thiết bị ---- */
+// thẻ "Giao diện và làm mới" (trước đây là 2 nút ở header): chọn sáng / tối / theo hệ thống, và nút làm mới dữ liệu
+function giaoDienCardHtml(){
+  var t = typeof themeHienTai === 'function' ? themeHienTai() : 'auto';      // ui.js
+  var seg = [['auto', 'Tự động'], ['light', 'Sáng'], ['dark', 'Tối']].map(function(x){
+    return '<button type="button" data-act="themeDat" data-v="' + x[0] + '" class="' + (t === x[0] ? 'on' : '') + '" aria-pressed="' + (t === x[0]) + '">' + x[1] + '</button>';
+  }).join('');
+  return '<div class="card dm-card">' + dmHead('Giao diện và làm mới')
+    + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Giao diện</b><span class="dm-s">Tự động theo cài đặt của điện thoại, hoặc chọn sáng / tối</span></span></div>'
+    + '<div class="dt-mode gd-seg" role="group" aria-label="Giao diện">' + seg + '</div>'
+    + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Làm mới dữ liệu</b><span class="dm-s">' + (state.offline ? 'Đang dùng bản lưu trên máy: bấm để đăng nhập và đồng bộ' : 'Tải lại từ Google Drive. Trên điện thoại cũng kéo xuống ở đầu trang được') + '</span></span>'
+    + '<button type="button" class="btn secondary sm" data-act="lamMoi">' + (state.offline ? 'Đăng nhập' : 'Làm mới') + '</button></div></div>';
+}
 function caiAppCardHtml(){
   var h = '<div class="card dm-card">'+dmHead('Cài lên điện thoại / máy tính');
   if (dangChayNhuApp()){
@@ -365,7 +377,7 @@ function dmPhanHtml(tab){
   if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
-  if (tab === 'ungdung') return '<div class="dm-grid">' + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div>';
+  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div>';
   return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
     + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
 }
@@ -619,6 +631,10 @@ function handleDanhMucAction(act, el){
     state.dmForm = { loai:'vi', id:'' }; renderDanhMuc();
   } else if (act === 'dmSuaVi'){
     state.dmForm = { loai:'vi', id: el.getAttribute('data-id') }; renderDanhMuc();
+  } else if (act === 'themeDat'){
+    datTheme(el.getAttribute('data-v')); renderDanhMuc();
+  } else if (act === 'lamMoi'){
+    lamMoiDuLieu();
   } else if (act === 'dmTab'){
     state.dmTab = el.getAttribute('data-v') || 'danhmuc';
     state.dmForm = null; state.dkForm = null; state.mtForm = null;
