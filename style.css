@@ -1679,3 +1679,33 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .ns-d{font-size:11.5px}.ns-d.giam{color:var(--green)}.ns-d.tang{color:var(--red)}
 .ns-tong{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--border);padding:12px 0 4px;font-size:13px;color:var(--muted)}
 .ns-tong b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
+
+/* ---- Ngày tự do (ngaytudo.js), tiền tố ntd- ---- */
+.qa-ntd{min-height:0;margin:-2px 2px 6px;font-size:12.5px;color:var(--muted);text-align:center}
+.qa-ntd:empty{display:none}
+.ntd-big{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.ntd-big b{font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.ntd-big span{font-size:16px;color:var(--muted)}
+.ntd-sub{font-size:13px;line-height:1.5;color:var(--muted);margin-top:6px}
+.ntd-sub b{color:var(--text);font-variant-numeric:tabular-nums}
+.ntd-bar{height:8px;border-radius:99px;background:var(--hover);overflow:hidden;margin-top:12px}
+.ntd-bar i{display:block;height:100%;border-radius:99px;background:var(--thu-solid)}
+.ntd-moc{font-size:12.5px;color:var(--muted);margin-top:6px}
+.ntd-moc b{color:var(--text)}
+.ntd-lbl{margin-top:16px}
+.ntd-xh{display:flex;align-items:flex-end;gap:8px;height:96px;margin-top:6px}
+.ntd-xc{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.ntd-xc i{display:block;width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:var(--hover);min-height:3px}
+.ntd-xc.nay i{background:var(--thu-solid)}
+.ntd-xv{font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ntd-xc.nay .ntd-xv{color:var(--text);font-weight:700}
+.ntd-xn{font-size:11px;color:var(--muted)}
+.ntd-fire{border-top:1px solid var(--border);margin-top:16px;padding-top:2px}
+.ntd-hint{font-size:12.5px;color:var(--muted);line-height:1.5}
+.ntd-tkv{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.ntd-tkv b{color:var(--text);font-variant-numeric:tabular-nums}
+.ntd-tkv select{min-height:34px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);padding:0 8px;font:inherit;font-size:13px}
+.ntd-kq{display:flex;flex-direction:column;gap:2px;margin-top:12px}
+.ntd-kq span{font-size:13px;color:var(--muted)}
+.ntd-kq b{font-size:26px}
+.ntd-kq small{font-size:12.5px;color:var(--muted)}

@@ -18,6 +18,7 @@ var HT_THE = {
     { id: 'sosanh', ten: 'So sánh cùng kỳ', mota: 'Chi so với tháng trước', khongThuTu: true }
   ],
   baocao: [
+    { id: 'ngaytudo', ten: 'Ngày tự do', mota: 'Tiền đang có đủ sống bao nhiêu ngày' },
     { id: 'diemnhan', ten: 'Điều đáng chú ý', mota: 'Vài câu tự rút ra từ dữ liệu' },
     { id: 'tongket', ten: 'Tổng kết tháng', mota: 'Chỉ hiện với tháng đã kết thúc' },
     { id: 'hanmuc', ten: 'Hạn mức' },
