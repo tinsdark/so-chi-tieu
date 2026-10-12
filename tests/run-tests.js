@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
+['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -5200,6 +5200,109 @@ test('chuông: thanh toán thẻ ghi thêm số tối thiểu khi đã đặt', 
   theTT(5, 30); setToday('2026-10-12');
   var th = ctx.cbTatCa('2026-10-12').filter(function(x){ return x.loai === 'the'; })[0];
   ok(th && th.phu.indexOf('tối thiểu 150.000') > 0, th && th.phu);
+  setToday('2026-10-01');
+});
+
+group('Ngân sách tự lập (ngansach.js)');
+function nsData(over){
+  var j = {}, an = [3000000, 2000000, 4000000], gt = [500000, 1500000, 1000000];
+  ['2026-07', '2026-08', '2026-09'].forEach(function(mk, i){
+    j[mk + '-10'] = { thu: { luong: (over && over.khongThu) ? 0 : 10000000 }, chi: { an: an[i], giaitri: gt[i], nha: 3000000, xang: 500000, khac: (over && over.khac) || 0 }, ghiChu: '', refs: [], items: [] };
+  });
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-07-01', thangBatDauDuTru: (over && over.batDau) || '2026-07' };
+  d.categories.thu = [{ id: 'luong', ten: 'Lương', chiTieu: 0 }];
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 5000000 }, { id: 'giaitri', ten: 'Giải trí', chiTieu: 0 }, { id: 'nha', ten: 'Nhà', chiTieu: 3000000, khoanCoDinh: true },
+    { id: 'xang', ten: 'Xăng', chiTieu: 0 }, { id: 'khac', ten: 'Khác', chiTieu: 0, khongDuTru: true }];
+  setToday('2026-10-11');
+  ctx.state.ns.muc = null;
+  return loadData(d);
+}
+test('nsDuLieu: thu nhập / chi TB 3 tháng, mức hiện tại, khoản cố định đã có hạn mức thì giữ nguyên', function(){
+  nsData();
+  var du = ctx.nsDuLieu();
+  eq(du.n, 3); eq(du.thu, 10000000); eq(du.chi, 7500000); eq(du.hienTai, 2500000);
+  eq(du.khac, 0, 'danh mục Khác chưa có số thì không có khoản không đổi');
+  eq(du.dong.map(function(d){ return d.id; }).join(), 'an,giaitri,nha,xang');
+  var nha = du.dong.filter(function(d){ return d.id === 'nha'; })[0];
+  ok(nha.coDinh && nha.giu && nha.goc === 3000000, 'Nhà: cố định, giữ hạn mức đã đặt');
+  ok(du.dong[0].flex > du.dong[3].flex, 'Ăn dao động nhiều hơn Xăng (không đổi) nên linh hoạt hơn');
+  eq(du.dong[3].flex, 0.1, 'Xăng đều 500k mỗi tháng: độ linh hoạt sàn 0,1');
+  setToday('2026-10-01');
+});
+test('nsPhanBo: mức để dành bằng hiện tại thì không cắt; để dành thêm thì chỉ cắt khoản linh hoạt, tổng khớp, không cắt quá 60%', function(){
+  nsData();
+  var du = ctx.nsDuLieu(), p0 = ctx.nsPhanBo(du, 2500000);
+  eq(p0.canCat, 0, 'đã để dành đúng mức này');
+  p0.rows.forEach(function(r){ near(r.de, r.goc, 500, r.id + ' không cắt'); });
+  var p = ctx.nsPhanBo(du, 4500000);
+  near(p.canCat, 2000000, 1, 'cần cắt = 7,5tr − (10tr − 4,5tr)');
+  var R = {}; p.rows.forEach(function(r){ R[r.id] = r; });
+  eq(R.nha.de, 3000000, 'khoản cố định giữ nguyên');
+  near(p.tongDe, 5500000, 2500, 'tổng hạn mức chi = thu − để dành (sai số làm tròn nghìn)');
+  near(p.daDanh, 4500000, 2500, 'để dành thực tế khớp thanh trượt');
+  ok(R.an.cat > R.xang.cat, 'Ăn (dao động) bị cắt nhiều hơn Xăng (đều)');
+  p.rows.forEach(function(r){ ok(r.cat <= r.tran + 1, r.id + ' không cắt quá 60%'); });
+  ok(!p.thieu, 'còn chỗ cắt');
+  setToday('2026-10-01');
+});
+test('nsPhanBo: để dành quá mức cắt được thì báo thiếu; mức tối đa = thu − (chi − phần cắt được)', function(){
+  nsData();
+  var du = ctx.nsDuLieu(), p = ctx.nsPhanBo(du, 9000000);
+  ok(p.thieu, 'đòi để dành 9tr mà chỉ cắt được ít: thiếu chỗ cắt');
+  near(ctx.nsPhanBo(du, 0).toiDa, 10000000 - (7500000 - 0.6 * 4500000), 1, 'tối đa = 10tr − (7,5tr − 60% của 4,5tr linh hoạt)');
+  eq(ctx.nsMucToiDa(du), 5200000, 'thanh trượt dừng ở mức tối đa làm tròn bước');
+  eq(ctx.nsMucMacDinh(du), 2500000, 'mặc định = mức đang để dành');
+  setToday('2026-10-01');
+});
+test('nsPhanBo: chi của danh mục "Không tính dự kiến" là khoản không đổi, trừ khỏi ngân sách', function(){
+  nsData({ khac: 300000 });
+  var du = ctx.nsDuLieu();
+  near(du.khac, 300000, 1);
+  var p = ctx.nsPhanBo(du, 4000000);
+  near(p.nganSach, 10000000 - 4000000 - 300000, 1);
+  setToday('2026-10-01');
+});
+test('nsDuLieu: chưa có tháng hoàn chỉnh hoặc chưa có thu nhập thì báo đúng và bảng trượt chỉ hiện lời giải thích', function(){
+  nsData({ batDau: '2026-10' });
+  eq(ctx.nsDuLieu(), null, 'tháng dự kiến bắt đầu từ tháng này: chưa tháng nào trọn');
+  ok(ctx.nsSheetHtml().indexOf('Chưa có tháng nào đủ dữ liệu') > 0 && ctx.nsSheetHtml().indexOf('ns_muc') < 0, 'không có thanh trượt');
+  nsData({ khongThu: true });
+  ok(ctx.nsDuLieu().thieuThu, 'chưa có thu');
+  ok(ctx.nsSheetHtml().indexOf('chưa có khoản thu nào') > 0 && ctx.nsSheetHtml().indexOf('ns_muc') < 0);
+  setToday('2026-10-01');
+});
+test('nsSheetHtml: có thanh trượt, danh sách danh mục, Cách tính có phép tính đúng', function(){
+  nsData();
+  var h = ctx.nsSheetHtml();
+  ok(h.indexOf('id="ns_muc"') > 0 && h.indexOf('max="5200000"') > 0 && h.indexOf('value="2500000"') > 0, 'thanh trượt 0..5,2tr, mặc định 2,5tr');
+  ok(h.indexOf('Ăn') > 0 && h.indexOf('Giải trí') > 0 && h.indexOf('Cố định, giữ nguyên') > 0, 'liệt kê danh mục, Nhà giữ nguyên');
+  ok(h.indexOf('Cách tính các số này') > 0, 'có mục Cách tính');
+  ok(h.indexOf('10.000.000 − 2.500.000 = 7.500.000') > 0, 'Tổng hạn mức chi = 10tr − 2,5tr');
+  var k = kiemPhepCong(h); ok(k.n >= 1, 'có phép tính'); eq(k.loi.join(' | '), '', 'mọi phép cộng đều đúng');
+  ctx.state.ns.muc = 4500000;
+  var h2 = ctx.nsSheetHtml(); eq(kiemPhepCong(h2).loi.join(' | '), ''); ok(h2.indexOf('Cần cắt') > 0 && h2.indexOf('Cần cắt <b>') > 0);
+  setToday('2026-10-01');
+});
+test('nsApDung / nsHoanTac: ghi chiTieu cho danh mục linh hoạt, không đụng khoản cố định đã có hạn mức, hoàn tác về như cũ', function(){
+  nsData();
+  var du = ctx.nsDuLieu(), cats = ctx.state.data.categories.chi;
+  var an0 = cats.filter(function(c){ return c.id === 'an'; })[0].chiTieu;
+  var cu = ctx.nsApDung(du, 4500000), p = ctx.nsPhanBo(du, 4500000), R = {};
+  p.rows.forEach(function(r){ R[r.id] = r; });
+  var an = cats.filter(function(c){ return c.id === 'an'; })[0], nha = cats.filter(function(c){ return c.id === 'nha'; })[0], kd = cats.filter(function(c){ return c.id === 'khac'; })[0];
+  eq(an.chiTieu, R.an.de, 'Ăn nhận hạn mức đề xuất'); ok(an.chiTieu < 3000000, 'đã cắt so với TB 3tr');
+  eq(nha.chiTieu, 3000000, 'Nhà giữ nguyên'); eq(kd.chiTieu, 0, 'danh mục Không tính dự kiến không bị đụng');
+  eq(cu.length, 3, 'ghi 3 danh mục (Ăn, Giải trí, Xăng)');
+  ctx.nsHoanTac(cu);
+  eq(an.chiTieu, an0, 'hoàn tác về hạn mức cũ');
+  setToday('2026-10-01');
+});
+test('Danh mục chi có nút "Tự lập hạn mức", danh mục thu thì không; sheet nstl thuộc phần Danh mục', function(){
+  nsData();
+  var chi = ctx.categoryCardHtml('chi', 'Danh mục khoản chi', ctx.state.data.categories.chi), thu = ctx.categoryCardHtml('thu', 'Danh mục khoản thu', ctx.state.data.categories.thu);
+  ok(chi.indexOf('data-act="nsMo"') > 0 && thu.indexOf('data-act="nsMo"') < 0);
+  eq(ctx.dmTabCua('nstl'), 'danhmuc');
   setToday('2026-10-01');
 });
 

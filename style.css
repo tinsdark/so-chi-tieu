@@ -1323,6 +1323,7 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .dm-card{padding:16px 16px 14px}
 .dm-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
 .dm-h h3{margin:0;border:none;padding:0;font-size:16px}
+.dm-hb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .dm-sub{font-size:12.5px;color:var(--muted);line-height:1.45}
 .dm-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-top:1px solid var(--border);cursor:pointer;min-height:52px}
 .dm-row:active{background:var(--hover)}
@@ -1659,3 +1660,22 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .dl-bar{scroll-margin-top:72px}
 .dk-in{width:112px;text-align:right;font-weight:600;padding:6px 8px}
 .dk-in.thu{color:var(--green)}.dk-in.chi{color:var(--red)}
+
+/* ---- Ngân sách tự lập (ngansach.js), tiền tố ns- ---- */
+.ns-range{width:100%;margin:10px 0 2px;accent-color:var(--chi-solid)}
+.ns-mm{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ns-big{display:flex;flex-direction:column;gap:2px;margin-top:14px}
+.ns-big span{font-size:13px;color:var(--muted)}
+.ns-big b{font-size:28px;font-variant-numeric:tabular-nums}
+.ns-big small{font-size:12.5px;color:var(--muted)}
+.ns-canh{background:var(--warn-bg);color:var(--warn-tx)}
+.ns-ds{margin-top:12px}
+.ns-row{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--border);font-size:13.5px}
+.ns-ten{display:flex;flex-direction:column;min-width:0}
+.ns-ten b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ns-g{font-size:11.5px;color:var(--muted)}
+.ns-tb{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ns-de{display:flex;flex-direction:column;align-items:flex-end;min-width:86px;font-variant-numeric:tabular-nums}
+.ns-d{font-size:11.5px}.ns-d.giam{color:var(--green)}.ns-d.tang{color:var(--red)}
+.ns-tong{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--border);padding:12px 0 4px;font-size:13px;color:var(--muted)}
+.ns-tong b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}

@@ -60,7 +60,8 @@ function categoryCardHtml(kind, title, cats){
   var tong = 0;
   cats.forEach(function(c){ tong += num(c.chiTieu); });
   var h = '<div class="card dm-card '+(kind === 'thu' ? 'k-asset' : 'k-debt')+'">'
-    + dmHead(title, '<button class="btn secondary sm" data-act="dmThemCat" data-kind="'+kind+'">+ Thêm</button>');
+    + dmHead(title, '<span class="dm-hb">' + (kind === 'chi' ? '<button class="btn secondary sm" data-act="nsMo">Tự lập hạn mức</button>' : '')
+      + '<button class="btn secondary sm" data-act="dmThemCat" data-kind="'+kind+'">+ Thêm</button></span>');
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục nào.</div>';
   } else {
@@ -352,7 +353,7 @@ function backupCardHtml(){
    state.dmTab nhớ phần đang xem; các nơi nhảy tới một bảng sửa (tìm kiếm, chuông) phải đặt đúng dmTab (xem dmTabCua). */
 var DM_TAB = [['danhmuc', 'Danh mục'], ['tien', 'Tiền'], ['kehoach', 'Kế hoạch'], ['hienthi', 'Hiển thị'], ['ungdung', 'Ứng dụng']];
 // phần chứa từng loại bảng sửa: 'cat' -> danhmuc, 'vi' / 'cfg' / 'doisoat' / 'thanhtoanthe' -> tien, 'dk' / 'mt' -> kehoach
-function dmTabCua(loai){ return { cat: 'danhmuc', vi: 'tien', cfg: 'tien', doisoat: 'tien', thanhtoanthe: 'tien', dk: 'kehoach', mt: 'kehoach', khoa: 'ungdung' }[loai] || 'danhmuc'; }
+function dmTabCua(loai){ return { cat: 'danhmuc', nstl: 'danhmuc', vi: 'tien', cfg: 'tien', doisoat: 'tien', thanhtoanthe: 'tien', dk: 'kehoach', mt: 'kehoach', khoa: 'ungdung' }[loai] || 'danhmuc'; }
 function dmThanhTabHtml(){
   return '<div class="dt-mode dm-seg" role="tablist" aria-label="Phần cài đặt">' + DM_TAB.map(function(t){
     var on = (state.dmTab || 'danhmuc') === t[0];
@@ -519,7 +520,7 @@ function dmSheetVe(){
   root.id = 'dmSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : (state.dmForm && state.dmForm.loai === 'thanhtoanthe') ? theTraSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
+  root.innerHTML = (state.dmForm && state.dmForm.loai === 'nstl') ? nsSheetHtml() : (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : (state.dmForm && state.dmForm.loai === 'thanhtoanthe') ? theTraSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -527,6 +528,7 @@ function dmSheetVe(){
 }
 // đổi màu bằng tay thì thôi cờ "về màu mặc định"
 function handleDanhMucInput(el){
+  if (handleNganSachInput(el)) return true;
   if (handleDoiSoatInput(el)) return true;
   if (el && el.id === 'dm_mau'){ el.removeAttribute('data-reset'); return true; }
   return false;
