@@ -79,7 +79,7 @@ function khoaHien(){
     g.className = 'gate lock-gate';
     g.setAttribute('role', 'dialog');
     g.setAttribute('aria-modal', 'true');
-    g.setAttribute('aria-label', 'Sổ Chi Tiêu đã khóa');
+    g.setAttribute('aria-label', 'Sổ Tiền đã khóa');
     document.body.appendChild(g);
   }
   _khoaVe(g);
@@ -95,7 +95,7 @@ function khoaTuQuet(){
 }
 function _khoaHero(phu){
   return '<div class="gate-hero nho"><div class="gate-logo"><img src="icons/icon-192.png" alt="" width="64" height="64"></div>'
-    + '<h1 class="gate-ten">Sổ Chi Tiêu</h1><p class="gate-sub">' + phu + '</p></div>';
+    + '<h1 class="gate-ten">Sổ Tiền</h1><p class="gate-sub">' + phu + '</p></div>';
 }
 function _khoaVe(g){
   var c = khoaCauHinh();
@@ -267,8 +267,8 @@ async function khoaBatSinhTrac(){
   try{
     var cred = await navigator.credentials.create({ publicKey: {
       challenge: _ngauNhien(32),
-      rp: { name: 'Sổ Chi Tiêu' },
-      user: { id: _ngauNhien(16), name: 'so-chi-tieu', displayName: 'Sổ Chi Tiêu' },
+      rp: { name: 'Sổ Tiền' },
+      user: { id: _ngauNhien(16), name: 'so-chi-tieu', displayName: 'Sổ Tiền' },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
       timeout: 60000 } });
