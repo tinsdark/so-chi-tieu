@@ -68,6 +68,7 @@ function categoryCardHtml(kind, title, cats){
     h += '<div class="cat-list" data-kind="'+kind+'">';
     cats.forEach(function(c){
       var chips = (kind === 'chi' && c.khoanCoDinh && !CAT_HE_THONG.chi[c.id] ? '<span class="dm-chip md">Khoản cố định</span>' : '')
+                + (catAm(c) ? '<span class="dm-chip">Âm lịch ' + c.ngayAm + (c.thangAm ? '/' + c.thangAm : ' hằng tháng') + '</span>' : '')
                 + (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
                 + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '');
       h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
@@ -404,6 +405,7 @@ function catSheetHtml(f){
         '<div class="dm-mau"><input type="color" id="dm_mau" value="'+mau+'" data-cur="'+mau+'" aria-label="Màu danh mục">'
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')
     + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : vnF('Ngày '+(f.kind === 'thu' ? 'thu' : 'chi')+' hằng tháng <span class="mp-hint">(nhắc)</span>', '<input type="number" id="dm_ngay" min="1" max="31" inputmode="numeric" value="'+(catNgayHan(d) || '')+'" placeholder="Bỏ trống = không nhắc">', '', 'VD: Tiền nhà ngày 5, Lương ngày 20. Gần tới ngày, Sổ tay hiện "N khoản thu/chi sắp đến hạn" cho tới khi tháng đó có giao dịch ở danh mục này.'))
+    + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : amLichOHtml(d))
     + dmToggle('dm_nodk', 'Không tính dự kiến', 'Không đoán số cho tháng tương lai (khoản không đều đặn, không thể dự đoán).', d.khongDuTru)
     + (f.kind === 'chi' && !(c && CAT_HE_THONG.chi[c.id]) ? dmToggle('dm_kcd', 'Khoản cố định', 'Tiền nhà, điện nước, học phí...: tiền ra theo lịch. Không tính vào mức tiêu mỗi ngày, nhịp chi và cảnh báo hạn mức; hiện ở nhóm "Cố định". Ăn uống, xăng xe... để tắt.', !!d.khoanCoDinh) : '')
     + dmToggle('dm_codinh', 'Cố định theo Hạn mức', 'Luôn dùng đúng Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa thay đổi).', d.coDinhChiTieu);
@@ -413,6 +415,21 @@ function catSheetHtml(f){
       + '<button type="button" class="btn danger dm-xoa" data-act="delCat" data-kind="'+f.kind+'" data-id="'+esc(c.id)+'">'+icon('trash')+' Xóa danh mục</button>';
   }
   return vnSheetKhung((c ? 'Sửa' : 'Thêm') + ' danh mục ' + (f.kind === 'thu' ? 'thu' : 'chi'), h, c ? 'Lưu thay đổi' : 'Lưu danh mục', 'dmLuuCat', 'dmHuy');
+}
+
+// ô nhập ngày âm lịch trong bảng sửa danh mục (nhachan.js: catAm): ngày âm 1–30 + "Hằng tháng" hoặc tháng âm 1–12 (hằng năm)
+function amLichOHtml(d){
+  var t = Math.round(num(d.thangAm)), opt = '<option value="0"' + (t ? '' : ' selected') + '>Hằng tháng</option>', i;
+  for (i = 1; i <= 12; i++) opt += '<option value="' + i + '"' + (t === i ? ' selected' : '') + '>Tháng ' + i + '</option>';
+  var xem = '';
+  if (catAm(d)){
+    var homNay = todayStr(), ds = catAmNgayDuong(d, homNay, catCongNgay(homNay, 400));
+    xem = ds.length ? 'Lần tới: <b>' + ngayVN(ds[0]) + '</b> (' + alNhan(ds[0]) + ').' : '';
+  }
+  return vnF('Hoặc theo âm lịch <span class="mp-hint">(nhắc)</span>',
+    '<div class="vn-2"><input type="number" id="dm_ngayAm" min="1" max="30" inputmode="numeric" value="' + (catAm(d) ? d.ngayAm : (num(d.ngayAm) > 0 ? d.ngayAm : '')) + '" placeholder="Ngày âm (1–30)">'
+    + '<select id="dm_thangAm" aria-label="Tháng âm lịch">' + opt + '</select></div>', '',
+    'VD: giỗ ông ngày 12, Tháng 3 (mỗi năm); rằm: ngày 15, Hằng tháng. Nhắc đúng ngày dương của từng lần. Đã điền ngày dương ở trên thì dùng ngày dương.' + (xem ? '<br>' + xem : ''));
 }
 
 function cfgSheetHtml(){
@@ -653,13 +670,21 @@ function handleDanhMucAction(act, el){
     var ngayEl = document.getElementById('dm_ngay');
     var mauMoi = mauEl && mauEl.getAttribute('data-reset') !== '1' && mauEl.value !== mauEl.getAttribute('data-cur') ? mauEl.value : null;
     if (ngayEl){ var ngayN = Math.round(num(ngayEl.value)); cDoi.ngay = (ngayN >= 1 && ngayN <= 31) ? ngayN : 0; }
+    var ngayAmEl = document.getElementById('dm_ngayAm'), thangAmEl = document.getElementById('dm_thangAm');
+    if (ngayAmEl){
+      var nAm = Math.round(num(ngayAmEl.value));
+      cDoi.ngayAm = (nAm >= 1 && nAm <= 30) ? nAm : 0;
+      cDoi.thangAm = (cDoi.ngayAm && thangAmEl) ? Math.max(0, Math.min(12, Math.round(num(thangAmEl.value)))) : 0;
+    }
     if (cCu){
       Object.assign(cCu, cDoi);
       if (!cCu.ngay) delete cCu.ngay;
+      if (!cCu.ngayAm){ delete cCu.ngayAm; delete cCu.thangAm; }
       if (mauEl && mauEl.getAttribute('data-reset') === '1') cCu.mau = '';
       else if (mauMoi) cCu.mau = mauMoi;
     } else {
       if (!cDoi.ngay) delete cDoi.ngay;
+      if (!cDoi.ngayAm){ delete cDoi.ngayAm; delete cDoi.thangAm; }
       cDoi.id = slugify(tenCat) + '_' + Date.now().toString(36);
       if (mauMoi) cDoi.mau = mauMoi;
       arrCat.push(cDoi);

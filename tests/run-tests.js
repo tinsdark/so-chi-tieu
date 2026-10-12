@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
+['state.js', 'amlich.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -5394,6 +5394,119 @@ test('Ghi nhanh: dưới ô số tiền hiện bao nhiêu ngày tự do (chi: Kh
 test('Báo cáo: thẻ Ngày tự do là thẻ đầu tiên sau thẻ đầu, ẩn / hiện được ở Hiển thị', function(){
   eq(ctx.htThuTu('baocao')[0], 'ngaytudo');
   ok(ctx.htThe('baocao', 'ngaytudo') && !ctx.htThe('baocao', 'ngaytudo').khoa, 'không khóa: ẩn được');
+});
+
+group('Lịch âm (amlich.js)');
+test('alTet: mùng 1 Tết các năm 2015 – 2030 theo giờ Việt Nam (UTC+7)', function(){
+  var tet = { 2015: '2015-02-19', 2016: '2016-02-08', 2017: '2017-01-28', 2018: '2018-02-16', 2019: '2019-02-05', 2020: '2020-01-25', 2021: '2021-02-12',
+    2022: '2022-02-01', 2023: '2023-01-22', 2024: '2024-02-10', 2025: '2025-01-29', 2026: '2026-02-17', 2027: '2027-02-06', 2028: '2028-01-26', 2029: '2029-02-13',
+    2030: '2030-02-02' };      // 2030: trăng mới lúc 23:08 ngày 2/2 giờ VN (sang 3/2 ở Trung Quốc UTC+8): Việt Nam ăn Tết sớm hơn một ngày
+  Object.keys(tet).forEach(function(y){ eq(ctx.alTet(parseInt(y, 10)), tet[y], 'Tết ' + y); });
+});
+test('alCua: ngày âm, tháng nhuận (2023 nhuận 2, 2025 nhuận 6), rằm tháng 8', function(){
+  var a = ctx.alCua('2026-02-17'); eq(a.ngay + '/' + a.thang + '/' + a.nam + '/' + a.nhuan, '1/1/2026/false', 'mùng 1 Tết Bính Ngọ');
+  var n1 = ctx.alCua('2023-03-22'); eq(n1.ngay + '/' + n1.thang + '/' + n1.nhuan, '1/2/true', '2023: tháng 2 nhuận bắt đầu 22/3');
+  eq(ctx.alCua('2023-02-20').nhuan, false, 'tháng 2 thường đứng trước'); eq(ctx.alCua('2023-04-20').thang, 3);
+  var n2 = ctx.alCua('2025-07-25'); eq(n2.ngay + '/' + n2.thang + '/' + n2.nhuan, '1/6/true', '2025: tháng 6 nhuận bắt đầu 25/7');
+  eq(ctx.alNhan('2025-07-25'), '1/6 nhuận âm'); eq(ctx.alNhan('2026-09-25'), '15/8 âm', 'Trung thu 2026');
+  eq(ctx.alNhan('2025-10-06'), '15/8 âm', 'Trung thu 2025');
+});
+test('alSangDuong là nghịch đảo của alCua trên mọi ngày 2020 – 2030', function(){
+  var loi = [], t = new Date(2020, 0, 1), n = 0;
+  while (t < new Date(2031, 0, 1)){
+    var d = t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2), a = ctx.alCua(d);
+    if (ctx.alSangDuong(a.ngay, a.thang, a.nam, a.nhuan) !== d) loi.push(d);
+    n++; t = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  }
+  eq(loi.slice(0, 3).join(), '', 'ngày lệch'); ok(n > 4000);
+  eq(ctx.alSangDuong(1, 2, 2024, true), '', 'năm 2024 không có tháng 2 nhuận');
+});
+test('alNgayDuong: rằm hằng tháng, giỗ hằng năm, ngày 30 của tháng thiếu rơi vào ngày 29, bỏ tháng nhuận', function(){
+  eq(ctx.alNgayDuong(15, 0, '2026-10-12', '2026-12-31').join(), '2026-10-24,2026-11-23,2026-12-23', 'rằm 3 tháng liền');
+  eq(ctx.alNgayDuong(12, 3, '2026-10-12', '2027-12-31').join(), '2027-04-18', 'giỗ 12/3 âm chỉ có một lần trong khoảng');
+  var thieu = ctx.alNgayDuong(30, 0, '2026-01-01', '2026-12-31'), a = ctx.alCua(thieu[0]);
+  ok(thieu.length >= 11 && thieu.length <= 13, 'mỗi tháng âm một lần: ' + thieu.length);
+  thieu.forEach(function(d){ var x = ctx.alCua(d); ok(x.ngay === 30 || x.ngay === 29, d + ' = ' + x.ngay); });
+  eq(ctx.alNgayDuong(1, 6, '2025-06-01', '2025-09-30').join(), '2025-06-25', 'mùng 1 tháng 6: lấy tháng 6 thường (25/6), bỏ tháng 6 nhuận (25/7)');
+  eq(ctx.alNgayDuong(31, 0, '2026-01-01', '2026-12-31').length, 0, 'ngày âm 31 không có'); eq(ctx.alNgayDuong(0, 0, '2026-01-01', '2026-12-31').length, 0);
+});
+test('alCanChi: năm âm lịch', function(){
+  eq(ctx.alCanChi(2026), 'Bính Ngọ'); eq(ctx.alCanChi(2027), 'Đinh Mùi'); eq(ctx.alCanChi(2024), 'Giáp Thìn'); eq(ctx.alCanChi(2000), 'Canh Thìn');
+});
+
+group('Lịch âm: danh mục nhắc theo âm lịch');
+function amData(cats){
+  var d = baseData({ journal: {} });
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-01-01', thangBatDauDuTru: '2026-01' };
+  d.categories.thu = [{ id: 'luong', ten: 'Lương', chiTieu: 0 }];
+  d.categories.chi = [{ id: 'ram', ten: 'Cúng rằm', chiTieu: 500000, ngayAm: 15, thangAm: 0 }, { id: 'gio', ten: 'Giỗ ông', chiTieu: 2000000, ngayAm: 12, thangAm: 3 },
+    { id: 'nha', ten: 'Tiền nhà', chiTieu: 3000000, ngay: 5 }].concat(cats || []);
+  setToday('2026-10-20');
+  return loadData(d);
+}
+test('chuẩn hóa: ngayAm 1–30, thangAm 0–12; sai khuôn thì bỏ cả hai', function(){
+  amData([{ id: 'x1', ten: 'X1', chiTieu: 0, ngayAm: 31, thangAm: 5 }, { id: 'x2', ten: 'X2', chiTieu: 0, ngayAm: 8, thangAm: 13 }, { id: 'x3', ten: 'X3', chiTieu: 0, ngayAm: 'abc' }]);
+  var c = {}; ctx.state.data.categories.chi.forEach(function(x){ c[x.id] = x; });
+  eq(c.ram.ngayAm, 15); eq(c.ram.thangAm, 0); eq(c.gio.thangAm, 3);
+  eq(c.x1.ngayAm, undefined, 'ngày 31 không hợp lệ'); eq(c.x1.thangAm, undefined);
+  eq(c.x2.ngayAm, 8); eq(c.x2.thangAm, 0, 'tháng 13 về hằng tháng'); eq(c.x3.ngayAm, undefined);
+  setToday('2026-10-01');
+});
+test('catAm: ngày dương đã đặt thì bỏ qua âm lịch; hệ thống không có', function(){
+  amData();
+  var c = {}; ctx.state.data.categories.chi.forEach(function(x){ c[x.id] = x; });
+  eq(ctx.catAm(c.ram).ngay, 15); eq(ctx.catAm(c.gio).thang, 3); eq(ctx.catAm(c.nha), null);
+  c.ram.ngay = 10; eq(ctx.catAm(c.ram), null, 'đã có ngày dương: dùng ngày dương');
+  eq(ctx.catAmHangNam(c.gio), true); eq(ctx.catAmHangNam({ id: 'q', ngayAm: 15, thangAm: 0 }), false, 'hằng tháng không phải hằng năm');
+  setToday('2026-10-01');
+});
+test('catHanTrongThang: ngày dương, rằm hằng tháng âm, giỗ hằng năm (chỉ đúng tháng)', function(){
+  amData();
+  var c = {}; ctx.state.data.categories.chi.forEach(function(x){ c[x.id] = x; });
+  eq(ctx.catHanTrongThang(c.nha, '2026-11'), '2026-11-05'); eq(ctx.catHanTrongThang(c.ram, '2026-11'), '2026-11-23');
+  eq(ctx.catHanTrongThang(c.gio, '2027-04'), '2027-04-18'); eq(ctx.catHanTrongThang(c.gio, '2027-05'), '', 'giỗ chỉ một lần mỗi năm');
+  setToday('2026-10-01');
+});
+test('dsCatSapDenHan: rằm âm nhắc đúng ngày dương, quá hạn tới 7 ngày, tắt bằng Hoàn thành hoặc khi đã ghi', function(){
+  amData();
+  var ds = ctx.dsCatSapDenHan(7, '2026-10-20').filter(function(x){ return x.id === 'ram'; });
+  eq(ds.length, 1); eq(ds[0].han, '2026-10-24'); eq(ds[0].soNgay, 4); eq(ds[0].am, true); eq(ds[0].mk, '2026-10-24', 'kỳ = chính ngày dương');
+  eq(ctx.dsCatSapDenHan(7, '2026-10-27').filter(function(x){ return x.id === 'ram'; })[0].soNgay, -3, 'quá hạn 3 ngày vẫn nhắc');
+  eq(ctx.dsCatSapDenHan(7, '2026-11-02').filter(function(x){ return x.id === 'ram'; }).length, 0, 'quá 7 ngày thôi nhắc, rằm tháng sau còn xa');
+  eq(ctx.dsCatSapDenHan(7, '2026-10-20').filter(function(x){ return x.id === 'gio'; }).length, 0, 'giỗ 12/3 âm chưa tới');
+  ctx.nhacHanHoanThanh('chi', 'ram', '2026-10-24');
+  eq(ctx.dsCatSapDenHan(7, '2026-10-20').filter(function(x){ return x.id === 'ram'; }).length, 0, 'Hoàn thành tắt nhắc kỳ đó');
+  ctx.nhacHanHoanTac('chi', 'ram', '2026-10-24');
+  ctx.state.data.journal['2026-10-22'] = { thu: {}, chi: { ram: 300000 }, ghiChu: '', refs: [], items: [] };
+  eq(ctx.dsCatSapDenHan(7, '2026-10-20').filter(function(x){ return x.id === 'ram'; }).length, 0, 'đã ghi gần ngày rằm thì hết nhắc');
+  setToday('2026-10-01');
+});
+test('dsCatSapDenHan: giỗ hằng năm nhắc đúng lần trong 7 ngày tới', function(){
+  amData(); setToday('2027-04-14');
+  var ds = ctx.dsCatSapDenHan(7, '2027-04-14').filter(function(x){ return x.id === 'gio'; });
+  eq(ds.length, 1); eq(ds[0].han, '2027-04-18'); eq(ds[0].soNgay, 4);
+  setToday('2026-10-01');
+});
+test('lichSuKien (.ics): lần âm lịch trong 12 tháng tới, tiêu đề ghi kèm ngày âm, bỏ lần đã Hoàn thành', function(){
+  amData();
+  var ds = ctx.lichSuKien('2026-10-20'), ram = ds.filter(function(e){ return e.uid.indexOf('dmam-chi-ram-') === 0; });
+  ok(ram.length >= 11 && ram.length <= 13, 'rằm khoảng 12 lần: ' + ram.length);
+  eq(ram[0].ngay, '2026-10-24'); eq(ram[0].tieuDe, 'Chi: Cúng rằm (15/9 âm)');
+  var gio = ds.filter(function(e){ return e.uid.indexOf('dmam-chi-gio-') === 0; }); eq(gio.length, 1, 'giỗ một lần'); eq(gio[0].ngay, '2027-04-18');
+  ctx.nhacHanHoanThanh('chi', 'ram', '2026-10-24');
+  eq(ctx.lichSuKien('2026-10-20').filter(function(e){ return e.ngay === '2026-10-24' && e.uid.indexOf('dmam-') === 0; }).length, 0, 'lần đã tắt không xuất');
+  setToday('2026-10-01');
+});
+test('bảng sửa danh mục: có ô ngày âm + chọn tháng âm, hiện lần tới; danh mục hệ thống thì không có', function(){
+  amData();
+  var arr = ctx.state.data.categories.chi, gio = arr.filter(function(c){ return c.id === 'gio'; })[0];
+  var h = ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'gio' });
+  ok(h.indexOf('id="dm_ngayAm"') > 0 && h.indexOf('value="12"') > 0 && h.indexOf('<option value="3" selected>Tháng 3</option>') > 0, 'đã điền 12, Tháng 3');
+  ok(h.indexOf('Lần tới: <b>18/04/2027</b> (12/3 âm)') > 0, 'hiện ngày dương của lần tới');
+  var h2 = ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: '' }); ok(h2.indexOf('id="dm_ngayAm"') > 0 && h2.indexOf('Lần tới') < 0, 'danh mục mới: ô trống');
+  var list = ctx.categoryCardHtml('chi', 'Danh mục khoản chi', arr);
+  ok(list.indexOf('Âm lịch 12/3') > 0 && list.indexOf('Âm lịch 15 hằng tháng') > 0, 'chip trong danh sách');
+  setToday('2026-10-01');
 });
 
 /* ==================================================================== */
