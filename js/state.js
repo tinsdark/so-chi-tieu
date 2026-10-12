@@ -578,6 +578,14 @@ function normalizeData(d){
     if (c.khoanCoDinh == null){ var n = Math.round(num(c.ngay)); c.khoanCoDinh = n >= 1 && n <= 31; }
     else c.khoanCoDinh = !!c.khoanCoDinh;
   });
+  // nhắc theo ÂM LỊCH (nhachan.js): ngayAm 1–30; thangAm 0 = hằng tháng âm, 1–12 = hằng năm. Sai khuôn thì bỏ cả hai.
+  ['thu', 'chi'].forEach(function(kind){
+    d.categories[kind].forEach(function(c){
+      var na = Math.round(num(c.ngayAm));
+      if (na >= 1 && na <= 30){ var tm = Math.round(num(c.thangAm)); c.ngayAm = na; c.thangAm = (tm >= 1 && tm <= 12) ? tm : 0; }
+      else { delete c.ngayAm; delete c.thangAm; }
+    });
+  });
   d.duTru = d.duTru || { thu: {}, chi: {} };
   d.duTru.thu = d.duTru.thu || {};
   d.duTru.chi = d.duTru.chi || {};

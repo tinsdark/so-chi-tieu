@@ -78,6 +78,7 @@ function qaNgayLui(n){
 }
 // nút "Ghi khoản chi" đổi thành "Nhập số tiền để ghi" khi chưa có số: gọi lại mỗi lần gõ vào ô số tiền
 function qaNutCapNhat(){
+  ntdGoiYCapNhat();
   var b = document.querySelector('#ghiNhanh .qa-save');
   if (!b) return;
   var co = numNonNeg(docSo(state.qa.amt)) > 0, kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
@@ -111,6 +112,7 @@ function ghiNhanhHtml(){
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-down')+' Khoản thu</button>'
     + '</div>'
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'">'
+    + '<div class="qa-ntd" id="qa_ntd">' + ntdGoiY(kind, numNonNeg(docSo(state.qa.amt))) + '</div>'
     // phím nhanh: điện thoại bàn phím số không có + / 000
     + '<div class="qa-keys" aria-label="Phím nhanh cho ô số tiền">'
     +   '<button type="button" data-chen="000" data-for="qa_amount">000</button>'

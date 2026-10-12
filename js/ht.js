@@ -18,11 +18,13 @@ var HT_THE = {
     { id: 'sosanh', ten: 'So sánh cùng kỳ', mota: 'Chi so với tháng trước', khongThuTu: true }
   ],
   baocao: [
+    { id: 'ngaytudo', ten: 'Ngày tự do', mota: 'Tiền đang có đủ sống bao nhiêu ngày' },
     { id: 'diemnhan', ten: 'Điều đáng chú ý', mota: 'Vài câu tự rút ra từ dữ liệu' },
     { id: 'tongket', ten: 'Tổng kết tháng', mota: 'Chỉ hiện với tháng đã kết thúc' },
     { id: 'hanmuc', ten: 'Hạn mức' },
     { id: 'taisan', ten: 'Tài sản ròng' },
     { id: 'muctieu', ten: 'Mục tiêu tiết kiệm' },
+    { id: 'tet', ten: 'Tết đếm ngược', mota: 'Hiện khi còn dưới 150 ngày tới Tết: số Tết năm ngoái và Quỹ Tết' },
     { id: 'nhan', ten: 'Theo nhãn' },
     { id: 'bieudo', ten: 'Biểu đồ chi tiêu', mota: 'Cột bên phải ở màn rộng', khongThuTu: true }
   ],

@@ -144,9 +144,10 @@ function tnLichTien(homNay, soNgay, viId){
         });
         return;
       }
-      var con = num(c.chiTieu) - da, nh = catNgayHan(c);
+      var con = num(c.chiTieu) - da, hanC = catHanTrongThang(c, mk);
       if (con <= 0) return;
-      them(nh ? ngayTraCuaKy(mk, nh) : (mk === monthKey(homNay) ? homNay : mk + '-01'), 'ra', c.ten + (nh ? '' : ' (chưa có ngày chi)'), con);   // không có ví riêng -> ví mặc định
+      if (!hanC && catAmHangNam(c)) return;                // hằng năm theo âm lịch: tháng này không có kỳ nào
+      them(hanC || (mk === monthKey(homNay) ? homNay : mk + '-01'), 'ra', c.ten + (hanC ? '' : ' (chưa có ngày chi)'), con);   // không có ví riêng -> ví mặc định
     });
     // khoản thu có ngày
     (d.categories.thu || []).forEach(function(c){
@@ -158,8 +159,8 @@ function tnLichTien(homNay, soNgay, viId){
           ds2.push({ ngay: ngayTraCuaKy(mk, k.ngay), ten: k.ten || c.ten, soTien: num(k.soTien), vi: k.walletId });
         });
       } else {
-        var nh = catNgayHan(c), con = num(c.chiTieu) - actualCatInMonth('thu', c.id, mk);
-        if (nh && con > 0) ds2.push({ ngay: ngayTraCuaKy(mk, nh), ten: c.ten, soTien: con });
+        var hanT = catHanTrongThang(c, mk), con = num(c.chiTieu) - actualCatInMonth('thu', c.id, mk);
+        if (hanT && con > 0) ds2.push({ ngay: hanT, ten: c.ten, soTien: con });
       }
       ds2.forEach(function(x){
         if (x.ngay < homNay){ ghiChu.push(x.ten + ' (ngày ' + ngayNganVN(x.ngay) + ') chưa ghi nên chưa tính.'); return; }

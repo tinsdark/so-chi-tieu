@@ -789,12 +789,14 @@ function renderBaoCao(){
   var hm = hanMucThangHtml(mk);
   // thẻ đầu luôn có; các thẻ còn lại theo thứ tự / bật tắt của người dùng (Cài đặt → Hiển thị, ht.js)
   var the = {
+    ngaytudo: ntdCardHtml(),                   // ngày tự do: tính tới HÔM NAY, không theo tháng đang xem (ngaytudo.js)
     diemnhan: dnCardHtml(mk),
     tongket: tongKetCardHtml(mk),              // chỉ có ở tháng đã kết thúc (tongket.js)
     hanmuc: hm || '<div class="card bc-card" id="cardHanMuc"><h3 class="bc-h">Hạn mức '+monthLabel(mk).toLowerCase()+'</h3><div class="empty" style="padding:0;text-align:left">'
       + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>',
     taisan: taiSanRongCardHtml(mk),
     muctieu: mucTieuCardHtml(),
+    tet: tetCardHtml(),                        // chỉ có khi sắp Tết (tet.js)
     nhan: nhanCardHtml()
   };
   var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);

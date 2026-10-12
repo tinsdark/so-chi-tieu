@@ -50,6 +50,16 @@ function lichSuKien(homNay){
         them('dm-' + kind + '-' + c.id + '-' + mk, ngayTraCuaKy(mk, n), (kind === 'thu' ? 'Thu: ' : 'Chi: ') + c.ten, '');
       }
     });
+    // theo âm lịch: từng lần xảy ra trong 12 tháng tới, tiêu đề ghi kèm ngày âm
+    (state.data.categories[kind] || []).forEach(function(c){
+      if (!catAm(c) || he[c.id]) return;
+      var xong = Array.isArray(c.xong) ? c.xong : [];
+      catAmNgayDuong(c, homNay, monthKey(monthKeyAdd(mk0, LICH_SO_THANG - 1)) + '-31').forEach(function(han){
+        if (xong.indexOf(han) >= 0) return;
+        if (catGhiTrongKhoang(kind, c.id, catCongNgay(han, -NHAC_HAN_NGAY), catCongNgay(han, NHAC_QUA_HAN_AM)) > 0) return;
+        them('dmam-' + kind + '-' + c.id + '-' + han, han, (kind === 'thu' ? 'Thu: ' : 'Chi: ') + c.ten + ' (' + alNhan(han) + ')', '');
+      });
+    });
   });
   // 4. giao dịch định kỳ
   (state.data.dinhKy || []).forEach(function(dk){

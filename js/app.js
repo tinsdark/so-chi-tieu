@@ -197,7 +197,7 @@ document.getElementById('btnRefresh').addEventListener('click', async function()
   if (tuLoi && ok){ await checkLocalDraft(); renderAll(); }
 });
 
-document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleCongCuInput(ev.target); handleTimInput(ev.target); });
+document.addEventListener('input', function(ev){ handleMoPhongInput(ev.target); handleVayNoInput(ev.target); handleNguoiInput(ev.target); handleDanhMucInput(ev.target); handleNgayTuDoInput(ev.target); handleCongCuInput(ev.target); handleTimInput(ev.target); });
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
@@ -226,6 +226,8 @@ function handleAction(act, el){
   if (handleTimAction(act, el)) return;
   if (handleCongCuAction(act, el)) return;
   if (handleDoiSoatAction(act, el)) return;
+  if (handleNganSachAction(act, el)) return;
+  if (handleTetAction(act, el)) return;
   if (handleTheAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
   if (handleMoPhongAction(act, el)) return;

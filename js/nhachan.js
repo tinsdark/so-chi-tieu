@@ -15,6 +15,41 @@
 var NHAC_HAN_NGAY = 7;     // nhắc trước hạn bao nhiêu ngày
 
 function catNgayHan(c){ var n = Math.round(num(c && c.ngay)); return (n >= 1 && n <= 31) ? n : 0; }
+/* NHẮC THEO ÂM LỊCH (giỗ, mùng 1 / rằm, sinh nhật âm...): cat.ngayAm (1–30), cat.thangAm (0 = hằng tháng âm, 1–12 = hằng năm).
+   Ngày dương (cat.ngay) đã đặt thì dùng ngày dương, bỏ qua âm lịch. Kỳ nhắc là TỪNG LẦN xảy ra (một ngày dương cụ thể), không theo tháng dương:
+   nhắc từ N ngày trước tới 7 ngày sau (quá hạn); hết nhắc khi cat.xong có đúng ngày đó, hoặc đã có giao dịch ở danh mục trong [ngày−N, ngày+7].
+   Cần amlich.js (alNgayDuong). */
+var NHAC_QUA_HAN_AM = 7;
+function catAm(c){
+  if (!c || catNgayHan(c)) return null;
+  var n = Math.round(num(c.ngayAm));
+  if (!(n >= 1 && n <= 30)) return null;
+  var t = Math.round(num(c.thangAm));
+  return { ngay: n, thang: (t >= 1 && t <= 12) ? t : 0 };
+}
+function catAmHangNam(c){ var a = catAm(c); return !!(a && a.thang > 0); }
+function catCongNgay(d, n){
+  var t = new Date(parseInt(d.slice(0, 4), 10), parseInt(d.slice(5, 7), 10) - 1, parseInt(d.slice(8, 10), 10) + n);
+  return t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+}
+// các ngày dương trong [tu, den] rơi đúng ngày âm của danh mục
+function catAmNgayDuong(c, tu, den){ var a = catAm(c); return a ? alNgayDuong(a.ngay, a.thang, tu, den) : []; }
+// ngày hạn của danh mục trong tháng dương mk: ngày dương nếu có, không thì lần âm lịch ĐẦU TIÊN rơi trong tháng; '' nếu không có
+function catHanTrongThang(c, mk){
+  var n = catNgayHan(c);
+  if (n) return ngayTraCuaKy(mk, n);
+  var ds = catAmNgayDuong(c, mk + '-01', mk + '-' + pad2(daysInMonth(mk)));
+  return ds.length ? ds[0] : '';
+}
+// tổng tiền đã ghi ở danh mục trong khoảng ngày [tu, den]
+function catGhiTrongKhoang(kind, id, tu, den){
+  var s = 0;
+  Object.keys(state.data.journal).forEach(function(d){
+    if (d < tu || d > den) return;
+    s += num((state.data.journal[d][kind] || {})[id]);
+  });
+  return s;
+}
 
 // các danh mục cần nhắc: [{ kind, id, ten, han ('YYYY-MM-DD'), soNgay (âm = quá hạn) }], gần hạn nhất trước
 function dsCatSapDenHan(nNgay, homNay){
@@ -38,6 +73,16 @@ function dsCatSapDenHan(nNgay, homNay){
       // tháng này đã ghi: chỉ nhắc kỳ của tháng sau khi đã gần (cuối tháng)
       var han2 = ngayTraCuaKy(mkSau, n), so2 = daysBetween(homNay, han2);
       if (so2 <= nNgay && xong.indexOf(mkSau) < 0) out.push({ kind: kind, id: c.id, ten: c.ten, han: han2, soNgay: so2, mk: mkSau });
+    });
+    // theo âm lịch: mỗi lần xảy ra là một kỳ, khóa 'xong' là chính ngày dương đó
+    (state.data.categories[kind] || []).forEach(function(c){
+      if (he[c.id] || !catAm(c)) return;
+      var xong = Array.isArray(c.xong) ? c.xong : [];
+      catAmNgayDuong(c, catCongNgay(homNay, -NHAC_QUA_HAN_AM), catCongNgay(homNay, nNgay)).forEach(function(han){
+        if (xong.indexOf(han) >= 0) return;
+        if (catGhiTrongKhoang(kind, c.id, catCongNgay(han, -nNgay), catCongNgay(han, NHAC_QUA_HAN_AM)) > 0) return;
+        out.push({ kind: kind, id: c.id, ten: c.ten, han: han, soNgay: daysBetween(homNay, han), mk: han, am: true });
+      });
     });
   });
   out.sort(function(a, b){ return a.soNgay - b.soNgay || (a.ten < b.ten ? -1 : 1); });
