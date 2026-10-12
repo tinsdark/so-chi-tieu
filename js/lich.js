@@ -13,7 +13,7 @@
    ==================================================================== */
 
 var LICH_SO_THANG = 12;
-var LICH_TEN_FILE = 'so-chi-tieu-nhac-viec.ics';
+var LICH_TEN_FILE = 'so-tien-nhac-viec.ics';
 
 // danh sách sự kiện: [{ uid, ngay ('YYYY-MM-DD'), tieuDe, moTa }], ngày tăng dần
 function lichSuKien(homNay){
@@ -104,7 +104,7 @@ function icsStamp(t){
 // dựng nội dung file .ics từ danh sách sự kiện; bay = thời điểm tạo (mặc định bây giờ)
 function lichIcs(ds, bay){
   var stamp = icsStamp(bay || new Date());
-  var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//So Chi Tieu//Nhac viec//VI', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Sổ Chi Tiêu'];
+  var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//So Tien//Nhac viec//VI', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Sổ Tiền'];
   ds.forEach(function(e){
     L.push('BEGIN:VEVENT', 'UID:' + e.uid + '@sochitieu', 'DTSTAMP:' + stamp,
       'DTSTART;VALUE=DATE:' + icsNgay(e.ngay), 'DTEND;VALUE=DATE:' + icsNgaySau(e.ngay),
@@ -132,7 +132,7 @@ function lichGiao(text){
   var blob = new Blob([text], { type: 'text/calendar;charset=utf-8' }), file = null;
   try { file = new File([blob], LICH_TEN_FILE, { type: 'text/calendar' }); } catch (e) { file = null; }
   if (file && navigator.canShare && navigator.canShare({ files: [file] })){
-    navigator.share({ files: [file], title: 'Nhắc việc Sổ Chi Tiêu' }).catch(function(e){
+    navigator.share({ files: [file], title: 'Nhắc việc Sổ Tiền' }).catch(function(e){
       if (!e || e.name !== 'AbortError') lichTaiXuong(blob, LICH_TEN_FILE);
     });
     return 'share';

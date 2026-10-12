@@ -1,6 +1,6 @@
 {
-  "name": "Sổ Chi Tiêu",
-  "short_name": "Sổ Chi Tiêu",
+  "name": "Sổ Tiền",
+  "short_name": "Sổ Tiền",
   "description": "Sổ chi tiêu cá nhân, đồng bộ qua Google Drive của bạn.",
   "lang": "vi",
   "start_url": "./",

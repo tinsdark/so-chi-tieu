@@ -395,7 +395,7 @@ function exportExcel(){
   var ws = XLSX.utils.aoa_to_sheet(rows);
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'So tay');
-  XLSX.writeFile(wb, 'so-chi-tieu_' + todayStr() + '.xlsx');
+  XLSX.writeFile(wb, 'so-tien_' + todayStr() + '.xlsx');
 }
 
 /* ---- Sổ tay ---- */

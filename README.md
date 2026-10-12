@@ -1,4 +1,4 @@
-# Sổ Chi Tiêu
+# Sổ Tiền
 
 Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn trên trình duyệt (HTML + CSS + JavaScript thuần, **không framework, không build, không server riêng**). Dữ liệu lưu trong **Google Drive của chính người dùng**, dùng được như app trên điện thoại (PWA) và mở được cả khi mất mạng.
 
