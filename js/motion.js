@@ -283,7 +283,7 @@ function vuotHoi(loai, date){
     if (!keo) return;
     var du = keo.d >= NGUONG; keo = null;
     an();
-    if (du){ var b = document.getElementById('btnRefresh'); if (b) b.click(); }
+    if (du) lamMoiDuLieu();
   }
   document.addEventListener('touchstart', function(ev){
     var app = document.getElementById('app');

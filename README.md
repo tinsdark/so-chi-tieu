@@ -62,7 +62,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, xem danh sách và **khôi phục** một bản ngay trong tab Cài đặt. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
-- **Giao diện** sáng/tối, tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
+- **Giao diện** sáng / tối / tự động theo điện thoại (chọn ở **Cài đặt → Ứng dụng → thẻ "Giao diện và làm mới"**, cùng nút **Làm mới dữ liệu**; header chỉ còn tìm kiếm, thông báo, ẩn số), tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
 - **Biểu đồ tự vẽ bằng SVG**, không dùng thư viện biểu đồ, nên xem được cả khi offline.
 - Có trang [Chính sách quyền riêng tư](privacy.html).
 
@@ -186,6 +186,8 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - **Lời giải thích nào cũng phải có số thật.** Con số mới được tính toán thì thêm `giaiThichSo([{ ten, ct, pt }], 'Cách tính các số này')` với `pt` là phép tính bằng số đang hiện (dùng `ptCong`, `soGt`); ghi chú giải thích khái niệm thì thêm `gtViDu([...])` ("Với số của bạn"). Không viết lời giải thích chung chung mà không có số. Có test (`kiemPhepCong` trong tests/run-tests.js) kiểm mọi phép cộng / trừ trong giải thích đúng về số học.
 
 - Màu: thu xanh, chi đỏ trầm, trả nợ / sắp đến hạn hổ phách. Chữ phần trăm để màu trung tính.
+- **Màu hành động tách khỏi màu "chi".** Mọi thứ BẤM ĐƯỢC hoặc ĐANG CHỌN (nút chính, tab đang chọn, liên kết, ô / đoạn chọn đang bật, vòng focus, nút Ghi nhanh) dùng `--action` (nâu cà phê đậm ở sáng, kem vàng ở tối; chữ trên nền đặc là `--action-tx`, hover là `--action-d`). Đỏ (`--red`, `--chi-solid`) chỉ có nghĩa "chi / vượt mức / nguy hiểm", xanh chỉ "thu". `--primary` / `--primary-d` (đỏ gạch) giữ cho tên app, dòng số dư và tiêu đề nhóm; đừng dùng cho nút hay liên kết mới.
+- **Báo cáo gập thẻ.** Tab Báo cáo giữ `BC_GIU` (3) thẻ đầu, gập phần còn lại sau nút "Xem thêm N thẻ: …" (`#bcExtra`, `state.bcMo`, không lưu); chỉ còn dư 1 thẻ thì không gập. Có hàng chip nhảy nhanh tới từng thẻ đang hiện (dùng `tqCuon`, tự mở phần gập nếu thẻ nằm trong đó). Màn rộng ≥ 1024px hiện hết, chip và nút ẩn. Thẻ mới thêm vào Báo cáo cần có id (`BC_DICH` trong `bieudo.js`) và tên chip (`BC_NHAN`).
 - Tiền hiện đầy đủ (`4.769.960`), không viết tắt "tr" / "k" (trừ trục biểu đồ).
 - Danh sách dài dùng thẻ + nút "Xem thêm / Xem tất cả" thay cho bảng cuộn lồng nhau; dưới 375px bớt cột phụ.
 - Thêm / sửa qua bảng trượt: khung `.qa-sheet` (Sổ tay), `.vn-sheet` (Vay - Nợ, Danh mục). Bảng nằm ngoài `#tabContent` và giữ nguyên DOM khi vẽ lại trang, nên đồng bộ Drive không làm mất ô đang gõ.
@@ -227,8 +229,6 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 - **Sổ tiết kiệm có kỳ hạn** (lãi suất, ngày đáo hạn, tự tính lãi) và **vàng / chứng khoán** vào tài sản ròng. Giá nhập tay vì không có server.
 - **Đa tiền tệ**, chỉ đáng khi có chi tiêu bằng ngoại tệ.
 - **Sổ Hụi (chơi họ):** tạo dây hụi (số chân, mệnh giá, kỳ, hụi sống / chết, là chân hay chủ hụi), mỗi kỳ nhập ai hốt và lãi bỏ, app tính số phải đóng, ghi vào Sổ tay, nhắc ở chuông, và cuối dây cho biết **lãi suất thực theo năm**. Luật mỗi nhóm một kiểu nên cần vài chế độ cố định + nhập tay phần chênh.
-- **"Vì sao?" (giải thích chênh lệch):** cạnh mọi so sánh với tháng trước có nút tách phần chênh thành nguyên nhân thật: nhiều lần hơn / mỗi lần đắt hơn / có khoản lớn đột xuất, vẽ dạng biểu đồ cầu. Phần "đắt hơn" phụ thuộc ghi chú nhất quán nên kém chắc hơn.
-- **"Lương tự trả" cho thu nhập không đều** (tài xế, shipper, bán hàng online, freelancer): tính một mức lương ổn định an toàn, tháng dư chảy vào ví đệm, tháng thiếu ví đệm bù. Chưa chốt cách tính mức ổn định (trung bình thấp nhất, trung vị hay phân vị 25).
 
 ### 7.3. Đã cân nhắc, quyết định không làm
 
@@ -237,6 +237,8 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 - **Mẫu giao dịch / yêu thích** ở Ghi nhanh: giữ ghi tay cho khỏi rối giao diện.
 - **Dùng chung sổ nhiều người:** rủi ro xung đột ghi chồng, bỏ.
 - **Quét QR VietQR để ghi khoản chi:** người dùng đã quét trong app ngân hàng rồi, quét thêm lần nữa ở sổ là thêm thao tác; mã cố định không có số tiền nên gần như không đỡ gì. Hướng "bắt khoản chi tại nơi nó xảy ra" (mục 7.1 số 2) đáng hơn.
+- **"Vì sao?" (tách chênh lệch so với tháng trước thành nhiều lần hơn / mỗi lần chi nhiều hơn / khoản lớn):** "số lần" thực ra là số lần ghi (phụ thuộc thói quen gom dòng), "mỗi lần chi nhiều hơn" dễ bị hiểu thành giá tăng trong khi chỉ là đổi món, dữ liệu cũ có dòng "(chưa chi tiết)" không đếm được. Giá trị không đủ lớn so với công sức, bỏ.
+- **"Lương tự trả" cho thu nhập không đều:** phải chọn mức ổn định (trung vị / phân vị), chạm vào cách dự báo Dòng tiền, cần cờ "chi phí công việc" để tính thu ròng cho tài xế / shipper, và hỏng nếu người dùng tiêu luôn phần dư. Quá khó so với giá trị, bỏ.
 - **Sổ gia đình ghép từ các sổ riêng** (xuất bản chia sẻ qua Zalo): gần với "dùng chung sổ", bỏ.
 - **Máy tính Gross → Net và thuế TNCN:** biểu thuế / mức giảm trừ đổi liên tục, không tự kiểm chứng được số hiện hành, bỏ.
 
