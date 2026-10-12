@@ -796,6 +796,7 @@ function renderBaoCao(){
       + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>',
     taisan: taiSanRongCardHtml(mk),
     muctieu: mucTieuCardHtml(),
+    tet: tetCardHtml(),                        // chỉ có khi sắp Tết (tet.js)
     nhan: nhanCardHtml()
   };
   var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk);

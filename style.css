@@ -1709,3 +1709,12 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .ntd-kq span{font-size:13px;color:var(--muted)}
 .ntd-kq b{font-size:26px}
 .ntd-kq small{font-size:12.5px;color:var(--muted)}
+
+/* ---- Tết đếm ngược (tet.js), tiền tố tet- ---- */
+.tet-big{display:flex;align-items:baseline;gap:8px;margin-top:6px}
+.tet-big b{font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.tet-big span{font-size:15px;color:var(--muted)}
+.tet-sub{font-size:13px;line-height:1.55;color:var(--muted);margin-top:6px}
+.tet-sub b{color:var(--text);font-variant-numeric:tabular-nums}
+.tet-lbl{margin-top:16px}
+.tet-nut{margin-top:10px}

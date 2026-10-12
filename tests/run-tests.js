@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'amlich.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
+['state.js', 'amlich.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -4918,15 +4918,15 @@ test('ht: ẩn / hiện, thứ tự, đặt lại; chỉ đổi cách vẽ; id l
   eq(ctx.htAn('baocao', 'tongket'), false); eq(ctx.htDatAn('baocao', 'tongket', true), true); eq(ctx.htAn('baocao', 'tongket'), true); eq(ctx.htAn('sotay', 'tongket'), false, 'nhóm khác không ảnh hưởng');
   ctx.htDatAn('baocao', 'tongket', false); eq(ctx.htAn('baocao', 'tongket'), false);
   eq(ctx.htDatAn('baocao', 'khong-co', true), false, 'id lạ bị bỏ qua'); eq(ctx.htAn('baocao', 'khong-co'), false);
-  eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,nhan,bieudo', 'thứ tự mặc định');
-  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,taisan,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
-  eq(ctx.htDoiViTri('baocao', 'ngaytudo', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[7], 'bieudo', 'biểu đồ luôn ở cuối');
+  eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,tet,nhan,bieudo', 'thứ tự mặc định');
+  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,taisan,tet,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
+  eq(ctx.htDoiViTri('baocao', 'ngaytudo', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[8], 'bieudo', 'biểu đồ luôn ở cuối');
   eq(ctx.htDoiViTri('baocao', 'nhan', 1), false, 'nhan là thẻ đổi được cuối cùng (bieudo cố định)');
-  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
-  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
+  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
+  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
   luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 5);
   luuTru['sct_hien_thi_v1'] = JSON.stringify({ thuTu: { baocao: ['nhan', 'cu-khong-con', 'hanmuc'] } });
-  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,ngaytudo,diemnhan,tongket,taisan,muctieu,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
+  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,ngaytudo,diemnhan,tongket,taisan,muctieu,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
   htSach();
 });
 test('ht: Công cụ chỉ đổi vị trí trong CÙNG nhóm (Quyết định / Sổ)', function(){
@@ -5506,6 +5506,74 @@ test('bảng sửa danh mục: có ô ngày âm + chọn tháng âm, hiện lầ
   var h2 = ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: '' }); ok(h2.indexOf('id="dm_ngayAm"') > 0 && h2.indexOf('Lần tới') < 0, 'danh mục mới: ô trống');
   var list = ctx.categoryCardHtml('chi', 'Danh mục khoản chi', arr);
   ok(list.indexOf('Âm lịch 12/3') > 0 && list.indexOf('Âm lịch 15 hằng tháng') > 0, 'chip trong danh sách');
+  setToday('2026-10-01');
+});
+
+group('Tết đếm ngược + Quỹ Tết (tet.js)');
+function tetData(bd){
+  var j = {};
+  j['2026-02-08'] = { thu: {}, chi: { an: 3000000, qua: 1000000 }, ghiChu: '', refs: [], items: [] };
+  j['2026-02-20'] = { thu: {}, chi: { an: 2000000, traNo: 5000000 }, ghiChu: '', refs: [], items: [] };
+  j['2026-03-05'] = { thu: {}, chi: { an: 9000000 }, ghiChu: '', refs: [], items: [] };      // ngoài mùa Tết
+  var d = baseData({ journal: j });
+  d.settings = { soDuDauKy: 0, ngayBatDau: bd || '2026-01-01', thangBatDauDuTru: '2026-01' };
+  d.categories.thu = [{ id: 'luong', ten: 'Lương', chiTieu: 0 }];
+  d.categories.chi = [{ id: 'an', ten: 'Ăn', chiTieu: 0 }, { id: 'qua', ten: 'Quà', chiTieu: 0 }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }];
+  setToday('2026-10-12');
+  return loadData(d);
+}
+test('tetSapToi: Tết sắp tới, mốc 20 Chạp / mùng 10, đang trong mùa Tết, qua mùng 10 thì sang năm sau', function(){
+  tetData();
+  var m = ctx.tetSapToi('2026-10-12');
+  eq(m.nam, 2027); eq(m.tet, '2027-02-06'); eq(m.batDau, '2027-01-27', '20 Chạp'); eq(m.ketThuc, '2027-02-15', 'mùng 10');
+  eq(m.conNgay, 117); eq(m.conToiBatDau, 107); eq(m.dangTrongMua, false); eq(m.tenNam, 'Đinh Mùi');
+  var d = ctx.tetSapToi('2027-02-10'); eq(d.nam, 2027); eq(d.dangTrongMua, true); eq(d.conNgay, -4, 'mùng 5: đã qua mùng 1');
+  var n = ctx.tetSapToi('2027-02-16'); eq(n.nam, 2028); eq(n.tet, '2028-01-26'); eq(n.dangTrongMua, false);
+  eq(ctx.tetThuChu('2027-02-06'), 'Thứ Bảy');
+  setToday('2026-10-01');
+});
+test('tetChiTrong: cộng chi thật đúng mùa Tết năm ngoái (bỏ trả nợ, bỏ ngoài mùa), danh mục lớn trước; sổ bắt đầu sau mùa đó thì chưa có dữ liệu', function(){
+  tetData();
+  var t = ctx.tetMua(2026), c = ctx.tetChiTrong(t.batDau, t.ketThuc);
+  eq(t.batDau, '2026-02-07'); eq(t.ketThuc, '2026-02-26');
+  eq(c.tong, 6000000, '3tr + 1tr + 2tr, không gồm trả nợ 5tr và 9tr ngoài mùa'); eq(c.ds.map(function(x){ return x.id + ':' + x.v; }).join(), 'an:5000000,qua:1000000'); eq(c.coDuLieu, true);
+  eq(ctx.tetGoiY(6000000), 6000000); eq(ctx.tetGoiY(5920001), 6000000, 'làm tròn lên 100.000'); eq(ctx.tetGoiY(0), 0);
+  tetData('2026-06-01'); eq(ctx.tetChiTrong(t.batDau, t.ketThuc).coDuLieu, false, 'sổ bắt đầu 1/6/2026, sau mùa Tết đó');
+  setToday('2026-10-01');
+});
+test('tetCardHtml: ẩn khi còn quá 150 ngày; hiện số ngày, mùng 1, mùa Tết, Tết năm ngoái, gợi ý quỹ và nút tạo mục tiêu', function(){
+  tetData(); setToday('2026-08-01');
+  eq(ctx.tetCardHtml('2026-08-01'), '', 'còn 189 ngày: chưa hiện');
+  var h = ctx.tetCardHtml('2026-10-12');
+  ok(h.indexOf('Tết Đinh Mùi') > 0 && h.indexOf('<b>117</b>') > 0 && h.indexOf('ngày nữa tới mùng 1 Tết') > 0, 'đếm ngược');
+  ok(h.indexOf('Thứ Bảy 06/02/2027') > 0 && h.indexOf('27/01/2027') > 0 && h.indexOf('107 ngày') > 0, 'mùng 1 và 20 Chạp');
+  ok(h.indexOf('Bạn chi <b>6.000.000') > 0 && h.indexOf('Ăn 5.000.000') > 0 && h.indexOf('Quà 1.000.000') > 0, 'Tết năm ngoái');
+  ok(h.indexOf('Gợi ý quỹ Tết: <b>6.000.000') > 0 && h.indexOf('data-act="tetTaoMt"') > 0 && h.indexOf('Tạo mục tiêu Quỹ Tết 6.000.000') > 0, 'gợi ý + nút');
+  ok(h.indexOf('Cách tính các số này') > 0, 'có Cách tính'); eq(kiemPhepCong(h).loi.join(' | '), '');
+  tetData('2026-06-01'); ok(ctx.tetCardHtml('2026-10-12').indexOf('Chưa có dữ liệu: sổ này bắt đầu sau mùa Tết đó') > 0 && ctx.tetCardHtml('2026-10-12').indexOf('data-act="tetMoMt"') > 0, 'không có số năm ngoái: tự thêm mục tiêu');
+  setToday('2026-10-01');
+});
+test('tetCardHtml: đang trong mùa Tết nói đúng ("Mùng 5", "Hôm nay là mùng 1")', function(){
+  tetData(); setToday('2027-02-10');
+  var h = ctx.tetCardHtml('2027-02-10'); ok(h.indexOf('<b>Mùng 5</b>') > 0 && h.indexOf('mùa Tết đang diễn ra') > 0, 'mùng 5');
+  var h2 = ctx.tetCardHtml('2027-02-06'); ok(h2.indexOf('<b>Hôm nay</b>') > 0 && h2.indexOf('là mùng 1 Tết') > 0, 'mùng 1');
+  setToday('2026-10-01');
+});
+test('tetTaoMt: tạo mục tiêu "Quỹ Tết 2027" bằng số gợi ý, hạn chót = tháng 20 Chạp, hoàn tác được; thẻ hiện tiến độ và số cần để dành mỗi ngày', function(){
+  tetData(); ctx.renderAll = ctx.renderAll || function(){};
+  var undo = null, t0 = ctx.toast; ctx.toast = function(m, o){ if (o && o.hoanTac) undo = o.hoanTac; };
+  try{
+    ctx.handleTetAction('tetTaoMt', elAct({ 'data-nam': '2027' }));
+    var g = ctx.tetMucTieu(2027);
+    ok(g, 'có mục tiêu'); eq(g.ten, 'Quỹ Tết 2027'); eq(g.soTien, 6000000); eq(g.hanChot, '2027-01'); eq(g.tetNam, 2027); eq(g.walletId, '');
+    ctx.handleTetAction('tetTaoMt', elAct({ 'data-nam': '2027' })); eq(ctx.state.data.mucTieu.length, 1, 'bấm lại không tạo trùng');
+    g.daGom = 1500000;
+    var h = ctx.tetCardHtml('2026-10-12');
+    ok(h.indexOf('Quỹ Tết 2027</b>: đã gom <b>1.500.000') > 0 && h.indexOf('(25%)') > 0, 'tiến độ'); ok(h.indexOf('data-act="mtGom"') > 0, 'nút Gom thêm');
+    ok(h.indexOf('<b>' + ctx.fmt(Math.round(4500000 / 107))) > 0 || h.indexOf(ctx.fmt(Math.round(4500000 / 107))) > 0, 'cần để dành mỗi ngày = còn thiếu ÷ ngày tới 20 Chạp');
+    ok(h.indexOf('tetTaoMt') < 0, 'đã có mục tiêu thì không còn nút tạo');
+    undo(); eq(ctx.tetMucTieu(2027), null, 'hoàn tác xóa mục tiêu');
+  } finally { ctx.toast = t0; }
   setToday('2026-10-01');
 });
 

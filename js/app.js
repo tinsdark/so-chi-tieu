@@ -227,6 +227,7 @@ function handleAction(act, el){
   if (handleCongCuAction(act, el)) return;
   if (handleDoiSoatAction(act, el)) return;
   if (handleNganSachAction(act, el)) return;
+  if (handleTetAction(act, el)) return;
   if (handleTheAction(act, el)) return;
   if (handleDanhMucAction(act, el)) return;
   if (handleMoPhongAction(act, el)) return;

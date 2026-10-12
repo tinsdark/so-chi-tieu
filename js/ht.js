@@ -24,6 +24,7 @@ var HT_THE = {
     { id: 'hanmuc', ten: 'Hạn mức' },
     { id: 'taisan', ten: 'Tài sản ròng' },
     { id: 'muctieu', ten: 'Mục tiêu tiết kiệm' },
+    { id: 'tet', ten: 'Tết đếm ngược', mota: 'Hiện khi còn dưới 150 ngày tới Tết: số Tết năm ngoái và Quỹ Tết' },
     { id: 'nhan', ten: 'Theo nhãn' },
     { id: 'bieudo', ten: 'Biểu đồ chi tiêu', mota: 'Cột bên phải ở màn rộng', khongThuTu: true }
   ],
