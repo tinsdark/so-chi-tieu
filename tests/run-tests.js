@@ -2419,6 +2419,21 @@ test('Dòng tiền: sang tháng sau là tháng gợi ý (nhãn gợi ý, không 
   setToday('2026-10-01');
 });
 
+test('Dòng tiền: dtDuKienRows có tài sản ròng = lũy kế + cho vay chưa thu − nợ gốc còn lại; bảng có cột Tài sản ròng', function(){
+  setToday('2026-10-10');
+  var d = dataDongTien();
+  d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-10-05', ngayDuKienThu:'2026-12-15', trangThai:'dang_cho' }],
+    vayNoPhaiTra: [loanKhongLai({ id:'v1', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10 })] };   // kỳ T10..T3, 1tr/kỳ
+  loadData(d);
+  var rows = ctx.dtDuKienRows(4);
+  // T10: phải thu 3tr, nợ còn 5tr · T11: 3tr, 4tr · T12: thu về nên phải thu 0, nợ 3tr · T1: 0, 2tr
+  var delta = rows.map(function(r){ return Math.round(r.rong - r.bal); });
+  eq(JSON.stringify(delta), JSON.stringify([3000000 - 5000000, 3000000 - 4000000, 0 - 3000000, 0 - 2000000]), 'ròng − lũy kế = phải thu − nợ gốc');
+  var html = ctx.dtDuKienHtml(rows, '2026-10');
+  ok(html.indexOf('Tài sản ròng') >= 0 && html.indexOf('dt-ml4') >= 0, 'bảng có cột Tài sản ròng');
+  setToday('2026-10-01');
+});
+
 test('Dòng tiền: dtDuKienRows cộng dồn từ số dư trước tháng hiện tại; tháng đã qua dùng số dư cuối tháng', function(){
   setToday('2026-10-10');
   loadData(dataDongTien());
