@@ -384,6 +384,34 @@ function taiSanRongThang(mk, thuHoi){
   var tien = balanceAtEndOfMonth(mk);
   return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
 }
+// tài sản ròng DỰ KIẾN cuối tháng mk (mk từ tháng hiện tại trở đi); tien = số dư ví dự kiến cuối tháng đó, do nơi gọi chiếu ra.
+// Cùng cách dự trù với tongTraNoThang / tongThuHoiThang: kỳ trả chưa đóng rơi vào tháng của nó (quá hạn dồn vào tháng hiện tại)
+// và làm nợ gốc giảm đúng phần GỐC của số tiền còn thiếu của kỳ; khoản cho vay hết "phải thu" từ tháng dự kiến thu.
+// Khoản vay Mô phỏng chưa tới ngày vay thì tính từ tháng vay; loan.mpTatToanMk: từ tháng đó nợ gốc về 0. Lãi tương lai không tính.
+function taiSanRongDuKien(mk, tien){
+  var today = todayStr(), curMk = monthKey(today), phaiThu = 0, no = 0;
+  (state.data.vayNo.choVay || []).forEach(function(loan){
+    if (loan.trangThai === 'da_thu_du') return;
+    var cl = conLaiPhaiThu(loan);
+    if (cl <= 0) return;
+    var duKien = monthKey(loan.ngayDuKienThu || today);
+    if ((duKien < curMk ? curMk : duKien) > mk) phaiThu += cl;
+  });
+  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){
+    if (!loanIsActive(loan) || !loan.ngayVay || monthKey(loan.ngayVay) > mk) return;
+    if (loan.mpTatToanMk && mk >= loan.mpTatToanMk) return;
+    var sch = tinhLichTraNo(loan);
+    var con = loan.ngayVay > today ? num(loan.soTienGoc) : noGocTaiNgay(loan, today);
+    sch.forEach(function(row, idx){
+      if (loan.mpTatToanMk && row.mk >= loan.mpTatToanMk) return;
+      if (kyDaDong(loan, idx) || !(num(row.tongTra) > 0)) return;
+      if ((row.mk < curMk ? curMk : row.mk) > mk) return;
+      con -= num(row.goc) * conThieuKy(loan, idx, sch) / num(row.tongTra);
+    });
+    no += Math.max(0, con);
+  });
+  return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
+}
 
 /* ---- tổng thu / chi cả tháng (dùng cho dự báo ở Dòng tiền, Mô phỏng, Báo cáo) ---- */
 function actualCatMonthAll(kind, mk){
