@@ -2431,6 +2431,18 @@ test('Dòng tiền: dtDuKienRows có tài sản ròng = lũy kế + cho vay chư
   eq(JSON.stringify(delta), JSON.stringify([3000000 - 5000000, 3000000 - 4000000, 0 - 3000000, 0 - 2000000]), 'ròng − lũy kế = phải thu − nợ gốc');
   var html = ctx.dtDuKienHtml(rows, '2026-10');
   ok(html.indexOf('Tài sản ròng') >= 0 && html.indexOf('dt-ml4') >= 0, 'bảng có cột Tài sản ròng');
+  ok(ctx.coCotTaiSanRong(rows), 'có nợ / cho vay đang mở thì hiện cột');
+  // hết nợ, không cho vay: ròng = lũy kế nên bỏ cột
+  d.vayNo = { choVay: [], vayNoPhaiTra: [] };
+  loadData(d);
+  var rows2 = ctx.dtDuKienRows(4), html2 = ctx.dtDuKienHtml(rows2, '2026-10');
+  ok(!ctx.coCotTaiSanRong(rows2), 'không nợ không cho vay thì không có cột');
+  ok(html2.indexOf('Tài sản ròng') < 0 && html2.indexOf('dt-ml4') < 0, 'bảng không còn cột Tài sản ròng');
+  // khoản vay đã trả hết ở các tháng xa vẫn hiện cột nếu còn tháng nào trong bảng có nợ
+  d.vayNo = { choVay: [], vayNoPhaiTra: [loanKhongLai({ id:'v1', soTienGoc:2000000, soThangVay:2, ngayVay:'2026-09-10', ngayTraHangThang:10 })] };   // trả T10, T11
+  loadData(d);
+  ok(ctx.coCotTaiSanRong(ctx.dtDuKienRows(4)), 'còn nợ ở T10 nên bảng 4 tháng vẫn hiện cột');
+  ok(!ctx.coCotTaiSanRong(ctx.dtDuKienRows(4).slice(2)), 'từ T12 trở đi đã hết nợ nên đoạn đó không cần cột');
   setToday('2026-10-01');
 });
 

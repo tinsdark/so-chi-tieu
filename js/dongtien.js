@@ -346,13 +346,14 @@ function dtDuKienHtml(rowsAll, selMk){
   var chart = '<div class="bd-box" style="margin-top:8px">' + bdLine({ W: 350, H: 190, labels: rows.map(function(r){ return nhanTruc(r.mk); }),
     series: [{ ten: 'Số dư', vals: rows.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
     sel: iSel, tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế các tháng tới' }) + '</div>';
-  var list = '<div class="dt-ml dt-ml4"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Lũy kế</span><span>Tài sản ròng</span></div>';
+  var coRong = coCotTaiSanRong(rows);   // hết nợ / không cho vay thì ròng = lũy kế, bỏ cột cho đỡ thừa
+  var list = '<div class="dt-ml'+(coRong ? ' dt-ml4' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Lũy kế</span>'+(coRong ? '<span>Tài sản ròng</span>' : '')+'</div>';
   rows.forEach(function(r){
     list += '<div class="dt-ml-r'+(r.mk === selMk ? ' sel' : '')+'" data-act="dtChonThang" data-mk="'+r.mk+'" role="button" tabindex="0">'
       + '<span class="m">'+dtNhanThang(r.mk)+(r.mk > cur ? '*' : '')+'</span>'
       + '<span class="c '+(Math.round(r.cb) < 0 ? 'xau' : (Math.round(r.cb) > 0 ? 'tot' : ''))+'">'+Math.round(r.cb).toLocaleString('vi-VN')+'</span>'
       + '<span class="l'+(r.bal < 0 ? ' xau' : '')+'">'+Math.round(r.bal).toLocaleString('vi-VN')+'</span>'
-      + '<span class="r'+(r.rong < 0 ? ' xau' : '')+'">'+Math.round(r.rong).toLocaleString('vi-VN')+'</span></div>';
+      + (coRong ? '<span class="r'+(r.rong < 0 ? ' xau' : '')+'">'+Math.round(r.rong).toLocaleString('vi-VN')+'</span>' : '') + '</div>';
   });
   list += '</div>';
   var fcM = forecastEligibleMonths(), startMk = (state.data.settings.ngayBatDau || todayStr()).slice(0, 7);
@@ -363,7 +364,7 @@ function dtDuKienHtml(rowsAll, selMk){
     + '<div class="vn-lbl">Tích lũy dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
     + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
     + chart + list
-    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫ · Tài sản ròng = lũy kế + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai)</span></div>'
+    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫'+(coRong ? ' · Tài sản ròng = lũy kế + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai)' : '')+'</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
       + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Cài đặt')
