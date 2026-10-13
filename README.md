@@ -134,7 +134,7 @@ js/
 tests/run-tests.js  Unit test (Node, không cần cài gói nào)
 tools/bump.js       Cập nhật số phiên bản ?v= trong index.html
 fonts/ icons/ img/  Font, icon, ảnh nền
-brand/              Logo thương hiệu TinsDark (SVG + PNG), chưa nối vào app
+brand/              Logo TinsDark (tinsdark.svg là file gốc của icons/; tinsdark-maskable.svg cho icon maskable), so-tien-logo.svg là logo sổ cũ
 ```
 
 **Thứ tự nạp file quan trọng**: `state.js` nạp đầu, `app.js` nạp cuối cùng (xem cuối `index.html`). Mỗi file có comment đầu file ghi rõ nó cần file nào nạp trước.
