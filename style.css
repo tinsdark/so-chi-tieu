@@ -1156,8 +1156,10 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .mp-strip{display:flex;gap:2px;margin:2px 38px 0 38px}
 .mp-strip i{flex:1;height:7px;border-radius:2px;background:var(--hover)} .mp-strip i.am{background:var(--red)}
 .mp-hint{font-size:11.5px;color:var(--muted)} .mp-hint.c{text-align:center;margin:8px 0}
-.mp-ml .dt-ml-h,.mp-ml .dt-ml-r{grid-template-columns:minmax(62px,.9fr) 1fr 1fr 1fr 1fr}
-.mp-ml .dt-ml-h span:nth-child(4),.mp-ml .dt-ml-h span:last-child{white-space:nowrap}
+.mp-ml .dt-ml-h,.mp-ml .dt-ml-r{grid-template-columns:minmax(62px,.9fr) 1fr 1fr 1fr}
+.mp-ml .dt-ml-h span:last-child{white-space:nowrap}
+.mp-ml.co-rong .dt-ml-h,.mp-ml.co-rong .dt-ml-r{grid-template-columns:minmax(62px,.9fr) 1fr 1fr 1fr 1fr}
+.mp-ml.co-rong .dt-ml-h span:nth-child(4){white-space:nowrap}
 .dt-ml-r .r{font-weight:700} .dt-ml-r .r.xau{color:var(--red)}
 .dt-ml4 .dt-ml-h,.dt-ml4 .dt-ml-r{grid-template-columns:minmax(58px,.8fr) 1fr 1fr 1fr}
 .dt-ml4 .dt-ml-h span:last-child{white-space:nowrap}
@@ -1179,10 +1181,14 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 @media (max-width:359px){ .mp-2{grid-template-columns:1fr} .dt-ml-h,.dt-ml-r{font-size:12.5px;padding-left:2px;padding-right:2px} }
 .mp-t .val.txt{font-size:15px}
 .mp-ml .dt-ml-r>span{min-width:0;overflow-wrap:anywhere}
-@media (max-width:479px){   /* 5 cột số 8 chữ số không vừa màn điện thoại: ẩn Cân đối, giữ Số dư / Tài sản ròng / Chênh lệch, chữ nhỏ lại và không bẻ số */
-  .mp-ml .dt-ml-h,.mp-ml .dt-ml-r{grid-template-columns:62px 1fr 1fr 1fr;gap:4px;font-size:12px;padding-left:4px;padding-right:4px}
+@media (max-width:374px){
+  .mp-ml .dt-ml-h,.mp-ml .dt-ml-r{grid-template-columns:minmax(58px,.8fr) 1fr 1fr}
   .mp-ml .dt-ml-h span:nth-child(2),.mp-ml .dt-ml-r .c{display:none}
-  .mp-ml .dt-ml-r>span{overflow-wrap:normal;white-space:nowrap}
+}
+@media (max-width:479px){   /* có cột Tài sản ròng: 5 cột số 8 chữ số không vừa màn điện thoại -> ẩn Cân đối, chữ nhỏ lại và không bẻ số */
+  .mp-ml.co-rong .dt-ml-h,.mp-ml.co-rong .dt-ml-r{grid-template-columns:62px 1fr 1fr 1fr;gap:4px;font-size:12px;padding-left:4px;padding-right:4px}
+  .mp-ml.co-rong .dt-ml-h span:nth-child(2),.mp-ml.co-rong .dt-ml-r .c{display:none}
+  .mp-ml.co-rong .dt-ml-r>span{overflow-wrap:normal;white-space:nowrap}
 }
 @media (max-width:479px){   /* bảng Dòng tiền tích lũy tương lai: cùng cách xử lý màn điện thoại như bảng Mô phỏng (ẩn Cân đối) */
   .dt-ml4 .dt-ml-h,.dt-ml4 .dt-ml-r{grid-template-columns:62px 1fr 1fr;gap:4px;font-size:12px;padding-left:4px;padding-right:4px}

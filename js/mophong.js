@@ -435,18 +435,19 @@ function renderMoPhong(){
     + '<div class="mp-strip" aria-hidden="true">'+rowsMoi.map(function(r){ return '<i'+(r.bal < 0 ? ' class="am"' : '')+' title="'+monthLabel(r.mk)+'"></i>'; }).join('')+'</div>'
     + '<div class="mp-hint c">Chạm hoặc kéo trên biểu đồ để xem từng tháng'+(cung ? ' · chưa điều chỉnh nên hai đường trùng nhau' : '')+'</div>';
   var hien = state.mp.hetThang ? rowsMoi : rowsMoi.slice(0, 6);
-  html += '<div class="dt-ml mp-ml"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span><span>Tài sản ròng</span><span>Chênh lệch</span></div>';
+  var coRong = coCotTaiSanRong(rowsMoi);   // hết nợ / không cho vay (và kịch bản không thêm vay) thì ròng = số dư, bỏ cột cho đỡ thừa
+  html += '<div class="dt-ml mp-ml'+(coRong ? ' co-rong' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng</span>' : '')+'<span>Chênh lệch</span></div>';
   hien.forEach(function(r, idx){
     var g = rowsGoc[idx], lech = Math.round(r.bal - g.bal), cb = r.thu - r.chi;
     html += '<div class="dt-ml-r'+(r.bal < 0 ? ' am' : '')+'"><span class="m"><i class="'+(r.bal < 0 ? 'am' : '')+'"></i>'+dtNhanThang(r.mk)+'</span>'
       + '<span class="c '+(cb < 0 ? 'xau' : 'tot')+'">'+MP_SO(cb)+'</span><span class="l'+(r.bal < 0 ? ' xau' : '')+'">'+MP_SO(r.bal)+'</span>'
-      + '<span class="r'+(r.rong < 0 ? ' xau' : '')+'">'+MP_SO(r.rong)+'</span>'
+      + (coRong ? '<span class="r'+(r.rong < 0 ? ' xau' : '')+'">'+MP_SO(r.rong)+'</span>' : '')
       + '<span class="d '+(lech === 0 ? '' : (lech > 0 ? 'tot' : 'xau'))+'">'+(lech === 0 ? '–' : (lech > 0 ? '+' : '')+MP_SO(lech))+'</span></div>';
   });
   html += '</div>';
   if (rowsMoi.length > 6) html += '<button type="button" class="dt-more" data-act="mpHetThang">'+(state.mp.hetThang ? 'Thu gọn' : 'Xem thêm '+(rowsMoi.length - 6)+' tháng')+'</button>';
   html += '<div class="mp-hint c">Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở chế độ Thực tế &amp; dự kiến · số tính bằng ₫</div>'
-    + '<div class="mp-hint c">Tài sản ròng = số dư + cho vay chưa thu − nợ gốc còn lại sau các kỳ trả đã tới tháng đó (theo lịch trả, không tính lãi tương lai)</div></div>';
+    + (coRong ? '<div class="mp-hint c">Tài sản ròng = số dư + cho vay chưa thu − nợ gốc còn lại sau các kỳ trả đã tới tháng đó (theo lịch trả, không tính lãi tương lai)</div>' : '') + '</div>';
 
   var phai = html.indexOf('<div class="mp-tiles">');
   root.innerHTML = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">' + html.slice(0, phai) + '</div><div class="cot-phai">' + html.slice(phai) + '</div></div>';

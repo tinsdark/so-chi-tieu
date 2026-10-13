@@ -412,6 +412,10 @@ function taiSanRongDuKien(mk, tien){
   });
   return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
 }
+// cột Tài sản ròng chỉ có nghĩa khi có nợ / cho vay đang mở: ròng khác số dư ở ít nhất một tháng của bảng (rows có bal và rong)
+function coCotTaiSanRong(rows){
+  return rows.some(function(r){ return Math.abs(r.rong - r.bal) >= 0.5; });
+}
 
 /* ---- tổng thu / chi cả tháng (dùng cho dự báo ở Dòng tiền, Mô phỏng, Báo cáo) ---- */
 function actualCatMonthAll(kind, mk){
