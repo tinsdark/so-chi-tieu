@@ -607,7 +607,7 @@ function vnTongQuanGiaiThichHtml(vays, tongNo, phaiThu, rong, can, da, curMk){
   vays.forEach(function(v){ noGoc += noGocTaiNgay(v, today); });
   if (vays.length) ds.push({ ten: 'Còn nợ', ct: 'Tổng các kỳ chưa đóng của từng khoản, GỒM lãi các kỳ chưa tới hạn, đã trừ phần trả dở của kỳ đang trả.',
     pt: vays.map(function(v){ return esc(v.ten) + ' ' + soGt(soTienConLaiPhaiTra(v)); }).join(' + ') + ' = ' + soGt(tongNo) });
-  if (vays.length) ds.push({ ten: 'Còn nợ so với nợ gốc ở Tài sản ròng', ct: 'Tài sản ròng (tab Báo cáo) chỉ trừ NỢ GỐC, chưa tính lãi chưa tới hạn; chênh lệch xấp xỉ phần lãi đó.',
+  if (vays.length) ds.push({ ten: 'Còn nợ so với nợ gốc ở Tài sản ròng thực tế', ct: 'Tài sản ròng thực tế (tab Báo cáo) chỉ trừ NỢ GỐC, chưa tính lãi chưa tới hạn; chênh lệch xấp xỉ phần lãi đó.',
     pt: soGt(tongNo) + ' − ' + soGt(noGoc) + ' ≈ ' + soGt(tongNo - noGoc) + ' (lãi chưa tới hạn)' });
   if (can > 0) ds.push({ ten: monthLabel(curMk) + ' cần trả', ct: 'Các kỳ đến hạn tới hết tháng này, cộng kỳ quá hạn chưa đóng của các tháng trước. "Đã trả" là tiền thật đã ghi cho các kỳ đó.',
     pt: 'cần ' + soGt(can) + ' − đã trả ' + soGt(da) + ' = còn ' + soGt(Math.max(0, can - da)) });

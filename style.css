@@ -1159,10 +1159,10 @@ svg text.bd-c3{font-size:10px;font-weight:600;fill:var(--muted)}
 .mp-ml .dt-ml-h,.mp-ml .dt-ml-r{grid-template-columns:minmax(62px,.9fr) 1fr 1fr 1fr}
 .mp-ml .dt-ml-h span:last-child{white-space:nowrap}
 .mp-ml.co-rong .dt-ml-h,.mp-ml.co-rong .dt-ml-r{grid-template-columns:minmax(62px,.9fr) 1fr 1fr 1fr 1fr}
-.mp-ml.co-rong .dt-ml-h span:nth-child(4){white-space:nowrap}
+.mp-ml.co-rong .dt-ml-h span:nth-child(4){line-height:1.25}
 .dt-ml-r .r{font-weight:700} .dt-ml-r .r.xau{color:var(--red)}
 .dt-ml4 .dt-ml-h,.dt-ml4 .dt-ml-r{grid-template-columns:minmax(58px,.8fr) 1fr 1fr 1fr}
-.dt-ml4 .dt-ml-h span:last-child{white-space:nowrap}
+.dt-ml4 .dt-ml-h span:last-child{line-height:1.25}
 .dt-ml-r .m i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:var(--border)} .dt-ml-r .m i.am{background:var(--red)}
 /* bảng trượt thêm điều chỉnh (dùng lại khung .qa-sheet của Sổ tay) */
 .mp-sheet .qa-body input[type=text],.mp-sheet .qa-body input[type=number],.mp-sheet .qa-body select{width:100%;min-height:44px;border-radius:12px;font-size:16px}
