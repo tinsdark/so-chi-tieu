@@ -745,7 +745,9 @@ function taiSanRongCardHtml(mk){
   if (startLock && mk < startLock) return '';
   var th = _thuHoiTheoKhoan(), cur = taiSanRongThang(mk, th);
   var tien = bdTien(cur.rong);
-  var h = '<div class="card bc-card" id="cardTaiSanRong"><h3 class="bc-h"><span>Tài sản ròng cuối '+monthLabel(mk).toLowerCase()+'</span></h3>'
+  // số THỰC TẾ = chỉ tính những gì đã ghi; tháng đang chạy thì mới là "tính đến hôm nay", chưa phải cuối tháng thật
+  var tieuDe = mk === monthKey(todayStr()) ? 'Tài sản ròng thực tế, tính đến hôm nay' : 'Tài sản ròng thực tế cuối ' + monthLabel(mk).toLowerCase();
+  var h = '<div class="card bc-card" id="cardTaiSanRong"><h3 class="bc-h"><span>'+tieuDe+'</span></h3>'
     + '<div class="tsr-val'+(cur.rong < 0 ? ' am' : '')+'" style="font-size:'+(tien.length > 13 ? 26 : 30)+'px">'+tien+'</div>';
   // so với 12 tháng trước; chưa đủ 12 tháng dữ liệu thì so với tháng xa nhất có thể và ghi đúng số tháng
   var xa = 12, mkXa = monthKeyAdd(mk, -12);
@@ -766,10 +768,10 @@ function taiSanRongCardHtml(mk){
   }
   if (mv.length >= 2){
     h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Tài sản ròng', vals: mv, cls: cur.rong < 0 ? 'chi' : 'thu', fill: true }],
-      tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Tài sản ròng cuối tháng' }) + '</div>';
+      tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Tài sản ròng thực tế cuối tháng' }) + '</div>';
   }
   h += giaiThichSo([
-    { ten: 'Tài sản ròng', ct: 'Tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). Khoản đã tất toán không còn tính từ ngày tất toán.',
+    { ten: 'Tài sản ròng thực tế', ct: 'Tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). Khoản đã tất toán không còn tính từ ngày tất toán. Chỉ tính những gì đã ghi ở Sổ tay và Vay - Nợ; số dự kiến cho các tháng tới nằm ở tab Dòng tiền (Theo tháng, Mô phỏng).',
       pt: ptCong([cur.tien, cur.phaiThu, -cur.no], cur.rong) },
     { ten: 'Tiền các ví', ct: 'Số dư đầu kỳ + tổng thu − tổng chi (gồm cả tiền vay và trả nợ vì tiền thật có ra vào ví) tới cuối tháng.', pt: soGt(cur.tien) }
   ], 'Tính thế nào?');

@@ -4120,7 +4120,7 @@ test('tongKetCardHtml: đủ các dòng, tháng chưa kết thúc thì rỗng; c
   var h = ctx.tongKetCardHtml('2026-10');
   ok(h.indexOf('id="cardTongKet"') > 0 && h.indexOf('Tổng kết tháng 10/2026') > 0, 'tiêu đề');
   ok(h.indexOf('Dư thật') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
-  ok(h.indexOf('Trả nợ') > 0 && h.indexOf('Tài sản ròng cuối tháng') > 0 && h.indexOf('Tăng mạnh nhất') > 0 && h.indexOf('Ăn') > 0, 'nợ, tài sản ròng, danh mục tăng');
+  ok(h.indexOf('Trả nợ') > 0 && h.indexOf('Tài sản ròng thực tế cuối tháng') > 0 && h.indexOf('Tăng mạnh nhất') > 0 && h.indexOf('Ăn') > 0, 'nợ, tài sản ròng, danh mục tăng');
   eq(ctx.tongKetCardHtml('2026-11'), '');
   tkData(function(d){ d.categories.chi[0].chiTieu = 0; });
   var k = ctx.tongKetCardHtml('2026-10');
@@ -4152,7 +4152,7 @@ test('tháng TRƯỚC mốc bắt đầu sổ vẫn tổng kết được (chỉ
   setToday('2026-12-02');
   var r10 = ctx.tongKetThang('2026-10');
   ok(r10.rong != null && r10.rongTruoc === null, 'tháng 10 (đúng mốc): có tài sản ròng, không có tháng trước để so');
-  ok(ctx.tongKetCardHtml('2026-10').indexOf('Tài sản ròng cuối tháng') > 0 && ctx.tongKetCardHtml('2026-10').indexOf('(tháng trước') < 0 && ctx.tongKetCardHtml('2026-10').indexOf('↑') < 0);
+  ok(ctx.tongKetCardHtml('2026-10').indexOf('Tài sản ròng thực tế cuối tháng') > 0 && ctx.tongKetCardHtml('2026-10').indexOf('(tháng trước') < 0 && ctx.tongKetCardHtml('2026-10').indexOf('↑') < 0);
   setToday('2026-10-01');
 });
 
