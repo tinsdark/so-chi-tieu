@@ -1524,6 +1524,56 @@ test('Mô phỏng tất toán sớm: các kỳ TRƯỚC tháng tất toán vẫn
   setToday('2026-10-01');
 });
 
+test('Tài sản ròng dự kiến: nợ gốc giảm theo từng kỳ trả trong lịch, về 0 khi trả hết', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10 })];   // kỳ T10..T3, 1tr/kỳ, chưa trả kỳ nào
+  loadData(d);
+  var mks = ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04'];
+  var no = mks.map(function(mk){ return Math.round(ctx.taiSanRongDuKien(mk, 0).no); });
+  eq(JSON.stringify(no), JSON.stringify([5000000, 4000000, 3000000, 2000000, 1000000, 0, 0]), 'cuối mỗi tháng đã trả thêm 1 kỳ');
+  eq(Math.round(ctx.taiSanRongDuKien('2026-11', 8000000).rong), 4000000, 'ròng = số dư 8tr − nợ gốc còn 4tr');
+});
+
+test('Tài sản ròng dự kiến: kỳ đã đóng ở Sổ tay không bị trừ nợ hai lần', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10,
+    traNo:[{ ky:0, ngay:'2026-10-05', soTien:1000000, dongKy:true }] })];   // đã trả đủ kỳ T10
+  loadData(d);
+  var no = ['2026-10', '2026-11', '2027-03'].map(function(mk){ return Math.round(ctx.taiSanRongDuKien(mk, 0).no); });
+  eq(JSON.stringify(no), JSON.stringify([5000000, 4000000, 0]), 'T10 vẫn 5tr (kỳ đã trả nằm trong nợ hiện tại), T11 4tr, T3 hết');
+});
+
+test('Tài sản ròng dự kiến: cho vay còn phải thu tới tháng dự kiến thu rồi chuyển thành tiền', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.choVay = [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-10-05', ngayDuKienThu:'2026-12-15', trangThai:'dang_cho' }];
+  loadData(d);
+  var pt = ['2026-10', '2026-11', '2026-12'].map(function(mk){ return Math.round(ctx.taiSanRongDuKien(mk, 0).phaiThu); });
+  eq(JSON.stringify(pt), JSON.stringify([3000000, 3000000, 0]), 'tháng 12 thu về: hết phải thu (đã nằm trong số dư)');
+});
+
+test('Mô phỏng: cột tài sản ròng theo kịch bản (tất toán sớm, vay thêm)', function(){
+  setToday('2026-10-10');
+  var d = baseTraNo();
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', ngayTraHangThang:10 })];
+  loadData(d);
+  ctx.state.mp.data = JSON.parse(JSON.stringify(ctx.state.data));
+  ctx.state.mp.dieuChinh = [{ loai:'traSom', bat:true, loanId:'v1', mk:'2027-01', soTienTatToan:0 }];
+  var sc = ctx.mpBuildScenario();
+  var rows = ctx.mpChieuDongTien(sc.data, '2026-10', 6, sc.overlay);
+  eq(JSON.stringify(rows.map(function(r){ return Math.round(r.bal - r.rong); })), JSON.stringify([5000000, 4000000, 3000000, 0, 0, 0]), 'nợ gốc: giảm mỗi tháng, tất toán T1 về 0');
+  // vay thêm 2tr từ T11, trả 2 kỳ (T12, T1): tiền vay vào ví nên ròng không đổi lúc vay, rồi nợ giảm dần
+  ctx.state.mp.dieuChinh = [{ loai:'vayMoi', bat:true, ten:'Vay thử', hinhThuc:'khong_lai', soTien:2000000, soThang:2, mkTu:'2026-11' }];
+  ctx.state.mp.data.vayNo.vayNoPhaiTra = [];
+  var sc2 = ctx.mpBuildScenario();
+  var rows2 = ctx.mpChieuDongTien(sc2.data, '2026-10', 4, sc2.overlay);
+  eq(JSON.stringify(rows2.map(function(r){ return Math.round(r.bal - r.rong); })), JSON.stringify([0, 2000000, 1000000, 0]), 'nợ gốc khoản vay thêm: 0 → 2tr → 1tr → 0');
+  ctx.state.mp.dieuChinh = []; ctx.state.mp.data = null;
+  setToday('2026-10-01');
+});
+
 test('Dòng tiền: "Lũy kế số dư" từ tháng hiện tại cộng dồn cả số dự báo', function(){
   setToday('2026-10-10');
   var d = baseData({ settings:{ soDuDauKy:5000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
