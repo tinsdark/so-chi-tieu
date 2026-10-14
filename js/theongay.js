@@ -127,14 +127,14 @@ function tnLichTien(homNay, soNgay, viId){
     if (c.ngayDuKienThu < homNay){ ghiChu.push('Chưa tính khoản cho vay quá hẹn: ' + c.ten + ' ' + fmt(Math.round(cl)) + '.'); return; }
     them(c.ngayDuKienThu, 'vao', 'Thu nợ: ' + c.ten, cl, c.walletId);
   });
-  var dkCua = function(kind, catId){
-    return (d.dinhKy || []).filter(function(k){ return k.bat && k.kind === kind && k.catId === catId && num(k.soTien) > 0; });
+  var dkCua = function(kind, catId, mk){
+    return (d.dinhKy || []).filter(function(k){ return k.bat && k.kind === kind && k.catId === catId && num(k.soTien) > 0 && dinhKyTrongHan(k, mk); });
   };
   thangs.forEach(function(mk){
     // khoản cố định
     (d.categories.chi || []).forEach(function(c){
       if (CAT_HE_THONG.chi[c.id] || c.khongDuTru || !catChiCoDinh(c)) return;
-      var dks = dkCua('chi', c.id), da = actualCatInMonth('chi', c.id, mk);
+      var dks = dkCua('chi', c.id, mk), da = actualCatInMonth('chi', c.id, mk);
       if (dks.length){
         var tongDk = 0; dks.forEach(function(k){ tongDk += num(k.soTien); });
         if (da >= tongDk) return;                       // tháng này đã chi đủ (kể cả ghi tay không qua nút định kỳ)
@@ -152,7 +152,7 @@ function tnLichTien(homNay, soNgay, viId){
     // khoản thu có ngày
     (d.categories.thu || []).forEach(function(c){
       if (CAT_HE_THONG.thu[c.id]) return;
-      var dks = dkCua('thu', c.id), ds2 = [];
+      var dks = dkCua('thu', c.id, mk), ds2 = [];
       if (dks.length){
         dks.forEach(function(k){
           if ((k.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(k, mk)) return;

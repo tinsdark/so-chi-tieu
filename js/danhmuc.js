@@ -215,7 +215,7 @@ function dkCardHtml(){
     var thu = k.kind === 'thu';
     h += '<div class="dm-row" role="button" tabindex="0" data-act="dkSua" data-id="'+esc(k.id)+'" aria-label="Sửa '+esc(k.ten)+'">'
       + '<input type="checkbox" class="dm-swi" data-act="dkBat" data-id="'+esc(k.id)+'"'+(k.bat ? ' checked' : '')+' aria-label="Bật nhắc '+esc(k.ten)+'">'
-      + '<span class="dm-main"><b class="dm-n">'+esc(k.ten)+'</b><span class="dm-s">'+(thu ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · <span style="white-space:nowrap">ngày '+k.ngay+'</span></span></span>'
+      + '<span class="dm-main"><b class="dm-n">'+esc(k.ten)+'</b><span class="dm-s">'+(thu ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · <span style="white-space:nowrap">ngày '+k.ngay+'</span>'+(k.gioiHan ? ' · <span style="white-space:nowrap">'+k.soThang+' tháng ('+dtNhanThang(k.tuMk)+'–'+dtNhanThang(dinhKyThangCuoi(k))+')</span>' : '')+'</span></span>'
       + '<span class="dm-v"><b class="'+(thu ? 'thu' : 'chi')+'">'+(thu ? '+' : '−')+fmt(Math.round(k.soTien))+'</b></span>'+dmGo()+'</div>';
   });
   return h + ghiChuGon('Lương, tiền nhà, tiền net... App <b>không tự ghi tiền</b>: tới ngày mà tháng đó chưa ghi thì hiện nhắc ở đầu Sổ tay, bấm "Ghi vào Sổ tay" mới có giao dịch.' + dmDinhKyViDu(), 'Giao dịch định kỳ hoạt động thế nào?') + '</div>';
@@ -489,6 +489,11 @@ function dkSheetHtml(){
     + vnF('Ngày trong tháng', '<select id="dk_ngay">'+ngayOpts+'</select>')
     + ((state.data.wallets || []).length > 1 ? vnF('Ví', '<select id="dk_vi">'+viOptionsHtml(k0.walletId)+'</select>') : '')
     + '</div>'
+    + dmToggle('dk_gh', 'Có giới hạn', 'Chỉ lặp một số tháng rồi tự dừng, không kéo dài mãi (vd được cho 10 triệu, nhận 2 triệu/tháng trong 5 tháng).', !!k0.gioiHan).replace('id="dk_gh"', 'id="dk_gh" data-act="dkGioiHan"')
+    + '<div id="dk_gh_f"'+(k0.gioiHan ? '' : ' hidden')+'><div class="vn-2">'
+    + vnF('Từ tháng', '<input type="month" id="dk_tu" value="'+esc(k0.tuMk || monthKey(todayStr()))+'">')
+    + vnF('Số tháng', '<input type="number" inputmode="numeric" id="dk_sothang" min="1" max="120" value="'+(k0.gioiHan ? k0.soThang : '')+'" placeholder="5">')
+    + '</div></div>'
     + vnF('Ghi chú <span class="mp-hint">(tùy chọn)</span>', '<input type="text" id="dk_note" value="'+esc(k0.ghiChu || '')+'">');
   if (ed) h += '<button type="button" class="btn danger dm-xoa" data-act="dkXoa" data-id="'+esc(ed.id)+'">'+icon('trash')+' Xóa khoản định kỳ</button>';
   return vnSheetKhung(ed ? 'Sửa giao dịch định kỳ' : 'Thêm giao dịch định kỳ', h, ed ? 'Cập nhật' : 'Lưu', 'dkLuu', 'dkHuy');
@@ -795,6 +800,13 @@ function handleDanhMucAction(act, el){
     var dkObj = { ten: dkTen, kind: dkCat[0], catId: dkCat[1], soTien: dkTien, ngay: dkNgay,
                   walletId: walletById(dkVi) ? dkVi : viMacDinhId(),
                   ghiChu: (document.getElementById('dk_note') || {}).value.trim() };
+    var dkGh = !!(document.getElementById('dk_gh') || {}).checked;
+    var dkTu = (document.getElementById('dk_tu') || {}).value || '', dkSoThang = Math.round(num((document.getElementById('dk_sothang') || {}).value));
+    if (dkGh){
+      if (!/^\d{4}-\d{2}$/.test(dkTu)){ toast('Chọn tháng bắt đầu.', { loai:'warn' }); return true; }
+      if (dkSoThang < 1 || dkSoThang > 120){ toast('Số tháng phải từ 1 đến 120.', { loai:'warn' }); return true; }
+    }
+    dkObj.gioiHan = dkGh; dkObj.tuMk = dkGh ? dkTu : ''; dkObj.soThang = dkGh ? dkSoThang : 0;
     var dkBatEl = document.getElementById('dk_bat');
     if (dkBatEl) dkObj.bat = !!dkBatEl.checked;
     var dkCu = state.dkForm && state.dkForm.id ? state.data.dinhKy.find(function(k){ return k.id === state.dkForm.id; }) : null;
@@ -919,6 +931,10 @@ function handleDanhMucChange(el){
   if (handleTheChange(el)) return true;
   if (handleHienThiChange(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
+  if (el.matches('[data-act=dkGioiHan]')){
+    var fGh2 = document.getElementById('dk_gh_f'); if (fGh2) fGh2.hidden = !el.checked;
+    return true;
+  }
   if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
     if (dkB){ dkB.bat = el.checked; scheduleSave(); }

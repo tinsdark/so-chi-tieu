@@ -333,8 +333,8 @@ function tongThuHoiThang(mk){
   (state.data.vayNo.choVay||[]).forEach(function(loan){
     if (loan.trangThai === 'da_thu_du') return;
     var cl = conLaiPhaiThu(loan);
-    if (cl <= 0) return;
-    var duKien = monthKey(loan.ngayDuKienThu || todayStr());
+    if (cl <= 0 || !loan.ngayDuKienThu) return;       // chưa có ngày dự kiến thu thì không đoán là thu về lúc nào
+    var duKien = monthKey(loan.ngayDuKienThu);
     var eff = (duKien < curMk) ? curMk : duKien;
     if (eff === mk) s += cl;
   });
@@ -394,7 +394,8 @@ function taiSanRongDuKien(mk, tien){
     if (loan.trangThai === 'da_thu_du') return;
     var cl = conLaiPhaiThu(loan);
     if (cl <= 0) return;
-    var duKien = monthKey(loan.ngayDuKienThu || today);
+    if (!loan.ngayDuKienThu){ phaiThu += cl; return; }     // chưa có ngày thu: vẫn là tiền phải thu, chưa biết bao giờ về
+    var duKien = monthKey(loan.ngayDuKienThu);
     if ((duKien < curMk ? curMk : duKien) > mk) phaiThu += cl;
   });
   (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){
@@ -437,9 +438,15 @@ function actualCatInMonth(kind, cid, mk){
   });
   return s;
 }
+// dự trù 1 danh mục cho tháng mk = ước lượng (duTruCoBan) + khoản định kỳ CÓ GIỚI HẠN của tháng đó (tháng tương lai)
 function duTruDanhMucThang(kind, cid, mk){
+  var dk = mk > monthKey(todayStr()) ? dinhKyGioiHanThang(kind, cid, mk) : 0;
+  return duTruCoBan(kind, cid, mk) + dk;
+}
+function duTruCoBan(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
-  if (cat0 && cat0.khongDuTru) return 0;
+  // Cho vay / Nhận tiền vay không đoán, nhưng giao dịch đã GHI ở ngày tương lai (cho vay hẹn tháng sau) là tiền chắc chắn đi / về
+  if (cat0 && cat0.khongDuTru) return (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
   if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
   if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
   if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : 0;

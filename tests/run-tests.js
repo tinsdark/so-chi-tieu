@@ -5720,6 +5720,107 @@ test('bcDatMo + tqCuon: bấm chip tới thẻ đang gập thì mở phần gậ
 });
 
 /* ==================================================================== */
+/* ==================================================================== */
+group('Định kỳ có giới hạn + cho vay vào dòng tiền tích lũy');
+
+function dataGioiHan(over){
+  var d = baseData({ settings:{ soDuDauKy:10000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'duocCho', ten:'Được cho', chiTieu:0 }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }, { id:'traNo', ten:'Trả nợ', chiTieu:0 }, { id:'choVay', ten:'Cho vay', chiTieu:0, khongDuTru:true }];
+  if (over) Object.keys(over).forEach(function(k){ d[k] = over[k]; });
+  return d;
+}
+function balList(n){ return ctx.dtDuKienRows(n).map(function(r){ return Math.round(r.bal); }); }
+
+test('dinhKyTrongHan: không giới hạn = mãi mãi; có giới hạn chỉ đúng soThang tháng từ tuMk', function(){
+  eq(ctx.dinhKyTrongHan({ gioiHan:false }, '2030-01'), true, 'không giới hạn');
+  var dk = { gioiHan:true, tuMk:'2026-11', soThang:5 };
+  eq(ctx.dinhKyTrongHan(dk, '2026-10'), false, 'trước tháng bắt đầu');
+  eq(ctx.dinhKyTrongHan(dk, '2026-11'), true, 'tháng đầu');
+  eq(ctx.dinhKyTrongHan(dk, '2027-03'), true, 'tháng thứ 5');
+  eq(ctx.dinhKyTrongHan(dk, '2027-04'), false, 'sau tháng thứ 5');
+  eq(ctx.dinhKyThangCuoi(dk), '2027-03', 'tháng cuối');
+});
+
+test('normalizeData: gioiHan thiếu tuMk / soThang thì coi như không giới hạn', function(){
+  var d = dataGioiHan();
+  d.dinhKy = [{ id:'a', ten:'A', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'2026-11', soThang:5 },
+              { id:'b', ten:'B', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'', soThang:5 },
+              { id:'c', ten:'C', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'2026-11', soThang:0 }];
+  loadData(d);
+  var g = ctx.state.data.dinhKy.map(function(k){ return k.gioiHan; });
+  eq(JSON.stringify(g), JSON.stringify([true, false, false]));
+});
+
+test('Định kỳ thu 2tr × 5 tháng từ T11: dòng tiền tương lai +2tr đúng T11..T3 rồi dừng', function(){
+  setToday('2026-10-14');
+  var d = dataGioiHan();
+  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-11', soThang:5 }];
+  loadData(d);
+  eq(JSON.stringify(balList(8)), JSON.stringify([10000000, 12000000, 14000000, 16000000, 18000000, 20000000, 20000000, 20000000]));
+  setToday('2026-10-01');
+});
+
+test('Định kỳ có giới hạn: tháng đã ghi Sổ tay không bị tính 2 lần vào trung bình dự trù', function(){
+  setToday('2026-12-10');
+  var d = dataGioiHan({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-10', soThang:2 }];
+  d.journal['2026-10-05'] = { items:[{ iid:'i1', kind:'thu', catId:'duocCho', soTien:2000000, dkId:'dk1', dkMk:'2026-10' }], refs:[], thu:{ duocCho:2000000 }, chi:{}, ghiChu:'' };
+  d.journal['2026-11-05'] = { items:[{ iid:'i2', kind:'thu', catId:'duocCho', soTien:2000000, dkId:'dk1', dkMk:'2026-11' }], refs:[], thu:{ duocCho:2000000 }, chi:{}, ghiChu:'' };
+  loadData(d);
+  eq(ctx.recentAvgActual('thu', 'duocCho', 3), 0, 'phần ghi từ định kỳ có giới hạn không vào TB');
+  eq(ctx.tongThuThangCard('2027-01'), 0, 'hết 2 tháng thì T1/2027 không còn khoản này');
+  setToday('2026-10-01');
+});
+
+test('Định kỳ có giới hạn: hết hạn thì không nhắc đến hạn nữa; còn hạn thì nhắc', function(){
+  setToday('2026-12-10');
+  var d = dataGioiHan();
+  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-10', soThang:2 },
+              { id:'dk2', ten:'Tiền net', kind:'chi', catId:'an', soTien:300000, ngay:5, bat:true, bo:[] }];
+  loadData(d);
+  eq(ctx.dinhKyDenHan('2026-12-10').map(function(x){ return x.dk.id; }).join(','), 'dk2', 'dk1 đã hết hạn');
+  eq(ctx.dinhKyChuaGhiThang('2026-12', 'thu'), 0, 'không còn tính vào dự báo tháng hiện tại');
+  setToday('2026-11-10');
+  eq(ctx.dinhKyDenHan('2026-11-10').map(function(x){ return x.dk.id; }).join(','), 'dk1,dk2', 'T11 còn trong hạn');
+  setToday('2026-10-01');
+});
+
+test('Cho vay KHÔNG có ngày dự kiến thu: tiền đã ra thì lũy kế giảm, không giả định thu về ngay tháng này; vẫn là tài sản ròng', function(){
+  setToday('2026-10-14');
+  var d = dataGioiHan();
+  d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-10-10', ngayDuKienThu:'', trangThai:'dang_cho' }], vayNoPhaiTra: [] };
+  loadData(d);
+  ctx.journalUpsertRef('2026-10-10', 'cv', 'choVay', 3000000, 'Cho vay: A');
+  ctx.invalidateBalanceCache();
+  eq(ctx.tongThuHoiThang('2026-10'), 0, 'không có ngày thì không dự trù thu hồi');
+  eq(JSON.stringify(balList(3)), JSON.stringify([7000000, 7000000, 7000000]), 'lũy kế giữ mức đã trừ 3tr');
+  eq(JSON.stringify(ctx.dtDuKienRows(3).map(function(r){ return Math.round(r.rong); })), JSON.stringify([10000000, 10000000, 10000000]), 'tài sản ròng vẫn gồm 3tr phải thu');
+  setToday('2026-10-01');
+});
+
+test('Cho vay có ngày thu T12: lũy kế giảm ngay, T12 tăng lại', function(){
+  setToday('2026-10-14');
+  var d = dataGioiHan();
+  d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-10-10', ngayDuKienThu:'2026-12-15', trangThai:'dang_cho' }], vayNoPhaiTra: [] };
+  loadData(d);
+  ctx.journalUpsertRef('2026-10-10', 'cv', 'choVay', 3000000, 'Cho vay: A');
+  ctx.invalidateBalanceCache();
+  eq(JSON.stringify(balList(3)), JSON.stringify([7000000, 7000000, 10000000]));
+  setToday('2026-10-01');
+});
+
+test('Cho vay hẹn ở THÁNG SAU (ngày cho vay tương lai): khoản chi vào đúng tháng đó trong dòng tiền', function(){
+  setToday('2026-10-14');
+  var d = dataGioiHan();
+  d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-11-10', ngayDuKienThu:'2026-12-15', trangThai:'dang_cho' }], vayNoPhaiTra: [] };
+  loadData(d);
+  ctx.journalUpsertRef('2026-11-10', 'cv', 'choVay', 3000000, 'Cho vay: A');
+  ctx.invalidateBalanceCache();
+  eq(JSON.stringify(balList(3)), JSON.stringify([10000000, 7000000, 10000000]));
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
