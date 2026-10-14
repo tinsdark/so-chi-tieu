@@ -5821,6 +5821,18 @@ test('Cho vay hẹn ở THÁNG SAU (ngày cho vay tương lai): khoản chi vào
   setToday('2026-10-01');
 });
 
+test('Cho vay từ tháng trước (ngoài kỳ), thu 20/11: dòng tiền T11 +3tr kể cả khi danh mục "Thu hồi cho vay" bật "Không tính dự kiến"', function(){
+  setToday('2026-10-14');
+  [false, true].forEach(function(cam){
+    var d = dataGioiHan();
+    d.categories.thu.push({ id:'thuHoiChoVay', ten:'Thu hồi cho vay', chiTieu:0, khongDuTru:cam });
+    d.vayNo = { choVay: [{ id:'cv', ten:'A', soTien:3000000, daThu:0, ngayChoVay:'2026-09-10', ngayDuKienThu:'2026-11-20', trangThai:'dang_cho' }], vayNoPhaiTra: [] };
+    loadData(d);
+    eq(JSON.stringify(balList(3)), JSON.stringify([10000000, 13000000, 13000000]), 'khongDuTru=' + cam);
+  });
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

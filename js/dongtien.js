@@ -64,9 +64,9 @@ function dtSuggest(kind, cid, mk){
 }
 function dtSuggestGoc(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-  if (cat0 && cat0.khongDuTru) return null;
-  if (kind === 'chi' && cid === 'traNo') return tongTraNoThang(mk) || null;
+  if (kind === 'chi' && cid === 'traNo') return tongTraNoThang(mk) || null;     // lấy từ lịch Vay - Nợ: cờ "Không tính dự kiến" không áp dụng
   if (kind === 'thu' && cid === 'thuHoiChoVay') return tongThuHoiThang(mk) || null;
+  if (cat0 && cat0.khongDuTru) return null;
   if (cat0 && cat0.coDinhChiTieu){
     var bF = dtBase(kind, cid);
     return bF > 0 ? bF : null;

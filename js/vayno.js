@@ -445,6 +445,9 @@ function duTruDanhMucThang(kind, cid, mk){
 }
 function duTruCoBan(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
+  // Trả nợ / Thu hồi cho vay lấy từ lịch Vay - Nợ, không phải ước lượng: cờ "Không tính dự kiến" không áp dụng
+  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
+  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
   // Cho vay / Nhận tiền vay không đoán, nhưng giao dịch đã GHI ở ngày tương lai (cho vay hẹn tháng sau) là tiền chắc chắn đi / về
   if (cat0 && cat0.khongDuTru) return (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
   if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
