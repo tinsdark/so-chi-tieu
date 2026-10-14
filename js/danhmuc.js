@@ -535,7 +535,7 @@ function dkSheetHtml(){
     });
     h += '<div class="qa-lbl" style="margin-top:12px">Đổi mức từ tháng <span class="mp-hint">(tùy chọn)</span></div>'
       + '<div class="vn-2">' + vnF('Từ tháng', '<input type="month" id="dk_doi_mk" value="">') + vnF('Số tiền mới', dmMoney('dk_doi_tien', '', 'Nhập 0 = dừng')) + '</div>'
-      + '<div class="vn-hint">Kỳ hiện tại tự đóng ở tháng liền trước và chuyển vào Lưu trữ. Dùng khi tăng lương, đổi giá thuê, hoặc dừng khoản (nhập 0).</div>'
+      + '<div class="vn-hint">Kỳ hiện tại tự đóng ở tháng liền trước và chuyển vào Lưu trữ. Dùng khi tăng lương, đổi giá thuê, hoặc dừng khoản (nhập 0). Đã khai trước một kỳ sắp tới (số ước tính) thì nhập lại đúng tháng đó để thay số.</div>'
       + sapToi
       + (dem ? '<details class="dm-luutru"><summary>Lưu trữ · '+dem+' kỳ</summary>'+luuTru+'</details>' : '');
     h += '<button type="button" class="btn danger dm-xoa" data-act="dkXoa" data-id="'+esc(ed.id)+'">'+icon('trash')+' Xóa khoản định kỳ</button>';

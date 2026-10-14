@@ -1017,7 +1017,9 @@ function dinhKyThemKy(dk, tuMk, soTien){
   if (!/^\d{4}-\d{2}$/.test(tuMk || '')) return 'Chọn tháng bắt đầu của kỳ mới.';
   if (!(soTien >= 0)) return 'Nhập số tiền mới (0 = dừng).';
   var cuoi = dk.ky[dk.ky.length - 1];
-  if (cuoi && tuMk <= cuoi.tuMk) return 'Tháng bắt đầu kỳ mới phải sau ' + monthLabel(cuoi.tuMk).toLowerCase() + ' (kỳ hiện tại bắt đầu từ đó).';
+  // kỳ CHƯA BẮT ĐẦU (khai trước, số ước tính) trùng tháng thì được thay số; kỳ đã chạy thì không động tới (lịch sử)
+  if (cuoi && cuoi.tuMk === tuMk && tuMk > monthKey(todayStr())){ cuoi.soTien = soTien; return ''; }
+  if (cuoi && tuMk <= cuoi.tuMk) return 'Tháng bắt đầu kỳ mới phải sau ' + monthLabel(cuoi.tuMk).toLowerCase() + ' (đã có kỳ bắt đầu từ đó; kỳ chưa bắt đầu thì nhập đúng tháng của nó để thay số).';
   dk.ky.push({ tuMk: tuMk, soTien: soTien });
   return '';
 }

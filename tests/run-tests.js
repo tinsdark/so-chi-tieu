@@ -5940,6 +5940,18 @@ test('Form danh mục: ô Hạn mức bị khóa khi lấy từ kế hoạch; Ng
   setToday('2026-10-01');
 });
 
+test('Kỳ sắp tới (khai trước, ước tính) được thay số bằng cách nhập lại đúng tháng; kỳ đã chạy thì không', function(){
+  setToday('2026-10-14');
+  var dk = dkLuong([{ tuMk:'2026-10', soTien:9400000 }]);
+  eq(ctx.dinhKyThemKy(dk, '2027-02', 10500000), '');
+  eq(ctx.dinhKyThemKy(dk, '2027-02', 11000000), '', 'thay số kỳ chưa bắt đầu');
+  eq(dk.ky.length, 2, 'không nhân đôi'); eq(ctx.dinhKySoTien(dk, '2027-02'), 11000000); eq(ctx.dinhKySoTien(dk, '2027-01'), 9400000, 'kỳ cũ giữ nguyên');
+  ok(ctx.dinhKyThemKy(dk, '2026-10', 12000000) !== '', 'kỳ đang chạy không bị ghi đè');
+  setToday('2027-02-03');
+  ok(ctx.dinhKyThemKy(dk, '2027-02', 12000000) !== '', 'kỳ đã bắt đầu rồi thì không thay số (lịch sử)');
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
