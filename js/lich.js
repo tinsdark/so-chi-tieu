@@ -69,7 +69,7 @@ function lichSuKien(homNay){
       if ((dk.bo || []).indexOf(mk) >= 0 || !dinhKyTrongHan(dk, mk)) continue;
       if (i === 0 && dinhKyDaGhi(dk, mk)) continue;
       them('dk-' + dk.id + '-' + mk, ngayTraCuaKy(mk, dk.ngay), 'Định kỳ: ' + dk.ten,
-        (dk.kind === 'thu' ? 'Thu ' : 'Chi ') + fmt(Math.round(dk.soTien)) + '.');
+        (dk.kind === 'thu' ? 'Thu ' : 'Chi ') + fmt(Math.round(dinhKySoTien(dk, mk))) + '.');
     }
   });
   out.sort(function(a, b){ return a.ngay < b.ngay ? -1 : (a.ngay > b.ngay ? 1 : (a.uid < b.uid ? -1 : 1)); });

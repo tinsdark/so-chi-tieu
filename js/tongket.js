@@ -60,7 +60,7 @@ function tongKetCardHtml(mk){
   } else {
     h += tkDong('Chi hằng ngày', bdTien(r.hangNgay), 'chưa đặt hạn mức');
   }
-  if (r.coDinh > 0.5) h += tkDong('Chi cố định', bdTien(r.coDinh), 'tiền nhà và các khoản bật "Khoản cố định"');
+  if (r.coDinh > 0.5) h += tkDong('Chi cố định', bdTien(r.coDinh), 'tiền nhà và các danh mục bật "Chi cố định"');
   if (r.traNo > 0.5 || r.no > 0.5 || r.vayNo.vay > 0.5){
     var giam = r.noTruoc != null ? r.noTruoc - r.no : null;
     h += tkDong('Trả nợ (tính riêng)', bdTien(r.traNo), (r.vayNo.vay > 0.5 ? 'vay thêm ' + bdTien(r.vayNo.vay) + ' · ' : '') + 'nợ gốc còn ' + bdTien(r.no)

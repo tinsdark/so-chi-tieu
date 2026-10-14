@@ -128,7 +128,7 @@ function tnLichTien(homNay, soNgay, viId){
     them(c.ngayDuKienThu, 'vao', 'Thu nợ: ' + c.ten, cl, c.walletId);
   });
   var dkCua = function(kind, catId, mk){
-    return (d.dinhKy || []).filter(function(k){ return k.bat && k.kind === kind && k.catId === catId && num(k.soTien) > 0 && dinhKyTrongHan(k, mk); });
+    return (d.dinhKy || []).filter(function(k){ return k.bat && k.kind === kind && k.catId === catId && dinhKyTrongHan(k, mk); });
   };
   thangs.forEach(function(mk){
     // khoản cố định
@@ -136,11 +136,11 @@ function tnLichTien(homNay, soNgay, viId){
       if (CAT_HE_THONG.chi[c.id] || c.khongDuTru || !catChiCoDinh(c)) return;
       var dks = dkCua('chi', c.id, mk), da = actualCatInMonth('chi', c.id, mk);
       if (dks.length){
-        var tongDk = 0; dks.forEach(function(k){ tongDk += num(k.soTien); });
+        var tongDk = 0; dks.forEach(function(k){ tongDk += dinhKySoTien(k, mk); });
         if (da >= tongDk) return;                       // tháng này đã chi đủ (kể cả ghi tay không qua nút định kỳ)
         dks.forEach(function(k){
           if ((k.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(k, mk)) return;
-          them(ngayTraCuaKy(mk, k.ngay), 'ra', k.ten || c.ten, num(k.soTien), k.walletId);
+          them(ngayTraCuaKy(mk, k.ngay), 'ra', k.ten || c.ten, dinhKySoTien(k, mk), k.walletId);
         });
         return;
       }
@@ -156,7 +156,7 @@ function tnLichTien(homNay, soNgay, viId){
       if (dks.length){
         dks.forEach(function(k){
           if ((k.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(k, mk)) return;
-          ds2.push({ ngay: ngayTraCuaKy(mk, k.ngay), ten: k.ten || c.ten, soTien: num(k.soTien), vi: k.walletId });
+          ds2.push({ ngay: ngayTraCuaKy(mk, k.ngay), ten: k.ten || c.ten, soTien: dinhKySoTien(k, mk), vi: k.walletId });
         });
       } else {
         var hanT = catHanTrongThang(c, mk), con = num(c.chiTieu) - actualCatInMonth('thu', c.id, mk);

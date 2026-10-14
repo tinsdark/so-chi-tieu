@@ -46,7 +46,7 @@ function cbTatCa(homNay){
   // 1. định kỳ đến hạn
   dinhKyDenHan(homNay).forEach(function(x){
     them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':q', muc: 'khan', han: x.han, tieu: x.dk.ten, phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · hạn ' + ngayNganVN(x.han),
-           tien: fmt(Math.round(x.dk.soTien)), dich: { loai: 'dk' } });
+           tien: fmt(Math.round(x.tien)), dich: { loai: 'dk' } });
   });
   // 2. khoản thu / chi theo ngày của danh mục
   // cùng một khoản (cùng loại, danh mục và ngày hạn) đã có thông báo định kỳ ở trên thì không nhắc lần hai: định kỳ có số tiền và nút Ghi nên giữ cái đó

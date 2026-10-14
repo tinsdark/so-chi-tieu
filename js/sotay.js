@@ -810,7 +810,7 @@ function dinhKyDenHanHtml(){
       + '<div class="dk-main"><div class="dk-ten">'+esc(k.ten)
         + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(k)))+'</span>' : '') + '</div>'
         + '<div class="dk-sub">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · hạn '+ngayVN(x.han).slice(0, 5)+'</div></div>'
-      + '<input type="text" inputmode="numeric" autocomplete="off" class="money dk-in '+k.kind+'" id="dk_tien_'+esc(k.id)+'" value="'+fmt(Math.round(k.soTien)).replace(/[^\d.]/g, '')+'" aria-label="Số tiền thật của kỳ này (đang điền sẵn số mẫu)">'
+      + '<input type="text" inputmode="numeric" autocomplete="off" class="money dk-in '+k.kind+'" id="dk_tien_'+esc(k.id)+'" value="'+fmt(Math.round(x.tien)).replace(/[^\d.]/g, '')+'" aria-label="Số tiền thật của kỳ này (đang điền sẵn số mẫu)">'
       + '<div class="dk-btn"><button class="btn sm" data-act="dkGhi" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'">Ghi vào Sổ tay</button>'
       + '<button class="btn secondary sm" data-act="dkBo" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'" title="Không ghi khoản này trong tháng này">Bỏ qua</button></div>'
       + '</div>';
@@ -1029,7 +1029,7 @@ function hanMucThangHtml(mk){
         + '<span class="mb"><i style="width:'+Math.min(100, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
         + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
     });
-    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Khoản cố định" ở tab Cài đặt) không tính vào % đã dùng và cảnh báo ở trên.</div>';
+    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Chi cố định" ở tab Cài đặt) không tính vào % đã dùng và cảnh báo ở trên.</div>';
   }
   return h + '</div>';
 }
@@ -1451,7 +1451,7 @@ function handleSoTayAction(act, el){
     }
     // số tiền mẫu chỉ là gợi ý: ghi theo số trong ô (người dùng sửa được), không đổi mẫu
     var dkTien = numNonNeg(docSo((document.getElementById('dk_tien_' + dkS.id) || {}).value));
-    if (!(dkTien > 0)) dkTien = dkS.soTien;
+    if (!(dkTien > 0)) dkTien = dinhKySoTien(dkS, dkMk);
     if (dkTien <= 0){ toast('Nhập số tiền lớn hơn 0.', { loai:'warn' }); return true; }
     // ví sắp âm / vượt lời hứa thì hỏi như Ghi nhanh (người dùng tự gõ số tiền nên giữ luật "bất thường" tắt như cũ: số mẫu to là bình thường)
     if (chayNeuDongY(canhBaoKhoan({ kind: dkS.kind, catId: dkS.catId, tien: dkTien, ngay: ngayTraCuaKy(dkMk, dkS.ngay), ghiChu: dkS.ghiChu || dkS.ten, viId: viCuaItem(dkS), batThuong: false }), act, el, handleSoTayAction)) return true;

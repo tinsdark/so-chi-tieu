@@ -45,7 +45,7 @@ function nsDuLieu(){
     sd = Math.sqrt(sd / n);
     var flex = n < 2 ? 0.5 : Math.max(0.1, Math.min(1, sd / tb));
     var coDinh = catChiLaCoDinh(c), hmCu = num(c.chiTieu);
-    var giu = coDinh && hmCu > 0;                      // khoản cố định đã có hạn mức: giữ nguyên
+    var giu = (coDinh && hmCu > 0) || catHanMucTuKeHoach('chi', c.id);    // khoản cố định đã có hạn mức, hoặc hạn mức lấy từ kế hoạch: giữ nguyên
     dong.push({ id: c.id, ten: c.ten, vals: vals, tb: tb, flex: flex, coDinh: coDinh, hmCu: hmCu, giu: giu, goc: giu ? hmCu : tb });
     tongTb += tb;
   });
