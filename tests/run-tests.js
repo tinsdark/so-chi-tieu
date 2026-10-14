@@ -5952,6 +5952,73 @@ test('Kỳ sắp tới (khai trước, ước tính) được thay số bằng c
   setToday('2026-10-01');
 });
 
+/* ==================================================================== */
+group('Sửa / xóa kỳ của khoản định kỳ (PR94)');
+
+test('dinhKySuaKy: tháng bắt đầu nằm giữa kỳ liền trước và liền sau; sai thì lỗi và không đổi gì', function(){
+  var ky = [{ tuMk:'2026-10', soTien:9400000 }, { tuMk:'2027-03', soTien:11400000 }, { tuMk:'2027-08', soTien:12000000 }];
+  eq(ctx.dinhKySuaKy(ky, 1, '2027-02', 11500000), '', 'sửa T3 thành T2 (đúng ý: nhập nhầm tháng)');
+  eq(ky[1].tuMk, '2027-02'); eq(ky[1].soTien, 11500000);
+  ok(ctx.dinhKySuaKy(ky, 1, '2026-10', 1) !== '', 'trùng / trước kỳ liền trước');
+  ok(ctx.dinhKySuaKy(ky, 1, '2027-08', 1) !== '', 'đụng kỳ liền sau');
+  ok(ctx.dinhKySuaKy(ky, 1, '', 1) !== '' && ctx.dinhKySuaKy(ky, 1, '2027-04', NaN) !== '', 'thiếu tháng / số tiền');
+  eq(ky[1].tuMk, '2027-02', 'lỗi thì giữ nguyên');
+  eq(ctx.dinhKySuaKy(ky, 0, '2026-01', 9500000), '', 'kỳ đầu dời sớm hơn được (không có kỳ trước)');
+  eq(ctx.dinhKySuaKy(ky, 2, '2030-01', 0), '', 'kỳ cuối dời xa + số 0 = dừng');
+});
+
+test('dinhKyXoaKy: xóa được kỳ nhập nhầm (kỳ liền trước chạy tiếp), luôn còn ít nhất 1 kỳ', function(){
+  var ky = [{ tuMk:'2026-10', soTien:9400000 }, { tuMk:'2027-03', soTien:11400000 }];
+  eq(ctx.dinhKyXoaKy(ky, 1), '');
+  eq(ky.length, 1); eq(ctx.dinhKySoTien({ ky: ky }, '2030-01'), 9400000, 'kỳ 9,4tr chạy tiếp sau khi xóa kỳ sau');
+  ok(ctx.dinhKyXoaKy(ky, 0) !== '' && ky.length === 1, 'không xóa kỳ cuối cùng');
+  ok(ctx.dinhKyXoaKy(ky, 5) !== '', 'chỉ số sai');
+});
+
+test('dinhKyTrangThaiKy: lưu trữ / đang chạy / sắp tới', function(){
+  var ky = [{ tuMk:'2026-01', soTien:1 }, { tuMk:'2026-10', soTien:2 }, { tuMk:'2027-02', soTien:3 }];
+  eq(ctx.dinhKyTrangThaiKy(ky, 0, '2026-12'), 'luutru'); eq(ctx.dinhKyTrangThaiKy(ky, 1, '2026-12'), 'dangchay'); eq(ctx.dinhKyTrangThaiKy(ky, 2, '2026-12'), 'saptoi');
+  eq(ctx.dinhKyTrangThaiKy(ky, 1, '2027-02'), 'luutru', 'sang T2/27 thì kỳ 2 vào lưu trữ');
+});
+
+test('Form sửa khoản định kỳ: liệt kê mọi kỳ; lưu trữ chỉ có Xóa, kỳ khác có Sửa + Xóa; không còn ô Số tiền / Từ tháng ngoài danh sách', function(){
+  setToday('2026-12-15');
+  var d = dataLuong([dkLuong([{ tuMk:'2026-10', soTien:9400000 }, { tuMk:'2026-12', soTien:10000000 }, { tuMk:'2027-02', soTien:11400000 }])]);
+  loadData(d);
+  ctx.state.dkForm = { id:'dkL' };
+  var h = ctx.dkSheetHtml();
+  ok(h.indexOf('Lưu trữ') > 0 && h.indexOf('Đang chạy') > 0 && h.indexOf('Sắp tới') > 0, 'đủ 3 trạng thái');
+  eq((h.match(/data-act="dkKyMo" data-i="\d"/g) || []).length, 2, 'Sửa chỉ ở kỳ đang chạy và sắp tới');
+  eq((h.match(/data-act="dkKyXoa"/g) || []).length, 3, 'Xóa ở cả 3 kỳ');
+  ok(h.indexOf('id="dk_tien"') < 0 && h.indexOf('id="dk_tu"') < 0, 'ô số tiền / từ tháng cũ đã bỏ ở form sửa');
+  ctx.state.dkForm = null; setToday('2026-10-01');
+});
+
+test('Form sửa khoản định kỳ: sửa tháng / xóa kỳ trong form chỉ có hiệu lực khi bấm Cập nhật; Hủy thì dữ liệu nguyên vẹn', function(){
+  setToday('2026-10-14');
+  loadData(dataLuong([dkLuong([{ tuMk:'2026-10', soTien:9400000 }, { tuMk:'2027-03', soTien:11400000 }])]));
+  var dk = ctx.state.data.dinhKy[0];
+  ctx.state.dkForm = { id:'dkL' }; ctx.dkSheetHtml();          // mở form -> tạo bản sao
+  var fld = { dk_ten:{ value:'Lương' }, dk_cat:{ value:'thu|luong' }, dk_ngay:{ value:'20' }, dk_du:{ checked:true }, dk_note:{ value:'' }, dk_bat:{ checked:true },
+              dk_ky_mk:{ value:'2027-02' }, dk_ky_tien:{ value:'11.500.000' } };
+  voiDom(fld, null, function(){
+    ctx.handleDanhMucAction('dkKyMo', elAct({ 'data-i':'1' }));
+    ctx.handleDanhMucAction('dkKyLuu', elAct({ 'data-i':'1' }));
+  });
+  eq(JSON.stringify(dk.ky[1]), JSON.stringify({ tuMk:'2027-03', soTien:11400000 }), 'chưa Cập nhật: dữ liệu thật chưa đổi');
+  eq(ctx.state.dkForm.ky[1].tuMk, '2027-02', 'bản sao đã đổi');
+  voiDom(fld, null, function(){ ctx.handleDanhMucAction('dkLuu', elAct({})); });
+  eq(JSON.stringify(dk.ky), JSON.stringify([{ tuMk:'2026-10', soTien:9400000 }, { tuMk:'2027-02', soTien:11500000 }]), 'Cập nhật: ghi đúng');
+  eq(ctx.state.dkForm, null, 'form đóng');
+  // Hủy: sửa rồi bỏ
+  ctx.state.dkForm = { id:'dkL' }; ctx.dkSheetHtml();
+  ctx.handleDanhMucAction('dkKyXoa', elAct({ 'data-i':'1' }));
+  eq(ctx.state.dkForm.ky.length, 1, 'xóa trong bản sao');
+  ctx.handleDanhMucAction('dkHuy', elAct({}));
+  eq(dk.ky.length, 2, 'Hủy: kỳ vẫn còn');
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

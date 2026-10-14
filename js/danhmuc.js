@@ -501,21 +501,49 @@ function dkMacDinhDuBao(kind, catId){
   var c = (state.data.categories.chi || []).filter(function(x){ return x.id === catId; })[0];
   return !!(c && catChiLaCoDinh(c));
 }
+// Phần "Các kỳ" trong form sửa khoản định kỳ, dựng từ state.dkForm.ky (bản sao đang soạn) và state.dkForm.kyEdit
+// (-2 = không soạn kỳ nào, -1 = thêm kỳ mới, i = sửa kỳ thứ i). Mọi thao tác chỉ đổi bản sao; bấm "Cập nhật" mới ghi vào dữ liệu.
+function dkKyBodyHtml(){
+  var f = state.dkForm, ky = f.ky || [], cur = monthKey(todayStr()), sua = f.kyEdit == null ? -2 : f.kyEdit;
+  var nut = function(act, i, nhan, cls){ return '<button type="button" class="btn '+(cls || 'secondary')+' sm" data-act="'+act+'" data-i="'+i+'">'+nhan+'</button>'; };
+  var rows = '';
+  for (var i = ky.length - 1; i >= 0; i--){     // mới nhất ở trên
+    var x = ky[i], tt = dinhKyTrangThaiKy(ky, i, cur), den = ky[i + 1] ? monthKeyAdd(ky[i + 1].tuMk, -1) : '';
+    var khoang = dtNhanThang(x.tuMk) + (den ? ' – ' + dtNhanThang(den) : ' trở đi');
+    var nhan = tt === 'dangchay' ? 'Đang chạy' : (tt === 'saptoi' ? 'Sắp tới' : 'Lưu trữ');
+    rows += '<div class="dk-ky-r '+tt+'"><span class="dk-ky-t"><b>'+khoang+'</b><small>'+nhan+'</small></span>'
+      + '<span class="dk-ky-v">'+(num(x.soTien) > 0 ? fmt(Math.round(x.soTien)) : 'Dừng')+'</span>'
+      + '<span class="dk-ky-b">'+(tt === 'luutru' ? '' : nut('dkKyMo', i, 'Sửa')) + nut('dkKyXoa', i, 'Xóa', 'secondary dk-ky-xoa')+'</span></div>';
+  }
+  var ed = '';
+  if (sua >= -1){
+    var x2 = sua >= 0 ? ky[sua] : null;
+    ed = '<div class="dk-ky-ed"><div class="qa-lbl">'+(x2 ? 'Sửa kỳ' : 'Đổi mức từ tháng')+'</div><div class="vn-2">'
+      + vnF('Từ tháng', '<input type="month" id="dk_ky_mk" value="'+esc(x2 ? x2.tuMk : '')+'">')
+      + vnF('Số tiền', dmMoney('dk_ky_tien', x2 ? x2.soTien : '', 'Nhập 0 = dừng')) + '</div>'
+      + '<div class="dk-ky-b">'+nut('dkKyLuu', sua, 'Xong', 'sm')+nut('dkKyHuy', sua, 'Hủy')+'</div></div>';
+  }
+  return '<div class="qa-lbl dk-ky-h" style="margin-top:12px">Các kỳ'
+    + (sua >= -1 ? '' : ' <button type="button" class="btn secondary sm" data-act="dkKyMo" data-i="-1">+ Đổi mức từ tháng</button>') + '</div>'
+    + '<div class="dk-ky">'+rows+'</div>' + ed
+    + '<div class="vn-hint">Mỗi kỳ chạy từ tháng bắt đầu đến hết tháng trước kỳ sau; kỳ cuối chạy mãi. Số 0 = dừng. Sửa ở đây chỉ có hiệu lực khi bấm "Cập nhật". Kỳ lưu trữ (đã kết thúc) chỉ xóa được, không sửa số.</div>';
+}
+function dkKyLamMoi(){ var el = document.getElementById('dk_ky_f'); if (el) el.innerHTML = dkKyBodyHtml(); }
 function dkSheetHtml(){
   var ds = state.data.dinhKy || [];
   var ed = state.dkForm.id ? ds.find(function(k){ return k.id === state.dkForm.id; }) : null;
   var cur = monthKey(todayStr());
   var k0 = ed || { ten:'', kind:'chi', catId:'', soTien:'', ngay:1, walletId: viMacDinhId(), ghiChu:'', bat:true, duBao:true, ky:[] };
-  var kyHT = ed ? dinhKyKyHienTai(ed, cur) : null;
+  if (ed && !state.dkForm.ky) state.dkForm.ky = ed.ky.map(function(x){ return { tuMk: x.tuMk, soTien: x.soTien }; });   // bản sao đang soạn: chỉ ghi vào dữ liệu khi bấm Cập nhật
   var ngayOpts = ''; for (var n = 1; n <= 31; n++) ngayOpts += '<option value="'+n+'"'+(n === (k0.ngay || 1) ? ' selected' : '')+'>Ngày '+n+'</option>';
   var h = dmToggle('dk_bat', 'Bật nhắc', 'Đến ngày app nhắc, bạn xác nhận mới ghi. App không tự ghi tiền.', k0.bat !== false)
     + vnF('Tên', '<input type="text" id="dk_ten" value="'+esc(k0.ten)+'" placeholder="Ví dụ: Lương">')
     + dmSeg('dk_kind', k0.kind === 'thu' ? 'thu' : 'chi', [['thu', 'Thu'], ['chi', 'Chi']])
     + vnF('Danh mục', '<select id="dk_cat">'+dkCatOptions(k0.kind === 'thu' ? 'thu' : 'chi', k0.catId ? k0.kind+'|'+k0.catId : '')+'</select>')
-    + '<div class="vn-2">'
-    + vnF(ed ? 'Số tiền (kỳ đang chạy)' : 'Số tiền', dmMoney('dk_tien', kyHT ? kyHT.soTien : ''))
-    + vnF(ed ? 'Kỳ này từ tháng' : 'Từ tháng', '<input type="month" id="dk_tu" value="'+esc(kyHT ? kyHT.tuMk : cur)+'"'+(ed ? ' disabled' : '')+'>')
-    + '</div>'
+    + (ed ? '' : '<div class="vn-2">'
+      + vnF('Số tiền', dmMoney('dk_tien', ''))
+      + vnF('Từ tháng', '<input type="month" id="dk_tu" value="'+esc(cur)+'">')
+      + '</div>')
     + '<div class="vn-2">'
     + vnF('Ngày trong tháng', '<select id="dk_ngay">'+ngayOpts+'</select>')
     + ((state.data.wallets || []).length > 1 ? vnF('Ví', '<select id="dk_vi">'+viOptionsHtml(k0.walletId)+'</select>') : '')
@@ -523,22 +551,8 @@ function dkSheetHtml(){
     + dmToggle('dk_du', 'Dùng làm dự báo', 'Các tháng tương lai trong Dòng tiền lấy đúng số này (và kỳ của nó) thay cho trung bình các tháng trước. Nên bật cho lương, tiền nhà, học phí; tắt cho khoản chỉ để nhắc nằm lẫn trong chi tiêu hằng ngày.', k0.duBao !== false).replace('id="dk_du"', 'id="dk_du" data-act="dkDuBao"'+(ed ? ' data-cham="1"' : ''))
     + vnF('Ghi chú <span class="mp-hint">(tùy chọn)</span>', '<input type="text" id="dk_note" value="'+esc(k0.ghiChu || '')+'">');
   if (ed){
-    var ky = ed.ky || [], dem = 0, luuTru = '', sapToi = '';
-    ky.forEach(function(x, i){
-      var den = i < ky.length - 1 ? monthKeyAdd(ky[i + 1].tuMk, -1) : '';
-      if (den && den < cur){
-        luuTru += '<div class="dm-row"><span class="dm-main"><b class="dm-n">'+dtNhanThang(x.tuMk)+' – '+dtNhanThang(den)+'</b></span><span class="dm-v"><b>'+fmt(Math.round(x.soTien))+'</b></span></div>';
-        dem++;
-      } else if (x.tuMk > cur){
-        sapToi += '<div class="vn-hint">Sắp tới: '+(num(x.soTien) > 0 ? fmt(Math.round(x.soTien)) : 'dừng')+' từ '+dtNhanThang(x.tuMk)+'</div>';
-      }
-    });
-    h += '<div class="qa-lbl" style="margin-top:12px">Đổi mức từ tháng <span class="mp-hint">(tùy chọn)</span></div>'
-      + '<div class="vn-2">' + vnF('Từ tháng', '<input type="month" id="dk_doi_mk" value="">') + vnF('Số tiền mới', dmMoney('dk_doi_tien', '', 'Nhập 0 = dừng')) + '</div>'
-      + '<div class="vn-hint">Kỳ hiện tại tự đóng ở tháng liền trước và chuyển vào Lưu trữ. Dùng khi tăng lương, đổi giá thuê, hoặc dừng khoản (nhập 0). Đã khai trước một kỳ sắp tới (số ước tính) thì nhập lại đúng tháng đó để thay số.</div>'
-      + sapToi
-      + (dem ? '<details class="dm-luutru"><summary>Lưu trữ · '+dem+' kỳ</summary>'+luuTru+'</details>' : '');
-    h += '<button type="button" class="btn danger dm-xoa" data-act="dkXoa" data-id="'+esc(ed.id)+'">'+icon('trash')+' Xóa khoản định kỳ</button>';
+    h += '<div id="dk_ky_f">'+dkKyBodyHtml()+'</div>'
+      + '<button type="button" class="btn danger dm-xoa" data-act="dkXoa" data-id="'+esc(ed.id)+'">'+icon('trash')+' Xóa khoản định kỳ</button>';
   }
   return vnSheetKhung(ed ? 'Sửa giao dịch định kỳ' : 'Thêm giao dịch định kỳ', h, ed ? 'Cập nhật' : 'Lưu', 'dkLuu', 'dkHuy');
 }
@@ -832,37 +846,46 @@ function handleDanhMucAction(act, el){
     state.dkForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
   } else if (act === 'dkHuy'){
     state.dkForm = null; renderDanhMuc();
+  } else if (act === 'dkKyMo' || act === 'dkKyHuy' || act === 'dkKyXoa' || act === 'dkKyLuu'){
+    var fK = state.dkForm; if (!fK || !fK.ky) return true;
+    var iK = parseInt(el.getAttribute('data-i'), 10);
+    if (act === 'dkKyMo'){ fK.kyEdit = iK; }
+    else if (act === 'dkKyHuy'){ fK.kyEdit = -2; }
+    else if (act === 'dkKyXoa'){
+      var loiX = dinhKyXoaKy(fK.ky, iK);
+      if (loiX){ toast(loiX, { loai:'warn' }); return true; }
+      fK.kyEdit = -2;
+    } else {
+      var mkK = (document.getElementById('dk_ky_mk') || {}).value || '', tienTxt = ((document.getElementById('dk_ky_tien') || {}).value || '').trim();
+      var tienK = tienTxt === '' ? NaN : numNonNeg(docSo(tienTxt));
+      var loiK = iK >= 0 ? dinhKySuaKy(fK.ky, iK, mkK, tienK) : dinhKyThemKy({ ky: fK.ky }, mkK, tienK);
+      if (loiK){ toast(loiK, { loai:'warn' }); return true; }
+      fK.kyEdit = -2;
+    }
+    dkKyLamMoi();
   } else if (act === 'dkLuu'){
     var dkEl = function(id){ return document.getElementById(id) || {}; };
     var dkTen = (dkEl('dk_ten').value || '').trim();
     var dkCat = (dkEl('dk_cat').value || '').split('|');
-    var dkTien = numNonNeg(docSo(dkEl('dk_tien').value));
-    var dkNgay = Math.round(num(dkEl('dk_ngay').value));
     var dkCu = state.dkForm && state.dkForm.id ? state.data.dinhKy.find(function(k){ return k.id === state.dkForm.id; }) : null;
+    var kyForm = dkCu && state.dkForm.ky ? state.dkForm.ky : null;
+    var dkTien = kyForm ? num((dinhKyKyHienTai({ ky: kyForm }, monthKey(todayStr())) || {}).soTien) : numNonNeg(docSo(dkEl('dk_tien').value));
+    var dkNgay = Math.round(num(dkEl('dk_ngay').value));
     if (!dkTen){ toast('Nhập tên khoản định kỳ.', { loai:'warn' }); return true; }
     if (dkCat.length !== 2 || !dkCat[1]){ toast('Chọn danh mục.', { loai:'warn' }); return true; }
-    if (dkTien <= 0){ toast('Số tiền phải lớn hơn 0. Muốn dừng khoản này từ một tháng nào đó, dùng "Đổi mức từ tháng" và nhập 0.', { loai:'warn' }); return true; }
+    if (!kyForm && dkTien <= 0){ toast('Số tiền phải lớn hơn 0. Muốn dừng khoản này từ một tháng nào đó, thêm một kỳ mới ("Đổi mức từ tháng") và nhập 0.', { loai:'warn' }); return true; }
     if (dkNgay < 1 || dkNgay > 31){ toast('Ngày trong tháng phải từ 1 đến 31.', { loai:'warn' }); return true; }
     var dkTu = dkEl('dk_tu').value || '';
     if (!dkCu && !/^\d{4}-\d{2}$/.test(dkTu)){ toast('Chọn tháng bắt đầu.', { loai:'warn' }); return true; }
-    var dkDoiMk = dkEl('dk_doi_mk').value || '', dkDoiTienTxt = (dkEl('dk_doi_tien').value || '').trim();
-    var coDoi = !!(dkDoiMk || dkDoiTienTxt);
     var dkVi = dkEl('dk_vi').value;
     var dkDuBao = !!dkEl('dk_du').checked, dkBatEl = document.getElementById('dk_bat');
-    // thử thêm kỳ mới trên BẢN SAO trước: lỗi thì chưa đụng gì tới dữ liệu
-    if (coDoi && dkCu){
-      var thu = { ky: dkCu.ky.map(function(x){ return { tuMk: x.tuMk, soTien: x.soTien }; }) };
-      var loi = dinhKyThemKy(thu, dkDoiMk, dkDoiTienTxt === '' ? NaN : numNonNeg(docSo(dkDoiTienTxt)));
-      if (loi){ toast(loi, { loai:'warn' }); return true; }
-    }
     var luuDK = function(){
       var dkObj = { ten: dkTen, kind: dkCat[0], catId: dkCat[1], ngay: dkNgay, duBao: dkDuBao,
                     walletId: walletById(dkVi) ? dkVi : viMacDinhId(), ghiChu: (dkEl('dk_note').value || '').trim() };
       if (dkBatEl) dkObj.bat = !!dkBatEl.checked;
       if (dkCu){
         Object.assign(dkCu, dkObj);
-        dinhKyKyHienTai(dkCu, monthKey(todayStr())).soTien = dkTien;          // sửa kỳ đang chạy = chữa nhập sai, không tạo kỳ mới
-        if (coDoi) dinhKyThemKy(dkCu, dkDoiMk, numNonNeg(docSo(dkDoiTienTxt)));
+        if (kyForm) dkCu.ky = kyForm.map(function(x){ return { tuMk: x.tuMk, soTien: x.soTien }; });      // danh sách kỳ đã soạn trong form
         dinhKyDongBoSoTien(dkCu);
       } else {
         dkObj.id = 'dk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
