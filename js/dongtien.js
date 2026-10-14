@@ -225,7 +225,7 @@ function dtDauHtml(d, bal, startMk, maxMk){
     + dtThangNavHtml(mk, startMk, maxMk) + '</div>'
     + '<div class="bc-val"><span class="bc-v dt-cb '+(cb < 0 ? 'am' : 'du')+'">'+fmt(cb)+'</span>'
     + (cb !== 0 ? (cb > 0 && cb - d.vayThem < 0 ? '<span class="dt-tag vay">Dư nhờ vay</span>' : '<span class="dt-tag '+(cb < 0 ? 'am' : 'du')+'">'+(cb < 0 ? 'Thiếu' : 'Dư')+'</span>') : '') + '</div>'
-    + '<div class="bc-pace-n dt-sub">'+(d.tuong ? 'dự kiến' : (d.qua ? 'cả tháng' : 'dự kiến cuối tháng'))+(bal != null ? ' · số dư lũy kế '+fmt(Math.round(bal)) : '')+'</div>'
+    + '<div class="bc-pace-n dt-sub">'+(d.tuong ? 'dự kiến' : (d.qua ? 'cả tháng' : 'dự kiến cuối tháng'))+(bal != null ? ' · số dư '+fmt(Math.round(bal)) : '')+'</div>'
     + (d.vayThem > 0.5 ? '<div class="bc-pace-n dt-sub">gồm vay thêm '+fmt(Math.round(d.vayThem))+' · không tính vay: '+(cb - d.vayThem < 0 ? '−' : '+')+fmt(Math.abs(Math.round(cb - d.vayThem)))+'</div>' : '');
   var nhanThu = d.tuong ? 'gợi ý' : 'kế hoạch';
   h += dtThanhHtml({ kind:'thu', ten:'Thu', act:d.thuAct, plan:d.thuPlan, nhanPlan:nhanThu,
@@ -261,7 +261,7 @@ function dtCanDoiGiaiThichHtml(d, bal){
     ds.push({ ten: 'Thu dự kiến', ct: 'Đã thu thật trong tháng + khoản biết trước mà chưa ghi (định kỳ thu, thu hồi cho vay theo lịch).', pt: ptCong([thucThu, thuChua], d.thuDK) });
   }
   if (d.vayThem > 0.5) ds.push({ ten: 'Không tính vay thêm', ct: 'Cân đối − tiền vay thêm trong tháng: cho biết tháng này tự cân đối được hay đang nhờ tiền vay.', pt: ptCong([d.cb, -d.vayThem], d.cb - d.vayThem) });
-  if (bal != null) ds.push({ ten: 'Số dư lũy kế', ct: 'Số dư các ví đầu tháng + cân đối của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
+  if (bal != null) ds.push({ ten: 'Số dư', ct: 'Số dư các ví đầu tháng + cân đối của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
   return giaiThichSo(ds, 'Cách tính các số này');
 }
 
@@ -352,9 +352,9 @@ function dtDuKienHtml(rowsAll, selMk){
   var nhanTruc = function(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + (mk.slice(0, 4) !== rows[0].mk.slice(0, 4) ? '/' + mk.slice(2, 4) : ''); };
   var chart = '<div class="bd-box" style="margin-top:8px">' + bdLine({ W: 350, H: 190, labels: rows.map(function(r){ return nhanTruc(r.mk); }),
     series: [{ ten: 'Số dư', vals: rows.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
-    sel: iSel, tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế các tháng tới' }) + '</div>';
+    sel: iSel, tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư các tháng tới' }) + '</div>';
   var coRong = coCotTaiSanRong(rows);   // hết nợ / không cho vay thì ròng = lũy kế, bỏ cột cho đỡ thừa
-  var list = '<div class="dt-ml'+(coRong ? ' dt-ml4' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Lũy kế</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'</div>';
+  var list = '<div class="dt-ml'+(coRong ? ' dt-ml4' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'</div>';
   rows.forEach(function(r){
     list += '<div class="dt-ml-r'+(r.mk === selMk ? ' sel' : '')+'" data-act="dtChonThang" data-mk="'+r.mk+'" role="button" tabindex="0">'
       + '<span class="m">'+dtNhanThang(r.mk)+(r.mk > cur ? '*' : '')+'</span>'
@@ -368,10 +368,10 @@ function dtDuKienHtml(rowsAll, selMk){
     + '<div class="mp-hz">'
     + [6, 12, 24].map(function(x){ return '<button type="button" class="'+(x === horizon ? 'on' : '')+'" data-act="dtHorizon" data-h="'+x+'">'+x+' tháng</button>'; }).join('')
     + '</div>'
-    + '<div class="vn-lbl">Tích lũy dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
+    + '<div class="vn-lbl">Số dư dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
     + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
     + chart + list
-    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫'+(coRong ? ' · Tài sản ròng dự kiến = lũy kế + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai); khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi' : '')+'</span></div>'
+    + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫'+(coRong ? ' · Tài sản ròng dự kiến = số dư + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai); khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi' : '')+'</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
       + (fcM.length ? 'đang dùng: ' + fcM.slice(-3).map(monthLabel).join(', ') : 'chưa có tháng nào hoàn chỉnh → dùng hạn mức ở tab Cài đặt')
@@ -456,7 +456,7 @@ function dtBangNamHtml(){
       mc = monthKeyAdd(mc, 1);
     }
   }
-  html += '<tr class="balance-row"><td class="sticky-col">Lũy kế số dư</td>';
+  html += '<tr class="balance-row"><td class="sticky-col">Số dư cuối tháng</td>';
   vm.forEach(function(mk){
     html += (mk < startMk) ? '<td>—</td>' : '<td>'+fmt(luyKe[mk] != null ? luyKe[mk] : balanceAtEndOfMonth(mk))+'</td>';
   });

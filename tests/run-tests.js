@@ -1583,7 +1583,7 @@ test('Dòng tiền: "Lũy kế số dư" từ tháng hiện tại cộng dồn c
   ctx.state.dongTienYear = 2026; ctx.state.dtBangNam = true;
   voiDom({ tabContent: root }, null, function(){ ctx.renderDongTien(); });
   ctx.state.dtBangNam = false;
-  var hang = root.innerHTML.split('Lũy kế số dư')[1].split('</tr>')[0];
+  var hang = root.innerHTML.split('Số dư cuối tháng')[1].split('</tr>')[0];
   var soTien = function(n){ return '<td>' + ctx.fmt(n) + '</td>'; };
   ok(hang.indexOf(soTien(4000000)) >= 0, 'T10 = 5tr - 1tr: ' + hang);
   ok(hang.indexOf(soTien(3000000)) >= 0, 'T11 = 4tr - 1tr: ' + hang);
@@ -2414,7 +2414,7 @@ test('Dòng tiền: sang tháng sau là tháng gợi ý (nhãn gợi ý, không 
   voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtMoDong', elAct({ 'data-id':'an' })); });
   ok(root.innerHTML.indexOf('class="dt-ct"') >= 0 && root.innerHTML.indexOf('Nhịp hiện tại') >= 0, 'chi tiết dòng Ăn');
   voiDom({ tabContent: root }, null, function(){ ctx.handleDongTienAction('dtBangNam', elAct({})); });
-  ok(root.innerHTML.indexOf('Lũy kế số dư') >= 0 && root.innerHTML.indexOf('Ẩn bảng cả năm') >= 0, 'bảng cả năm hiện sau nút');
+  ok(root.innerHTML.indexOf('Số dư cuối tháng') >= 0 && root.innerHTML.indexOf('Ẩn bảng cả năm') >= 0, 'bảng cả năm hiện sau nút');
   ctx.state.dtBangNam = false; ctx.state.dtMoDong = null; ctx.state.dtMk = null;
   setToday('2026-10-01');
 });
@@ -3207,14 +3207,14 @@ test('Bảng theo dõi: ô hiển thị — tháng trống là "–", mở rộn
   ctx.state.vnHorizon = 12;
 });
 
-test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng đã chọn, 3 cột Tháng / Cân đối / Lũy kế, có số cuối kỳ + thấp nhất', function(){
+test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng đã chọn, 3 cột Tháng / Cân đối / Số dư, có số cuối kỳ + thấp nhất', function(){
   setToday('2026-12-10');
   loadData(baseData());
   var rows = ctx.dtDuKienRows(24), dem = function(){ return (ctx.dtDuKienHtml(rows, '2026-12').match(/class="dt-ml-r/g) || []).length; };
   ctx.state.dtHorizon = 12; var h = ctx.dtDuKienHtml(rows, '2026-12');
   ok(h.indexOf('Dòng tiền tích lũy tương lai') >= 0, 'tiêu đề');
-  ok(h.indexOf('<span>Tháng</span><span>Cân đối</span><span>Lũy kế</span>') >= 0, 'đúng 3 cột');
-  ok(h.indexOf('Tích lũy dự kiến cuối') >= 0 && h.indexOf('Thấp nhất') >= 0, 'số cuối kỳ + thấp nhất');
+  ok(h.indexOf('<span>Tháng</span><span>Cân đối</span><span>Số dư</span>') >= 0, 'đúng 3 cột');
+  ok(h.indexOf('Số dư dự kiến cuối') >= 0 && h.indexOf('Thấp nhất') >= 0, 'số cuối kỳ + thấp nhất');
   ok(h.indexOf('Xem cả') < 0 && h.indexOf('Chi</span>') < 0, 'không còn nút Xem cả / cột Chi');
   eq(dem(), 12, '12 tháng'); ctx.state.dtHorizon = 6; eq(dem(), 6, '6 tháng'); ctx.state.dtHorizon = 24; eq(dem(), 24, '24 tháng');
   ctx.state.dtHorizon = 12;
@@ -4282,7 +4282,7 @@ test('Báo cáo / Tổng kết / Dòng tiền / Theo ngày: phép tính trong gi
   eq(kiemPhepCong(ng).loi.join(' | '), '');
   var lt = ctx.tnLichTienGiaiThichHtml(ctx.tnLichTien('2026-10-11')); ok(lt.indexOf('Số dư ngày cuối') > 0 && lt.indexOf('Ngày thấp nhất') > 0, 'Lịch tiền');
   eq(kiemPhepCong(lt).loi.join(' | '), '');
-  var d = ctx.dtThangDuLieu('2026-10'), cd = ctx.dtCanDoiGiaiThichHtml(d, 1000000); ok(cd.indexOf('Cân đối') > 0 && cd.indexOf('Số dư lũy kế') > 0, 'Dòng tiền Cân đối'); eq(kiemPhepCong(cd).loi.join(' | '), '');
+  var d = ctx.dtThangDuLieu('2026-10'), cd = ctx.dtCanDoiGiaiThichHtml(d, 1000000); ok(cd.indexOf('Cân đối') > 0 && cd.indexOf('Số dư') > 0, 'Dòng tiền Cân đối'); eq(kiemPhepCong(cd).loi.join(' | '), '');
   setToday('2026-10-01');
 });
 test('Tab Cài đặt / Vay - Nợ: ghi chú có ví dụ "Với số của bạn" bằng số thật, phép tính đúng', function(){
