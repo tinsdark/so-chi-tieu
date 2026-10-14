@@ -1737,3 +1737,14 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
   .bc-jump,.bc-more{display:none}
   .bc-extra.dong{display:block}
 }
+
+/* kỳ của khoản định kỳ (form sửa): danh sách kỳ + ô soạn kỳ */
+.dk-ky-r{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:9px 2px;border-top:1px solid var(--border)}
+.dk-ky-r .dk-ky-t{display:flex;flex-direction:column;gap:1px}
+.dk-ky-r .dk-ky-t small{color:var(--muted);font-size:12px}
+.dk-ky-r.dangchay .dk-ky-t small{color:var(--green)} .dk-ky-r.luutru{opacity:.75}
+.dk-ky-r .dk-ky-v{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.dk-ky-r .dk-ky-b{grid-column:1/-1;display:flex;gap:6px;justify-content:flex-end}
+.dk-ky-b{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.dk-ky-ed{margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:12px}
+.dk-ky-h{display:flex;align-items:center;justify-content:space-between;gap:8px}

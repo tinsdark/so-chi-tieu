@@ -1023,6 +1023,29 @@ function dinhKyThemKy(dk, tuMk, soTien){
   dk.ky.push({ tuMk: tuMk, soTien: soTien });
   return '';
 }
+// SỬA 1 kỳ trong danh sách ky (đang soạn trong form): tháng bắt đầu phải nằm giữa kỳ liền trước và kỳ liền sau (không đảo thứ tự). Trả về chuỗi lỗi ('' = ổn).
+function dinhKySuaKy(ky, i, tuMk, soTien){
+  if (!ky[i]) return 'Không tìm thấy kỳ cần sửa.';
+  if (!/^\d{4}-\d{2}$/.test(tuMk || '')) return 'Chọn tháng bắt đầu của kỳ.';
+  if (!(soTien >= 0)) return 'Nhập số tiền (0 = dừng).';
+  var truoc = ky[i - 1], sau = ky[i + 1];
+  if (truoc && tuMk <= truoc.tuMk) return 'Tháng bắt đầu phải sau ' + monthLabel(truoc.tuMk).toLowerCase() + ' (kỳ liền trước).';
+  if (sau && tuMk >= sau.tuMk) return 'Tháng bắt đầu phải trước ' + monthLabel(sau.tuMk).toLowerCase() + ' (kỳ liền sau). Muốn dời xa hơn thì xóa kỳ sau rồi thêm lại.';
+  ky[i].tuMk = tuMk; ky[i].soTien = soTien;
+  return '';
+}
+// XÓA 1 kỳ (nhập nhầm): kỳ liền trước chạy tiếp qua phần tháng của kỳ bị xóa. Phải còn ít nhất 1 kỳ.
+function dinhKyXoaKy(ky, i){
+  if (!ky[i]) return 'Không tìm thấy kỳ cần xóa.';
+  if (ky.length < 2) return 'Phải còn ít nhất 1 kỳ. Muốn bỏ cả khoản thì xóa khoản định kỳ.';
+  ky.splice(i, 1);
+  return '';
+}
+// 'luutru' = đã kết thúc (kỳ sau đã bắt đầu), 'saptoi' = chưa bắt đầu, 'dangchay' = còn lại
+function dinhKyTrangThaiKy(ky, i, cur){
+  if (ky[i + 1] && ky[i + 1].tuMk <= cur) return 'luutru';
+  return ky[i].tuMk > cur ? 'saptoi' : 'dangchay';
+}
 function dinhKyDongBoSoTien(dk){
   var c = dinhKyKyHienTai(dk, monthKey(todayStr()));
   dk.soTien = c ? num(c.soTien) : 0;
