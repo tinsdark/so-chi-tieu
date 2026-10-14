@@ -66,7 +66,7 @@ function lichSuKien(homNay){
     if (!dk.bat) return;
     for (var i = 0; i < LICH_SO_THANG; i++){
       var mk = monthKeyAdd(mk0, i);
-      if ((dk.bo || []).indexOf(mk) >= 0) continue;
+      if ((dk.bo || []).indexOf(mk) >= 0 || !dinhKyTrongHan(dk, mk)) continue;
       if (i === 0 && dinhKyDaGhi(dk, mk)) continue;
       them('dk-' + dk.id + '-' + mk, ngayTraCuaKy(mk, dk.ngay), 'Định kỳ: ' + dk.ten,
         (dk.kind === 'thu' ? 'Thu ' : 'Chi ') + fmt(Math.round(dk.soTien)) + '.');

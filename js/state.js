@@ -773,6 +773,10 @@ function normalizeData(d){
     k.ngay = Math.max(1, Math.min(31, Math.round(num(k.ngay)) || 1));
     k.soTien = num(k.soTien);
     k.kind = (k.kind === 'thu') ? 'thu' : 'chi';
+    // có giới hạn: chỉ chạy soThang tháng kể từ tháng tuMk (thiếu / sai thì coi như không giới hạn)
+    k.soThang = Math.max(0, Math.round(num(k.soThang)));
+    if (!/^\d{4}-\d{2}$/.test(k.tuMk || '')) k.tuMk = '';
+    k.gioiHan = !!k.gioiHan && k.soThang >= 1 && !!k.tuMk;
   });
   // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
   d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
@@ -949,6 +953,33 @@ function viChotSoDuDauKy(dateStr){
    Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
    Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
    ==================================================================== */
+// "Có giới hạn": khoản chỉ lặp soThang tháng kể từ tuMk (vd được cho 10tr, nhận 2tr/tháng trong 5 tháng) rồi tự dừng.
+// Không giới hạn = lặp mãi. Mọi nơi dùng khoản định kỳ theo tháng mk phải qua hàm này.
+function dinhKyTrongHan(dk, mk){
+  return !dk.gioiHan || (mk >= dk.tuMk && mk < monthKeyAdd(dk.tuMk, dk.soThang));
+}
+function dinhKyThangCuoi(dk){ return monthKeyAdd(dk.tuMk, dk.soThang - 1); }
+// tổng khoản định kỳ CÓ GIỚI HẠN (đang bật, chưa "Bỏ qua") rơi vào tháng mk của 1 danh mục — số BIẾT TRƯỚC cho tháng tương lai
+function dinhKyGioiHanThang(kind, catId, mk){
+  var s = 0;
+  (state.data.dinhKy || []).forEach(function(dk){
+    if (!dk.gioiHan || !dk.bat || num(dk.soTien) <= 0 || dk.kind !== kind || dk.catId !== catId) return;
+    if (!dinhKyTrongHan(dk, mk) || (dk.bo || []).indexOf(mk) >= 0) return;
+    s += num(dk.soTien);
+  });
+  return s;
+}
+// phần đã ghi Sổ tay trong tháng mk đến từ khoản định kỳ có giới hạn: loại khỏi trung bình dự trù để khỏi tính 2 lần
+function dinhKyGioiHanDaGhi(kind, catId, mk){
+  var ids = {}, co = false, s = 0;
+  (state.data.dinhKy || []).forEach(function(dk){ if (dk.gioiHan && dk.kind === kind && dk.catId === catId){ ids[dk.id] = 1; co = true; } });
+  if (!co) return 0;
+  Object.keys(state.data.journal).forEach(function(d){
+    if (monthKey(d) !== mk) return;
+    entryItems(state.data.journal[d]).forEach(function(it){ if (it.dkId && ids[it.dkId] && it.kind === kind && it.catId === catId) s += num(it.soTien); });
+  });
+  return s;
+}
 function dinhKyDaGhi(dk, mk){
   var da = false;
   Object.keys(state.data.journal).forEach(function(date){
@@ -962,7 +993,7 @@ function dinhKyDaGhi(dk, mk){
 function dinhKyChuaGhiThang(mk, kind, catId){
   var s = 0;
   (state.data.dinhKy || []).forEach(function(dk){
-    if (!dk.bat || num(dk.soTien) <= 0) return;
+    if (!dk.bat || num(dk.soTien) <= 0 || !dinhKyTrongHan(dk, mk)) return;
     if (kind && dk.kind !== kind) return;
     if (catId && dk.catId !== catId) return;
     if ((dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
@@ -974,7 +1005,7 @@ function dinhKyChuaGhiThang(mk, kind, catId){
 function dinhKyDenHan(homNay){
   var mk = monthKey(homNay), out = [];
   (state.data.dinhKy || []).forEach(function(dk){
-    if (!dk.bat || num(dk.soTien) <= 0) return;
+    if (!dk.bat || num(dk.soTien) <= 0 || !dinhKyTrongHan(dk, mk)) return;
     var han = ngayTraCuaKy(mk, dk.ngay);
     if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
     out.push({ dk: dk, mk: mk, han: han });
