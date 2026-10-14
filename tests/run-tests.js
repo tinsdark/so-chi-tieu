@@ -5893,6 +5893,53 @@ test('Cho vay từ tháng trước (ngoài kỳ), thu 20/11: dòng tiền T11 +3
   setToday('2026-10-01');
 });
 
+/* ==================================================================== */
+group('Dọn công tắc danh mục (PR91)');
+
+test('Form danh mục: "Cố định theo Hạn mức" bị ẩn ở danh mục thu (đang bật thì vẫn hiện để tắt được); chi vẫn có; lưu không làm mất cờ cũ', function(){
+  setToday('2026-10-14');
+  var d = dataLuong([]);
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'cu', ten:'Thu cũ', chiTieu:5000000, coDinhChiTieu:true }];
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:0 }];
+  loadData(d);
+  ok(ctx.catSheetHtml({ kind:'thu', id:'luong' }).indexOf('dm_codinh') < 0, 'thu bình thường: ẩn');
+  ok(ctx.catSheetHtml({ kind:'thu', id:'cu' }).indexOf('id="dm_codinh" checked') > 0, 'thu đang bật: vẫn hiện, đang bật');
+  ok(ctx.catSheetHtml({ kind:'chi', id:'an' }).indexOf('dm_codinh') > 0, 'chi: vẫn có');
+  setToday('2026-10-01');
+});
+
+test('Công tắc đổi tên: "Chi cố định" (nhãn + chip), dữ liệu vẫn là khoanCoDinh', function(){
+  tnData(TN_CHI);
+  var h = ctx.catSheetHtml({ loai: 'cat', kind: 'chi', id: 'nha' });
+  ok(h.indexOf('Chi cố định') > 0 && h.indexOf('Khoản cố định') < 0, 'form dùng tên mới');
+});
+
+test('Hạn mức tự lấy từ kế hoạch: = tổng số kỳ hiện tại của các khoản bật + "Dùng làm dự báo"; đổi kỳ / tắt nhắc / sang tháng mới thì đổi theo', function(){
+  setToday('2026-10-14');
+  var d = dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }, { tuMk:'2026-12', soTien:12000000 }]), dkLuong([{ tuMk:'2026-10', soTien:3000000 }], { id:'dkL2' })]);
+  d.categories.thu[0].chiTieu = 999;                      // số tay cũ bị thay bằng số của kế hoạch
+  loadData(d);
+  var luong = function(){ return ctx.state.data.categories.thu.filter(function(c){ return c.id === 'luong'; })[0].chiTieu; };
+  eq(luong(), 13000000, '10tr + 3tr');
+  ok(ctx.catHanMucTuKeHoach('thu', 'luong') && !ctx.catHanMucTuKeHoach('thu', 'duocCho'), 'chỉ danh mục có kế hoạch');
+  setToday('2026-12-02'); ctx.dinhKyDongBoHanMuc(); eq(luong(), 15000000, 'sang T12: kỳ 12tr + 3tr');
+  ctx.state.data.dinhKy[1].bat = false; ctx.dinhKyDongBoHanMuc();
+  eq(luong(), 12000000, 'tắt nhắc khoản 2: chỉ còn khoản 1 (kỳ 12tr)');
+  ctx.state.data.dinhKy[0].duBao = false; ctx.state.data.dinhKy[1].duBao = false; ctx.dinhKyDongBoHanMuc();
+  eq(luong(), 12000000, 'không còn kế hoạch dự báo nào: không đụng, người dùng tự đặt lại');
+  ok(ctx.catSheetHtml({ kind:'thu', id:'luong' }).indexOf('id="dm_base"') > 0, 'ô hạn mức nhập lại được');
+  setToday('2026-10-01');
+});
+
+test('Form danh mục: ô Hạn mức bị khóa khi lấy từ kế hoạch; Ngân sách không đổi hạn mức của danh mục đó', function(){
+  setToday('2026-10-14');
+  var d = dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }])]);
+  loadData(d);
+  var h = ctx.catSheetHtml({ kind:'thu', id:'luong' });
+  ok(/id="dm_base"[^>]*disabled/.test(h) && h.indexOf('Tự lấy từ kế hoạch') > 0, 'khóa + giải thích');
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

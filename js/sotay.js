@@ -1029,7 +1029,7 @@ function hanMucThangHtml(mk){
         + '<span class="mb"><i style="width:'+Math.min(100, Math.round(r.pct * 100))+'%;background:'+catMau('chi', r.id)+'"></i></span>'
         + '<b>'+Math.round(r.pct * 100)+'%</b></div>';
     });
-    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Khoản cố định" ở tab Cài đặt) không tính vào % đã dùng và cảnh báo ở trên.</div>';
+    h += '</div><div class="bc-pace-n">Khoản cố định (trả nợ và danh mục bật "Chi cố định" ở tab Cài đặt) không tính vào % đã dùng và cảnh báo ở trên.</div>';
   }
   return h + '</div>';
 }

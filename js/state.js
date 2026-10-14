@@ -775,6 +775,7 @@ function normalizeData(d){
     k.kind = (k.kind === 'thu') ? 'thu' : 'chi';
     dinhKyChuanHoaKy(k, d);
   });
+  dinhKyDongBoHanMuc(d);
   // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
   d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
   // gắn walletId tường minh cho mọi dòng/khoản vay còn thiếu, để sau này đổi ví mặc định
@@ -988,6 +989,28 @@ function dinhKyChuanHoaKy(k, d){
     k.duBao = k.kind === 'thu' ? true : !!(cat && typeof catChiLaCoDinh === 'function' && catChiLaCoDinh(cat));
   }
   k.duBao = !!k.duBao;
+}
+// HẠN MỨC TỰ LẤY TỪ KẾ HOẠCH: danh mục có khoản định kỳ đang bật + "Dùng làm dự báo" thì Hạn mức/tháng = tổng số kỳ hiện tại
+// của các khoản đó (cùng nguồn số với dự báo, không phải nhập 2 nơi). Ghi thẳng vào cat.chiTieu để mọi nơi đọc hạn mức không phải đổi.
+function catHanMucTuKeHoach(kind, catId){
+  return (state.data.dinhKy || []).some(function(dk){ return dk.bat && dk.duBao && dk.kind === kind && dk.catId === catId; });
+}
+function dinhKyDongBoHanMuc(d){
+  d = d || state.data;
+  if (!d || !d.categories) return;
+  var mk = monthKey(todayStr()), tong = {};
+  (d.dinhKy || []).forEach(function(dk){
+    if (!dk.bat || !dk.duBao) return;
+    var key = dk.kind + '|' + dk.catId;
+    tong[key] = (tong[key] || 0) + dinhKySoTien(dk, mk);
+  });
+  ['thu', 'chi'].forEach(function(kind){
+    (d.categories[kind] || []).forEach(function(c){
+      var key = kind + '|' + c.id;
+      if (CAT_HE_THONG[kind][c.id] || tong[key] == null) return;
+      c.chiTieu = Math.round(tong[key]);
+    });
+  });
 }
 // thêm kỳ mới ("Đổi mức từ tháng…"): tháng bắt đầu phải SAU kỳ cuối; kỳ cuối tự đóng ở tháng liền trước. Trả về chuỗi lỗi ('' = ổn).
 function dinhKyThemKy(dk, tuMk, soTien){

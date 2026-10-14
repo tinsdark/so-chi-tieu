@@ -234,7 +234,7 @@ function dtDauHtml(d, bal, startMk, maxMk){
     phu: d.nay ? 'Đã qua '+d.nhip.ngayQua+'/'+d.nhip.soNgay+' ngày' : (d.tuong ? 'Gợi ý cả tháng' : 'Cả tháng') });
   if (d.chiActCD > 0 || d.chiPlanCD > 0){
     h += dtThanhHtml({ kind:'chi', ten:'Chi cố định', act:d.chiActCD, plan:d.chiPlanCD, nhanPlan:'hạn mức',
-      phu: 'Danh mục bật "Khoản cố định" · không xét nhịp' });
+      phu: 'Danh mục bật "Chi cố định" · không xét nhịp' });
   }
   if (tn && (tn.plan > 0 || tn.act > 0)){
     h += dtThanhHtml({ kind:'no', ten:'Trả nợ', act:tn.act, plan:tn.plan, nhanPlan:'',

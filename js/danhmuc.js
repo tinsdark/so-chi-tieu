@@ -67,10 +67,11 @@ function categoryCardHtml(kind, title, cats){
   } else {
     h += '<div class="cat-list" data-kind="'+kind+'">';
     cats.forEach(function(c){
-      var chips = (kind === 'chi' && c.khoanCoDinh && !CAT_HE_THONG.chi[c.id] ? '<span class="dm-chip md">Khoản cố định</span>' : '')
+      var chips = (kind === 'chi' && c.khoanCoDinh && !CAT_HE_THONG.chi[c.id] ? '<span class="dm-chip md">Chi cố định</span>' : '')
                 + (catAm(c) ? '<span class="dm-chip">Âm lịch ' + c.ngayAm + (c.thangAm ? '/' + c.thangAm : ' hằng tháng') + '</span>' : '')
                 + (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
-                + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '');
+                + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '')
+                + (catHanMucTuKeHoach(kind, c.id) ? '<span class="dm-chip">Hạn mức từ kế hoạch</span>' : '');
       h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
         + '<span class="cat-drag" draggable="true" data-act="dmNop" title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>'
         + '<span class="cat-dot" style="background:'+catMau(kind, c.id)+'"></span>'
@@ -421,15 +422,18 @@ function catSheetHtml(f){
   var d = c || { ten:'', chiTieu:0, khongDuTru:false, coDinhChiTieu:false };
   var mau = c ? catMau(f.kind, c.id) : CAT_PALETTE[arr.length % CAT_PALETTE.length];
   var h = vnF('Tên', '<input type="text" id="dm_ten" value="'+esc(d.ten)+'" placeholder="VD: Ăn uống">')
-    + vnF('Hạn mức/tháng', dmMoney('dm_base', d.chiTieu))
+    + (c && catHanMucTuKeHoach(f.kind, c.id)
+        ? vnF('Hạn mức/tháng', '<input type="text" id="dm_base" class="money" value="'+veSo(d.chiTieu)+'" disabled>', '', 'Tự lấy từ kế hoạch (kỳ đang chạy) ở Cài đặt → Kế hoạch. Muốn đổi, sửa ở đó.')
+        : vnF('Hạn mức/tháng', dmMoney('dm_base', d.chiTieu)))
     + vnF('Màu <span class="mp-hint">(dùng ở biểu đồ)</span>',
         '<div class="dm-mau"><input type="color" id="dm_mau" value="'+mau+'" data-cur="'+mau+'" aria-label="Màu danh mục">'
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')
     + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : vnF('Ngày '+(f.kind === 'thu' ? 'thu' : 'chi')+' hằng tháng <span class="mp-hint">(nhắc)</span>', '<input type="number" id="dm_ngay" min="1" max="31" inputmode="numeric" value="'+(catNgayHan(d) || '')+'" placeholder="Bỏ trống = không nhắc">', '', 'VD: Tiền nhà ngày 5, Lương ngày 20. Gần tới ngày, Sổ tay hiện "N khoản thu/chi sắp đến hạn" cho tới khi tháng đó có giao dịch ở danh mục này.'))
     + (CAT_HE_THONG[f.kind] && c && CAT_HE_THONG[f.kind][c.id] ? '' : amLichOHtml(d))
     + dmToggle('dm_nodk', 'Không tính dự kiến', 'Không đoán số cho tháng tương lai (khoản không đều đặn, không thể dự đoán).', d.khongDuTru)
-    + (f.kind === 'chi' && !(c && CAT_HE_THONG.chi[c.id]) ? dmToggle('dm_kcd', 'Khoản cố định', 'Tiền nhà, điện nước, học phí...: tiền ra theo lịch. Không tính vào mức tiêu mỗi ngày, nhịp chi và cảnh báo hạn mức; hiện ở nhóm "Cố định". Ăn uống, xăng xe... để tắt.', !!d.khoanCoDinh) : '')
-    + dmToggle('dm_codinh', 'Cố định theo Hạn mức', 'Luôn dùng đúng Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa thay đổi).', d.coDinhChiTieu);
+    + (f.kind === 'chi' && !(c && CAT_HE_THONG.chi[c.id]) ? dmToggle('dm_kcd', 'Chi cố định', 'Tách khỏi chi hằng ngày. Tiền nhà, điện nước, học phí...: tiền ra theo lịch. Không tính vào mức tiêu mỗi ngày, nhịp chi và cảnh báo hạn mức; hiện ở nhóm "Cố định". Ăn uống, xăng xe... để tắt.', !!d.khoanCoDinh) : '')
+    + ((f.kind === 'thu' && !d.coDinhChiTieu) ? '' : dmToggle('dm_codinh', 'Cố định theo Hạn mức', 'Luôn dùng đúng Hạn mức/tháng cho các tháng tương lai, không lấy trung bình 3 tháng thực tế.'
+        + (f.kind === 'thu' ? ' Khoản thu nên khai ở Cài đặt → Kế hoạch (theo kỳ) thay cho công tắc này; tắt đi nếu đã có kế hoạch.' : ''), d.coDinhChiTieu));
   if (c){
     h += '<div class="dm-tool"><button type="button" class="btn secondary sm" data-act="catUp" data-kind="'+f.kind+'" data-id="'+esc(c.id)+'"'+(idx === 0 ? ' disabled' : '')+'>'+icon('arrow-up')+' Lên trên</button>'
       + '<button type="button" class="btn secondary sm" data-act="catDown" data-kind="'+f.kind+'" data-id="'+esc(c.id)+'"'+(idx === arr.length - 1 ? ' disabled' : '')+'>'+icon('arrow-down')+' Xuống dưới</button></div>'
@@ -725,7 +729,7 @@ function handleDanhMucAction(act, el){
       ten: tenCat,
       chiTieu: numNonNeg(docSo(document.getElementById('dm_base').value)),
       khongDuTru: !!document.getElementById('dm_nodk').checked,
-      coDinhChiTieu: !!document.getElementById('dm_codinh').checked
+      coDinhChiTieu: document.getElementById('dm_codinh') ? !!document.getElementById('dm_codinh').checked : !!(cCu && cCu.coDinhChiTieu)
     };
     var kcdEl = document.getElementById('dm_kcd');
     if (fC.kind === 'chi' && kcdEl) cDoi.khoanCoDinh = !!kcdEl.checked;
@@ -867,6 +871,7 @@ function handleDanhMucAction(act, el){
         dinhKyDongBoSoTien(dkObj);
         state.data.dinhKy.push(dkObj);
       }
+      dinhKyDongBoHanMuc();
       state.dkForm = null;
       scheduleSave();
       renderDanhMuc();
@@ -999,7 +1004,7 @@ function handleDanhMucChange(el){
   if (el.matches && el.matches('#dk_cat')){ dkCapNhatDuBao(); return true; }
   if (el.matches('[data-act=dkBat]')){
     var dkB = (state.data.dinhKy || []).find(function(k){ return k.id === el.getAttribute('data-id'); });
-    if (dkB){ dkB.bat = el.checked; scheduleSave(); }
+    if (dkB){ dkB.bat = el.checked; dinhKyDongBoHanMuc(); scheduleSave(); }
     return true;
   }
   return false;

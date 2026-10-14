@@ -38,6 +38,7 @@ function renderSyncStatus(){
 }
 
 function renderAll(){
+  dinhKyDongBoHanMuc();                // sang tháng mới thì hạn mức đổi theo kỳ mới của kế hoạch
   renderSyncStatus();
   var tcBusy = document.getElementById('tabContent');
   if (tcBusy) tcBusy.removeAttribute('aria-busy');
