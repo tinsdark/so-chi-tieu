@@ -438,10 +438,15 @@ function actualCatInMonth(kind, cid, mk){
   });
   return s;
 }
-// dự trù 1 danh mục cho tháng mk = ước lượng (duTruCoBan) + khoản định kỳ CÓ GIỚI HẠN của tháng đó (tháng tương lai)
+// dự trù 1 danh mục cho tháng mk (tháng tương lai). Thứ tự ưu tiên:
+// 1. kế hoạch: khoản định kỳ đang bật + bật "Dùng làm dự báo" + có kỳ phủ tháng mk -> lấy đúng số của kỳ (thay hẳn ước lượng)
+// 2. danh mục: duTruCoBan (lịch Vay - Nợ, hạn mức cố định, trung bình 3 tháng, hạn mức)
 function duTruDanhMucThang(kind, cid, mk){
-  var dk = mk > monthKey(todayStr()) ? dinhKyGioiHanThang(kind, cid, mk) : 0;
-  return duTruCoBan(kind, cid, mk) + dk;
+  if (mk > monthKey(todayStr()) && !CAT_HE_THONG[kind][cid]){
+    var duBao = dinhKyDuBaoThang(kind, cid, mk);
+    if (duBao != null) return duBao;
+  }
+  return duTruCoBan(kind, cid, mk);
 }
 function duTruCoBan(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
@@ -528,7 +533,7 @@ function tongChiThangCard(mk){
 function soDuHienTaiDieuChinh(homNay){
   var items = [];
   dinhKyDenHan(homNay).forEach(function(x){
-    items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: num(x.dk.soTien) });
+    items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: x.tien });
   });
   var curMk = monthKey(homNay), tongVay = 0;
   (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){

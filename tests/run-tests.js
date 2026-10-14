@@ -5732,58 +5732,118 @@ function dataGioiHan(over){
 }
 function balList(n){ return ctx.dtDuKienRows(n).map(function(r){ return Math.round(r.bal); }); }
 
-test('dinhKyTrongHan: không giới hạn = mãi mãi; có giới hạn chỉ đúng soThang tháng từ tuMk', function(){
-  eq(ctx.dinhKyTrongHan({ gioiHan:false }, '2030-01'), true, 'không giới hạn');
-  var dk = { gioiHan:true, tuMk:'2026-11', soThang:5 };
-  eq(ctx.dinhKyTrongHan(dk, '2026-10'), false, 'trước tháng bắt đầu');
-  eq(ctx.dinhKyTrongHan(dk, '2026-11'), true, 'tháng đầu');
-  eq(ctx.dinhKyTrongHan(dk, '2027-03'), true, 'tháng thứ 5');
-  eq(ctx.dinhKyTrongHan(dk, '2027-04'), false, 'sau tháng thứ 5');
-  eq(ctx.dinhKyThangCuoi(dk), '2027-03', 'tháng cuối');
-});
-
-test('normalizeData: gioiHan thiếu tuMk / soThang thì coi như không giới hạn', function(){
-  var d = dataGioiHan();
-  d.dinhKy = [{ id:'a', ten:'A', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'2026-11', soThang:5 },
-              { id:'b', ten:'B', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'', soThang:5 },
-              { id:'c', ten:'C', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, gioiHan:true, tuMk:'2026-11', soThang:0 }];
-  loadData(d);
-  var g = ctx.state.data.dinhKy.map(function(k){ return k.gioiHan; });
-  eq(JSON.stringify(g), JSON.stringify([true, false, false]));
-});
-
-test('Định kỳ thu 2tr × 5 tháng từ T11: dòng tiền tương lai +2tr đúng T11..T3 rồi dừng', function(){
-  setToday('2026-10-14');
-  var d = dataGioiHan();
-  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-11', soThang:5 }];
-  loadData(d);
-  eq(JSON.stringify(balList(8)), JSON.stringify([10000000, 12000000, 14000000, 16000000, 18000000, 20000000, 20000000, 20000000]));
-  setToday('2026-10-01');
-});
-
-test('Định kỳ có giới hạn: tháng đã ghi Sổ tay không bị tính 2 lần vào trung bình dự trù', function(){
-  setToday('2026-12-10');
+function dkLuong(ky, over){
+  var o = { id:'dkL', ten:'Lương', kind:'thu', catId:'luong', soTien:ky[0].soTien, ngay:5, bat:true, bo:[], duBao:true, ky:ky };
+  if (over) Object.keys(over).forEach(function(k){ o[k] = over[k]; });
+  return o;
+}
+function dataLuong(dk, journal){
   var d = dataGioiHan({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
-  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-10', soThang:2 }];
-  d.journal['2026-10-05'] = { items:[{ iid:'i1', kind:'thu', catId:'duocCho', soTien:2000000, dkId:'dk1', dkMk:'2026-10' }], refs:[], thu:{ duocCho:2000000 }, chi:{}, ghiChu:'' };
-  d.journal['2026-11-05'] = { items:[{ iid:'i2', kind:'thu', catId:'duocCho', soTien:2000000, dkId:'dk1', dkMk:'2026-11' }], refs:[], thu:{ duocCho:2000000 }, chi:{}, ghiChu:'' };
+  d.categories.thu = [{ id:'luong', ten:'Lương', chiTieu:0 }, { id:'duocCho', ten:'Được cho', chiTieu:0 }];
+  d.dinhKy = dk; d.journal = journal || {};
+  return d;
+}
+function cbList(n){ return ctx.dtDuKienRows(n).map(function(r){ return Math.round(r.cb / 1e5) / 10; }); }
+
+test('Kỳ: dinhKyKy / dinhKySoTien lấy kỳ có tháng bắt đầu lớn nhất ≤ tháng hỏi; trước kỳ đầu = chưa có hiệu lực; kỳ 0 = dừng', function(){
+  var dk = dkLuong([{ tuMk:'2026-12', soTien:10000000 }, { tuMk:'2027-06', soTien:12000000 }, { tuMk:'2028-01', soTien:0 }]);
+  eq(ctx.dinhKySoTien(dk, '2026-11'), 0, 'trước kỳ đầu');
+  eq(ctx.dinhKyTrongHan(dk, '2026-11'), false);
+  eq(ctx.dinhKySoTien(dk, '2026-12'), 10000000, 'tháng đầu kỳ 1');
+  eq(ctx.dinhKySoTien(dk, '2027-05'), 10000000, 'tháng cuối kỳ 1 (= tháng trước kỳ 2)');
+  eq(ctx.dinhKySoTien(dk, '2027-06'), 12000000, 'đầu kỳ 2');
+  eq(ctx.dinhKySoTien(dk, '2028-01'), 0, 'kỳ dừng');
+  eq(ctx.dinhKyTrongHan(dk, '2028-02'), false, 'dừng thì không còn hiệu lực');
+});
+
+test('normalizeData: khoản định kỳ cũ (soTien phẳng) thành 1 kỳ; thu tự vào dự báo, chi hằng ngày thì không, chi cố định thì có', function(){
+  setToday('2026-10-14');
+  var d = dataLuong([{ id:'a', ten:'Lương', kind:'thu', catId:'luong', soTien:10000000, ngay:5, bat:true },
+                     { id:'b', ten:'Net', kind:'chi', catId:'an', soTien:300000, ngay:5, bat:true },
+                     { id:'c', ten:'Nhà', kind:'chi', catId:'nha', soTien:3000000, ngay:5, bat:true }]);
+  d.categories.chi.push({ id:'nha', ten:'Nhà', chiTieu:0, khoanCoDinh:true });
   loadData(d);
-  eq(ctx.recentAvgActual('thu', 'duocCho', 3), 0, 'phần ghi từ định kỳ có giới hạn không vào TB');
-  eq(ctx.tongThuThangCard('2027-01'), 0, 'hết 2 tháng thì T1/2027 không còn khoản này');
+  var k = ctx.state.data.dinhKy;
+  eq(JSON.stringify(k[0].ky), JSON.stringify([{ tuMk:'2026-10', soTien:10000000 }]), 'một kỳ từ đầu sổ');
+  eq(k[0].duBao, true, 'thu'); eq(k[1].duBao, false, 'chi hằng ngày'); eq(k[2].duBao, true, 'chi cố định');
+  eq(k[0].soTien, 10000000, 'bản sao số tiền kỳ đang chạy');
   setToday('2026-10-01');
 });
 
-test('Định kỳ có giới hạn: hết hạn thì không nhắc đến hạn nữa; còn hạn thì nhắc', function(){
-  setToday('2026-12-10');
-  var d = dataGioiHan();
-  d.dinhKy = [{ id:'dk1', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, bo:[], gioiHan:true, tuMk:'2026-10', soThang:2 },
-              { id:'dk2', ten:'Tiền net', kind:'chi', catId:'an', soTien:300000, ngay:5, bat:true, bo:[] }];
-  loadData(d);
-  eq(ctx.dinhKyDenHan('2026-12-10').map(function(x){ return x.dk.id; }).join(','), 'dk2', 'dk1 đã hết hạn');
-  eq(ctx.dinhKyChuaGhiThang('2026-12', 'thu'), 0, 'không còn tính vào dự báo tháng hiện tại');
-  setToday('2026-11-10');
-  eq(ctx.dinhKyDenHan('2026-11-10').map(function(x){ return x.dk.id; }).join(','), 'dk1,dk2', 'T11 còn trong hạn');
+test('normalizeData: dữ liệu bản trước (gioiHan/tuMk/soThang) đổi thành kỳ + kỳ dừng; trường cũ bị bỏ', function(){
+  setToday('2026-10-14');
+  loadData(dataLuong([{ id:'a', ten:'Được cho', kind:'thu', catId:'duocCho', soTien:2000000, ngay:5, bat:true, gioiHan:true, tuMk:'2026-11', soThang:5 }]));
+  var k = ctx.state.data.dinhKy[0];
+  eq(JSON.stringify(k.ky), JSON.stringify([{ tuMk:'2026-11', soTien:2000000 }, { tuMk:'2027-04', soTien:0 }]));
+  ok(k.gioiHan === undefined && k.soThang === undefined, 'bỏ trường cũ');
   setToday('2026-10-01');
+});
+
+test('Lương 10tr từ T10, đổi 12tr từ T6/2027: dòng tiền đúng từng tháng, KHÔNG cộng đôi với lương đã ghi tay', function(){
+  setToday('2026-12-15');
+  var j = {}; ['2026-10', '2026-11', '2026-12'].forEach(function(m){ j[m + '-05'] = { items:[], refs:[], thu:{ luong:10000000 }, chi:{}, ghiChu:'' }; });
+  loadData(dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }, { tuMk:'2027-06', soTien:12000000 }])], j));
+  // T12/2026 (tháng này, đã ghi tay 10tr) rồi T1..T5/2027 = 10tr, T6..T12/2027 = 12tr
+  eq(JSON.stringify(cbList(14)), JSON.stringify([10, 10, 10, 10, 10, 10, 12, 12, 12, 12, 12, 12, 12, 12]));
+  setToday('2026-10-01');
+});
+
+test('Công tắc "Dùng làm dự báo" tắt: tháng tương lai quay về trung bình 3 tháng như cũ', function(){
+  setToday('2026-12-15');
+  var j = {}; ['2026-10', '2026-11', '2026-12'].forEach(function(m){ j[m + '-05'] = { items:[], refs:[], thu:{ luong:10300000 }, chi:{}, ghiChu:'' }; });
+  loadData(dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }], { duBao:false })], j));
+  eq(ctx.tongThuThangCard('2027-02'), 10300000, 'trung bình thực tế, không phải 10tr của kế hoạch');
+  setToday('2026-10-01');
+});
+
+test('Kỳ dừng (số tiền 0): được cho 2tr × 5 tháng từ T11, sau đó danh mục về 0 (không rơi về trung bình)', function(){
+  setToday('2026-10-14');
+  loadData(dataLuong([dkLuong([{ tuMk:'2026-11', soTien:2000000 }, { tuMk:'2027-04', soTien:0 }], { id:'dkC', ten:'Được cho', catId:'duocCho' })]));
+  eq(JSON.stringify(cbList(8)), JSON.stringify([0, 2, 2, 2, 2, 2, 0, 0]));
+  setToday('2026-10-01');
+});
+
+test('Hai khoản cùng danh mục (2 việc) thì cộng; khoản tắt nhắc thì không vào dự báo; tháng "Bỏ qua" tính 0', function(){
+  setToday('2026-10-14');
+  loadData(dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }]), dkLuong([{ tuMk:'2026-10', soTien:3000000 }], { id:'dkL2' }),
+                      dkLuong([{ tuMk:'2026-10', soTien:5000000 }], { id:'dkL3', bat:false })]));
+  eq(ctx.dinhKyDuBaoThang('thu', 'luong', '2026-12'), 13000000, '10tr + 3tr, khoản tắt bỏ ra');
+  ctx.state.data.dinhKy[1].bo = ['2026-12'];
+  eq(ctx.dinhKyDuBaoThang('thu', 'luong', '2026-12'), 10000000, 'tháng bỏ qua của khoản 2');
+  eq(ctx.dinhKyDuBaoThang('thu', 'duocCho', '2026-12'), null, 'danh mục không có khoản nào -> cách ước lượng thường');
+  setToday('2026-10-01');
+});
+
+test('Tháng hiện tại: lương GHI TAY rồi thì không cộng thêm số định kỳ; ghi thiếu thì chỉ cộng phần thiếu; chi hằng ngày không bị trừ', function(){
+  setToday('2026-10-14');
+  var d = dataLuong([dkLuong([{ tuMk:'2026-10', soTien:10000000 }])], { '2026-10-03': { items:[], refs:[], thu:{ luong:10000000 }, chi:{}, ghiChu:'' } });
+  loadData(d);
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'thu'), 0, 'ghi tay đủ');
+  d.journal['2026-10-03'].thu.luong = 4000000; loadData(d);
+  eq(ctx.dinhKyChuaGhiThang('2026-10', 'thu'), 6000000, 'ghi 4tr thì còn thiếu 6tr');
+  setToday('2026-10-01');
+});
+
+test('Nhắc / ghi Sổ tay dùng số tiền ĐÚNG KỲ của tháng; sắp xếp lại kỳ khi nhập lộn xộn', function(){
+  setToday('2027-06-10');
+  loadData(dataLuong([dkLuong([{ tuMk:'2027-06', soTien:12000000 }, { tuMk:'2026-10', soTien:10000000 }])]));
+  var ds = ctx.dinhKyDenHan('2027-06-10');
+  eq(ds.length, 1); eq(ds[0].tien, 12000000, 'T6/2027 đã sang kỳ 12tr');
+  setToday('2027-05-10');
+  eq(ctx.dinhKyDenHan('2027-05-10')[0].tien, 10000000, 'T5/2027 còn kỳ 10tr');
+  setToday('2026-10-01');
+});
+
+test('dinhKyThemKy: tháng bắt đầu phải sau kỳ cuối; kỳ cuối tự đóng ở tháng trước; số 0 = dừng; thiếu số tiền thì lỗi', function(){
+  var dk = dkLuong([{ tuMk:'2026-10', soTien:10000000 }]);
+  ok(ctx.dinhKyThemKy(dk, '2026-10', 12000000) !== '', 'trùng tháng bắt đầu kỳ cuối');
+  ok(ctx.dinhKyThemKy(dk, '2026-09', 12000000) !== '', 'trước kỳ cuối');
+  ok(ctx.dinhKyThemKy(dk, '', 12000000) !== '', 'thiếu tháng');
+  ok(ctx.dinhKyThemKy(dk, '2027-06', NaN) !== '', 'thiếu số tiền');
+  eq(dk.ky.length, 1, 'lỗi thì không thêm gì');
+  eq(ctx.dinhKyThemKy(dk, '2027-06', 12000000), '');
+  eq(ctx.dinhKyThemKy(dk, '2028-01', 0), '', 'số 0 = dừng');
+  eq(ctx.dinhKySoTien(dk, '2027-05'), 10000000, 'tháng trước kỳ mới vẫn là kỳ cũ'); eq(ctx.dinhKySoTien(dk, '2027-06'), 12000000); eq(ctx.dinhKySoTien(dk, '2028-02'), 0);
 });
 
 test('Cho vay KHÔNG có ngày dự kiến thu: tiền đã ra thì lũy kế giảm, không giả định thu về ngay tháng này; vẫn là tài sản ròng', function(){

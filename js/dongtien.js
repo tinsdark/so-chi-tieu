@@ -30,7 +30,7 @@ function recentAvgActual(kind, catId, n){
   if (!months.length) return null;
   var win = months.slice(-n);
   var sum = 0;
-  win.forEach(function(mk){ sum += actualCatInMonth(kind, catId, mk) - dinhKyGioiHanDaGhi(kind, catId, mk); });
+  win.forEach(function(mk){ sum += actualCatInMonth(kind, catId, mk); });
   return sum / win.length;
 }
 
@@ -59,8 +59,11 @@ function dtBase(kind, cid){
 // gợi ý: riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch Vay-Nợ; danh mục "Không dự trù" (khongDuTru) thì để trống;
 // danh mục "Cố định theo hạn mức" lấy đúng hạn mức; còn lại TB thực tế tối đa 3 tháng hoàn chỉnh gần nhất (chưa có thì hạn mức)
 function dtSuggest(kind, cid, mk){
-  var g = dtSuggestGoc(kind, cid, mk), dk = mk > monthKey(todayStr()) ? dinhKyGioiHanThang(kind, cid, mk) : 0;
-  return dk > 0 ? num(g) + dk : g;
+  if (mk > monthKey(todayStr()) && !CAT_HE_THONG[kind][cid]){
+    var duBao = dinhKyDuBaoThang(kind, cid, mk);       // kế hoạch (định kỳ bật "Dùng làm dự báo") đi trước danh mục
+    if (duBao != null) return duBao;
+  }
+  return dtSuggestGoc(kind, cid, mk);
 }
 function dtSuggestGoc(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });

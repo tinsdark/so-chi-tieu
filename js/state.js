@@ -773,10 +773,7 @@ function normalizeData(d){
     k.ngay = Math.max(1, Math.min(31, Math.round(num(k.ngay)) || 1));
     k.soTien = num(k.soTien);
     k.kind = (k.kind === 'thu') ? 'thu' : 'chi';
-    // có giới hạn: chỉ chạy soThang tháng kể từ tháng tuMk (thiếu / sai thì coi như không giới hạn)
-    k.soThang = Math.max(0, Math.round(num(k.soThang)));
-    if (!/^\d{4}-\d{2}$/.test(k.tuMk || '')) k.tuMk = '';
-    k.gioiHan = !!k.gioiHan && k.soThang >= 1 && !!k.tuMk;
+    dinhKyChuanHoaKy(k, d);
   });
   // settings.soDuDauKy luôn = tổng số dư đầu kỳ của các ví: mọi hàm số dư cũ vẫn đọc số này
   d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
@@ -953,32 +950,82 @@ function viChotSoDuDauKy(dateStr){
    Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
    Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
    ==================================================================== */
-// "Có giới hạn": khoản chỉ lặp soThang tháng kể từ tuMk (vd được cho 10tr, nhận 2tr/tháng trong 5 tháng) rồi tự dừng.
-// Không giới hạn = lặp mãi. Mọi nơi dùng khoản định kỳ theo tháng mk phải qua hàm này.
-function dinhKyTrongHan(dk, mk){
-  return !dk.gioiHan || (mk >= dk.tuMk && mk < monthKeyAdd(dk.tuMk, dk.soThang));
+// KỲ của khoản định kỳ: dk.ky = [{tuMk, soTien}] sắp theo tuMk. Mỗi kỳ chạy từ tuMk đến hết tháng trước tuMk của kỳ sau;
+// kỳ cuối chạy mãi (không có tháng kết thúc). Đổi mức = thêm kỳ mới, kỳ cũ tự đóng và thành "lưu trữ".
+// soTien = 0 là "dừng từ tháng này". Tháng trước kỳ đầu thì khoản chưa có hiệu lực.
+// dk.soTien chỉ còn là bản sao số tiền kỳ đang chạy (bản app cũ trên máy khác vẫn đọc được); code mới đọc qua dinhKySoTien.
+// Mọi nơi dùng khoản định kỳ theo tháng mk phải qua dinhKyKy / dinhKySoTien / dinhKyTrongHan.
+function dinhKyKy(dk, mk){
+  if (!dk.ky || !dk.ky.length) return { tuMk: '', soTien: num(dk.soTien) };      // chưa chuẩn hóa (dữ liệu nạp thẳng): coi như 1 kỳ từ đầu
+  var r = null;
+  dk.ky.forEach(function(k){ if (k.tuMk <= mk) r = k; });
+  return r;
 }
-function dinhKyThangCuoi(dk){ return monthKeyAdd(dk.tuMk, dk.soThang - 1); }
-// tổng khoản định kỳ CÓ GIỚI HẠN (đang bật, chưa "Bỏ qua") rơi vào tháng mk của 1 danh mục — số BIẾT TRƯỚC cho tháng tương lai
-function dinhKyGioiHanThang(kind, catId, mk){
-  var s = 0;
+function dinhKySoTien(dk, mk){ var k = dinhKyKy(dk, mk); return k ? num(k.soTien) : 0; }
+function dinhKyTrongHan(dk, mk){ return dinhKySoTien(dk, mk) > 0; }
+// kỳ đang chạy ở tháng mk (chưa có thì kỳ đầu tiên, để form có chỗ hiện / sửa)
+function dinhKyKyHienTai(dk, mk){ return dinhKyKy(dk, mk) || (dk.ky || [])[0] || null; }
+// dạng chuẩn: dữ liệu cũ (soTien phẳng, hoặc gioiHan/tuMk/soThang của bản trước) -> ky; duBao mặc định theo loại khoản
+function dinhKyChuanHoaKy(k, d){
+  var re = /^\d{4}-\d{2}$/, ky = [];
+  (Array.isArray(k.ky) ? k.ky : []).forEach(function(x){
+    if (x && re.test(x.tuMk || '')) ky.push({ tuMk: x.tuMk, soTien: Math.max(0, num(x.soTien)) });
+  });
+  if (!ky.length){
+    var dau = monthKey((d.settings && d.settings.ngayBatDau) || todayStr());
+    if (k.gioiHan && re.test(k.tuMk || '') && num(k.soThang) >= 1){
+      ky.push({ tuMk: k.tuMk, soTien: num(k.soTien) });
+      ky.push({ tuMk: monthKeyAdd(k.tuMk, Math.round(num(k.soThang))), soTien: 0 });
+    } else ky.push({ tuMk: dau, soTien: num(k.soTien) });
+  }
+  ky.sort(function(a, b){ return a.tuMk < b.tuMk ? -1 : (a.tuMk > b.tuMk ? 1 : 0); });
+  k.ky = ky.filter(function(x, i){ return i === ky.length - 1 || ky[i + 1].tuMk !== x.tuMk; });   // trùng tháng thì lấy kỳ sau
+  delete k.gioiHan; delete k.tuMk; delete k.soThang;
+  var cur = dinhKyKyHienTai(k, monthKey(todayStr()));
+  k.soTien = cur ? cur.soTien : 0;
+  if (k.duBao == null){
+    var cat = ((d.categories && d.categories[k.kind]) || []).filter(function(c){ return c.id === k.catId; })[0];
+    k.duBao = k.kind === 'thu' ? true : !!(cat && typeof catChiLaCoDinh === 'function' && catChiLaCoDinh(cat));
+  }
+  k.duBao = !!k.duBao;
+}
+// thêm kỳ mới ("Đổi mức từ tháng…"): tháng bắt đầu phải SAU kỳ cuối; kỳ cuối tự đóng ở tháng liền trước. Trả về chuỗi lỗi ('' = ổn).
+function dinhKyThemKy(dk, tuMk, soTien){
+  if (!/^\d{4}-\d{2}$/.test(tuMk || '')) return 'Chọn tháng bắt đầu của kỳ mới.';
+  if (!(soTien >= 0)) return 'Nhập số tiền mới (0 = dừng).';
+  var cuoi = dk.ky[dk.ky.length - 1];
+  if (cuoi && tuMk <= cuoi.tuMk) return 'Tháng bắt đầu kỳ mới phải sau ' + monthLabel(cuoi.tuMk).toLowerCase() + ' (kỳ hiện tại bắt đầu từ đó).';
+  dk.ky.push({ tuMk: tuMk, soTien: soTien });
+  return '';
+}
+function dinhKyDongBoSoTien(dk){
+  var c = dinhKyKyHienTai(dk, monthKey(todayStr()));
+  dk.soTien = c ? num(c.soTien) : 0;
+}
+// DỰ BÁO tháng mk của 1 danh mục từ các khoản định kỳ đang bật mà bật "Dùng làm dự báo" và có kỳ phủ tháng đó.
+// null = không có khoản nào (danh mục dùng cách ước lượng thường); số (kể cả 0 = đã dừng) = thay hẳn ước lượng.
+// Nhiều khoản cùng danh mục (2 việc) thì cộng lại; tháng đã bấm "Bỏ qua" tính 0.
+function dinhKyDuBaoThang(kind, catId, mk){
+  var co = false, s = 0;
   (state.data.dinhKy || []).forEach(function(dk){
-    if (!dk.gioiHan || !dk.bat || num(dk.soTien) <= 0 || dk.kind !== kind || dk.catId !== catId) return;
-    if (!dinhKyTrongHan(dk, mk) || (dk.bo || []).indexOf(mk) >= 0) return;
-    s += num(dk.soTien);
+    if (!dk.bat || !dk.duBao || dk.kind !== kind || dk.catId !== catId) return;
+    var ky = dinhKyKy(dk, mk);
+    if (!ky) return;
+    co = true;
+    if ((dk.bo || []).indexOf(mk) < 0) s += num(ky.soTien);
   });
-  return s;
+  return co ? s : null;
 }
-// phần đã ghi Sổ tay trong tháng mk đến từ khoản định kỳ có giới hạn: loại khỏi trung bình dự trù để khỏi tính 2 lần
-function dinhKyGioiHanDaGhi(kind, catId, mk){
-  var ids = {}, co = false, s = 0;
-  (state.data.dinhKy || []).forEach(function(dk){ if (dk.gioiHan && dk.kind === kind && dk.catId === catId){ ids[dk.id] = 1; co = true; } });
-  if (!co) return 0;
-  Object.keys(state.data.journal).forEach(function(d){
-    if (monthKey(d) !== mk) return;
-    entryItems(state.data.journal[d]).forEach(function(it){ if (it.dkId && ids[it.dkId] && it.kind === kind && it.catId === catId) s += num(it.soTien); });
+// phần đã ghi TAY (không qua nút "Ghi vào Sổ tay" của định kỳ) của 1 danh mục trong tháng mk
+function ghiTayTrongThang(kind, catId, mk){
+  var tong = 0, qua = 0;
+  Object.keys(state.data.journal).forEach(function(date){
+    if (monthKey(date) !== mk) return;
+    var e = state.data.journal[date];
+    tong += num((e[kind] || {})[catId]);
+    entryItems(e).forEach(function(it){ if (it.dkId && it.kind === kind && it.catId === catId) qua += num(it.soTien); });
   });
-  return s;
+  return Math.max(0, tong - qua);
 }
 function dinhKyDaGhi(dk, mk){
   var da = false;
@@ -990,14 +1037,25 @@ function dinhKyDaGhi(dk, mk){
 }
 // tổng các khoản định kỳ ĐANG BẬT của tháng mk mà chưa ghi Sổ tay và chưa bấm "Bỏ qua" — kể cả khoản CHƯA tới ngày
 // (dùng cho dự báo cuối tháng). kind/catId bỏ trống = tính tất cả.
+// Đã ghi TAY (không qua nút định kỳ) vào cùng danh mục thì trừ bớt: lương ghi tay 10tr thì không cộng thêm 10tr định kỳ nữa.
 function dinhKyChuaGhiThang(mk, kind, catId){
-  var s = 0;
+  var nhom = {}, le = 0;
   (state.data.dinhKy || []).forEach(function(dk){
-    if (!dk.bat || num(dk.soTien) <= 0 || !dinhKyTrongHan(dk, mk)) return;
+    var tien = dinhKySoTien(dk, mk);
+    if (!dk.bat || tien <= 0) return;
     if (kind && dk.kind !== kind) return;
     if (catId && dk.catId !== catId) return;
     if ((dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
-    s += num(dk.soTien);
+    // khoản "Dùng làm dự báo" là toàn bộ khoản của danh mục (lương...): ghi tay rồi thì trừ bớt. Khoản chỉ để nhắc (tiền net trong Ăn)
+    // nằm lẫn trong chi tiêu khác của danh mục nên không trừ.
+    if (!dk.duBao){ le += tien; return; }
+    var key = dk.kind + '|' + dk.catId;
+    nhom[key] = (nhom[key] || 0) + tien;
+  });
+  var s = le;
+  Object.keys(nhom).forEach(function(key){
+    var p = key.split('|');
+    s += Math.max(0, nhom[key] - ghiTayTrongThang(p[0], p[1], mk));
   });
   return s;
 }
@@ -1005,10 +1063,10 @@ function dinhKyChuaGhiThang(mk, kind, catId){
 function dinhKyDenHan(homNay){
   var mk = monthKey(homNay), out = [];
   (state.data.dinhKy || []).forEach(function(dk){
-    if (!dk.bat || num(dk.soTien) <= 0 || !dinhKyTrongHan(dk, mk)) return;
+    if (!dk.bat || !dinhKyTrongHan(dk, mk)) return;
     var han = ngayTraCuaKy(mk, dk.ngay);
     if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
-    out.push({ dk: dk, mk: mk, han: han });
+    out.push({ dk: dk, mk: mk, han: han, tien: dinhKySoTien(dk, mk) });
   });
   out.sort(function(a, b){ return a.han < b.han ? -1 : (a.han > b.han ? 1 : 0); });
   return out;
@@ -1018,7 +1076,7 @@ function dinhKyDenHan(homNay){
 // Trả về {date, iid, note} để hoàn tác được; null nếu không ghi được.
 // tien (tuỳ chọn): số tiền thật của kỳ này nếu khác số tiền mẫu; mẫu không bị đổi
 function dinhKyGhi(dk, mk, homNay, tien){
-  tien = tien > 0 ? tien : dk.soTien;
+  tien = tien > 0 ? tien : dinhKySoTien(dk, mk);
   var han = ngayTraCuaKy(mk, dk.ngay);
   var start = state.data.settings.ngayBatDau || '';
   var date = (!start || han >= start) ? han : homNay;
