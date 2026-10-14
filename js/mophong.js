@@ -431,7 +431,7 @@ function renderMoPhong(){
     + bdLine({ W: 350, H: 200, labels: rowsMoi.map(function(r){ return dtNhanThang(r.mk); }),
       series: [{ ten: 'Hiện tại', vals: rowsGoc.map(function(r){ return Math.round(r.bal); }), cls: 'gray', dash: true },
                { ten: 'Kịch bản', vals: rowsMoi.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
-      tipTitle: function(k){ return monthLabel(rowsMoi[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư lũy kế: hiện tại và kịch bản' }) + '</div>'
+      tipTitle: function(k){ return monthLabel(rowsMoi[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư: hiện tại và kịch bản' }) + '</div>'
     + '<div class="mp-strip" aria-hidden="true">'+rowsMoi.map(function(r){ return '<i'+(r.bal < 0 ? ' class="am"' : '')+' title="'+monthLabel(r.mk)+'"></i>'; }).join('')+'</div>'
     + '<div class="mp-hint c">Chạm hoặc kéo trên biểu đồ để xem từng tháng'+(cung ? ' · chưa điều chỉnh nên hai đường trùng nhau' : '')+'</div>';
   var hien = state.mp.hetThang ? rowsMoi : rowsMoi.slice(0, 6);
