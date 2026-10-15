@@ -5457,10 +5457,10 @@ test('ntdKetQuaHtml: nhận định đúng; mỗi 1tr để dành thêm sớm h�
   ok(h.indexOf(ctx.ntdKhoangChu(m1)) > 0, 'hiện thời gian tới tự do'); ok(h.indexOf('sớm hơn <b>' + ctx.ntdKhoangChu(m1 - m2) + '</b>') > 0, 'so sánh +1tr');
   setToday('2026-10-01');
 });
-test('Ghi nhanh: dưới ô số tiền hiện bao nhiêu ngày tự do (chi: Khoản này ≈ …, thu: +…); không có số tiền / dữ liệu thì rỗng', function(){
+test('Ghi nhanh: dưới ô số tiền hiện bao nhiêu ngày tự do (chi: Khoản này ≈ …, thu: Khoản này ≈ +…); không có số tiền / dữ liệu thì rỗng', function(){
   nsData();
   var c = 22500000 / 92;
-  eq(ctx.ntdGoiY('chi', c * 2), 'Khoản này ≈ 2 ngày tự do'); eq(ctx.ntdGoiY('thu', c * 0.5), '+0,5 ngày tự do'); eq(ctx.ntdGoiY('chi', 1), 'Khoản này ≈ chưa tới 0,1 ngày tự do');
+  eq(ctx.ntdGoiY('chi', c * 2), 'Khoản này ≈ 2 ngày tự do'); eq(ctx.ntdGoiY('thu', c * 0.5), 'Khoản này ≈ +0,5 ngày tự do'); eq(ctx.ntdGoiY('thu', 1), 'Khoản này ≈ chưa tới 0,1 ngày tự do', 'thu số nhỏ: không có dấu + trước chữ'); eq(ctx.ntdGoiY('chi', 1), 'Khoản này ≈ chưa tới 0,1 ngày tự do');
   eq(ctx.ntdGoiY('chi', 0), '', 'chưa nhập tiền');
   ctx.state.qa.amt = '489130'; ctx.state.qa.kind = 'chi';
   ok(ctx.ghiNhanhHtml().indexOf('id="qa_ntd">Khoản này ≈ 2 ngày tự do</div>') > 0, 'có sẵn trong bảng khi mở');
