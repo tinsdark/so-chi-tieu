@@ -473,6 +473,8 @@ function bdTongQuanHtml(mk){
   h += '<div class="bd-kpi"><div><small>Thu nhập</small><b class="thu">'+bdTien(cur.tongThuThat)+'</b>'+so(pt, 'thu')+'</div>'
     + '<div><small>Chi tiêu</small><b class="chi">'+bdTien(cur.tongChiThat)+'</b>'+so(prev.coDl ? pc : null, 'chi')+'</div></div>'
     + bdVayNoDongHtml(cur.vayNo);
+  // --- từ đây là phần chi tiết từng ngày: gập sau nút "Xem ..." (màn rộng hiện hết), xem bdMoHtml ---
+  var hTruoc = h; h = '';
   // --- số dư cuối ngày ---
   var bs = balanceSeries(mk);
   if (bs.vals.length >= 2){
@@ -500,7 +502,15 @@ function bdTongQuanHtml(mk){
       return '<div data-act="bdDay" data-date="'+mk+'-'+pad2(t.d)+'"><span>'+pad2(t.d)+'/'+mk.slice(5)+(ck ? ' · '+esc(catTen('chi', ck)) : '')+'</span><b>'+bdTien(t.v)+'</b></div>';
     }).join('') + '</div>';
   }
-  return h;
+  return hTruoc + bdMoHtml(h);
+}
+// phần chi tiết từng ngày của tab Tổng quan (số dư cuối ngày, lịch chi tiêu, top ngày): gập mặc định cho đỡ dài; state.bdMo không lưu
+function bdMoHtml(inner){
+  if (!inner) return '';
+  var mo = !!state.bdMo;
+  return '<div class="bd-extra' + (mo ? '' : ' dong') + '" id="bdExtra">' + inner + '</div>'
+    + '<button type="button" class="btn secondary bd-more" data-act="bdMo" aria-expanded="' + mo + '" aria-controls="bdExtra">'
+    + (mo ? 'Thu gọn' : 'Xem số dư từng ngày, lịch chi tiêu, top ngày') + '</button>';
 }
 
 function bdDanhMucHtml(mk){
@@ -648,6 +658,7 @@ function handleBieuDoAction(act, el){
   }
   if (act === 'hmXem'){ state.hmMoHet = !state.hmMoHet; renderBaoCao(); return true; }
   if (act === 'bdDay'){ state.bdDay = el.getAttribute('data-date'); veLaiBieuDo(); return true; }
+  if (act === 'bdMo'){ state.bdMo = !state.bdMo; veLaiBieuDo(); return true; }
   return false;
 }
 

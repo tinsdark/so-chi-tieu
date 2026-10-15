@@ -2620,6 +2620,8 @@ test('bieuDoCardHtml: 3 tab vẽ được với dữ liệu thật; tháng trố
   ctx.state.bdTab = 'tq';
   var tq = ctx.bieuDoCardHtml('2026-10');
   ok(tq.indexOf('id="bieuDoCard"') > 0 && tq.indexOf('Phân tích') > 0 && tq.indexOf('bd-cal') > 0, 'tab Tổng quan');
+  ok(tq.indexOf('class="bd-extra dong"') > 0 && tq.indexOf('data-act="bdMo"') > 0 && tq.indexOf('bd-cal') > tq.indexOf('id="bdExtra"') && tq.indexOf('Phân tích') < tq.indexOf('id="bdExtra"'), 'chi tiết từng ngày nằm trong phần gập, Phân tích nằm ngoài');
+  ctx.state.bdMo = true; var tqMo = ctx.bieuDoCardHtml('2026-10'); ok(tqMo.indexOf('class="bd-extra"') > 0 && tqMo.indexOf('Thu gọn') > 0, 'mở thì hiện hết và nút đổi thành Thu gọn'); ctx.state.bdMo = false;
   // tháng 9 chỉ có giao dịch ngày 10 -> cùng kỳ 1–6/9 trống: không so (trước đây so với cả tháng 9 ra "giảm" sai)
   ok(tq.indexOf('so với tháng 9') < 0 && tq.indexOf('chi nhiều nhất') > 0, 'cùng kỳ trống thì không so với cả tháng trước');
   ctx.state.bdTab = 'dm'; ctx.state.bdMode = 'vong';
@@ -2767,6 +2769,7 @@ test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ
   ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, 2);
   ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, null, 'bấm lại bỏ chọn');
   ctx.handleBieuDoAction('bdDay', el({ 'data-date': '2026-10-03' })); eq(ctx.state.bdDay, '2026-10-03');
+  ctx.state.bdMo = false; ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo, true, 'bấm thì mở'); ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo, false, 'bấm lại thì gập');
   eq(ctx.handleBieuDoAction('khac', el({})), false);
   eq(JSON.stringify(ctx.state.data), kt, 'không đụng dữ liệu');
   ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; ctx.state.bdDay = null;
