@@ -932,9 +932,6 @@ body.qa-mo{overflow:hidden}
 .bc-pace-n{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
 .bc-ut{font-size:13px;line-height:1.5;margin-top:10px}
 .bc-ut b{white-space:nowrap;font-variant-numeric:tabular-nums}
-.bc-sp-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:14px 0 5px}
-.bc-spark{display:block;width:100%;height:40px}
-.bc-spark .b{fill:var(--bd-chi);opacity:.4} .bc-spark .mx{fill:var(--bd-chi)} .bc-spark .z{fill:var(--border)} .bc-spark .f{fill:var(--border)}
 .bc-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .bc-chip{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:99px;padding:9px 14px;font-size:13px;font-weight:700}
 .bc-chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
@@ -1732,11 +1729,12 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .bc-jump{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 6px;margin:0 -2px;scrollbar-width:none}
 .bc-jump::-webkit-scrollbar{display:none}
 .bc-jump button{flex:0 0 auto;min-height:40px;padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:600}
-.bc-extra.dong{display:none}
-.bc-more{width:100%;min-height:46px;margin:6px 0 4px;border-radius:14px;font-size:14px;line-height:1.35}
+.bc-extra.dong,.bd-extra.dong{display:none}
+.bc-more,.bd-more{width:100%;min-height:46px;margin:6px 0 4px;border-radius:14px;font-size:14px;line-height:1.35}
+.bd-more{margin-top:14px}
 @media (min-width:1024px){
-  .bc-jump,.bc-more{display:none}
-  .bc-extra.dong{display:block}
+  .bc-jump,.bc-more,.bd-more{display:none}
+  .bc-extra.dong,.bd-extra.dong{display:block}
 }
 
 /* kỳ của khoản định kỳ (form sửa): danh sách kỳ + ô soạn kỳ */
