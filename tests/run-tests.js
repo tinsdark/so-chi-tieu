@@ -6031,6 +6031,229 @@ test('Nút "Ghi khoản thu" ở bảng Ghi nhanh có chữ: nhãn đúng và CS
   setToday('2026-10-01');
 });
 
+/* ==================================================================== */
+group('KB. Kịch bản đời thực: nhiều kiểu người dùng chạy qua hàm thật, kiểm các bất biến');
+
+// bộ sinh số ngẫu nhiên có hạt giống (mulberry32): cùng seed luôn ra cùng kịch bản, fail thì chạy lại được
+function kbRng(seed){
+  var s = seed >>> 0;
+  return function(){ s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function kbNgay(y, m, d){ return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d; }
+function kbSoVo(v, path, out, sau){
+  if (sau > 7 || v == null) return;
+  if (typeof v === 'number'){ if (!isFinite(v)) out.push(path); return; }
+  if (typeof v !== 'object') return;
+  Object.keys(v).forEach(function(k){ kbSoVo(v[k], path + '.' + k, out, sau + 1); });
+}
+var KB_HTML = ['baoCaoDauHtml:mk', 'viSoDuCardHtml:mk', 'hanMucThangHtml:mk', 'ntdCardHtml', 'dnCardHtml:mk', 'tongKetCardHtml:mkTruoc', 'taiSanRongCardHtml:mk',
+  'mucTieuCardHtml', 'tetCardHtml:homNay', 'nhanCardHtml', 'vnTongQuanHtml', 'ccHubHtml', 'tieuMoiNgayHtml:homNay'];
+// chạy cả bộ kiểm tra lên dữ liệu đang nạp: sổ khớp, tổng các ví = số dư, mọi số hữu hạn, không chữ NaN / undefined / null trên màn hình
+function kbKiemTra(nhan, homNay){
+  setToday(homNay);
+  ctx.invalidateBalanceCache();
+  var d = ctx.state.data, mk = homNay.slice(0, 7), mkTruoc = ctx.monthKeyAdd(mk, -1);
+  ctx.state.soTayMonth = mk;       // renderBaoCao / Sổ tay đặt tháng đang xem trước khi vẽ
+  eq(JSON.stringify(ctx.journalKiemTra(d.journal)), '[]', nhan + ': số lưu của ngày phải khớp items + refs');
+  var tong = 0;
+  d.wallets.forEach(function(w){ tong += ctx.soDuTheoVi(w.id, homNay); });
+  near(tong, ctx.balanceAt(homNay), 0.5, nhan + ': tổng số dư các ví = số dư tổng');
+  var kq = { bd: ctx.bdThang(mk), rong: ctx.taiSanRongThang(mk), lich: ctx.tnLichTien(homNay, 30), ntd: ctx.ntdTinh(homNay), tieu: ctx.tieuMoiNgay(homNay),
+    dn: ctx.dnTatCa(mk, homNay), cb: ctx.cbTatCa(homNay), dt: ctx.dtDuKienRows(12), chiThang: ctx.tongChiThangCard(mk), sap: ctx.danhSachSapDenHan(7) };
+  d.wallets.forEach(function(w){ kq['lich_' + w.id] = ctx.tnLichTien(homNay, 30, w.id); });
+  var xau = [];
+  kbSoVo(kq, '', xau, 0);
+  eq(xau.join(' '), '', nhan + ': có số không hữu hạn (NaN / Infinity)');
+  KB_HTML.forEach(function(s){
+    var p = s.split(':'), tham = { mk: mk, mkTruoc: mkTruoc, homNay: homNay }[p[1]];
+    var h = p[1] ? ctx[p[0]](tham) : ctx[p[0]]();
+    ok(typeof h === 'string', nhan + ': ' + p[0] + ' trả chuỗi');
+    ok(!/NaN|undefined|Infinity|\[object/.test(h), nhan + ': ' + p[0] + ' lộ NaN / undefined trên màn hình: ' + (h.match(/.{0,40}(NaN|undefined|Infinity|\[object).{0,20}/) || [''])[0]);
+  });
+  return kq;
+}
+// lịch trả nợ của mọi khoản vay: tổng gốc các kỳ = số vay, dư nợ giảm dần về 0, tổng trả >= gốc, nợ gốc theo ngày không bao giờ tăng
+function kbKiemVay(nhan){
+  (ctx.state.data.vayNo.vayNoPhaiTra || []).forEach(function(l){
+    var sch = ctx.tinhLichTraNo(l), g = 0, truoc = Infinity;
+    sch.forEach(function(k){ g += k.goc; ok(k.lai >= -1e-6 && k.tongTra >= k.goc - 1e-6, nhan + ': ' + l.ten + ' kỳ ' + k.mk + ' lãi âm'); ok(k.duNoConLai <= truoc + 1e-6, nhan + ': dư nợ ' + l.ten + ' tăng'); truoc = k.duNoConLai; });
+    near(g, l.soTienGoc, 1, nhan + ': ' + l.ten + ' tổng gốc các kỳ = số vay');
+    near(sch[sch.length - 1].duNoConLai, 0, 1, nhan + ': ' + l.ten + ' kỳ cuối hết nợ');
+    var no0 = Infinity;       // chỉ xét từ ngày vay trở đi (trước ngày vay chưa có nợ)
+    for (var m = 0; m < 40; m++){
+      var ng = m === 0 ? l.ngayVay : ctx.monthKeyAdd(l.ngayVay.slice(0, 7), m) + '-28', no = ctx.noGocTaiNgay(l, ng);
+      ok(no <= no0 + 1e-6, nhan + ': nợ gốc ' + l.ten + ' tăng lên ở ' + ng); ok(no >= -1e-6, nhan + ': nợ gốc âm'); no0 = no;
+    }
+  });
+}
+function kbTraKy(l, ky, ngay){
+  var k = ctx.tinhLichTraNo(l)[ky], rid = 'r' + l.id + ky;
+  l.traNo = l.traNo || [];
+  l.traNo.push({ rid: rid, ky: ky, mk: k.mk, soTien: Math.round(k.tongTra), ngay: ngay, dongKy: true });
+  ctx.journalAddRef(ngay, l.id, 'traNo', Math.round(k.tongTra), 'Trả nợ ' + l.ten, { ky: ky, rid: rid });
+}
+function kbDuLieu(over){
+  var d = baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' } });
+  d.categories = { thu: [{ id: 'luong', ten: 'Lương', chiTieu: 0 }, { id: 'phu', ten: 'Thu phụ', chiTieu: 0 }],
+    chi: [{ id: 'an', ten: 'Ăn', chiTieu: 3000000 }, { id: 'nha', ten: 'Tiền nhà', chiTieu: 4000000, khoanCoDinh: true }, { id: 'xe', ten: 'Xăng xe', chiTieu: 500000 }, { id: 'traNo', ten: 'Trả nợ', chiTieu: 0 }, { id: 'choVay', ten: 'Cho vay', chiTieu: 0 }] };
+  if (over) Object.keys(over).forEach(function(k){ d[k] = over[k]; });
+  return d;
+}
+
+test('KB1 Sinh viên: một ví tiền mặt, gia đình gửi tiền đầu tháng, chi vặt mỗi ngày, không nợ', function(){
+  var r = kbRng(11), d = kbDuLieu({ settings: { soDuDauKy: 400000, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' } });
+  loadData(d);
+  for (var m = 7; m <= 10; m++){
+    ctx.entryAddItem(kbNgay(2026, m, 1), 'thu', 'phu', 3000000, 'Gia đình gửi', '');
+    for (var day = 1; day <= (m === 10 ? 14 : 28); day++) for (var n = 0; n < 1 + Math.floor(r() * 3); n++)
+      ctx.entryAddItem(kbNgay(2026, m, day), 'chi', r() < 0.7 ? 'an' : 'xe', 15000 + Math.round(r() * 65) * 1000, 'chi vặt', '');
+  }
+  ['2026-10-14', '2026-10-15', '2026-09-30', '2026-08-01'].forEach(function(h){ kbKiemTra('KB1 ' + h, h); });
+});
+
+test('KB2 Nhân viên văn phòng: lương định kỳ, 3 ví (có thẻ tín dụng), chuyển ví trả thẻ, vay ngân hàng trả đều 4 tháng', function(){
+  var d = kbDuLieu();
+  d.wallets = [{ id: 'tk', ten: 'Techcom', soDuDauKy: 8000000 }, { id: 'tm', ten: 'Tiền mặt', soDuDauKy: 500000 },
+    { id: 'the', ten: 'Thẻ VPBank', soDuDauKy: 0, the: true, hanMucThe: 30000000, ngaySaoKe: 25, ngayTraThe: 15 }];
+  d.dinhKy = [{ id: 'dkL', ten: 'Lương', kind: 'thu', catId: 'luong', soTien: 20000000, ngay: 5, bat: true, bo: [], duBao: true, ky: [{ tuMk: '2026-07', soTien: 20000000 }] }];
+  d.vayNo.vayNoPhaiTra = [{ id: 'nh1', ten: 'Vay mua xe', loaiVay: 'ngan_hang', hinhThuc: 'co_lai', soTienGoc: 60000000, laiSuatNam: 9.5, ngayVay: '2026-06-20', ngayTraHangThang: 20, soThangVay: 24, walletId: 'tk', traNo: [], trangThai: 'dang_vay' }];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  for (var m = 7; m <= 10; m++){
+    ctx.entryAddItem(kbNgay(2026, m, 5), 'thu', 'luong', 20000000, 'Lương', 'tk');
+    ctx.entryAddItem(kbNgay(2026, m, 6), 'chi', 'nha', 4000000, 'Tiền nhà', 'tk');
+    for (var k = 0; k < 6; k++) ctx.entryAddItem(kbNgay(2026, m, 8 + k * 3), 'chi', 'an', 180000 + k * 20000, 'Ăn ngoài', 'the');
+    ctx.chuyenViThem(kbNgay(2026, m, 15), 'tk', 'the', 1100000, 'Trả thẻ');
+    if (m < 10) kbTraKy(l, m - 7, kbNgay(2026, m, 20));
+  }
+  ctx.invalidateBalanceCache();
+  kbKiemVay('KB2');
+  ['2026-10-15', '2026-10-31', '2026-11-01', '2026-10-20'].forEach(function(h){ kbKiemTra('KB2 ' + h, h); });
+  var tr = ctx.balanceAt('2026-10-31');
+  ctx.chuyenViThem('2026-10-16', 'tk', 'tm', 2000000, 'rút tiền mặt'); ctx.invalidateBalanceCache();
+  near(ctx.balanceAt('2026-10-31'), tr, 0.5, 'chuyển giữa các ví không đổi tổng số dư');
+  var a = ctx.entryAddItem('2026-10-17', 'chi', 'an', 250000, 'thêm rồi xóa', 'tm'); ctx.invalidateBalanceCache();
+  ok(Math.abs(ctx.balanceAt('2026-10-31') - (tr - 250000)) < 0.5, 'thêm một khoản chi: số dư giảm đúng số đó');
+});
+
+test('KB3 Freelancer: tháng không thu đồng nào, tháng thu rất lớn, ví âm, chi cuối tháng', function(){
+  var d = kbDuLieu({ settings: { soDuDauKy: 2000000, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' } });
+  loadData(d);
+  var thu = { 7: 0, 8: 45000000, 9: 0, 10: 6000000 }, r = kbRng(33);
+  Object.keys(thu).forEach(function(m){
+    if (thu[m]) ctx.entryAddItem(kbNgay(2026, +m, 12), 'thu', 'luong', thu[m], 'Dự án', '');
+    for (var i = 0; i < 18; i++) ctx.entryAddItem(kbNgay(2026, +m, 1 + Math.floor(r() * 27)), 'chi', i % 5 === 0 ? 'nha' : 'an', 90000 + Math.round(r() * 900) * 1000 / 10, 'chi', '');
+  });
+  ['2026-09-30', '2026-10-15', '2026-10-31'].forEach(function(h){ kbKiemTra('KB3 ' + h, h); });
+});
+
+test('KB4 Người hay cho vay: nhiều người, thu đủ / thu một phần / xóa nợ một phần / tất toán thiếu, tài sản ròng luôn khớp', function(){
+  var d = kbDuLieu({ settings: { soDuDauKy: 30000000, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' } });
+  d.vayNo.choVay = [
+    { id: 'cv1', ten: 'Cho Minh vay', nguoi: 'Minh', soTien: 5000000, ngayChoVay: '2026-07-10', ngayDuKienThu: '2026-09-10', daThu: 0, trangThai: 'dang_cho', walletId: '' },
+    { id: 'cv2', ten: 'Cho Lan vay', nguoi: 'lan', soTien: 2000000, ngayChoVay: '2026-08-01', ngayDuKienThu: '', daThu: 0, trangThai: 'dang_cho' },
+    { id: 'cv3', ten: 'Cho Hùng vay', nguoi: 'Hùng', soTien: 8000000, ngayChoVay: '2026-08-15', ngayDuKienThu: '2027-02-01', daThu: 0, trangThai: 'dang_cho' }];
+  loadData(d);
+  var cv = ctx.state.data.vayNo.choVay;
+  cv.forEach(function(c){ ctx.journalAddRef(c.ngayChoVay, c.id, 'choVay', c.soTien, 'Cho vay ' + c.nguoi, {}); });
+  cv[0].daThu = 5000000; ctx.journalAddRef('2026-09-12', 'cv1', 'thuHoiChoVay', 5000000, 'Minh trả', {}); cv[0].trangThai = 'da_thu_du';
+  cv[1].daThu = 500000; ctx.journalAddRef('2026-09-20', 'cv2', 'thuHoiChoVay', 500000, 'Lan trả bớt', {});
+  cv[1].daBo = [{ soTien: 300000, ngay: '2026-10-01' }];
+  cv[2].daThu = 3000000; ctx.journalAddRef('2026-10-02', 'cv3', 'thuHoiChoVay', 3000000, 'Hùng trả bớt', {});
+  cv[2].tatToan = { soTien: 5000000, ngay: '2026-10-05' }; cv[2].trangThai = 'da_thu_du';
+  ctx.invalidateBalanceCache();
+  ['2026-08-31', '2026-09-30', '2026-10-15', '2026-12-31'].forEach(function(h){
+    kbKiemTra('KB4 ' + h, h);
+    var t = ctx.taiSanRongThang(h.slice(0, 7));
+    near(t.rong, t.tien + t.phaiThu - t.no, 0.5, 'tài sản ròng = tiền + phải thu - nợ gốc');
+    ok(t.phaiThu >= -1e-6, 'phải thu không âm');
+  });
+  near(ctx.taiSanRongThang('2026-10').phaiThu, 1200000, 1, 'còn phải thu: Lan 2tr - 0,5tr đã thu - 0,3tr xóa nợ = 1,2tr; Minh đủ; Hùng đã tất toán');
+});
+
+test('KB5 Người mới: sổ trống hoàn toàn, rồi chỉ có đúng một khoản — mọi màn không vỡ', function(){
+  loadData(baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-15', thangBatDauDuTru: '2026-10' } }));
+  kbKiemTra('KB5 trống', '2026-10-15');
+  kbKiemTra('KB5 trống, 1 năm sau', '2027-10-15');
+  ctx.entryAddItem('2026-10-15', 'chi', 'an', 1, 'một đồng', ''); ctx.invalidateBalanceCache();
+  kbKiemTra('KB5 một khoản 1đ', '2026-10-15');
+  eq(ctx.balanceAt('2026-10-15'), -1, 'chi 1đ khi ví 0 thì số dư -1');
+});
+
+test('KB6 Giá trị cực đoan: 10 tỷ, 1 đồng, ghi chú dài và ký tự HTML — không NaN, không để lọt thẻ HTML', function(){
+  var d = kbDuLieu({ settings: { soDuDauKy: 10000000000, ngayBatDau: '2026-09-01', thangBatDauDuTru: '2026-09' } });
+  d.categories.chi.push({ id: 'xss', ten: '<img src=x onerror=alert(1)>', chiTieu: 1 });
+  d.wallets = [{ id: 'a', ten: '"><script>boom()</script>', soDuDauKy: 10000000000 }];
+  loadData(d);
+  ctx.entryAddItem('2026-10-10', 'chi', 'xss', 9999999999, '<b>đậm</b> & "trích" \'đơn\' ' + new Array(3000).join('x'), 'a');
+  ctx.entryAddItem('2026-10-11', 'thu', 'luong', 1, '', 'a');
+  ctx.invalidateBalanceCache();
+  kbKiemTra('KB6', '2026-10-15');
+  var h = ctx.viSoDuCardHtml('2026-10') + ctx.baoCaoDauHtml('2026-10') + ctx.hanMucThangHtml('2026-10') + ctx.dnCardHtml('2026-10') + ctx.ccHubHtml();
+  ok(h.indexOf('<script>boom') < 0 && h.indexOf('<img src=x') < 0, 'tên ví / danh mục không được in thô vào HTML');
+});
+
+test('KB7 Ngày biên: năm nhuận 29/2, ngày trả 31, qua năm, ngày đầu tháng, ngày cuối tháng, sổ bắt đầu ở tương lai', function(){
+  var d = kbDuLieu({ settings: { soDuDauKy: 1000000, ngayBatDau: '2027-11-01', thangBatDauDuTru: '2027-11' } });
+  d.vayNo.vayNoPhaiTra = [
+    { id: 'a', ten: 'Trả ngày 31', hinhThuc: 'khong_lai', soTienGoc: 12000000, ngayVay: '2027-11-30', ngayTraHangThang: 31, soThangVay: 6, traNo: [], trangThai: 'dang_vay' },
+    { id: 'b', ten: 'Qua năm nhuận', hinhThuc: 'tra_co_dinh', soTienGoc: 5000000, soTienTraThang: 1100000, ngayVay: '2027-12-31', ngayTraHangThang: 29, soThangVay: 5, traNo: [], trangThai: 'dang_vay' },
+    { id: 'c', ten: 'Một lần', hinhThuc: 'tra_1_lan', soTienGoc: 3000000, ngayVay: '2028-01-31', soThangVay: 1, traNo: [], trangThai: 'dang_vay' }];
+  loadData(d);
+  var sa = ctx.tinhLichTraNo(ctx.state.data.vayNo.vayNoPhaiTra[0]), sb = ctx.tinhLichTraNo(ctx.state.data.vayNo.vayNoPhaiTra[1]);
+  eq(sa[2].ngayTra, '2028-02-29', 'ngày 31 rơi vào tháng 2 năm nhuận thì lùi về 29/2');
+  eq(sb[1].ngayTra, '2028-02-29', 'ngày 29 ở tháng 2 nhuận vẫn là 29');
+  kbKiemVay('KB7');
+  ctx.entryAddItem('2028-02-29', 'chi', 'an', 50000, 'ngày nhuận', ''); ctx.invalidateBalanceCache();
+  ['2028-02-29', '2028-03-01', '2027-12-31', '2028-01-01', '2027-10-15', '2027-11-01'].forEach(function(h){ kbKiemTra('KB7 ' + h, h); });
+});
+
+test('KB8 Dữ liệu cũ: không có ví, không items, khoản vay kiểu cũ (daTraGoc) — nạp xong dùng được, nạp lại không mất dữ liệu', function(){
+  var d = { settings: { soDuDauKy: 3000000, ngayBatDau: '2026-08-01' }, journal: { '2026-09-03': { thu: { luong: 9000000 }, chi: { an: 400000 }, ghiChu: 'cũ', refs: [] } },
+    categories: { thu: [{ id: 'luong', ten: 'Lương', chiTieu: 0 }], chi: [{ id: 'an', ten: 'Ăn', chiTieu: 0 }] },
+    vayNo: { choVay: [], vayNoPhaiTra: [{ id: 'old', ten: 'Vay cũ', hinhThuc: 'khong_lai', soTienGoc: 6000000, ngayVay: '2026-08-10', soThangVay: 6, daTraGoc: 2000000, trangThai: 'dang_vay' }] } };
+  loadData(d);
+  eq(ctx.state.data.wallets.length, 1, 'tự tạo 1 ví mang số dư đầu kỳ');
+  kbKiemTra('KB8', '2026-10-15'); kbKiemVay('KB8');
+  // lần nạp đầu có thể thêm cờ mặc định (false) cho vài danh mục; từ lần nạp thứ hai trở đi phải đứng yên và không mất dữ liệu
+  var n1 = ctx.normalizeData(JSON.parse(JSON.stringify(ctx.state.data))), s2 = JSON.stringify(n1), s3 = JSON.stringify(ctx.normalizeData(JSON.parse(s2)));
+  eq(s3, s2, 'nạp lại lần 3 không đổi gì so với lần 2');
+  eq(JSON.stringify(n1.journal), JSON.stringify(ctx.state.data.journal), 'sổ giao dịch không đổi khi nạp lại');
+  near(ctx.balanceAt('2026-10-15'), 3000000 + 9000000 - 400000, 0.5, 'số dư đúng sau migration');
+});
+
+test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay mọi hình thức, cho vay, định kỳ, chuyển ví, ngày hôm nay bất kỳ', function(){
+  var hinh = ['khong_lai', 'co_lai', 'tra_co_dinh', 'goc_deu', 'tra_1_lan'];
+  for (var seed = 1; seed <= 150; seed++){
+    var r = kbRng(seed * 7919), nhan = 'KB9 seed ' + seed, d = kbDuLieu({ settings: { soDuDauKy: Math.round(r() * 20000000), ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } });
+    d.wallets = [{ id: 'w0', ten: 'Ví 0', soDuDauKy: Math.round(r() * 5000000) }];
+    if (r() < 0.5) d.wallets.push({ id: 'w1', ten: 'Ví 1', soDuDauKy: Math.round(r() * 5000000), deDanh: r() < 0.3 });
+    if (r() < 0.4) d.wallets.push({ id: 'wt', ten: 'Thẻ', soDuDauKy: 0, the: true, hanMucThe: 10000000, ngaySaoKe: 1 + Math.floor(r() * 28), ngayTraThe: 1 + Math.floor(r() * 28) });
+    d.settings.soDuDauKy = d.wallets.reduce(function(s, w){ return s + w.soDuDauKy; }, 0);
+    for (var i = 0, nv = Math.floor(r() * 3); i < nv; i++){
+      d.vayNo.vayNoPhaiTra.push({ id: 'v' + i, ten: 'Vay ' + i, hinhThuc: hinh[Math.floor(r() * hinh.length)], soTienGoc: 1000000 + Math.round(r() * 90) * 1000000,
+        laiSuatNam: Math.round(r() * 20), soTienTraThang: 0, ngayVay: kbNgay(2026, 6 + Math.floor(r() * 4), 1 + Math.floor(r() * 28)), ngayTraHangThang: 1 + Math.floor(r() * 31),
+        soThangVay: 1 + Math.floor(r() * 36), walletId: 'w0', traNo: [], trangThai: 'dang_vay' });
+      var v = d.vayNo.vayNoPhaiTra[i]; v.soTienTraThang = Math.ceil(v.soTienGoc / v.soThangVay * 1.1);
+    }
+    for (var j = 0, nc = Math.floor(r() * 3); j < nc; j++)
+      d.vayNo.choVay.push({ id: 'c' + j, ten: 'CV ' + j, nguoi: 'N' + j, soTien: 500000 + Math.round(r() * 20) * 500000, ngayChoVay: kbNgay(2026, 7 + Math.floor(r() * 3), 1 + Math.floor(r() * 28)),
+        ngayDuKienThu: r() < 0.5 ? '' : kbNgay(2027, 1 + Math.floor(r() * 6), 10), daThu: 0, trangThai: 'dang_cho' });
+    if (r() < 0.6) d.dinhKy = [{ id: 'dk', ten: 'Lương', kind: 'thu', catId: 'luong', soTien: 5000000 + Math.round(r() * 30) * 1000000, ngay: 1 + Math.floor(r() * 31), bat: true, bo: [], duBao: r() < 0.5, ky: [{ tuMk: '2026-06', soTien: 5000000 + Math.round(r() * 30) * 1000000 }] }];
+    loadData(d);
+    var st = ctx.state.data;
+    st.vayNo.choVay.forEach(function(c){ ctx.journalAddRef(c.ngayChoVay, c.id, 'choVay', c.soTien, 'cho vay', {}); });
+    st.vayNo.vayNoPhaiTra.forEach(function(v){ if (r() < 0.5) kbTraKy(v, 0, ctx.tinhLichTraNo(v)[0].ngayTra); });
+    for (var n = 0, nn = 20 + Math.floor(r() * 80); n < nn; n++){
+      var ng = kbNgay(2026, 6 + Math.floor(r() * 5), 1 + Math.floor(r() * 28)), w = st.wallets[Math.floor(r() * st.wallets.length)].id, thu = r() < 0.2;
+      ctx.entryAddItem(ng, thu ? 'thu' : 'chi', thu ? 'luong' : ['an', 'nha', 'xe'][Math.floor(r() * 3)], 1000 + Math.round(r() * 2000) * 1000, r() < 0.3 ? 'ghi chú ' + n : '', w);
+    }
+    if (st.wallets.length > 1) ctx.chuyenViThem(kbNgay(2026, 9, 1 + Math.floor(r() * 28)), st.wallets[0].id, st.wallets[1].id, 100000 + Math.round(r() * 30) * 100000, '');
+    kbKiemVay(nhan);
+    kbKiemTra(nhan, kbNgay(2026, 8 + Math.floor(r() * 5), 1 + Math.floor(r() * 28)));
+  }
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

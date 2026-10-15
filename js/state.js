@@ -470,7 +470,7 @@ function ptCong(ds, kq){
   return s + ' = ' + soGt(kq);
 }
 function gtDong(x){
-  return '<div class="gt-d"><b>'+x.ten+'</b>' + (x.ct ? '<span class="gt-ct">'+x.ct+'</span>' : '') + '<span class="gt-pt">'+x.pt+'</span></div>';
+  return '<div class="gt-d"><b>'+x.ten+'</b>' + (x.ct ? '<span class="gt-ct">'+x.ct+'</span>' : '') + (x.pt != null ? '<span class="gt-pt">'+x.pt+'</span>' : '') + '</div>';
 }
 // tổng của 2 số: chỉ viết phép cộng khi cả hai khác 0 (tránh "50.000.000 = 50.000.000")
 function ptTong2(a, b){ return Math.round(b) === 0 ? soGt(a) : (Math.round(a) === 0 ? soGt(b) : ptCong([a, b], a + b)); }
