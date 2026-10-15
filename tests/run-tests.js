@@ -6019,6 +6019,18 @@ test('Form sửa khoản định kỳ: sửa tháng / xóa kỳ trong form chỉ
   setToday('2026-10-01');
 });
 
+test('Nút "Ghi khoản thu" ở bảng Ghi nhanh có chữ: nhãn đúng và CSS ép chữ trắng (không bị .thu{color:green} ghi đè thành xanh trên xanh)', function(){
+  setToday('2026-10-14');
+  loadData(dataLuong([]));
+  ctx.state.qa = Object.assign({}, ctx.state.qa, { kind:'thu', amt:'25000' });
+  var h = ctx.ghiNhanhHtml();
+  ok(/qa-save thu"[^>]*>Ghi khoản thu</.test(h), 'nhãn "Ghi khoản thu"');
+  var css = require('fs').readFileSync(require('path').join(__dirname, '..', 'style.css'), 'utf8');
+  ok(/\.qa-save\.chi,\.qa-save\.thu\{color:#fff\}/.test(css), 'CSS ép chữ trắng cho nút Chi / Thu (2 class thắng .thu 1 class)');
+  ok(css.indexOf('.qa-save.chua{') > css.indexOf('.qa-save.chi,.qa-save.thu{color:#fff}'), 'trạng thái "Nhập số tiền" (chua) vẫn đè sau cùng, giữ chữ xám');
+  setToday('2026-10-01');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){
