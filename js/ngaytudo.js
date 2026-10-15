@@ -9,7 +9,7 @@
    - xu hướng: cùng công thức tại cuối từng tháng đã trọn (tối đa 5 tháng) + hôm nay.
    - tự do tài chính (quy tắc 25 lần): cần = 25 × chi mỗi ngày × 365. Mô phỏng theo tháng: tiền = tiền × (1 + lãi thực/12) + để dành,
      tới khi đủ. Lãi THỰC (đã trừ lạm phát) 0 / 3 / 6% do người dùng chọn. Chỉ là ước lượng, không phải lời khuyên đầu tư.
-   - Ghi nhanh: dưới ô số tiền hiện "≈ 0,3 ngày tự do" (chi) / "+0,5 ngày tự do" (thu).
+   - Ghi nhanh: dưới ô số tiền hiện "Khoản này ≈ 0,3 ngày tự do" (chi) / "Khoản này ≈ +0,5 ngày tự do" (thu).
    Chỉ ĐỌC dữ liệu; chỉ lưu trong RAM (state.ntd): không ghi gì lên Drive.
    Cần state.js, vayno.js (daysInMonth), dongtien.js (forecastEligibleMonths), bieudo.js (bdThang), bieudo.js load trước.
    ==================================================================== */
@@ -193,7 +193,7 @@ function ntdGoiY(kind, tien){
   if (!t) return '';
   var n = tien / t.c.chiNgay;
   var s = n < 0.05 ? 'chưa tới 0,1' : ntdSoChu(n);
-  return kind === 'thu' ? '+' + s + ' ngày tự do' : 'Khoản này ≈ ' + s + ' ngày tự do';
+  return 'Khoản này ≈ ' + (kind === 'thu' && n >= 0.05 ? '+' : '') + s + ' ngày tự do';      // thu có dấu + (cộng thêm ngày); chưa tới 0,1 thì không có dấu cho khỏi "+chưa tới"
 }
 function ntdGoiYCapNhat(){
   var el = document.getElementById('qa_ntd');
