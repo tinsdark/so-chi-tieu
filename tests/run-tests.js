@@ -2670,7 +2670,7 @@ test('Báo cáo: thẻ đầu — đã chi / hạn mức, vạch Hôm nay, ướ
   setToday('2026-10-18'); loadData(dataBaoCao());
   var h = ctx.baoCaoDauHtml('2026-10');
   ok(h.indexOf('Đã chi tháng này') > 0 && h.indexOf('1.925.000') > 0 && h.indexOf('/ 4.550.000') > 0, 'tổng đã chi 1.925.000 (1.200.000+215.000+410.000+100.000) trên hạn mức 4.550.000');
-  ok(h.indexOf('Hôm nay') > 0 && h.indexOf('Đã qua 18/31 ngày') > 0 && h.indexOf('class="bc-chip red"') > 0 && h.indexOf('class="bc-chip amber"') > 0, 'vạch Hôm nay + chip vượt + chip mục tiêu quá hạn');
+  ok(h.indexOf('Hôm nay') > 0 && h.indexOf('đã qua 18/31 ngày') > 0 && h.indexOf('class="bc-chip red"') > 0 && h.indexOf('class="bc-chip amber"') > 0, 'vạch Hôm nay + chip vượt + chip mục tiêu quá hạn');
   ok(h.indexOf('Giữ nhịp này') > 0, 'có dòng ước tính cuối tháng');
   var q = ctx.baoCaoDauHtml('2026-09');
   ok(q.indexOf('Đã chi tháng 9') > 0 && q.indexOf('Hôm nay') < 0 && q.indexOf('Giữ nhịp này') < 0, 'tháng đã qua: bỏ vạch Hôm nay và ước tính');
@@ -4995,15 +4995,15 @@ test('ht: ẩn / hiện, thứ tự, đặt lại; chỉ đổi cách vẽ; id l
   eq(ctx.htAn('baocao', 'tongket'), false); eq(ctx.htDatAn('baocao', 'tongket', true), true); eq(ctx.htAn('baocao', 'tongket'), true); eq(ctx.htAn('sotay', 'tongket'), false, 'nhóm khác không ảnh hưởng');
   ctx.htDatAn('baocao', 'tongket', false); eq(ctx.htAn('baocao', 'tongket'), false);
   eq(ctx.htDatAn('baocao', 'khong-co', true), false, 'id lạ bị bỏ qua'); eq(ctx.htAn('baocao', 'khong-co'), false);
-  eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,tet,nhan,bieudo', 'thứ tự mặc định');
-  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,taisan,tet,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
-  eq(ctx.htDoiViTri('baocao', 'ngaytudo', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[8], 'bieudo', 'biểu đồ luôn ở cuối');
+  eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo', 'thứ tự mặc định');
+  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,muctieu,taisan,diemnhan,ngaytudo,tet,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
+  eq(ctx.htDoiViTri('baocao', 'tongket', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[8], 'bieudo', 'biểu đồ luôn ở cuối');
   eq(ctx.htDoiViTri('baocao', 'nhan', 1), false, 'nhan là thẻ đổi được cuối cùng (bieudo cố định)');
-  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,muctieu,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
-  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'ngaytudo,diemnhan,tongket,hanmuc,taisan,muctieu,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
+  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'tongket,hanmuc,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
+  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
   luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 5);
   luuTru['sct_hien_thi_v1'] = JSON.stringify({ thuTu: { baocao: ['nhan', 'cu-khong-con', 'hanmuc'] } });
-  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,ngaytudo,diemnhan,tongket,taisan,muctieu,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
+  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,tongket,taisan,muctieu,diemnhan,ngaytudo,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
   htSach();
 });
 test('ht: Công cụ chỉ đổi vị trí trong CÙNG nhóm (Quyết định / Sổ)', function(){
@@ -5067,7 +5067,7 @@ test('Hiển thị: công tắc bật = hiện; thông báo bị tắt thì chu�
   var rd = { innerHTML: '' }; ctx.state.dmTab = 'hienthi';
   voiDom({ tabContent: rd }, null, function(){ renderThat.renderDanhMuc = renderThat.renderDanhMuc; });
   var h = ctx.hienThiHtml(); ok(h.indexOf('aria-label="Hiện Tổng kết tháng"') > 0 && h.indexOf('data-act="htLen"') > 0, 'có công tắc và mũi tên');
-  ok(/data-act="htLen" data-nhom="baocao" data-id="ngaytudo"[^>]*disabled/.test(h), 'thẻ đầu danh sách: mũi tên lên bị khóa'); ok(h.indexOf('data-act="htLen" data-nhom="sotay"') < 0, 'thẻ trong thẻ đầu Sổ tay không có mũi tên');
+  ok(/data-act="htLen" data-nhom="baocao" data-id="tongket"[^>]*disabled/.test(h), 'thẻ đầu danh sách: mũi tên lên bị khóa'); ok(h.indexOf('data-act="htLen" data-nhom="sotay"') < 0, 'thẻ trong thẻ đầu Sổ tay không có mũi tên');
   ok(/data-act="htAn" data-nhom="baocao" data-id="bieudo" checked/.test(h), 'đang hiện thì có tích'); ctx.htDatAn('baocao', 'bieudo', true); ok(!/data-act="htAn" data-nhom="baocao" data-id="bieudo" checked/.test(ctx.hienThiHtml()), 'ẩn thì không tích');
   htSach(); setToday('2026-10-01'); ctx.state.dmTab = 'danhmuc';
 });
@@ -5128,7 +5128,7 @@ test('dnTatCa: lời hứa đang giữ / vừa phá; giờ công; mọi phép c�
   ctx.htDatAn('baocao', 'diemnhan', true); eq(ctx.dnCardHtml('2026-10'), '', 'ẩn ở Cài đặt → Hiển thị thì không vẽ'); htSach();
   var root = { innerHTML: '' }; ctx.state.soTayMonth = '2026-10';
   voiDom({ tabContent: root }, null, function(){ ctx.renderBaoCao(); });
-  ok(root.innerHTML.indexOf('id="cardDiemNhan"') > root.innerHTML.indexOf('id="bcDau"') && root.innerHTML.indexOf('id="cardDiemNhan"') < root.innerHTML.indexOf('id="cardHanMuc"'), 'nằm ngay sau thẻ đầu của Báo cáo, trước Hạn mức');
+  ok(root.innerHTML.indexOf('id="cardDiemNhan"') > root.innerHTML.indexOf('id="cardHanMuc"') && root.innerHTML.indexOf('id="cardDiemNhan"') > root.innerHTML.indexOf('id="cardTaiSanRong"'), 'nằm sau Hạn mức và Tài sản ròng');
   setToday('2026-10-01');
 });
 
@@ -5468,8 +5468,8 @@ test('Ghi nhanh: dưới ô số tiền hiện bao nhiêu ngày tự do (chi: Kh
   ctx.state.qa.amt = '';
   setToday('2026-10-01');
 });
-test('Báo cáo: thẻ Ngày tự do là thẻ đầu tiên sau thẻ đầu, ẩn / hiện được ở Hiển thị', function(){
-  eq(ctx.htThuTu('baocao')[0], 'ngaytudo');
+test('Báo cáo: thẻ Ngày tự do nằm trong phần phụ (sau Hạn mức, Tài sản ròng, Mục tiêu), ẩn / hiện được ở Hiển thị', function(){
+  eq(ctx.htThuTu('baocao').indexOf('ngaytudo') > ctx.htThuTu('baocao').indexOf('muctieu'), true);
   ok(ctx.htThe('baocao', 'ngaytudo') && !ctx.htThe('baocao', 'ngaytudo').khoa, 'không khóa: ẩn được');
 });
 
@@ -5695,7 +5695,8 @@ test('Báo cáo: giữ 3 thẻ đầu, gập phần còn lại sau nút "Xem th�
   var h = baoCaoVe();
   ok(h.indexOf('class="bc-jump"') > 0 && h.indexOf('data-act="tqCuon" data-to="cardNgayTuDo"') > 0 && h.indexOf('data-to="bieuDoCard"') > 0, 'hàng chip có Ngày tự do và Biểu đồ');
   var iEx = h.indexOf('id="bcExtra"'); ok(iEx > 0 && h.indexOf('class="bc-extra dong"') > 0, 'phần gập có sẵn và đang gập');
-  ok(h.indexOf('id="cardNgayTuDo"') > 0 && h.indexOf('id="cardNgayTuDo"') < iEx, 'Ngày tự do (thẻ đầu) nằm ngoài phần gập');
+  ok(h.indexOf('id="cardHanMuc"') > 0 && h.indexOf('id="cardHanMuc"') < iEx, 'Hạn mức (thẻ đầu) nằm ngoài phần gập');
+  ok(h.indexOf('id="cardNgayTuDo"') > iEx, 'Ngày tự do nằm trong phần gập');
   ok(h.indexOf('id="cardNhan"') > iEx, 'thẻ cuối (Nhãn) nằm trong phần gập');
   ok(h.indexOf('data-act="bcMo"') > iEx && h.indexOf('Xem thêm ') > 0 && h.indexOf('aria-expanded="false"') > 0, 'nút Xem thêm sau phần gập');
   ctx.state.bcMo = true; var h2 = baoCaoVe(); ok(h2.indexOf('class="bc-extra"') > 0 && h2.indexOf('Thu gọn') > 0 && h2.indexOf('aria-expanded="true"') > 0, 'đã mở thì hiện hết, nút là Thu gọn');

@@ -932,9 +932,6 @@ body.qa-mo{overflow:hidden}
 .bc-pace-n{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
 .bc-ut{font-size:13px;line-height:1.5;margin-top:10px}
 .bc-ut b{white-space:nowrap;font-variant-numeric:tabular-nums}
-.bc-sp-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:14px 0 5px}
-.bc-spark{display:block;width:100%;height:40px}
-.bc-spark .b{fill:var(--bd-chi);opacity:.4} .bc-spark .mx{fill:var(--bd-chi)} .bc-spark .z{fill:var(--border)} .bc-spark .f{fill:var(--border)}
 .bc-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .bc-chip{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:99px;padding:9px 14px;font-size:13px;font-weight:700}
 .bc-chip i{width:7px;height:7px;border-radius:50%;background:currentColor}

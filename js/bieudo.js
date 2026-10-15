@@ -670,17 +670,7 @@ function bcVong(pct, mau, giua, nho){
     + '<circle cx="32" cy="32" r="26" class="t '+mau+'" stroke-dasharray="'+(c * p).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 32 32)"/></svg>'
     + '<span class="g"><b>'+giua+'</b>'+(nho ? '<small>'+nho+'</small>' : '')+'</span></div>';
 }
-// biểu đồ cột nhỏ "chi mỗi ngày": tới hết denNgay; ngày chi nhiều nhất tô đậm
-function bcSpark(chi, denNgay, soNgay){
-  var W = 300, H = 40, bw = W / soNgay, mx = Math.max.apply(null, chi.slice(0, denNgay).concat([1])), s = '';
-  for (var i = 0; i < soNgay; i++){
-    if (i >= denNgay){ s += '<circle cx="'+(bw * i + bw / 2).toFixed(1)+'" cy="'+(H - 2)+'" r="1.2" class="f"/>'; continue; }
-    var v = chi[i] || 0, h = v > 0 ? Math.max(3, v / mx * (H - 6)) : 1.5;
-    s += '<rect x="'+(bw * i + bw * .17).toFixed(1)+'" y="'+(H - h).toFixed(1)+'" width="'+(bw * .66).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1.5" class="'+(v > 0 && v === mx ? 'mx' : (v > 0 ? 'b' : 'z'))+'"/>';
-  }
-  return '<svg class="bc-spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Chi mỗi ngày">'+s+'</svg>';
-}
-// thẻ đầu: tổng đã chi, thanh dùng hạn mức (có vạch Hôm nay), dòng ước tính, chi mỗi ngày, chip cảnh báo
+// thẻ đầu: tổng đã chi, thanh dùng hạn mức (có vạch Hôm nay), dòng ước tính, chip cảnh báo
 function baoCaoDauHtml(mk){
   var cur = bdThang(mk), nhip = bcNhip(mk), hom = todayStr(), dang = nhip.dangChay;
   // hạn mức / nhịp / cảnh báo vượt chỉ tính CHI HẰNG NGÀY; tổng đã chi (số to) vẫn là tổng thật
@@ -699,9 +689,8 @@ function baoCaoDauHtml(mk){
     h += '<div class="bc-pace '+muc+'" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+rong+'" aria-label="Đã dùng hạn mức tháng">'
       + '<div class="hm-fill" style="width:'+rong+'%"></div>'
       + (dang ? '<i class="mk" style="left:'+vi+'%"></i><span class="mkl'+canh+'" style="left:'+vi+'%">Hôm nay</span>' : '') + '</div>'
-      + '<div class="bc-pace-s"><span><b>'+Math.round(pct * 100)+'%</b> đã dùng</span>'
+      + '<div class="bc-pace-s"><span><b>'+Math.round(pct * 100)+'%</b> đã dùng'+(dang ? ' · đã qua '+nhip.ngayQua+'/'+nhip.soNgay+' ngày' : '')+'</span>'
       + '<span>'+(daHM > cap ? 'vượt '+bdTien(daHM - cap) : 'còn '+bdTien(cap - daHM))+'</span></div>';
-    if (dang) h += '<div class="bc-pace-n">Đã qua '+nhip.ngayQua+'/'+nhip.soNgay+' ngày</div>';
     if (dang && nhip.ngayQua >= 3 && cur.tongChiHN > 0){
       var du = bdUocTinhChiHangNgay(mk, nhip.ngayQua).tong;
       h += '<div class="bc-ut">Giữ nhịp này, cuối tháng chi hằng ngày khoảng <b>'+bdTien(du)+'</b> '
@@ -709,12 +698,6 @@ function baoCaoDauHtml(mk){
     }
   } else {
     h += '<div class="bc-pace-n">Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div>';
-  }
-  if (cur.tongChiThat > 0){
-    var den = dang ? nhip.ngayQua : cur.soNgay, mxD = 0, mxV = 0;
-    cur.chiHN.forEach(function(v, i){ if (v > mxV){ mxV = v; mxD = i + 1; } });
-    if (cur.tongChiHN > 0) h += '<div class="bc-sp-h"><span>Chi hằng ngày</span><span>TB '+bdTien(cur.tongChiHN / Math.max(1, den))+' · cao nhất '+pad2(mxD)+'/'+mk.slice(5)+'</span></div>'
-      + bcSpark(cur.chiHN, den, cur.soNgay);
   }
   var chips = '';
   if (nVuot) chips += '<button type="button" class="bc-chip red" data-act="tqCuon" data-to="cardHanMuc"><i></i>'+nVuot+' danh mục vượt <span aria-hidden="true">›</span></button>';
