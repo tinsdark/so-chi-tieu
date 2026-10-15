@@ -883,6 +883,7 @@ body.qa-mo{overflow:hidden}
 .qa-save{width:100%;padding:12px;font-size:15.5px;border-radius:14px}
 .qa-save.chi{background:var(--chi-solid)}
 .qa-save.thu{background:var(--thu-solid)}
+.qa-save.chi,.qa-save.thu{color:#fff}   /* nền đặc Chi / Thu luôn chữ trắng; phải đặt rõ vì .thu{color:var(--green)} (tô số tiền) ghi đè làm nút Thu xanh trên xanh, mất chữ */
 .qa-save.chua{background:var(--hover);color:var(--muted)}
 .qa-save[disabled]{opacity:.45}
 
