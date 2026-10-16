@@ -128,6 +128,7 @@ style.css           Toàn bộ CSS (biến màu sáng/tối)
 manifest.json       Cấu hình PWA (tên, icon, màu)
 ghi.html            App con "Ghi nhanh" (biểu tượng riêng trên màn hình chính). SINH TỰ ĐỘNG từ index.html bằng tools/bump.js, KHÔNG sửa tay
 ghi.webmanifest     Manifest của app con (mở thẳng ghi.html)
+brand/ghi-nhanh.svg Nguồn logo app con (dấu cộng kem trên nền nâu, giống nút Ghi nhanh trong app); icons/ghi-*.png là bản xuất ra 180 / 192 / 512 từ file này
 sw.js               Service worker (mạng trước, cache khi offline)
 privacy.html        Chính sách quyền riêng tư
 js/

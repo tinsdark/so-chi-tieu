@@ -1505,7 +1505,16 @@ test('ghi.html là bản SINH TỰ ĐỘNG từ index.html (không có bản sao
   ok(ghi.indexOf('href="manifest.json"') < 0, 'không dùng manifest của app chính');
   var man = JSON.parse(fs.readFileSync(path.join(root, 'ghi.webmanifest'), 'utf8'));
   eq(man.start_url, './ghi.html', 'mở thẳng trang Ghi nhanh'); eq(man.id, './ghi.html', 'là app riêng, không trùng app chính'); eq(man.display, 'standalone', 'toàn màn hình');
-  man.icons.forEach(function(ic){ ok(fs.existsSync(path.join(root, ic.src)), 'có file icon ' + ic.src); });
+  var dai = function(f){ var b = fs.readFileSync(path.join(root, f)); return b.readUInt32BE(16) + 'x' + b.readUInt32BE(20); };      // rộng x cao trong khối IHDR của PNG
+  man.icons.forEach(function(ic){
+    ok(fs.existsSync(path.join(root, ic.src)), 'có file icon ' + ic.src);
+    ok(/^icons\/ghi-/.test(ic.src), 'icon riêng của app con, không dùng lại logo app chính: ' + ic.src);
+    eq(dai(ic.src), ic.sizes, 'kích thước thật khớp khai báo trong manifest: ' + ic.src);
+  });
+  ok(ghi.indexOf('<link rel="apple-touch-icon" href="icons/ghi-apple-touch-icon.png">') >= 0 && ghi.indexOf('<link rel="icon" type="image/png" sizes="192x192" href="icons/ghi-icon-192.png">') >= 0, 'ghi.html dùng icon riêng cho iPhone và tab');
+  eq(dai('icons/ghi-apple-touch-icon.png'), '180x180', 'icon màn hình chính iPhone 180x180');
+  ok(!fs.readFileSync(path.join(root, 'icons/ghi-icon-192.png')).equals(fs.readFileSync(path.join(root, 'icons/icon-192.png'))), 'khác logo app chính');
+  ok(fs.existsSync(path.join(root, 'brand/ghi-nhanh.svg')), 'có nguồn SVG');
   ok(/<title>Ghi nhanh<\/title>/.test(ghi), 'tiêu đề');
 });
 

@@ -39,8 +39,8 @@ function capNhat(html){
   return { ver: ver, html: html.replace(RE_REF, function(_, a, f, c){ return a + f + '?v=' + ver + c; }) };
 }
 
-// ghi.html (app con "Ghi nhanh", biểu tượng riêng trên màn hình chính) = index.html đổi 5 chỗ: chế độ data-ghi, tên, manifest riêng, class body,
-// và 2 khối nhỏ (thông báo chưa có dữ liệu, màn "Xong"). Sinh tự động nên không có bản sao thủ công nào để lệch; test kiểm ghi.html = taoGhi(index.html).
+// ghi.html (app con "Ghi nhanh", biểu tượng riêng trên màn hình chính) = index.html đổi 7 chỗ: chế độ data-ghi, tên, manifest riêng, 2 icon riêng
+// (dấu cộng, nguồn brand/ghi-nhanh.svg), class body, và 2 khối nhỏ (thông báo chưa có dữ liệu, màn "Xong"). Sinh tự động nên không có bản sao thủ công nào để lệch; test kiểm ghi.html = taoGhi(index.html).
 function taoGhi(html){
   var doi = function(h, tu, den){
     if (h.split(tu).length !== 2) throw new Error('index.html phải có đúng 1 chỗ: ' + tu);
@@ -50,6 +50,8 @@ function taoGhi(html){
   h = doi(h, '<html lang="vi">', '<html lang="vi" data-ghi>');
   h = doi(h, '<title>Sổ Tiền</title>', '<title>Ghi nhanh</title>');
   h = doi(h, '<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="ghi.webmanifest">');
+  h = doi(h, '<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">', '<link rel="icon" type="image/png" sizes="192x192" href="icons/ghi-icon-192.png">');
+  h = doi(h, '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">', '<link rel="apple-touch-icon" href="icons/ghi-apple-touch-icon.png">');
   h = doi(h, '<meta name="apple-mobile-web-app-title" content="Sổ Tiền">', '<meta name="apple-mobile-web-app-title" content="Ghi nhanh">');
   h = doi(h, '<body>', '<body class="ghi">');
   h = doi(h, '<div id="bannerZone"></div>', '<div id="bannerZone"></div>\n'
