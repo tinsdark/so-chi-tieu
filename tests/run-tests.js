@@ -2021,6 +2021,28 @@ test('Vay "Trả 1 lần" có lãi đơn và "Lãi hằng tháng, gốc cuối k
   var f = ctx.vayNoFormHtml(); ok(f.indexOf('Lãi hằng tháng, gốc cuối kỳ') > 0, 'form có hình thức mới'); ok(/data-ht="[^"]*tra_1_lan[^"]*"[^>]*><div class="qa-lbl">Lãi suất/.test(f), 'ô lãi suất hiện cho Trả 1 lần'); ctx.state.vnFormKind = null;
 });
 
+test('Bảng thuật ngữ: mỗi tên trong THUAT_NGU còn thật sự xuất hiện trong giao diện; thẻ có trong Cài đặt → Ứng dụng; không có tên cũ', function(){
+  var files = fs.readdirSync(JS_DIR).filter(function(f){ return /\.js$/.test(f) && f !== 'danhmuc.js'; });
+  var tat = files.map(function(f){ return fs.readFileSync(path.join(JS_DIR, f), 'utf8'); }).join('\n');
+  ok(ctx.THUAT_NGU.length >= 10, 'có bảng');
+  ctx.THUAT_NGU.forEach(function(t){
+    t.ten.split(', ').forEach(function(ten){ ok(tat.indexOf(ten) >= 0, 'tên "' + ten + '" không còn trong giao diện (đổi tên thì đổi cả bảng thuật ngữ)'); });
+    ok(t.nghia.length > 20 && t.nghia.indexOf('undefined') < 0, 'định nghĩa của "' + t.ten + '"');
+  });
+  var h = ctx.thuatNguCardHtml(); ok(h.indexOf('Các số trong app nghĩa là gì') > 0 && h.indexOf('Để dành được') > 0 && h.indexOf('Tiền vào − ra') > 0, 'thẻ hiện bảng');
+  var all = fs.readdirSync(JS_DIR).map(function(f){ return fs.readFileSync(path.join(JS_DIR, f), 'utf8'); }).join('\n');
+  ok(all.indexOf("'Dư thật'") < 0 && all.indexOf("'Cân đối'") < 0 && all.indexOf('>Dư thật<') < 0, 'không còn nhãn cũ Dư thật / Cân đối trong code');
+});
+
+test('Không có hai file js định nghĩa cùng một tên hàm (36 file chung một không gian tên: trùng tên là file nạp sau âm thầm đè file trước)', function(){
+  var seen = {}, trung = [];
+  fs.readdirSync(JS_DIR).filter(function(f){ return /\.js$/.test(f); }).forEach(function(f){
+    var src = fs.readFileSync(path.join(JS_DIR, f), 'utf8'), re = /(?:^|\n)(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/g, m;      // chỉ hàm ở cột 0 (toàn cục); hàm lồng trong hàm khác không đè gì
+    while ((m = re.exec(src))){ if (seen[m[1]] && seen[m[1]] !== f) trung.push(m[1] + ' (' + seen[m[1]] + ' và ' + f + ')'); else seen[m[1]] = f; }
+  });
+  eq(trung.join(', '), '', 'hàm trùng tên giữa các file');
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){

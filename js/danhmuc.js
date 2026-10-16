@@ -400,6 +400,29 @@ function khoiPhucTuFile(el){
   };
   rd.readAsText(f);
 }
+/* ---- Thuật ngữ: mỗi khái niệm một tên, một câu định nghĩa (khớp README mục "Thuật ngữ"). Test kiểm mỗi tên có thật trong giao diện. ---- */
+var THUAT_NGU = [
+  { ten: 'Số dư hiện tại', nghia: 'Tiền đang có trong tất cả các ví tới hết hôm nay (Sổ tay, tháng đang chạy). Tháng đã qua gọi là "Số dư cuối tháng". Khoản đã ghi trước cho ngày sau hôm nay chưa tính, chỉ hiện ở dòng phụ.' },
+  { ten: 'Số dư theo ví', nghia: 'Tiền trong từng ví tới hôm nay. Ví thẻ tín dụng mang số âm là đang nợ thẻ.' },
+  { ten: 'Thu nhập, Chi tiêu', nghia: 'Thu và chi thường xuyên của tháng. Không gồm nhận vay, thu hồi cho vay, cho vay, trả nợ và điều chỉnh số dư.' },
+  { ten: 'Để dành được', nghia: 'Thu nhập trừ Chi tiêu của tháng, không tính tiền vay. Âm thì hiện "Chi vượt thu". Trả lời câu hỏi "tháng này mình có sống trong khả năng không".' },
+  { ten: 'Tiền vào − ra', nghia: 'Tiền vào ví trừ tiền ra khỏi ví trong tháng, TÍNH CẢ tiền vay và trả nợ vì đó là tiền thật ra vào ví (Dòng tiền). Trả lời câu hỏi "tháng này tiền có đủ không". Khác "Để dành được": vay 50 triệu làm Tiền vào − ra tăng 50 triệu nhưng Để dành được không đổi.' },
+  { ten: 'Chi hằng ngày', nghia: 'Chi của các danh mục không phải chi cố định. Hạn mức, nhịp chi và "Hôm nay còn tiêu được" chỉ xét phần này.' },
+  { ten: 'Chi cố định', nghia: 'Danh mục bật công tắc "Chi cố định" (tiền nhà, tiền net...) và các danh mục hệ thống (Trả nợ, Cho vay, Điều chỉnh số dư). Không đem so với hạn mức chi hằng ngày.' },
+  { ten: 'Hạn mức', nghia: 'Số tiền dự định chi mỗi tháng của một danh mục chi. Với danh mục thu gọi là "Kế hoạch thu".' },
+  { ten: 'Hôm nay còn tiêu được', nghia: '(Tổng hạn mức chi hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay.' },
+  { ten: 'Tài sản ròng thực tế', nghia: 'Tiền các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả. Chỉ tính số đã ghi, không tính lãi tương lai.' },
+  { ten: 'Tài sản ròng dự kiến', nghia: 'Như trên nhưng cho các tháng sắp tới: số dư dự kiến + cho vay chưa thu − nợ gốc còn lại theo lịch trả.' },
+  { ten: 'Dòng tiền tích lũy', nghia: 'Số dư các ví cộng dồn qua từng tháng tới, theo dự báo (khoản định kỳ, lịch trả nợ, hạn mức hoặc trung bình các tháng gần đây).' },
+  { ten: 'Ngày tự do', nghia: 'Tiền các ví ÷ chi thật mỗi ngày: số ngày sống được mà không cần thêm đồng thu nào.' },
+  { ten: 'Lãi thực', nghia: 'Lãi suất suy ra từ số vay, số trả mỗi tháng và số kỳ của khoản "Trả cố định/tháng" (lãi ngầm mỗi tháng × 12). Giúp thấy cái giá thật của trả góp.' }
+];
+function thuatNguCardHtml(){
+  var dl = '<dl class="tn-dl">' + THUAT_NGU.map(function(t){ return '<dt>' + esc(t.ten) + '</dt><dd>' + esc(t.nghia) + '</dd>'; }).join('') + '</dl>';
+  return '<div class="card dm-card">' + dmHead('Các số trong app nghĩa là gì')
+    + '<div class="dm-sub">Mỗi khái niệm một tên, ở mọi tab.</div>'
+    + ghiChuGon(dl, 'Xem bảng thuật ngữ') + '</div>';
+}
 function backupCardHtml(){
   var ds = state.backupDs, mo = !!(ds && state.backupMo);
   var cuoi = null;
@@ -445,7 +468,7 @@ function dmPhanHtml(tab){
   if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
-  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div>';
+  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + '</div>';
   return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
     + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
 }

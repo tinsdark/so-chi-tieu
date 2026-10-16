@@ -74,6 +74,28 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 - **Biểu đồ tự vẽ bằng SVG**, không dùng thư viện biểu đồ, nên xem được cả khi offline.
 - Có trang [Chính sách quyền riêng tư](privacy.html).
 
+
+### Thuật ngữ trong app
+
+Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này cũng nằm trong app (Cài đặt → Ứng dụng → "Các số trong app nghĩa là gì", `THUAT_NGU` ở `danhmuc.js`); đổi tên một khái niệm thì phải đổi ở cả hai nơi, có test kiểm mỗi tên còn thật sự xuất hiện trong giao diện.
+
+| Tên | Nghĩa |
+|---|---|
+| **Số dư hiện tại** | Tiền đang có trong tất cả các ví tới hết hôm nay (Sổ tay, tháng đang chạy). Tháng đã qua gọi là "Số dư cuối tháng". Khoản đã ghi trước cho ngày sau hôm nay chưa tính, chỉ hiện ở dòng phụ. |
+| **Số dư theo ví** | Tiền trong từng ví tới hôm nay. Ví thẻ tín dụng mang số âm là đang nợ thẻ. |
+| **Thu nhập, Chi tiêu** | Thu và chi thường xuyên của tháng. Không gồm nhận vay, thu hồi cho vay, cho vay, trả nợ và điều chỉnh số dư. |
+| **Để dành được** | Thu nhập trừ Chi tiêu của tháng, không tính tiền vay. Âm thì hiện "Chi vượt thu". Trả lời câu hỏi "tháng này mình có sống trong khả năng không". |
+| **Tiền vào − ra** | Tiền vào ví trừ tiền ra khỏi ví trong tháng, TÍNH CẢ tiền vay và trả nợ vì đó là tiền thật ra vào ví (Dòng tiền). Trả lời câu hỏi "tháng này tiền có đủ không". Khác "Để dành được": vay 50 triệu làm Tiền vào − ra tăng 50 triệu nhưng Để dành được không đổi. |
+| **Chi hằng ngày** | Chi của các danh mục không phải chi cố định. Hạn mức, nhịp chi và "Hôm nay còn tiêu được" chỉ xét phần này. |
+| **Chi cố định** | Danh mục bật công tắc "Chi cố định" (tiền nhà, tiền net...) và các danh mục hệ thống (Trả nợ, Cho vay, Điều chỉnh số dư). Không đem so với hạn mức chi hằng ngày. |
+| **Hạn mức** | Số tiền dự định chi mỗi tháng của một danh mục chi. Với danh mục thu gọi là "Kế hoạch thu". |
+| **Hôm nay còn tiêu được** | (Tổng hạn mức chi hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay. |
+| **Tài sản ròng thực tế** | Tiền các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả. Chỉ tính số đã ghi, không tính lãi tương lai. |
+| **Tài sản ròng dự kiến** | Như trên nhưng cho các tháng sắp tới: số dư dự kiến + cho vay chưa thu − nợ gốc còn lại theo lịch trả. |
+| **Dòng tiền tích lũy** | Số dư các ví cộng dồn qua từng tháng tới, theo dự báo (khoản định kỳ, lịch trả nợ, hạn mức hoặc trung bình các tháng gần đây). |
+| **Ngày tự do** | Tiền các ví ÷ chi thật mỗi ngày: số ngày sống được mà không cần thêm đồng thu nào. |
+| **Lãi thực** | Lãi suất suy ra từ số vay, số trả mỗi tháng và số kỳ của khoản "Trả cố định/tháng" (lãi ngầm mỗi tháng × 12). Giúp thấy cái giá thật của trả góp. |
+
 ---
 
 ## 2. Đã làm được gì (lịch sử tóm tắt)

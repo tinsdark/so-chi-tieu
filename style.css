@@ -1772,3 +1772,8 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .vn-chitiet>summary::-webkit-details-marker{display:none}
 .vn-chitiet>summary::before{content:'+';font-weight:700;width:18px;text-align:center}
 .vn-chitiet[open]>summary::before{content:'−'}
+
+/* Bảng thuật ngữ (Cài đặt → Ứng dụng) */
+.tn-dl{margin:0;display:flex;flex-direction:column;gap:10px}
+.tn-dl dt{font-weight:700;font-size:13.5px;margin:0}
+.tn-dl dd{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
