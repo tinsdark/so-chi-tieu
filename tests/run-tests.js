@@ -140,7 +140,7 @@ test('co_lai 100tr/12 tháng/10%: tổng gốc khớp 100tr, dư nợ kỳ cuố
   // annuity: tổng trả mỗi kỳ bằng nhau
   sch.forEach(function(r){ near(r.tongTra, sch[0].tongTra, 0.01, 'tongTra kỳ phải bằng nhau'); });
   // lãi kỳ đầu = dư nợ * r
-  near(sch[0].lai, goc * 10/12/100, 0.01, 'lãi kỳ đầu');
+  near(sch[0].lai, goc * 10/12/100, 1, 'lãi kỳ đầu (đã làm tròn về đồng)');
   // tổng trả > gốc (có lãi)
   ok(sch.reduce(function(s,r){ return s+r.tongTra; },0) > goc, 'tổng trả phải lớn hơn gốc');
 });
@@ -1871,14 +1871,19 @@ test('Trả cố định/tháng: lãi suất ngầm đúng; cách chia "Lãi tr�
   eq(ctx.laiNgamThang(10000000, 800000, 12), 0, 'tổng trả ≤ gốc thì không có lãi');
   var base = { id:'x', ten:'FE', hinhThuc:'tra_co_dinh', soTienGoc:10000000, soTienTraThang:1000000, soThangVay:12, ngayVay:'2026-01-10', ngayTraHangThang:10, traNo:[], trangThai:'dang_vay' };
   var deu = ctx.tinhLichTraNo(Object.assign({}, base)), giam = ctx.tinhLichTraNo(Object.assign({}, base, { cachGoc:'giam' }));
-  near(deu[5].duNoConLai, 5000000, 1, 'gốc chia đều: sau kỳ 6 còn đúng nửa gốc (cách cũ không đổi)');
-  near(giam[5].duNoConLai, 5431070, 2, 'dư nợ giảm dần: sau kỳ 6 còn 5.431.070 (tính tay: lãi từng kỳ trên dư nợ)');
-  near(giam[2].duNoConLai, 7814195, 2, 'sau kỳ 3 còn 7.814.195');
+  near(deu[5].duNoConLai, 5000000, 3, 'gốc chia đều: sau kỳ 6 còn nửa gốc (cách cũ, lệch tối đa vài đồng do làm tròn)');
+  near(giam[5].duNoConLai, 5431070, 4, 'dư nợ giảm dần: sau kỳ 6 còn 5.431.070 (tính tay: lãi từng kỳ trên dư nợ)');
+  near(giam[2].duNoConLai, 7814195, 4, 'sau kỳ 3 còn 7.814.195');
   near(giam[0].lai, 10000000 * r, 1, 'lãi kỳ 1 = dư nợ × lãi ngầm');
   var tongGoc = 0; giam.forEach(function(k){ tongGoc += k.goc; });
   near(tongGoc, 10000000, 1, 'tổng gốc các kỳ = số vay'); near(giam[11].duNoConLai, 0, 0.01, 'kỳ cuối hết nợ');
   near(giam[11].tongTra, 1000000, 2, 'số trả mỗi tháng vẫn ≈ 1tr, kể cả kỳ cuối');
   ok(giam[0].goc < giam[11].goc, 'gốc tăng dần, lãi giảm dần');
+  // làm tròn về đồng: 1tr / 3 kỳ không lãi = 333.333 + 333.333 + 333.334; mọi kỳ là số nguyên, tổng gốc đúng bằng số vay
+  var ks = ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'khong_lai', soTienGoc:1000000, soThangVay:3 }));
+  eq(ks.map(function(k){ return k.tongTra; }).join('+'), '333333+333333+333334', '1tr / 3 kỳ');
+  var tr = ctx.tinhLichTraNo(Object.assign({}, base)); eq(tr.every(function(k){ return k.tongTra === 1000000; }), true, 'trả cố định 1tr: mọi kỳ đúng 1.000.000, kể cả kỳ cuối');
+  var tongG = 0; tr.forEach(function(k){ tongG += k.goc; ok(k.goc === Math.round(k.goc) && k.lai === Math.round(k.lai), 'số nguyên'); }); eq(tongG, 10000000, 'tổng gốc');
   // lãi thực suy ra: SPayLater 10tr, 12 kỳ, phí 2,95%/tháng trên gốc = 833.333 + 295.000 = 1.128.333 mỗi tháng ≈ 5,00%/tháng ≈ 60%/năm
   near(ctx.laiThucNam({ hinhThuc:'tra_co_dinh', soTienGoc:10000000, soTienTraThang:1128333.33, soThangVay:12 }), 60, 0.3, 'SPayLater 12 kỳ ≈ 60%/năm');
   near(ctx.laiThucNam(base), 35.0, 0.3, 'khoản 10tr trả 1tr x 12 ≈ 35%/năm');
@@ -2542,9 +2547,9 @@ test('Dòng tiền: dtDuKienRows cộng dồn từ số dư trước tháng hi�
   setToday('2026-10-01');
 });
 
-test('Mô phỏng: mpTinhVay trả cố định 150tr/9%/36 tháng = 4.769.960, tổng lãi 21.718.556; gốc đều thì giảm dần', function(){
+test('Mô phỏng: mpTinhVay trả cố định 150tr/9%/36 tháng = 4.769.960, tổng lãi 21.718.560; gốc đều thì giảm dần', function(){
   var a = ctx.mpTinhVay({ hinhThuc:'co_lai', soTien:150000000, laiSuatNam:9, soThang:36, mkTu:'2026-11' });
-  eq(Math.round(a.tra), 4769960); eq(Math.round(a.tongLai), 21718556); eq(a.hetMk, '2029-11');
+  eq(Math.round(a.tra), 4769960); eq(Math.round(a.tongLai), 21718560);   // = 4.769.960 × 36 − 150.000.000 (lịch đã làm tròn về đồng, số trả mỗi kỳ đúng 4.769.960) eq(a.hetMk, '2029-11');
   var b = ctx.mpTinhVay({ hinhThuc:'goc_deu', soTien:12000000, laiSuatNam:12, soThang:12, mkTu:'2026-11' });
   eq(Math.round(b.tra), 1000000 + 120000, 'kỳ đầu = gốc 1tr + lãi 1%/tháng trên 12tr');
   eq(Math.round(b.tongLai), 780000, 'lãi giảm dần: 1% × (12+11+…+1)tr');

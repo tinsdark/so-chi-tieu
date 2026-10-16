@@ -46,8 +46,21 @@ function laiThucNam(loan){
   return r > 0 ? r * 1200 : null;
 }
 function vnSoChuLai(x){ return (Math.round(x * 10) / 10).toString().replace('.', ','); }
-// trả về lịch trả từng tháng: [{mk, ngayTra, goc, lai, tongTra, duNoConLai}]
+// trả về lịch trả từng tháng: [{mk, ngayTra, goc, lai, tongTra, duNoConLai}], mọi số đã làm tròn về đồng.
+// Số trả mỗi kỳ làm tròn trước (nên khoản trả đều vẫn đều đúng một con số), gốc làm tròn, lãi = số trả − gốc; kỳ cuối trả hết gốc còn lại
+// nên tổng gốc đúng bằng số vay (1.000.000 / 3 kỳ = 333.333 + 333.333 + 333.334).
 function tinhLichTraNo(loan){
+  var sch = tinhLichTraNoTho(loan);
+  var du = Math.round(num(loan.soTienGoc));
+  for (var i = 0; i < sch.length; i++){
+    var k = sch[i], tt = Math.round(k.tongTra), g = (i === sch.length - 1) ? du : Math.min(du, Math.round(k.goc));
+    k.goc = g; k.lai = Math.max(0, tt - g); k.tongTra = g + k.lai;
+    du -= g; k.duNoConLai = Math.max(0, du);
+  }
+  return sch;
+}
+// lịch chưa làm tròn (số thực)
+function tinhLichTraNoTho(loan){
   var sch = [];
   var startMk = monthKey(loan.ngayVay || todayStr());
   var goc0 = num(loan.soTienGoc);
@@ -727,6 +740,9 @@ function vayNoScheduleHtml(loan){
   if (Math.abs(lech) >= 1){
     h += '<div class="vn-ghichu">'+(lech < 0 ? 'Trả thiếu ' : 'Trả thừa ')+'<b>'+fmt(Math.round(Math.abs(lech)))+'</b> ở các kỳ đã đóng. '
       + 'Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay. Kỳ còn đang trả dở thì phần thiếu vẫn nằm trong dư nợ.</div>';
+  }
+  if (sch.length && num(sch[0].lai) > 0 && (loan.hinhThuc === 'co_lai' || loan.hinhThuc === 'goc_deu' || (loan.hinhThuc === 'tra_co_dinh' && loan.cachGoc === 'giam'))){
+    h += '<div class="vn-ghichu">Lãi kỳ đầu tính tròn một tháng. Ngân hàng thường tính theo số ngày thực kể từ ngày giải ngân nên kỳ đầu có thể chênh nhẹ so với lịch này; các kỳ sau thường khớp.</div>';
   }
   if (loan.tatToan){
     h += '<div class="vn-ghichu">Đã tất toán ngày '+(loan.tatToan.ngay ? ngayVN(loan.tatToan.ngay) : '')+' với số tiền <b>'+fmt(loan.tatToan.soTien)+'</b>.</div>';
