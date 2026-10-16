@@ -345,6 +345,61 @@ function backupLoai(name){
   if (!m || !m[1]) return 'Tự động';
   return m[1] === 'thu-cong' ? 'Thủ công' : (BACKUP_NHAN[m[1]] || m[1]);
 }
+/* ---- Tải toàn bộ dữ liệu về máy / khôi phục từ file .json (không cần Drive) ----
+   File xuất là đúng nội dung state.data, cùng định dạng với bản sao lưu trên Drive. Khôi phục đi qua normalizeData như mọi đường nạp dữ liệu. */
+function tenFileXuat(){ return 'so-tien-du-lieu_' + todayStr() + '.json'; }
+// -> { data } nếu text là dữ liệu Sổ Tiền hợp lệ, { loi } nếu không (không đoán, không sửa)
+function docFileKhoiPhuc(text){
+  var j;
+  try{ j = JSON.parse(String(text == null ? '' : text).replace(/^\uFEFF/, '')); }catch(e){ return { loi: 'File không phải JSON hợp lệ.' }; }
+  if (!j || typeof j !== 'object' || Array.isArray(j)) return { loi: 'File không phải dữ liệu Sổ Tiền.' };
+  if (!j.journal || typeof j.journal !== 'object' || Array.isArray(j.journal)) return { loi: 'File thiếu sổ giao dịch (journal), không phải bản dữ liệu hoặc sao lưu Sổ Tiền.' };
+  if (j.categories != null && (typeof j.categories !== 'object' || Array.isArray(j.categories))) return { loi: 'Phần danh mục trong file bị hỏng.' };
+  return { data: j };
+}
+// Phải gọi ĐỒNG BỘ trong cú bấm. iPhone: bảng chia sẻ (Lưu vào Tệp); không có thì tải file về.
+function xuatDuLieuGiao(){
+  var text = JSON.stringify(state.data), ten = tenFileXuat();
+  var blob = new Blob([text], { type: 'application/json' }), file = null;
+  try { file = new File([blob], ten, { type: 'application/json' }); } catch (e) { file = null; }
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })){
+    navigator.share({ files: [file], title: 'Dữ liệu Sổ Tiền' }).catch(function(e){ if (!e || e.name !== 'AbortError') lichTaiXuong(blob, ten); });
+    return 'share';
+  }
+  lichTaiXuong(blob, ten);
+  return 'tai';
+}
+function khoiPhucTuFile(el){
+  var f = el.files && el.files[0];
+  el.value = '';                                  // chọn lại đúng file đó lần sau vẫn nhận
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onerror = function(){ toast('Không đọc được file.', { loai:'err' }); };
+  rd.onload = function(){
+    (async function(){
+      var kq = docFileKhoiPhuc(rd.result);
+      if (kq.loi){ toast(kq.loi, { loai:'err' }); return; }
+      var nNgay = Object.keys(kq.data.journal).length, vn = kq.data.vayNo || {};
+      var tomTat = nNgay + ' ngày có giao dịch, ' + ((vn.vayNoPhaiTra || []).length + (vn.choVay || []).length) + ' khoản vay / cho vay, ' + ((kq.data.wallets || []).length || 1) + ' ví.';
+      if (!await xacNhan('Khôi phục từ file "' + f.name + '"?',
+            'File có ' + tomTat + '\nToàn bộ dữ liệu hiện tại sẽ được thay bằng file này.'
+            + (accessToken ? ' Dữ liệu hiện tại được sao lưu lên Drive trước khi thay.' : ' Đang ngoại tuyến nên dữ liệu hiện tại KHÔNG được sao lưu lên Drive: hãy bấm "Tải dữ liệu về máy" trước nếu muốn giữ.'),
+            { nguyHiem:true, chuOk:'Khôi phục' })) return;
+      try{
+        if (accessToken) await saoLuuNgay('truoc-khoi-phuc', JSON.stringify(state.data));
+        if (state.mp) mpXoaNhap();
+        state.data = normalizeData(kq.data);
+        scheduleSave();
+        toast('Đã khôi phục dữ liệu từ file.');
+      }catch(e){
+        console.error('[chitieu] Khôi phục từ file lỗi:', e);
+        toast('Không khôi phục được: ' + (e && e.message ? e.message : 'lỗi'), { loai:'err' });
+      }
+      renderAll();
+    })();
+  };
+  rd.readAsText(f);
+}
 function backupCardHtml(){
   var ds = state.backupDs, mo = !!(ds && state.backupMo);
   var cuoi = null;
@@ -353,6 +408,8 @@ function backupCardHtml(){
     + '<div class="dm-sub">'+(cuoi ? 'Lần cuối: '+esc(backupGio(cuoi))+' · '+esc(backupLoai(cuoi.name).toLowerCase()) : 'Tự lưu mỗi ngày · giữ '+BACKUP_GIU+' bản gần nhất')+'</div>'
     + '<div class="dm-btns">'
     + '<button class="btn sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
+    + '<button class="btn secondary sm" data-act="bkTai">Tải dữ liệu về máy</button>'
+    + '<label class="btn secondary sm bk-file">Khôi phục từ file<input type="file" id="bk_file" data-act="bkFile" accept=".json,application/json" hidden></label>'
     + (mo ? '<button class="btn secondary sm" data-act="bkAn">Ẩn các bản sao lưu ('+ds.length+')</button>'
           : '<button class="btn secondary sm" data-act="'+(ds ? 'bkMo' : 'bkXem')+'"'+(state.backupBusy?' disabled':'')+'>Xem các bản sao lưu'+(ds ? ' ('+ds.length+')' : '')+'</button>')
     + '</div>';
@@ -368,7 +425,8 @@ function backupCardHtml(){
   }
   return h + ghiChuGon('Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
     + gtViDu([ds ? { ten: 'Hiện có', ct: 'Số bản sao lưu đang giữ trên Drive / số bản tối đa.', pt: ds.length + ' / ' + BACKUP_GIU + ' bản' } : null]) + ' '
-    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?') + '</div>';
+    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được. '
+    + '"Tải dữ liệu về máy" lưu toàn bộ sổ thành một file .json ngay trên máy (không cần Drive); "Khôi phục từ file" nạp lại file đó.', 'Sao lưu hoạt động thế nào?') + '</div>';
 }
 
 /* Tab Cài đặt chia thành 5 PHẦN bằng thanh chọn (cùng kiểu thanh chọn của Dòng tiền: Theo ngày / Theo tháng / Mô phỏng), không phải danh sách bấm:
@@ -636,6 +694,8 @@ function catNameExists(kind, name, excludeId){
 function handleDanhMucAction(act, el){
   if (act === 'bkMo' || act === 'bkAn'){
     state.backupMo = (act === 'bkMo'); renderDanhMuc();
+  } else if (act === 'bkTai'){
+    xuatDuLieuGiao();
   } else if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
     // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
     if (state.backupBusy) return true;
@@ -1023,6 +1083,7 @@ function handleDanhMucChange(el){
   if (handleTheChange(el)) return true;
   if (handleHienThiChange(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
+  if (el.matches('[data-act=bkFile]')){ khoiPhucTuFile(el); return true; }
   if (el.matches('[data-act=dkDuBao]')){ el.setAttribute('data-cham', '1'); return true; }     // người dùng đã tự chọn: thôi tự đổi mặc định
   if (el.matches && el.matches('#dk_cat')){ dkCapNhatDuBao(); return true; }
   if (el.matches('[data-act=dkBat]')){

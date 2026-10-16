@@ -1897,6 +1897,32 @@ test('Trả cố định/tháng: lãi suất ngầm đúng; cách chia "Lãi tr�
   ctx.state.vnFormKind = null;
 });
 
+test('Tải dữ liệu về file .json rồi khôi phục: vòng khứ hồi giữ nguyên số dư, vay nợ, ví; file hỏng bị từ chối, không đoán', function(){
+  setToday('2026-10-15');
+  var d = baseData({ settings:{ soDuDauKy:5000000, ngayBatDau:'2026-09-01', thangBatDauDuTru:'2026-09' } });
+  d.wallets = [{ id:'a', ten:'Tiền mặt', soDuDauKy:2000000 }, { id:'b', ten:'Techcom', soDuDauKy:3000000 }];
+  d.vayNo.vayNoPhaiTra = [loanKhongLai({ id:'v1', ten:'Vay FE', soTienGoc:6000000, soThangVay:6, ngayVay:'2026-09-10', hinhThuc:'tra_co_dinh', soTienTraThang:1100000, cachGoc:'giam' })];
+  loadData(d);
+  ctx.entryAddItem('2026-10-02', 'chi', 'an', 120000, 'phở', 'a'); ctx.entryAddItem('2026-10-05', 'thu', 'luong', 9000000, 'lương', 'b');
+  ctx.chuyenViThem('2026-10-06', 'b', 'a', 1000000, 'rút'); ctx.invalidateBalanceCache();
+  var truoc = { so: ctx.balanceAt('2026-10-31'), a: ctx.soDuTheoVi('a', '2026-10-31'), lich: JSON.stringify(ctx.tinhLichTraNo(ctx.state.data.vayNo.vayNoPhaiTra[0])) };
+  var kq = ctx.docFileKhoiPhuc(JSON.stringify(ctx.state.data));
+  ok(kq.data && !kq.loi, 'file xuất đọc lại được');
+  loadData(kq.data); ctx.invalidateBalanceCache();
+  eq(ctx.balanceAt('2026-10-31'), truoc.so, 'tổng số dư giữ nguyên'); eq(ctx.soDuTheoVi('a', '2026-10-31'), truoc.a, 'số dư từng ví giữ nguyên');
+  eq(JSON.stringify(ctx.tinhLichTraNo(ctx.state.data.vayNo.vayNoPhaiTra[0])), truoc.lich, 'lịch trả (cả cachGoc) giữ nguyên');
+  ok(ctx.docFileKhoiPhuc('\uFEFF' + JSON.stringify(ctx.state.data)).data, 'có BOM đầu file vẫn đọc được');
+  ['', '   ', '{không phải json', '[]', '123', 'null', '{"a":1}', '{"journal":[]}', '{"journal":"x"}', '{"journal":{},"categories":[]}'].forEach(function(t){
+    ok(ctx.docFileKhoiPhuc(t).loi && !ctx.docFileKhoiPhuc(t).data, 'từ chối: ' + t);
+  });
+  ok(ctx.docFileKhoiPhuc('{"journal":{}}').data, 'sổ trống tối thiểu vẫn hợp lệ (normalizeData điền phần thiếu)');
+  eq(ctx.tenFileXuat(), 'so-tien-du-lieu_2026-10-15.json', 'tên file có ngày');
+  if (ctx.BACKUP_GIU == null) ctx.BACKUP_GIU = 10;        // drive-sync.js không nạp trong test
+  var cardH = ctx.backupCardHtml();
+  ok(cardH.indexOf('data-act="bkTai"') > 0 && cardH.indexOf('id="bk_file"') > 0 && cardH.indexOf('accept=".json,application/json"') > 0, 'thẻ Sao lưu có nút Tải về máy và Khôi phục từ file');
+  setToday('2026-10-01');
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
