@@ -2448,7 +2448,7 @@ test('Dòng tiền: thẻ đầu, Thu/Chi theo danh mục, dự kiến; không c
   loadData(dataDongTien());
   ctx.state.dtMk = null; ctx.state.dtBangNam = false; ctx.state.dtMoPhong = false;
   var h = renderDT();
-  ok(h.indexOf('Cân đối tháng') >= 0 && h.indexOf('id="dtDau"') >= 0, 'thẻ đầu');
+  ok(h.indexOf('Tiền vào − ra tháng') >= 0 && h.indexOf('id="dtDau"') >= 0, 'thẻ đầu');
   ok(h.indexOf('Thu nhập tháng 10') >= 0 && h.indexOf('Chi theo hạn mức') >= 0 && h.indexOf('Dòng tiền tích lũy tương lai') >= 0);
   ok(h.indexOf('<table') < 0, 'không còn bảng ở màn chính');
   ok(h.indexOf('data-act="dtBangNam"') >= 0 && h.indexOf('Xem bảng cả năm') >= 0);
@@ -3270,13 +3270,13 @@ test('Bảng theo dõi: ô hiển thị — tháng trống là "–", mở rộn
   ctx.state.vnHorizon = 12;
 });
 
-test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng đã chọn, 3 cột Tháng / Cân đối / Số dư, có số cuối kỳ + thấp nhất', function(){
+test('Dòng tiền tích lũy tương lai (tab Dòng tiền): đủ số tháng đã chọn, 3 cột Tháng / Tiền vào − ra / Số dư, có số cuối kỳ + thấp nhất', function(){
   setToday('2026-12-10');
   loadData(baseData());
   var rows = ctx.dtDuKienRows(24), dem = function(){ return (ctx.dtDuKienHtml(rows, '2026-12').match(/class="dt-ml-r/g) || []).length; };
   ctx.state.dtHorizon = 12; var h = ctx.dtDuKienHtml(rows, '2026-12');
   ok(h.indexOf('Dòng tiền tích lũy tương lai') >= 0, 'tiêu đề');
-  ok(h.indexOf('<span>Tháng</span><span>Cân đối</span><span>Số dư</span>') >= 0, 'đúng 3 cột');
+  ok(h.indexOf('<span>Tháng</span><span>Tiền vào − ra</span><span>Số dư</span>') >= 0, 'đúng 3 cột');
   ok(h.indexOf('Số dư dự kiến cuối') >= 0 && h.indexOf('Thấp nhất') >= 0, 'số cuối kỳ + thấp nhất');
   ok(h.indexOf('Xem cả') < 0 && h.indexOf('Chi</span>') < 0, 'không còn nút Xem cả / cột Chi');
   eq(dem(), 12, '12 tháng'); ctx.state.dtHorizon = 6; eq(dem(), 6, '6 tháng'); ctx.state.dtHorizon = 24; eq(dem(), 24, '24 tháng');
@@ -4182,7 +4182,7 @@ test('tongKetCardHtml: đủ các dòng, tháng chưa kết thúc thì rỗng; c
   tkData();
   var h = ctx.tongKetCardHtml('2026-10');
   ok(h.indexOf('id="cardTongKet"') > 0 && h.indexOf('Tổng kết tháng 10/2026') > 0, 'tiêu đề');
-  ok(h.indexOf('Dư thật') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
+  ok(h.indexOf('Để dành được') > 0 && h.indexOf('Chi hằng ngày') > 0 && h.indexOf('trong mức') > 0 && h.indexOf('Chi cố định') > 0, 'các dòng chính');
   ok(h.indexOf('Trả nợ') > 0 && h.indexOf('Tài sản ròng thực tế cuối tháng') > 0 && h.indexOf('Tăng mạnh nhất') > 0 && h.indexOf('Ăn') > 0, 'nợ, tài sản ròng, danh mục tăng');
   eq(ctx.tongKetCardHtml('2026-11'), '');
   tkData(function(d){ d.categories.chi[0].chiTieu = 0; });
@@ -4249,10 +4249,10 @@ test('bdThang: thu / chi THẬT không gồm nhận vay, thu hồi, cho vay, tr�
   eq(Object.keys(c.theoCatThuThat).join(), 'luong');
   eq(ctx.balanceAt('2026-10-31'), 51600000 - 33140000, 'số dư ví vẫn tính từ tổng');
 });
-test('Sổ tay thẻ đầu: Thu nhập / Chi tiêu / Dư thật + dòng Vay nợ riêng; Số dư vẫn là số dư thật của ví', function(){
+test('Sổ tay thẻ đầu: Thu nhập / Chi tiêu / Để dành được + dòng Vay nợ riêng; Số dư vẫn là số dư thật của ví', function(){
   tcData();
   var h = ctx.tongQuanHtml('2026-10', 51600000, 33140000, 0, 18460000, false);
-  ok(h.indexOf('Thu nhập') > 0 && h.indexOf('Chi tiêu') > 0 && h.indexOf('Dư thật') > 0 && h.indexOf('Tổng thu</div>') < 0 && h.indexOf('>Chênh lệch<') < 0, 'nhãn mới');
+  ok(h.indexOf('Thu nhập') > 0 && h.indexOf('Chi tiêu') > 0 && h.indexOf('Để dành được') > 0 && h.indexOf('Tổng thu</div>') < 0 && h.indexOf('>Chênh lệch<') < 0, 'nhãn mới');
   ok(h.indexOf('−' + ctx.fmt(200000).replace(' ₫', '')) > 0, 'dư thật = 1tr − 1,2tr = −200.000 (không phải +18,4tr)');
   ok(h.indexOf('Vay nợ') > 0 && h.indexOf('vào <b>' + ctx.fmt(50500000).replace(' ₫', '')) > 0 || h.indexOf(ctx.fmt(50500000)) > 0, 'vào = vay 50tr + thu hồi 0,5tr');
   ok(h.indexOf(ctx.fmt(31900000)) > 0, 'ra = trả nợ 29,9tr + cho vay 2tr');
@@ -4280,12 +4280,12 @@ test('Báo cáo: thẻ đầu, KPI, phân tích, danh mục, xu hướng đều 
   eq(u.daChi, 1200000, 'ước tính chi: đã chi thường xuyên'); eq(u.bietTruoc, 0, 'không cộng trả nợ biết trước');
   ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; setToday('2026-10-01');
 });
-test('Tổng kết tháng: Dư thật, chi cố định không gồm trả nợ, dòng Trả nợ tính riêng kèm vay thêm', function(){
+test('Tổng kết tháng: Để dành được, chi cố định không gồm trả nợ, dòng Trả nợ tính riêng kèm vay thêm', function(){
   tcData(); setToday('2026-11-03');
   var r = ctx.tongKetThang('2026-10');
   eq(r.thu, 1000000); eq(r.chi, 1200000); eq(r.coDinh, 800000, 'chỉ khoản cố định thật (Nhà)'); eq(r.traNo, 29900000);
   var h = ctx.tongKetCardHtml('2026-10');
-  ok(h.indexOf('Dư thật') > 0 && h.indexOf('Thu − Chi') < 0 && h.indexOf('chưa tính vay nợ') > 0, 'dư thật');
+  ok(h.indexOf('Để dành được') > 0 && h.indexOf('Thu − Chi') < 0 && h.indexOf('chưa tính vay nợ') > 0, 'dư thật');
   ok(h.indexOf('Trả nợ (tính riêng)') > 0 && h.indexOf('vay thêm ' + ctx.fmt(50000000)) > 0, 'dòng nợ kèm vay thêm');
   setToday('2026-10-01');
 });
@@ -4328,7 +4328,7 @@ test('Sổ tay thẻ đầu: dòng "= thu nhập − chi tiêu" + mục Cách t�
   var h = ctx.tongQuanHtml('2026-10', 51600000, 33140000, 0, 18460000, false);
   ok(h.indexOf('hero-ct') < 0 && h.indexOf('= thu nhập') < 0, 'không có dòng giải thích hiện sẵn: chỉ hiện khi bấm "Cách tính các số này"');
   ok(h.indexOf('<details class="giai-thich"><summary>ⓘ Cách tính các số này</summary>') > 0 && h.indexOf('<details class="giai-thich" open') < 0, 'mục giải thích gập sẵn');
-  ok(h.indexOf('1.000.000 − 1.200.000 = −200.000') > 0, 'Dư thật = −200.000');
+  ok(h.indexOf('1.000.000 − 1.200.000 = −200.000') > 0, 'Để dành được = −200.000');
   ok(h.indexOf('51.600.000 − 50.500.000 − 100.000 = 1.000.000') > 0, 'Thu nhập = tổng thu − vay − điều chỉnh');
   ok(h.indexOf('33.140.000 − 31.900.000 − 40.000 = 1.200.000') > 0, 'Chi tiêu = tổng chi − nợ − điều chỉnh');
   ok(h.indexOf('0 − 200.000 + 18.600.000') > 0 || h.indexOf('−200.000 + 18.600.000') > 0, 'số dư = đầu tháng + dư thật + vay nợ ròng ...');
@@ -4349,7 +4349,7 @@ test('Báo cáo / Tổng kết / Dòng tiền / Theo ngày: phép tính trong gi
   eq(kiemPhepCong(ng).loi.join(' | '), '');
   var lt = ctx.tnLichTienGiaiThichHtml(ctx.tnLichTien('2026-10-11')); ok(lt.indexOf('Số dư ngày cuối') > 0 && lt.indexOf('Ngày thấp nhất') > 0, 'Lịch tiền');
   eq(kiemPhepCong(lt).loi.join(' | '), '');
-  var d = ctx.dtThangDuLieu('2026-10'), cd = ctx.dtCanDoiGiaiThichHtml(d, 1000000); ok(cd.indexOf('Cân đối') > 0 && cd.indexOf('Số dư') > 0, 'Dòng tiền Cân đối'); eq(kiemPhepCong(cd).loi.join(' | '), '');
+  var d = ctx.dtThangDuLieu('2026-10'), cd = ctx.dtCanDoiGiaiThichHtml(d, 1000000); ok(cd.indexOf('Tiền vào − ra') > 0 && cd.indexOf('Số dư') > 0, 'Dòng tiền Tiền vào − ra'); eq(kiemPhepCong(cd).loi.join(' | '), '');
   setToday('2026-10-01');
 });
 test('Tab Cài đặt / Vay - Nợ: ghi chú có ví dụ "Với số của bạn" bằng số thật, phép tính đúng', function(){
@@ -4384,7 +4384,7 @@ test('Hạn mức / Số dư đầu kỳ ở tab Cài đặt: ví dụ trung bì
 /* ==================================================================== */
 group('Dòng tiền Theo tháng: tách vay nợ khỏi Thu nhập / Chi');
 
-test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, cho vay, điều chỉnh; vay nợ ở d.vayThem...; Cân đối vẫn là dòng tiền thật', function(){
+test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, cho vay, điều chỉnh; vay nợ ở d.vayThem...; Tiền vào − ra vẫn là dòng tiền thật', function(){
   tcData(); setToday('2026-10-11');
   var d = ctx.dtThangDuLieu('2026-10');
   eq(d.thuAct, 1000000, 'thu nhập = lương, không có vay 50tr'); eq(d.thuPlan, 0, 'chưa đặt kế hoạch thu');
@@ -4394,7 +4394,7 @@ test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, c
   eq(d.cb, d.thuDK - d.chiDK, 'cân đối vẫn tính cả vay nợ'); ok(d.cb > 18000000, 'cân đối là dòng tiền thật: ' + d.cb);
   setToday('2026-10-01');
 });
-test('dtDauHtml: Thu không còn "vượt kế hoạch 457%"; có dòng Vay nợ riêng; Cân đối ghi "gồm vay thêm" và nhãn "Dư nhờ vay"', function(){
+test('dtDauHtml: Thu không còn "vượt kế hoạch 457%"; có dòng Vay nợ riêng; Tiền vào − ra ghi "gồm vay thêm" và nhãn "Dư nhờ vay"', function(){
   tcData(); setToday('2026-10-11');
   ctx.state.data.categories.thu[0].chiTieu = 1000000;                       // kế hoạch thu = lương 1tr
   var d = ctx.dtThangDuLieu('2026-10'), h = ctx.dtDauHtml(d, 18460000, '2026-09', '2026-12');

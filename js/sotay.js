@@ -248,7 +248,7 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock, duH
     + '<div class="hero-nums">'
     +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+soGon(tongThu)+'</div></div>'
     +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+soGon(tongChi)+'</div></div>'
-    +   '<div><div class="l">Dư thật</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
+    +   '<div><div class="l">'+(chenh < 0 ? 'Chi vượt thu' : 'Để dành được')+'</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
     + '</div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (laThangNay && !beforeLock && !htAn('sotay', 'tieu')) h += tieuMoiNgayHtml(todayStr());
@@ -273,7 +273,7 @@ function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNa
   var vn = ct.vayNo, vao = vn.vay + vn.thuHoi, ra = vn.traNo + vn.choVay, rongNo = vao - ra;
   var dcThu = num(ct.theoCatThu.dieuChinh), dcChi = num(ct.theoCat.dieuChinh), dc = dcThu - dcChi;
   var duThat = ct.tongThuThat - ct.tongChiThat, ds = [];
-  ds.push({ ten: 'Dư thật', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
+  ds.push({ ten: 'Để dành được', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ. Âm nghĩa là chi vượt thu (hiện là "Chi vượt thu").', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
   ds.push({ ten: 'Thu nhập', ct: 'Tổng thu − nhận vay − thu hồi cho vay − điều chỉnh số dư.',
     pt: ptCong([ct.tongThu, -vao, -dcThu], ct.tongThuThat) });
   ds.push({ ten: 'Chi tiêu', ct: 'Tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
@@ -281,7 +281,7 @@ function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNa
   if (vao + ra > 0.5) ds.push({ ten: 'Vay nợ (tính riêng)', ct: 'Vào (nhận vay + thu hồi cho vay) − ra (trả nợ + cho vay).',
     pt: 'vào ' + ptTong2(vn.vay, vn.thuHoi) + ' · ra ' + ptTong2(vn.traNo, vn.choVay) + ' · ' + ptCong([vao, -ra], rongNo) });
   var truoc = (laThangNay && duHetThang != null) ? duHetThang - duCuoi : 0;      // thu − chi của các khoản đã ghi trước cho ngày sau hôm nay
-  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Dư thật + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '')
+  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Để dành được + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '')
       + (Math.abs(truoc) > 0.5 ? ' − khoản đã ghi trước cho các ngày sau hôm nay (chưa tới ngày nên chưa tính)' : '') + '.',
     pt: ptCong([duDau, duThat, rongNo, dc, -truoc], duCuoi) });
   if (tongCap > 0) ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',

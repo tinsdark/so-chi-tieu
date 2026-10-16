@@ -52,7 +52,7 @@ function tongKetCardHtml(mk){
   if (!r) return '';
   var cl = r.thu - r.chi, ten = parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(0, 4);
   var h = '<div class="card bc-card" id="cardTongKet"><h3 class="bc-h"><span>Tổng kết tháng '+ten+'</span></h3>'
-    + tkDong('Dư thật', (cl > 0 ? '+' : (cl < 0 ? '−' : '')) + bdTien(Math.abs(cl)), 'Thu nhập ' + bdTien(r.thu) + ' · chi tiêu ' + bdTien(r.chi) + ' (chưa tính vay nợ)', cl >= 0 ? 'thu' : 'chi');
+    + tkDong(cl < 0 ? 'Chi vượt thu' : 'Để dành được', (cl > 0 ? '+' : (cl < 0 ? '−' : '')) + bdTien(Math.abs(cl)), 'Thu nhập ' + bdTien(r.thu) + ' · chi tiêu ' + bdTien(r.chi) + ' (chưa tính vay nợ)', cl >= 0 ? 'thu' : 'chi');
   if (r.cap > 0){
     var tt = r.ngayOk != null ? r.ngayOk + '/' + r.soNgay + ' ngày trong mức · ' : '';
     var pct = Math.round(r.hangNgay / r.cap * 100);
@@ -77,7 +77,7 @@ function tongKetCardHtml(mk){
 // cách tính từng dòng của thẻ, có phép tính bằng số thật của tháng đó (giaiThichSo ở state.js)
 function tkGiaiThichHtml(r){
   var ds = [], cl = r.thu - r.chi;
-  ds.push({ ten: 'Dư thật', ct: 'Thu nhập − chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([r.thu, -r.chi], cl) });
+  ds.push({ ten: 'Để dành được', ct: 'Thu nhập − chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([r.thu, -r.chi], cl) });
   if (r.cap > 0) ds.push({ ten: 'Chi hằng ngày', ct: 'Chi của các danh mục tiêu hằng ngày so với tổng hạn mức của chúng. Một ngày "trong mức" khi chi hôm đó không vượt (hạn mức còn lại đầu ngày ÷ số ngày còn lại).',
     pt: soGt(r.hangNgay) + ' ÷ ' + soGt(r.cap) + ' = ' + Math.round(r.hangNgay / r.cap * 100) + '%' + (r.ngayOk != null ? '; ' + r.ngayOk + '/' + r.soNgay + ' ngày trong mức' : '') });
   if (r.coDinh > 0.5) ds.push({ ten: 'Chi cố định', ct: 'Chi tiêu − chi hằng ngày.', pt: ptCong([r.chi, -r.hangNgay], r.coDinh) });

@@ -457,7 +457,7 @@ function ghiChuGon(noiDung, nhan){
 
 /* GIẢI THÍCH CÓ SỐ THẬT: mỗi con số quan trọng được giải thích bằng 2 phần — cách tính bằng chữ, và PHÉP TÍNH bằng chính số trên màn hình
    (VD "80.000 − 1.212.600 = −1.132.600"), để người dùng tự đối chiếu. Dùng:
-     giaiThichSo([ { ten:'Dư thật', ct:'Thu nhập − Chi tiêu', pt: ptCong([thu, -chi], thu - chi) }, ... ], 'Cách tính các số này')
+     giaiThichSo([ { ten:'Để dành được', ct:'Thu nhập − Chi tiêu', pt: ptCong([thu, -chi], thu - chi) }, ... ], 'Cách tính các số này')
    soGt: số nguyên có dấu chấm ngăn nghìn, âm ghi "−". ptCong: các số hạng có dấu cộng / trừ rồi "= kết quả" (số hạng 0 ở sau bị bỏ). */
 function soGt(n){ var r = Math.round(Number(n) || 0); return (r < 0 ? '−' : '') + Math.abs(r).toLocaleString('vi-VN'); }
 function ptCong(ds, kq){

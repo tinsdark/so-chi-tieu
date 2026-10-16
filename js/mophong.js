@@ -436,7 +436,7 @@ function renderMoPhong(){
     + '<div class="mp-hint c">Chạm hoặc kéo trên biểu đồ để xem từng tháng'+(cung ? ' · chưa điều chỉnh nên hai đường trùng nhau' : '')+'</div>';
   var hien = state.mp.hetThang ? rowsMoi : rowsMoi.slice(0, 6);
   var coRong = coCotTaiSanRong(rowsMoi);   // hết nợ / không cho vay (và kịch bản không thêm vay) thì ròng = số dư, bỏ cột cho đỡ thừa
-  html += '<div class="dt-ml mp-ml'+(coRong ? ' co-rong' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'<span>Chênh lệch</span></div>';
+  html += '<div class="dt-ml mp-ml'+(coRong ? ' co-rong' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Tiền vào − ra</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'<span>Chênh lệch</span></div>';
   hien.forEach(function(r, idx){
     var g = rowsGoc[idx], lech = Math.round(r.bal - g.bal), cb = r.thu - r.chi;
     html += '<div class="dt-ml-r'+(r.bal < 0 ? ' am' : '')+'"><span class="m"><i class="'+(r.bal < 0 ? 'am' : '')+'"></i>'+dtNhanThang(r.mk)+'</span>'
