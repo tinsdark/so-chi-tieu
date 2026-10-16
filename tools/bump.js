@@ -16,7 +16,6 @@ var crypto = require('crypto');
 
 var ROOT = path.join(__dirname, '..');
 var INDEX = path.join(ROOT, 'index.html');
-var GHI = path.join(ROOT, 'ghi.html');
 var RE_REF = /((?:src|href)=")((?:js\/[A-Za-z0-9_-]+\.js)|style\.css)\?v=[^"]*(")/g;
 
 function filesInIndex(html){
@@ -39,40 +38,18 @@ function capNhat(html){
   return { ver: ver, html: html.replace(RE_REF, function(_, a, f, c){ return a + f + '?v=' + ver + c; }) };
 }
 
-// ghi.html (app con "Ghi nhanh", biểu tượng riêng trên màn hình chính) = index.html đổi 7 chỗ: chế độ data-ghi, tên, manifest riêng, 2 icon riêng
-// (dấu cộng, nguồn brand/ghi-nhanh.svg), class body, và 2 khối nhỏ (thông báo chưa có dữ liệu, màn "Xong"). Sinh tự động nên không có bản sao thủ công nào để lệch; test kiểm ghi.html = taoGhi(index.html).
-function taoGhi(html){
-  var doi = function(h, tu, den){
-    if (h.split(tu).length !== 2) throw new Error('index.html phải có đúng 1 chỗ: ' + tu);
-    return h.replace(tu, function(){ return den; });
-  };
-  var h = html;
-  h = doi(h, '<html lang="vi">', '<html lang="vi" data-ghi>');
-  h = doi(h, '<title>Sổ Tiền</title>', '<title>Ghi nhanh</title>');
-  h = doi(h, '<link rel="manifest" href="manifest.json">', '<link rel="manifest" href="ghi.webmanifest">');
-  h = doi(h, '<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">', '<link rel="icon" type="image/png" sizes="192x192" href="icons/ghi-icon-192.png">');
-  h = doi(h, '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">', '<link rel="apple-touch-icon" href="icons/ghi-apple-touch-icon.png">');
-  h = doi(h, '<meta name="apple-mobile-web-app-title" content="Sổ Tiền">', '<meta name="apple-mobile-web-app-title" content="Ghi nhanh">');
-  h = doi(h, '<body>', '<body class="ghi">');
-  h = doi(h, '<div id="bannerZone"></div>', '<div id="bannerZone"></div>\n'
-    + '  <div id="ghiThongBao" class="ghi-tb" style="display:none"></div>\n'
-    + '  <div id="ghiXong" class="ghi-xong"><b>Xong</b><span id="ghiXongTxt"></span><small>Vuốt lên để thoát. Mở lại là bản mới, không giữ dữ liệu cũ.</small><button type="button" class="btn" data-act="qaMo">Ghi tiếp</button></div>');
-  return h;
-}
-
-module.exports = { tinhVer: tinhVer, capNhat: capNhat, filesInIndex: filesInIndex, taoGhi: taoGhi };
+module.exports = { tinhVer: tinhVer, capNhat: capNhat, filesInIndex: filesInIndex };
 
 if (require.main === module){
   var html = fs.readFileSync(INDEX, 'utf8');
   var r = capNhat(html);
-  var ghiMoi = taoGhi(r.html), ghiCu = fs.existsSync(GHI) ? fs.readFileSync(GHI, 'utf8') : '';
   if (process.argv.indexOf('--check') >= 0){
     if (r.html !== html){ console.error('index.html: số ?v= lệch với nội dung file. Chạy: node tools/bump.js'); process.exit(1); }
-    if (ghiMoi !== ghiCu){ console.error('ghi.html không khớp index.html (sinh tự động từ index.html). Chạy: node tools/bump.js'); process.exit(1); }
-    console.log('?v= khớp (' + r.ver + '), ghi.html khớp');
+    console.log('?v= khớp (' + r.ver + ')');
+  } else if (r.html !== html){
+    fs.writeFileSync(INDEX, r.html);
+    console.log('Đã đặt ?v=' + r.ver);
   } else {
-    if (r.html !== html){ fs.writeFileSync(INDEX, r.html); console.log('Đã đặt ?v=' + r.ver); }
-    else console.log('?v= đã đúng (' + r.ver + '), không đổi');
-    if (ghiMoi !== ghiCu){ fs.writeFileSync(GHI, ghiMoi); console.log('Đã sinh lại ghi.html'); }
+    console.log('?v= đã đúng (' + r.ver + '), không đổi');
   }
 }

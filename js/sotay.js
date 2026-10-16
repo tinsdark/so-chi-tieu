@@ -1322,7 +1322,6 @@ function handleSoTayAction(act, el){
     qaGhiNho();
     qaVeLai();
   } else if (act === 'qaSave'){
-    napLaiTuMay();       // bản kia (app chính / Ghi nhanh) có thể vừa ghi: cộng khoản mới lên bản mới nhất, không đè
     var kQ = (state.qa.kind === 'thu') ? 'thu' : 'chi';
     var tienQ = numNonNeg(docSo((document.getElementById('qa_amount') || {}).value));
     var noteQ = ((document.getElementById('qa_note') || {}).value || '').trim();

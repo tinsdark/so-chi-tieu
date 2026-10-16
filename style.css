@@ -1799,11 +1799,3 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .gn-tien.thu{color:var(--green)} .gn-tien.chi{color:var(--red)}
 .gn-cfg{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
 .gn-cfg summary{cursor:pointer;color:var(--muted);font-size:13px}
-
-/* Trang Ghi nhanh (ghi.html, <html data-ghi>): chỉ có bảng Ghi nhanh, mọi thứ khác ẩn. Sinh bởi tools/bump.js từ index.html. */
-body.ghi header, body.ghi .tabs, body.ghi #tabContent, body.ghi #bannerZone{display:none !important}
-.ghi-tb{margin:24px 16px;padding:16px;border-radius:14px;background:var(--card);border:1px solid var(--border);line-height:1.5}
-.ghi-xong{display:none}
-body.ghi-san:not(.qa-mo) .ghi-xong{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;margin:20vh 24px 0}
-.ghi-xong b{font-size:24px}
-.ghi-xong small{color:var(--muted)}
