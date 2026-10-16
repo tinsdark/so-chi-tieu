@@ -2620,8 +2620,8 @@ test('bieuDoCardHtml: 3 tab vẽ được với dữ liệu thật; tháng trố
   ctx.state.bdTab = 'tq';
   var tq = ctx.bieuDoCardHtml('2026-10');
   ok(tq.indexOf('id="bieuDoCard"') > 0 && tq.indexOf('Phân tích') > 0 && tq.indexOf('bd-cal') > 0, 'tab Tổng quan');
-  ok(tq.indexOf('class="bd-extra dong"') > 0 && tq.indexOf('data-act="bdMo"') > 0 && tq.indexOf('bd-cal') > tq.indexOf('id="bdExtra"') && tq.indexOf('Phân tích') < tq.indexOf('id="bdExtra"'), 'chi tiết từng ngày nằm trong phần gập, Phân tích nằm ngoài');
-  ctx.state.bdMo = true; var tqMo = ctx.bieuDoCardHtml('2026-10'); ok(tqMo.indexOf('class="bd-extra"') > 0 && tqMo.indexOf('Thu gọn') > 0, 'mở thì hiện hết và nút đổi thành Thu gọn'); ctx.state.bdMo = false;
+  ok(tq.indexOf('class="bd-extra dong"') > 0 && tq.indexOf('data-act="bdMo"') > 0 && tq.indexOf('bd-cal') > tq.indexOf('id="bdExtra_tq"') && tq.indexOf('Phân tích') < tq.indexOf('id="bdExtra_tq"'), 'chi tiết từng ngày nằm trong phần gập, Phân tích nằm ngoài');
+  ctx.state.bdMo = { tq: true }; var tqMo = ctx.bieuDoCardHtml('2026-10'); ok(tqMo.indexOf('class="bd-extra"') > 0 && tqMo.indexOf('Thu gọn') > 0, 'mở thì hiện hết và nút đổi thành Thu gọn'); ctx.state.bdMo = {};
   // tháng 9 chỉ có giao dịch ngày 10 -> cùng kỳ 1–6/9 trống: không so (trước đây so với cả tháng 9 ra "giảm" sai)
   ok(tq.indexOf('so với tháng 9') < 0 && tq.indexOf('chi nhiều nhất') > 0, 'cùng kỳ trống thì không so với cả tháng trước');
   ctx.state.bdTab = 'dm'; ctx.state.bdMode = 'vong';
@@ -2692,7 +2692,7 @@ test('Báo cáo: Mục tiêu tiết kiệm — trạng thái Hạn / Quá hạn 
 test('Báo cáo: Tài sản ròng — chip chênh lệch đúng số tháng, hạ xuống dưới Hạn mức và trên Mục tiêu', function(){
   setToday('2026-10-18'); loadData(dataBaoCao());
   var h = ctx.taiSanRongCardHtml('2026-10');
-  ok(h.indexOf('id="cardTaiSanRong"') > 0 && h.indexOf('tsr-tbl') > 0 && h.indexOf('Tiền các ví') > 0, 'số lớn + bảng thành phần');
+  ok(h.indexOf('id="cardTaiSanRong"') > 0 && h.indexOf('tsr-tbl') > 0 && h.indexOf('Số dư các ví') > 0, 'số lớn + bảng thành phần');
   ok(/so với 9 tháng trước/.test(h), 'dữ liệu bắt đầu 01/2026 nên so với 9 tháng trước, không nói 12');
   var root = { innerHTML: '' }; ctx.state.soTayMonth = '2026-10';
   voiDom({ tabContent: root }, null, function(){ ctx.renderBaoCao(); });
@@ -2769,7 +2769,8 @@ test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ
   ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, 2);
   ctx.handleBieuDoAction('bdPick', el({ 'data-i': '2' })); eq(ctx.state.bdCat, null, 'bấm lại bỏ chọn');
   ctx.handleBieuDoAction('bdDay', el({ 'data-date': '2026-10-03' })); eq(ctx.state.bdDay, '2026-10-03');
-  ctx.state.bdMo = false; ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo, true, 'bấm thì mở'); ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo, false, 'bấm lại thì gập');
+  ctx.state.bdMo = {}; ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo.tq, true, 'không có data-k thì là khóa tq, bấm thì mở'); ctx.handleBieuDoAction('bdMo', el({})); eq(ctx.state.bdMo.tq, false, 'bấm lại thì gập');
+  ctx.handleBieuDoAction('bdMo', el({ 'data-k': 'th' })); eq(ctx.state.bdMo.th, true, 'mỗi khóa độc lập'); eq(!!ctx.state.bdMo.xh, false); ctx.state.bdMo = {};
   eq(ctx.handleBieuDoAction('khac', el({})), false);
   eq(JSON.stringify(ctx.state.data), kt, 'không đụng dữ liệu');
   ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; ctx.state.bdDay = null;
@@ -4212,6 +4213,10 @@ test('Báo cáo: thẻ đầu, KPI, phân tích, danh mục, xu hướng đều 
   ok(dm.indexOf('Nhận tiền vay') < 0 && dm.indexOf('Lương') > 0, 'thu theo danh mục không có Nhận tiền vay');
   var x = ctx.bdXuHuongHtml('2026-10');
   ok(x.indexOf(ctx.fmt(1000000).replace(' ₫', '')) >= 0 || x.length > 0, 'xu hướng vẽ được');
+  // Danh mục: Chi theo danh mục luôn hiện, Thu theo danh mục nằm trong phần gập
+  ctx.state.bdMo = {};
+  ok(dm.indexOf('class="bd-extra dong" id="bdExtra_th"') > 0 && dm.indexOf('Thu theo danh mục') > dm.indexOf('id="bdExtra_th"') && dm.indexOf('Chi theo danh mục') < dm.indexOf('id="bdExtra_th"') && dm.indexOf('Xem thu theo danh mục') > 0, 'Danh mục: Thu gập sau nút');
+  ok(x.indexOf('id="bdExtra_xh"') > 0 && x.indexOf('Thu / Chi theo tháng') < x.indexOf('id="bdExtra_xh"') && x.indexOf('Số dư cuối tháng') > x.indexOf('id="bdExtra_xh"') && x.indexOf('Xem số dư cuối tháng và chi theo thứ') > 0, 'Xu hướng: biểu đồ Thu / Chi nằm ngoài, Số dư cuối tháng nằm trong phần gập');
   var u = ctx.bdUocTinhChiThang('2026-10', 11);
   eq(u.daChi, 1200000, 'ước tính chi: đã chi thường xuyên'); eq(u.bietTruoc, 0, 'không cộng trả nợ biết trước');
   ctx.state.bdTab = 'tq'; ctx.state.bdMode = 'vong'; setToday('2026-10-01');
@@ -4278,7 +4283,7 @@ test('Báo cáo / Tổng kết / Dòng tiền / Theo ngày: phép tính trong gi
   setToday('2026-10-11');
   var dau = ctx.baoCaoDauHtml('2026-10'); ok(dau.indexOf('Đã chi tháng này') > 0 && dau.indexOf('= 1.200.000') > 0 && dau.indexOf('Cách tính các số này') > 0, 'Báo cáo thẻ đầu');
   eq(kiemPhepCong(dau).loi.join(' | '), '');
-  var ts = ctx.taiSanRongCardHtml('2026-10'); ok(/= −?[\d.]+/.test(ts) && ts.indexOf('Tiền các ví') > 0, 'Tài sản ròng'); eq(kiemPhepCong(ts).loi.join(' | '), '');
+  var ts = ctx.taiSanRongCardHtml('2026-10'); ok(/= −?[\d.]+/.test(ts) && ts.indexOf('Số dư các ví') > 0, 'Tài sản ròng'); eq(kiemPhepCong(ts).loi.join(' | '), '');
   tndData(5000000);
   var ng = ctx.tnHomNayGiaiThichHtml(ctx.tnNgayThang('2026-10-11'), ctx.tieuMoiNgay('2026-10-11'));
   ok(ng.indexOf('(3.100.000 − 550.000) ÷ 21 = 121.429/ngày') > 0 || ng.indexOf('÷ 21 =') > 0, 'Hôm nay còn tiêu được'); ok(ng.indexOf('Chuỗi trong mức') > 0 && ng.indexOf('So với nhịp đều') > 0);

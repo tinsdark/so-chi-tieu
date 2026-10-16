@@ -85,7 +85,7 @@ function tkGiaiThichHtml(r){
     ds.push({ ten: 'Trả nợ (tính riêng)', ct: 'Tổng các lần trả nợ trong tháng (gồm tất toán). Nợ gốc còn lại tính từ lịch vay tới cuối tháng.',
       pt: 'trả ' + soGt(r.traNo) + (r.vayNo.vay > 0.5 ? ' · vay thêm ' + soGt(r.vayNo.vay) : '') + ' · nợ gốc cuối tháng ' + soGt(r.no) + (r.noTruoc != null ? ' (đầu tháng ' + soGt(r.noTruoc) + ')' : '') });
   }
-  if (r.rong != null) ds.push({ ten: 'Tài sản ròng thực tế cuối tháng', ct: 'Tiền các ví + cho vay chưa thu − nợ gốc còn lại, theo số đã ghi.',
+  if (r.rong != null) ds.push({ ten: 'Tài sản ròng thực tế cuối tháng', ct: 'Số dư các ví + cho vay chưa thu − nợ gốc còn lại, theo số đã ghi.',
     pt: soGt(r.rong) + (r.rongTruoc != null ? ' (tháng trước ' + soGt(r.rongTruoc) + ' → ' + (r.rong - r.rongTruoc >= 0 ? '+' : '−') + soGt(Math.abs(r.rong - r.rongTruoc)) + ')' : '') });
   if (r.tang) ds.push({ ten: 'Tăng mạnh nhất', ct: 'Danh mục chi hằng ngày có mức tăng lớn nhất so với tháng trước.', pt: soGt(r.tang.v) + ' − ' + soGt(r.tang.v - r.tang.d) + ' = +' + soGt(r.tang.d) });
   return giaiThichSo(ds, 'Cách tính các số này');

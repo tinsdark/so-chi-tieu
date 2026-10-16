@@ -504,13 +504,14 @@ function bdTongQuanHtml(mk){
   }
   return hTruoc + bdMoHtml(h);
 }
-// phần chi tiết từng ngày của tab Tổng quan (số dư cuối ngày, lịch chi tiêu, top ngày): gập mặc định cho đỡ dài; state.bdMo không lưu
-function bdMoHtml(inner){
+// phần phụ của thẻ biểu đồ gập mặc định cho đỡ dài; state.bdMo = { khóa: true / false } không lưu. Khóa: tq (chi tiết từng ngày ở Tổng quan), th (Thu theo danh mục), xh (số dư cuối tháng + chi theo thứ ở Xu hướng)
+function bdMoHtml(inner, k, nhan){
   if (!inner) return '';
-  var mo = !!state.bdMo;
-  return '<div class="bd-extra' + (mo ? '' : ' dong') + '" id="bdExtra">' + inner + '</div>'
-    + '<button type="button" class="btn secondary bd-more" data-act="bdMo" aria-expanded="' + mo + '" aria-controls="bdExtra">'
-    + (mo ? 'Thu gọn' : 'Xem số dư từng ngày, lịch chi tiêu, top ngày') + '</button>';
+  k = k || 'tq'; nhan = nhan || 'Xem số dư từng ngày, lịch chi tiêu, top ngày';
+  var mo = !!(state.bdMo || {})[k], id = 'bdExtra_' + k;
+  return '<div class="bd-extra' + (mo ? '' : ' dong') + '" id="' + id + '">' + inner + '</div>'
+    + '<button type="button" class="btn secondary bd-more" data-act="bdMo" data-k="' + k + '" aria-expanded="' + mo + '" aria-controls="' + id + '">'
+    + (mo ? 'Thu gọn' : nhan) + '</button>';
 }
 
 function bdDanhMucHtml(mk){
@@ -534,9 +535,9 @@ function bdDanhMucHtml(mk){
     h += bdHBars(cats, tong, { phanTram: true, soSanh: prev.coDl, nhanTruoc: prev.nhan });
   }
   var thu = bdXepCat('thu', cur.theoCatThuThat, null, 6);
-  h += '<div class="bd-h" style="margin-top:22px">Thu theo danh mục'+(cur.tongThuThat > 0 ? '<b class="bd-tot">'+bdTien(cur.tongThuThat)+'</b>' : '')+'</div>';
-  h += thu.length ? bdHBars(thu, cur.tongThuThat, { phanTram: true, nhanTong: 'tổng thu', mauChung: 'var(--bd-thu)' }) : '<div class="empty">Chưa có khoản thu nào trong tháng này.</div>';
-  return h;
+  var hThu = '<div class="bd-h" style="margin-top:22px">Thu theo danh mục'+(cur.tongThuThat > 0 ? '<b class="bd-tot">'+bdTien(cur.tongThuThat)+'</b>' : '')+'</div>';
+  hThu += thu.length ? bdHBars(thu, cur.tongThuThat, { phanTram: true, nhanTong: 'tổng thu', mauChung: 'var(--bd-thu)' }) : '<div class="empty">Chưa có khoản thu nào trong tháng này.</div>';
+  return h + bdMoHtml(hThu, 'th', 'Xem thu theo danh mục');
 }
 
 function bdXuHuongHtml(mk){
@@ -578,6 +579,8 @@ function bdXuHuongHtml(mk){
       tl != null ? { ten: 'Tỉ lệ tiết kiệm', ct: 'Tổng tiết kiệm ÷ tổng thu nhập của các tháng đó.', pt: soGt(tongTK) + ' ÷ ' + soGt(tongThuNam) + ' = ' + tl + '%' } : null
     ], 'Cách tính các số này');
   }
+  // phần phụ (số dư cuối tháng, chi hằng ngày theo thứ) gập sau nút; phần trên luôn hiện
+  var hChinh = h; h = '';
   // số dư cuối tháng, tối đa 10 tháng gần nhất tính tới tháng đang xem
   var ml = [], mv = [], mm2 = mk;
   var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7);
@@ -592,7 +595,7 @@ function bdXuHuongHtml(mk){
       + bdLine({ W: 350, H: 170, labels: ml, series: [{ ten: 'Số dư', vals: mv, cls: 'blue', fill: true }], dots: true,
         tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Số dư cuối tháng' }) + '</div>';
   }
-  return h;
+  return hChinh + bdMoHtml(h + bdTheoThuHtml(mk), 'xh', 'Xem số dư cuối tháng và chi theo thứ');
 }
 /* ---------- chi hằng ngày theo thứ trong tuần ----------
    Gộp tháng đang xem + 2 tháng trước. Mỗi thứ: tổng chi hằng ngày (bdThang.chiHN, không gồm khoản cố định / vay nợ)
@@ -636,7 +639,7 @@ function bieuDoInnerHtml(mk){
     + [['tq', 'Tổng quan'], ['dm', 'Danh mục'], ['xh', 'Xu hướng']].map(function(t){
         return '<button type="button" role="tab" data-act="bdTab" data-tab="'+t[0]+'" class="'+(tab === t[0] ? 'on' : '')+'" aria-selected="'+(tab === t[0])+'">'+t[1]+'</button>';
       }).join('') + '</div>';
-  h += tab === 'dm' ? bdDanhMucHtml(mk) : (tab === 'xh' ? bdXuHuongHtml(mk) + bdTheoThuHtml(mk) : bdTongQuanHtml(mk));
+  h += tab === 'dm' ? bdDanhMucHtml(mk) : (tab === 'xh' ? bdXuHuongHtml(mk) : bdTongQuanHtml(mk));
   return h;
 }
 function bieuDoCardHtml(mk){
@@ -658,7 +661,7 @@ function handleBieuDoAction(act, el){
   }
   if (act === 'hmXem'){ state.hmMoHet = !state.hmMoHet; renderBaoCao(); return true; }
   if (act === 'bdDay'){ state.bdDay = el.getAttribute('data-date'); veLaiBieuDo(); return true; }
-  if (act === 'bdMo'){ state.bdMo = !state.bdMo; veLaiBieuDo(); return true; }
+  if (act === 'bdMo'){ var k = el.getAttribute('data-k') || 'tq'; state.bdMo = state.bdMo || {}; state.bdMo[k] = !state.bdMo[k]; veLaiBieuDo(); return true; }
   return false;
 }
 
@@ -750,7 +753,7 @@ function taiSanRongCardHtml(mk){
     var dl = cur.rong - taiSanRongThang(mkXa, th).rong;
     if (Math.abs(dl) >= 1) h += '<div class="tsr-chip '+(dl > 0 ? 'up' : 'dn')+'">'+(dl > 0 ? '↑' : '↓')+' '+bdTien(Math.abs(dl))+' so với '+xa+' tháng trước</div>';
   }
-  h += '<div class="tsr-tbl"><div><span>Tiền các ví</span><b>'+bdTien(cur.tien)+'</b></div>'
+  h += '<div class="tsr-tbl"><div><span>Số dư các ví</span><b>'+bdTien(cur.tien)+'</b></div>'
     + (cur.phaiThu > 0 ? '<div><span>+ Cho vay chưa thu</span><b class="thu">'+bdTien(cur.phaiThu)+'</b></div>' : '')
     + (cur.no > 0 ? '<div><span>− Nợ gốc còn lại</span><b class="chi">'+bdTien(cur.no)+'</b></div>' : '') + '</div>';
   var ml = [], mv = [], m = mk;
@@ -767,7 +770,7 @@ function taiSanRongCardHtml(mk){
   h += giaiThichSo([
     { ten: 'Tài sản ròng thực tế', ct: 'Tiền trong các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả (không tính lãi tương lai). Khoản đã tất toán không còn tính từ ngày tất toán. Chỉ tính những gì đã ghi ở Sổ tay và Vay - Nợ; số dự kiến cho các tháng tới nằm ở tab Dòng tiền (Theo tháng, Mô phỏng).',
       pt: ptCong([cur.tien, cur.phaiThu, -cur.no], cur.rong) },
-    { ten: 'Tiền các ví', ct: 'Số dư đầu kỳ + tổng thu − tổng chi (gồm cả tiền vay và trả nợ vì tiền thật có ra vào ví) tới cuối tháng.', pt: soGt(cur.tien) }
+    { ten: 'Số dư các ví', ct: 'Số dư đầu kỳ + tổng thu − tổng chi (gồm cả tiền vay và trả nợ vì tiền thật có ra vào ví) tới cuối tháng.', pt: soGt(cur.tien) }
   ], 'Tính thế nào?');
   return h + '</div>';
 }
