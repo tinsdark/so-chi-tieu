@@ -1325,6 +1325,94 @@ test('signOut: xóa cả bản đồng bộ lẫn nháp trên máy (còn nháp t
 });
 
 /* ==================================================================== */
+group('7f. Ghi nhanh bằng Phím tắt iPhone: nhập nhiều file, mã riêng từng khoản, tick bỏ khoản không ghi');
+
+// mỗi lần bấm phím tắt tạo 1 file CSV tên ghi-nhanh-<giờ>.csv (cùng dòng tiêu đề)
+var GN_DAU = 'Ngày,Loại,Số tiền,Danh mục,Ghi chú';
+function gnFile(gio, dong){ return { ten: 'ghi-nhanh-2026-10-16-' + gio + '.csv', rows: ctx.nhapParseCsv(GN_DAU + '\n' + dong) }; }
+function gnImp(ds){ var k = ctx.nhapTaoImp(ds); ok(!k.loi, 'dựng imp: ' + k.loi); return k.imp; }
+function gnData(){ var d = baseData(); d.settings.ngayBatDau = '2026-10-01'; d.wallets = [{ id: 'w1', ten: 'Tiền mặt', soDuDauKy: 1000000 }]; return d; }
+var GN_BA_FILE = [gnFile('09-12-33', '2026-10-16,chi,25000,Ăn,cà phê'), gnFile('09-40-02', '2026-10-16,chi,25000,Ăn,cà phê'), gnFile('12-05-10', '2026-10-16,thu,500000,Lương,')];
+
+test('nhapGopFile: file thường giữ nguyên; nhiều file / file ghi-nhanh thì gộp và thêm cột Mã; khác kiểu cột thì báo lỗi', function(){
+  var bank = { ten: 'sao-ke.csv', rows: ctx.nhapParseCsv('Ngày,Số tiền,Nội dung\n2026-10-01,-50000,Cơm') };
+  var g = ctx.nhapGopFile([bank]);
+  eq(g.maCot, -1, 'một file thường không thêm mã'); eq(g.rows, bank.rows, 'giữ nguyên rows');
+  g = ctx.nhapGopFile([GN_BA_FILE[0]]);
+  eq(g.maCot, 5, 'một file tên ghi-nhanh cũng thêm mã (cột thứ 6)'); eq(g.rows[0][5], 'Mã', 'tiêu đề cột mã');
+  g = ctx.nhapGopFile(GN_BA_FILE);
+  eq(g.loi, '', 'cùng kiểu thì gộp được'); eq(g.rows.length, 4, '1 dòng tiêu đề + 3 khoản'); eq(g.maCot, 5, 'cột mã');
+  var ma = g.rows.slice(1).map(function(r){ return r[5]; });
+  eq(new Set(ma).size, 3, 'ba mã khác nhau dù hai khoản giống hệt nhau'); eq(ma[0], 'ghi-nhanh-2026-10-16-09-12-33.csv#1', 'mã = tên file + số dòng');
+  g = ctx.nhapGopFile([GN_BA_FILE[0], bank]);
+  ok(g.loi.indexOf('cùng kiểu cột') >= 0, 'khác dòng tiêu đề: báo lỗi chứ không trộn: ' + g.loi);
+  g = ctx.nhapGopFile([{ ten: 'ghi-nhanh-a.csv', rows: ctx.nhapParseCsv('2026-10-16,chi,10000,Ăn,') }, { ten: 'ghi-nhanh-b.csv', rows: ctx.nhapParseCsv('2026-10-16,chi,20000,Ăn,') }]);
+  eq(g.rows.length, 2, 'file không có dòng tiêu đề vẫn gộp được'); eq(g.rows[0].length, 6, 'thêm cột mã');
+});
+
+test('ghi nhanh: dòng tiêu đề Ngày / Loại / Số tiền / Danh mục / Ghi chú được nhận đúng cột, danh mục khớp theo tên', function(){
+  loadData(gnData());
+  var imp = gnImp(GN_BA_FILE);
+  eq(imp.coHeader, true, 'có tiêu đề');
+  var m = imp.map; eq([m.ngay, m.loai, m.tien, m.cat, m.note].join(','), '0,1,2,3,4', 'đoán đúng cột');
+  var kq = ctx.nhapPhanTich(imp);
+  eq(kq.nOk, 3, 'cả 3 khoản hợp lệ'); eq(kq.nLoi, 0, 'không lỗi'); eq(kq.nTrung, 0, 'không trùng');
+  eq(kq.tongChi, 50000, 'hai khoản chi 25.000'); eq(kq.tongThu, 500000, 'một khoản thu');
+  eq(kq.dong[0].catId, 'an', 'Ăn khớp danh mục có sẵn'); eq(kq.dong[2].catId, 'luong', 'Lương khớp danh mục thu');
+});
+
+test('ghi nhanh: hai khoản GIỐNG HỆT trong ngày vẫn là hai khoản; nhập lại file cũ không nhân đôi; xóa khoản rồi không sống lại; hoàn tác thì nhập lại được', function(){
+  loadData(gnData());
+  var kq = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  var imp = gnImp(GN_BA_FILE), r = ctx.nhapThucHien(imp, kq);
+  eq(r.da.length, 3, 'ghi đủ 3 khoản (không mất ly cà phê thứ hai)');
+  eq(ctx.state.data.journal['2026-10-16'].items.filter(function(it){ return it.catId === 'an'; }).length, 2, 'hai khoản Ăn');
+  eq(ctx.state.data.settings.maDaNhap.length, 3, 'nhớ 3 mã đã nhập');
+  var lai = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  eq(lai.nTrung, 3, 'nhập lại cùng các file: cả 3 là đã nhập'); eq(lai.nOk, 0, 'không nhân đôi');
+  // xóa 1 khoản vừa nhập ở Sổ tay, file vẫn còn trong Tệp: không sống lại
+  var it0 = ctx.state.data.journal['2026-10-16'].items.filter(function(it){ return it.catId === 'an'; })[0];
+  ctx.entryDeleteItem('2026-10-16', it0.iid);
+  eq(ctx.nhapPhanTich(gnImp(GN_BA_FILE)).nOk, 0, 'xóa khoản rồi nhập lại file: không sống lại');
+  // hoàn tác: mã được trả, nhập lại được
+  loadData(gnData());
+  var imp2 = gnImp(GN_BA_FILE), kq2 = ctx.nhapPhanTich(imp2), r2 = ctx.nhapThucHien(imp2, kq2);
+  ctx.nhapHoanTac(r2);
+  eq(ctx.state.data.settings.maDaNhap.length, 0, 'hoàn tác trả lại mã'); eq(ctx.nhapPhanTich(gnImp(GN_BA_FILE)).nOk, 3, 'nhập lại được');
+});
+
+test('ghi nhanh: bỏ tick thì khoản đó không ghi, không tính vào tổng, lần sau vẫn còn trong danh sách', function(){
+  loadData(gnData());
+  var imp = gnImp(GN_BA_FILE);
+  var stt = ctx.nhapPhanTich(imp).dong.map(function(x){ return x.stt; });
+  imp.bo = {}; imp.bo[stt[0]] = true;                // bỏ tick khoản đầu tiên
+  var kq = ctx.nhapPhanTich(imp);
+  eq(kq.nBo, 1, 'một dòng bỏ tick'); eq(kq.nOk, 2, 'còn 2 dòng sẽ ghi'); eq(kq.tongChi, 25000, 'tổng không tính dòng bỏ tick');
+  var r = ctx.nhapThucHien(imp, kq);
+  eq(r.da.length, 2, 'chỉ ghi 2 khoản'); eq(ctx.state.data.settings.maDaNhap.length, 2, 'chỉ nhớ mã 2 khoản đã ghi');
+  var lai = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  eq(lai.nOk, 1, 'khoản bỏ tick vẫn còn trong danh sách lần sau'); eq(lai.nTrung, 2, 'hai khoản đã ghi thì là đã nhập');
+});
+
+test('nhập file ngân hàng thường vẫn như cũ: không có mã, trùng so theo ngày + loại + số tiền + nội dung', function(){
+  loadData(gnData());
+  var f = { ten: 'sao-ke.csv', rows: ctx.nhapParseCsv('Ngày,Số tiền,Nội dung\n2026-10-01,-50000,Cơm\n2026-10-01,-50000,Cơm') };
+  var imp = gnImp([f]); imp.catMD.chi = 'chi|an';
+  var kq = ctx.nhapPhanTich(imp);
+  eq(imp.maCot, -1, 'không có cột mã'); eq(kq.nOk, 2, 'trong cùng file hai dòng giống nhau đều nhập (chỉ so với dữ liệu ĐÃ CÓ)');
+  ctx.nhapThucHien(imp, kq);
+  eq(ctx.nhapPhanTich(imp).nTrung, 2, 'nhập lại file đó: trùng theo nội dung như cũ'); eq(ctx.state.data.settings.maDaNhap.length, 0, 'không ghi mã');
+});
+
+test('settings.maDaNhap: qua lưu / nạp lại vẫn còn, dữ liệu cũ không có thì thành danh sách rỗng, giữ tối đa 2000', function(){
+  loadData(gnData());
+  eq(Array.isArray(ctx.state.data.settings.maDaNhap), true, 'dữ liệu cũ: mặc định rỗng');
+  var d = gnData(); d.settings.maDaNhap = []; for (var i = 0; i < 2100; i++) d.settings.maDaNhap.push('m' + i); d.settings.maDaNhap.push(42);
+  var n = ctx.normalizeData(JSON.parse(JSON.stringify(d)));
+  eq(n.settings.maDaNhap.length, 2000, 'cắt còn 2000, bỏ phần tử không phải chuỗi'); eq(n.settings.maDaNhap[1999], 'm2099', 'giữ các mã mới nhất');
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){

@@ -94,7 +94,7 @@ function canhBaoNhap(kq, viId){
     var t = lhTrangThai(h);
     if (t.trang === 'pha') return;
     var moi = kq.dong.filter(function(x){
-      return !x.loi && !x.trung && x.kind === 'chi' && x.ngay >= h.tuNgay && x.ngay <= h.denNgay && lhKhop(h, x.catId || '', x.note || x.catTen || '');
+      return !x.loi && !x.trung && !x.bo && x.kind === 'chi' && x.ngay >= h.tuNgay && x.ngay <= h.denNgay && lhKhop(h, x.catId || '', x.note || x.catTen || '');
     });
     if (!moi.length) return;
     var tong = 0; moi.forEach(function(x){ tong += x.soTien; });

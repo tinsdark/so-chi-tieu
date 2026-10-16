@@ -706,6 +706,7 @@ function normalizeData(d){
   d.dinhKy = Array.isArray(d.dinhKy) ? d.dinhKy : [];
   // quy tắc tự phân loại (từ khóa trong ghi chú -> danh mục) và cách ghép cột đã lưu cho từng kiểu file sao kê (nhap.js)
   d.settings.mauNhap = (d.settings.mauNhap && typeof d.settings.mauNhap === 'object') ? d.settings.mauNhap : {};
+  d.settings.maDaNhap = Array.isArray(d.settings.maDaNhap) ? d.settings.maDaNhap.filter(function(x){ return typeof x === 'string'; }).slice(-2000) : [];   // mã các khoản ghi nhanh đã nhập (nhập lại file cũ không nhân đôi, xóa khoản rồi cũng không sống lại)
   ['thu', 'chi'].forEach(function(k){
     d.categories[k].forEach(function(c){ if (c.mau && !/^#[0-9a-f]{6}$/i.test(c.mau)) c.mau = ''; });
   });
