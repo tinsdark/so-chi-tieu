@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
+['state.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -2041,6 +2041,30 @@ test('Không có hai file js định nghĩa cùng một tên hàm (36 file chung
     while ((m = re.exec(src))){ if (seen[m[1]] && seen[m[1]] !== f) trung.push(m[1] + ' (' + seen[m[1]] + ' và ' + f + ')'); else seen[m[1]] = f; }
   });
   eq(trung.join(', '), '', 'hàm trùng tên giữa các file');
+});
+
+test('Nhật ký cập nhật (phienban.js): đúng định dạng, mới nhất ở đầu, viết cho người dùng; thẻ Phiên bản và cập nhật hiện đúng trạng thái', function(){
+  ok(ctx.NHAT_KY.length >= 3, 'có nhật ký');
+  var truoc = '9999-99-99', ban = {};
+  ctx.NHAT_KY.forEach(function(m){
+    ok(/^\d{4}\.\d{2}\.\d{2}(\.\d+)?$/.test(m.ban), 'số phiên bản ' + m.ban);
+    ok(/^\d{4}-\d{2}-\d{2}$/.test(m.ngay) && !isNaN(Date.parse(m.ngay)), 'ngày ' + m.ngay);
+    ok(m.ban.indexOf(m.ngay.replace(/-/g, '.')) === 0, 'số phiên bản ' + m.ban + ' phải bắt đầu bằng ngày ' + m.ngay);
+    ok(m.ngay <= truoc, 'mới nhất ở đầu: ' + m.ngay + ' sau ' + truoc); truoc = m.ngay;
+    ok(!ban[m.ban], 'trùng số phiên bản ' + m.ban); ban[m.ban] = 1;
+    ok(m.ten && m.muc.length >= 1, 'có tiêu đề và ít nhất một mục');
+    m.muc.forEach(function(x){ ok(x.length > 15 && !/\.js\b|function |=>/.test(x), 'mục viết cho người dùng, không nhắc tên file / hàm: ' + x); });
+  });
+  eq(ctx.PHIEN_BAN, ctx.NHAT_KY[0].ban, 'PHIEN_BAN là mục đầu');
+  ctx.state.coBanMoi = false;
+  var h = ctx.phienBanCardHtml();
+  ok(h.indexOf('Phiên bản và cập nhật') > 0 && h.indexOf(ctx.PHIEN_BAN) > 0 && h.indexOf('data-act="kiemTraMoi"') > 0 && h.indexOf('capNhatApp') < 0, 'chưa có bản mới: nút Kiểm tra');
+  ok(h.indexOf(ctx.NHAT_KY[0].ten) > 0 && h.indexOf('Xem các bản trước (' + (ctx.NHAT_KY.length - 1) + ')') > 0 && h.indexOf(ctx.NHAT_KY[1].ten) > 0, 'bản mới nhất mở sẵn, các bản trước gập lại');
+  ctx.state.coBanMoi = true;
+  var h2 = ctx.phienBanCardHtml();
+  ok(h2.indexOf('data-act="capNhatApp"') > 0 && h2.indexOf('kiemTraMoi') < 0 && h2.indexOf('Có bản mới') > 0, 'có bản mới: nút Cập nhật ngay');
+  ctx.state.coBanMoi = false;
+  ok(/tab === 'ungdung'\) return[^\n]*phienBanCardHtml\(\)/.test(fs.readFileSync(path.join(JS_DIR, 'danhmuc.js'), 'utf8')), 'thẻ nằm trong Cài đặt → Ứng dụng (phần Ứng dụng cần drive-sync.js nên không dựng cả trang trong test)');
 });
 
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
@@ -6466,6 +6490,19 @@ test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay m
     kbKiemVay(nhan);
     kbKiemTra(nhan, kbNgay(2026, 8 + Math.floor(r() * 5), 1 + Math.floor(r() * 28)));
   }
+});
+
+test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){
+  var fs = require('fs'), root = require('path').join(__dirname, '..');
+  var html = fs.readFileSync(root + '/index.html', 'utf8');
+  var m = html.match(/<script[^>]*cdn\.sheetjs\.com[^>]*>/);
+  ok(m, 'có thẻ SheetJS');
+  ok(/integrity="sha384-[A-Za-z0-9+\/]{64}"/.test(m[0]), 'integrity sha384 64 ký tự');
+  ok(/crossorigin="anonymous"/.test(m[0]), 'crossorigin');
+  var sw = fs.readFileSync(root + '/sw.js', 'utf8');
+  ok(/'opaque' && req\.mode === 'cors'/.test(sw), 'sw bỏ opaque cũ');
+  ok(!/VERSION = 'v4'/.test(sw), 'đã tăng VERSION sw');
+  ok(/typeof XLSX === 'undefined'/.test(fs.readFileSync(root + '/js/nhap.js', 'utf8')), 'guard XLSX ở nhập file');
 });
 
 console.log('\n' + '='.repeat(60));

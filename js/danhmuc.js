@@ -423,6 +423,23 @@ function thuatNguCardHtml(){
     + '<div class="dm-sub">Mỗi khái niệm một tên, ở mọi tab.</div>'
     + ghiChuGon(dl, 'Xem bảng thuật ngữ') + '</div>';
 }
+/* ---- Phiên bản và cập nhật: số phiên bản (phienban.js), mã bản đang chạy, kiểm tra bản mới bằng tay, nhật ký thay đổi ---- */
+function ngayVNDai(iso){ return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4); }
+function nhatKyMucHtml(m){
+  return '<div class="pb-m"><b>' + esc(m.ten) + '</b><small>' + esc(m.ban) + ' · ' + ngayVNDai(m.ngay) + '</small><ul>'
+    + m.muc.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+}
+function phienBanCardHtml(){
+  var ma = (typeof APP_VER !== 'undefined' && APP_VER) ? APP_VER : null;
+  var moi = !!state.coBanMoi;
+  var h = '<div class="card dm-card">' + dmHead('Phiên bản và cập nhật')
+    + '<div class="pb-ban"><b>' + esc(PHIEN_BAN) + '</b><span>bản đang dùng' + (ma ? ' · mã ' + esc(ma) : '') + '</span></div>'
+    + '<div class="dm-sub">' + (moi ? icon('refresh') + ' Có bản mới. Cập nhật để dùng bản mới nhất.' : 'Chưa thấy bản mới. App tự kiểm tra mỗi khi mở lại và mỗi 10 phút.') + '</div>'
+    + '<div class="dm-btns">' + (moi ? '<button class="btn sm" data-act="capNhatApp">Cập nhật ngay</button>' : '<button class="btn secondary sm" data-act="kiemTraMoi">Kiểm tra bản mới</button>') + '</div>'
+    + nhatKyMucHtml(NHAT_KY[0])
+    + (NHAT_KY.length > 1 ? ghiChuGon(NHAT_KY.slice(1).map(nhatKyMucHtml).join(''), 'Xem các bản trước (' + (NHAT_KY.length - 1) + ')') : '');
+  return h + '</div>';
+}
 function backupCardHtml(){
   var ds = state.backupDs, mo = !!(ds && state.backupMo);
   var cuoi = null;
@@ -468,7 +485,7 @@ function dmPhanHtml(tab){
   if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
-  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + '</div>';
+  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + phienBanCardHtml() + '</div>';
   return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
     + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
 }
@@ -719,6 +736,8 @@ function handleDanhMucAction(act, el){
     state.backupMo = (act === 'bkMo'); renderDanhMuc();
   } else if (act === 'bkTai'){
     xuatDuLieuGiao();
+  } else if (act === 'kiemTraMoi'){
+    kiemTraBanMoiTay();
   } else if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
     // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
     if (state.backupBusy) return true;

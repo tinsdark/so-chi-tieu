@@ -10,7 +10,7 @@
    - mọi thứ khác (đăng nhập Google, Drive API): KHÔNG can thiệp.
    Đổi file này (ví dụ tăng VERSION) thì trình duyệt tự cài bản mới, xóa cache cũ.
    ==================================================================== */
-var VERSION = 'v4';
+var VERSION = 'v5';
 var CACHE = 'sochitieu-' + VERSION;
 var CDN_HOSTS = ['cdn.sheetjs.com'];
 var MANG_CHO_MS = 6000;
@@ -41,7 +41,8 @@ function mangTruoc(req){
     // dùng cache khi không có mạng. Điều hướng (mở trang) mà không có bản đúng URL thì lấy trang gốc của app
     function dungCache(){
       return caches.match(req).then(function(c){
-        if (c) return c;
+        /* bản lưu cũ dạng 'opaque' (tải không CORS) không dùng được cho script có integrity → bỏ qua, tải lại */
+        if (c && !(c.type === 'opaque' && req.mode === 'cors')) return c;
         if (req.mode === 'navigate') return caches.match(new URL('./', self.registration.scope).href);
         return null;
       });

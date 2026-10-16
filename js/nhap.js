@@ -360,6 +360,7 @@ function nhapDocFile(file){
     fr.onload = function(){
       try{
         if (laText) return resolve(nhapParseCsv(fr.result));
+        if (typeof XLSX === 'undefined') return reject(new Error('Chưa tải được thư viện Excel (cần mạng lần đầu). Thử lại khi có mạng.'));
         var wb = XLSX.read(fr.result, { type: 'array' });
         var ws = wb.Sheets[wb.SheetNames[0]];
         var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
