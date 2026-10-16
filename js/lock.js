@@ -20,7 +20,17 @@ var KHOA_KEY = 'chitieu_khoa_v1';
 var KHOA_VONG = 150000;
 var _khoaDangMo = false;      // màn khóa đang hiện -> app.js chặn phím tắt
 var _khoaAnLuc = null;        // lúc app bị ẩn (rời app)
-var _khoaSai = 0, _khoaChoDen = 0;
+// Sai 5 lần liên tiếp thì phải chờ; mỗi lần bị khóa chờ lâu hơn (30 giây, 1, 2, 5, 15 phút) và LƯU trên máy nên tải lại trang không xóa được.
+// Gõ đúng thì xóa hết. Chỉ là khóa màn hình (xem README mục 6), không phải mã hóa.
+var KHOA_CHO_KEY = 'chitieu_khoa_cho_v1';
+function khoaChoGiay(lan){ var b = [30, 60, 120, 300, 900]; return b[Math.min(Math.max(Math.round(lan) || 1, 1), b.length) - 1]; }
+function khoaChoChu(giay){ return giay < 60 ? giay + ' giây' : Math.round(giay / 60) + ' phút'; }
+function khoaDocCho(){
+  try{ var o = JSON.parse(localStorage.getItem(KHOA_CHO_KEY) || 'null'); return (o && typeof o === 'object') ? { lan: Math.max(0, +o.lan || 0), den: +o.den || 0 } : { lan: 0, den: 0 }; }
+  catch(e){ return { lan: 0, den: 0 }; }
+}
+function khoaGhiCho(o){ try{ localStorage.setItem(KHOA_CHO_KEY, JSON.stringify(o)); }catch(e){} }
+var _khoaSai = 0, _khoaChoDen = khoaDocCho().den;
 
 function khoaCauHinh(){
   try{
@@ -183,20 +193,25 @@ async function khoaThuPin(){
   var msg = document.getElementById('lockMsg');
   if (_khoaBan || !_khoaNhap) return;
   var conCho = Math.ceil((_khoaChoDen - Date.now()) / 1000);
-  if (conCho > 0){ if (msg) msg.textContent = 'Sai nhiều lần, thử lại sau ' + conCho + ' giây.'; _khoaNhap = ''; _khoaVeChamPin(); return; }
+  if (conCho > 0){ if (msg) msg.textContent = 'Sai nhiều lần, thử lại sau ' + khoaChoChu(conCho) + '.'; _khoaNhap = ''; _khoaVeChamPin(); return; }
   _khoaBan = true;
   var pin = _khoaNhap, dung = false;
   try{ dung = await khoaDungPin(pin); } finally { _khoaBan = false; }
   if (dung){
     var c = khoaCauHinh();
     if (c && !c.len){ c.len = pin.length; khoaGhi(c); }      // nhớ độ dài PIN để lần sau tự mở khi đủ số
+    _khoaSai = 0; _khoaChoDen = 0; khoaGhiCho({ lan: 0, den: 0 });
     khoaDong();
     return;
   }
   _khoaSai++;
   if (navigator.vibrate){ try { navigator.vibrate([30, 40, 30]); } catch (e){} }
   _khoaVeChamPin(true);
-  if (_khoaSai >= 5){ _khoaChoDen = Date.now() + 30000; _khoaSai = 0; if (msg) msg.textContent = 'Sai 5 lần, đợi 30 giây rồi thử lại.'; }
+  if (_khoaSai >= 5){
+    var lanKhoa = khoaDocCho().lan + 1, giayCho = khoaChoGiay(lanKhoa);
+    _khoaChoDen = Date.now() + giayCho * 1000; _khoaSai = 0; khoaGhiCho({ lan: lanKhoa, den: _khoaChoDen });
+    if (msg) msg.textContent = 'Sai 5 lần, đợi ' + khoaChoChu(giayCho) + ' rồi thử lại.';
+  }
   else if (msg) msg.textContent = 'Mã PIN không chính xác.';
   setTimeout(function(){ _khoaNhap = ''; _khoaVeChamPin(); }, 450);   // để chấm đỏ kịp rung rồi mới xóa
 }

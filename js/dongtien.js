@@ -2,7 +2,7 @@
 /* ====================================================================
    dongtien.js — tab "Dòng tiền" (chế độ "Thực tế & dự kiến"): thẻ cân đối của 1 tháng,
    thu / chi theo từng danh mục, dòng tiền tích lũy tương lai (6 / 12 / 24 tháng); bảng cả năm cũ nằm sau nút "Xem bảng cả năm".
-   Cần state.js, vayno.js (tongTraNoThang, tongThuHoiThang) load trước.
+   Cần state.js, vayno-tinh.js (tongTraNoThang, tongThuHoiThang) load trước.
    ==================================================================== */
 
 /* ====================================================================
@@ -139,7 +139,7 @@ function dtThangDuLieu(mk){
       }
       var r = { kind: kind, id: c.id, ten: c.ten, act: act, plan: plan, proj: proj, base: base, lich: lich, coDinh: kind === 'chi' && catChiLaCoDinh(c) };
       // VAY NỢ tách khỏi thu nhập / chi: Trả nợ có thanh riêng (d.traNo); Nhận vay, Thu hồi / Cho vay, Điều chỉnh số dư không nằm trong
-      // các thẻ Thu nhập / Chi (d.heThong) mà hiện ở dòng "Vay nợ" riêng. Cân đối (d.cb) vẫn là DÒNG TIỀN thật, gồm cả vay nợ.
+      // các thẻ Thu nhập / Chi (d.heThong) mà hiện ở dòng "Vay nợ" riêng. Tiền vào − ra (d.cb) vẫn là DÒNG TIỀN thật, gồm cả vay nợ.
       if (kind === 'chi' && c.id === 'traNo') d.traNo = r;
       else if (CAT_HE_THONG[kind][c.id]) d.heThong[kind + ':' + c.id] = r;
       else d[kind].push(r);
@@ -221,7 +221,7 @@ function dtGiaiThichHtml(d){
 }
 function dtDauHtml(d, bal, startMk, maxMk){
   var cb = Math.round(d.cb), mk = d.mk, tn = d.traNo;
-  var h = '<div class="card hero bc-hero dt-hero" id="dtDau"><div class="hero-top"><div class="hero-lbl">Cân đối '+(d.nay ? 'tháng này' : monthLabel(mk).toLowerCase())+(d.tuong ? ' (dự kiến)' : '')+'</div>'
+  var h = '<div class="card hero bc-hero dt-hero" id="dtDau"><div class="hero-top"><div class="hero-lbl">Tiền vào − ra '+(d.nay ? 'tháng này' : monthLabel(mk).toLowerCase())+(d.tuong ? ' (dự kiến)' : '')+'</div>'
     + dtThangNavHtml(mk, startMk, maxMk) + '</div>'
     + '<div class="bc-val"><span class="bc-v dt-cb '+(cb < 0 ? 'am' : 'du')+'">'+fmt(cb)+'</span>'
     + (cb !== 0 ? (cb > 0 && cb - d.vayThem < 0 ? '<span class="dt-tag vay">Dư nhờ vay</span>' : '<span class="dt-tag '+(cb < 0 ? 'am' : 'du')+'">'+(cb < 0 ? 'Thiếu' : 'Dư')+'</span>') : '') + '</div>'
@@ -250,18 +250,18 @@ function dtVayNoDongHtml(d){
   if (d.choVay > 0.5) p.push('cho vay <b class="chi">−' + fmt(Math.round(d.choVay)) + '</b>');
   return p.length ? '<div class="bd-vn"><span>Vay nợ <small>(tính riêng)</small></span><span>' + p.join(' · ') + '</span></div>' : '';
 }
-// cách tính Cân đối và số dư lũy kế, có phép tính bằng số thật (giaiThichSo ở state.js)
+// cách tính Tiền vào − ra và số dư lũy kế, có phép tính bằng số thật (giaiThichSo ở state.js)
 function dtCanDoiGiaiThichHtml(d, bal){
   var ds = [], thucChi = actualCatMonthAll('chi', d.mk), thucThu = actualCatMonthAll('thu', d.mk), chuaGhi = d.chiDK - thucChi, thuChua = d.thuDK - thucThu;
-  ds.push({ ten: 'Cân đối', ct: 'Thu − chi ' + (d.tuong ? 'gợi ý' : 'dự kiến cả tháng') + ', tính cả vay nợ và trả nợ vì đây là dòng tiền thật (khác "Dư thật" ở Sổ tay: thu nhập − chi tiêu, chưa tính vay nợ).',
+  ds.push({ ten: 'Tiền vào − ra', ct: 'Thu − chi ' + (d.tuong ? 'gợi ý' : 'dự kiến cả tháng') + ', tính cả vay nợ và trả nợ vì đây là dòng tiền thật (khác "Để dành được" ở Sổ tay: thu nhập − chi tiêu, chưa tính vay nợ).',
     pt: ptCong([d.thuDK, -d.chiDK], d.cb) });
   if (d.nay || d.qua){
     ds.push({ ten: 'Chi dự kiến', ct: 'Đã chi thật trong tháng + khoản biết trước mà chưa ghi (kỳ trả nợ chưa đóng, định kỳ chưa ghi, danh mục "Cố định theo Hạn mức" chưa chi).',
       pt: ptCong([thucChi, chuaGhi], d.chiDK) });
     ds.push({ ten: 'Thu dự kiến', ct: 'Đã thu thật trong tháng + khoản biết trước mà chưa ghi (định kỳ thu, thu hồi cho vay theo lịch).', pt: ptCong([thucThu, thuChua], d.thuDK) });
   }
-  if (d.vayThem > 0.5) ds.push({ ten: 'Không tính vay thêm', ct: 'Cân đối − tiền vay thêm trong tháng: cho biết tháng này tự cân đối được hay đang nhờ tiền vay.', pt: ptCong([d.cb, -d.vayThem], d.cb - d.vayThem) });
-  if (bal != null) ds.push({ ten: 'Số dư', ct: 'Số dư các ví đầu tháng + cân đối của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
+  if (d.vayThem > 0.5) ds.push({ ten: 'Không tính vay thêm', ct: 'Tiền vào − ra − tiền vay thêm trong tháng: cho biết tháng này tự cân đối được hay đang nhờ tiền vay.', pt: ptCong([d.cb, -d.vayThem], d.cb - d.vayThem) });
+  if (bal != null) ds.push({ ten: 'Số dư', ct: 'Số dư các ví đầu tháng + tiền vào − ra của tháng.', pt: ptCong([bal - d.cb, d.cb], bal) });
   return giaiThichSo(ds, 'Cách tính các số này');
 }
 
@@ -354,7 +354,7 @@ function dtDuKienHtml(rowsAll, selMk){
     series: [{ ten: 'Số dư', vals: rows.map(function(r){ return Math.round(r.bal); }), cls: 'chi', fill: true }],
     sel: iSel, tipTitle: function(k){ return monthLabel(rows[k].mk); }, money: function(v){ return fmt(v); }, aria: 'Số dư các tháng tới' }) + '</div>';
   var coRong = coCotTaiSanRong(rows);   // hết nợ / không cho vay thì ròng = lũy kế, bỏ cột cho đỡ thừa
-  var list = '<div class="dt-ml'+(coRong ? ' dt-ml4' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'</div>';
+  var list = '<div class="dt-ml'+(coRong ? ' dt-ml4' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Tiền vào − ra</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'</div>';
   rows.forEach(function(r){
     list += '<div class="dt-ml-r'+(r.mk === selMk ? ' sel' : '')+'" data-act="dtChonThang" data-mk="'+r.mk+'" role="button" tabindex="0">'
       + '<span class="m">'+dtNhanThang(r.mk)+(r.mk > cur ? '*' : '')+'</span>'
@@ -371,6 +371,7 @@ function dtDuKienHtml(rowsAll, selMk){
     + '<div class="vn-lbl">Số dư dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
     + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
     + chart + list
+    + (horizon > 12 ? '<div class="dt-foot"><span>Từ tháng thứ 13 trở đi chỉ là xu hướng: dự báo giữ nguyên thói quen chi tiêu hiện tại, càng xa càng kém chắc.</span></div>' : '')
     + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫'+(coRong ? ' · Tài sản ròng dự kiến = số dư + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai); khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi' : '')+'</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('
@@ -443,7 +444,7 @@ function dtBangNamHtml(){
     vm.forEach(function(mk){ html += '<td>'+fmt(groupCell(g.kind,mk))+'</td>'; });
     html += '</tr>';
   });
-  html += '<tr class="balance-row"><td class="sticky-col">Cân đối tháng</td>';
+  html += '<tr class="balance-row"><td class="sticky-col">Tiền vào − ra tháng</td>';
   vm.forEach(function(mk){ html += '<td>'+fmt(groupCell('thu',mk) - groupCell('chi',mk))+'</td>'; });
   html += '</tr>';
   // Lũy kế: tháng đã qua = số dư thực; từ tháng hiện tại trở đi CỘNG DỒN dự báo
@@ -474,6 +475,13 @@ function renderDongTien(){
   if (mk < minMk) mk = minMk;
   if (mk > maxMk) mk = maxMk;
   state.dtMk = mk;
+  if (soChuaCoDuLieu()){        // sổ trống: bảng 12 tháng toàn số 0 không nói được gì, chỉ rối mắt
+    root.innerHTML = dtCheDoHtml() + '<div class="card empty-card"><h3>Chưa có gì để dự báo</h3>'
+      + '<p>Dòng tiền cho thấy tiền của bạn sẽ ra sao 12 tháng tới. Ghi vài khoản thu chi ở Sổ tay (hoặc thêm khoản lương, tiền nhà ở Cài đặt → Kế hoạch) rồi quay lại đây.</p>'
+      + '<button type="button" class="btn" data-act="qaMo">Ghi khoản đầu tiên</button></div>';
+    if (typeof mpSheetVe === 'function') mpSheetVe();
+    return;
+  }
   var d = dtThangDuLieu(mk);
   var rows = dtDuKienRows(Math.max(DT_SO_THANG, 1));
   var html = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">'

@@ -1,559 +1,9 @@
 "use strict";
 /* ====================================================================
-   vayno.js — toàn bộ logic + giao diện tab "Vay - Nợ": tính lịch trả nợ,
-   render bảng Cho vay / Vay-Nợ phải trả, bảng theo dõi trả nợ & thu tiền theo tháng,
-   và xử lý các hành động (thêm/sửa/xóa/tất toán/ghi nhận thu-trả) của tab này.
-   Cần state.js, drive-sync.js load trước.
+   vayno.js — giao diện tab "Vay - Nợ" (bảng Cho vay / Vay-Nợ phải trả, bảng theo dõi trả nợ và thu tiền theo tháng, form thêm / sửa)
+   và xử lý các hành động (thêm / sửa / xóa / tất toán / ghi nhận thu-trả) của tab này.
+   Phần tính toán (lịch trả nợ, tiến độ, tài sản ròng, dự trù) nằm ở vayno-tinh.js. Cần vayno-tinh.js, state.js, drive-sync.js load trước.
    ==================================================================== */
-
-var LOAI_VAY_LABEL = { ngan_hang:'Ngân hàng', vi:'Ví', ban_be:'Bạn bè', nguoi_than:'Người thân' };
-var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng', goc_deu:'Gốc đều, lãi giảm dần' };
-
-function monthKeyAdd(mk, n){
-  var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + n;
-  while (m > 12){ m -= 12; y++; }
-  while (m < 1){ m += 12; y--; }
-  return y + '-' + pad2(m);
-}
-function loanIsActive(loan){ return loan.trangThai !== 'da_tra_het'; }
-// khoản cho vay đã xong (thu đủ, hoặc đã xóa nợ phần còn lại) -> vào mục "Đã xong", không hiện ở danh sách chính
-function choVayDaXong(c){ return !!c.tatToan || c.trangThai === 'da_thu_du' || conLaiPhaiThu(c) <= 0; }
-// số ngày của tháng mk (YYYY-MM)
-function daysInMonth(mk){ var p = mk.split('-'); return new Date(parseInt(p[0],10), parseInt(p[1],10), 0).getDate(); }
-// ghép tháng mk + "ngày trong tháng" (1-31) -> "YYYY-MM-DD", tự co về ngày cuối tháng
-// nếu tháng đó không có đủ ngày (vd ngày 31 rơi vào tháng 2/4/6/9/11)
-function ngayTraCuaKy(mk, ngayTrongThang){
-  var n = Math.max(1, Math.min(31, num(ngayTrongThang) || 1));
-  return mk + '-' + pad2(Math.min(n, daysInMonth(mk)));
-}
-// trả về lịch trả từng tháng: [{mk, ngayTra, goc, lai, tongTra, duNoConLai}]
-function tinhLichTraNo(loan){
-  var sch = [];
-  var startMk = monthKey(loan.ngayVay || todayStr());
-  var goc0 = num(loan.soTienGoc);
-  // "ngày trả hàng tháng" là field nhập tay riêng (1-31), tách biệt với ngày vay;
-  // khoản cũ chưa có thì tạm lấy ngày-trong-tháng của ngày vay làm mặc định
-  var ngayTrongThang = num(loan.ngayTraHangThang) || (loan.ngayVay ? parseInt(loan.ngayVay.slice(8,10),10) : 1);
-  if (loan.hinhThuc === 'tra_1_lan'){
-    var mkDue = loan.ngayDaoHan ? monthKey(loan.ngayDaoHan) : monthKeyAdd(startMk, num(loan.soThangVay) || 0);
-    var ngayTraDue = loan.ngayDaoHan || ngayTraCuaKy(mkDue, ngayTrongThang);
-    sch.push({ mk: mkDue, ngayTra: ngayTraDue, goc: goc0, lai: 0, tongTra: goc0, duNoConLai: 0 });
-    return sch;
-  }
-  var n = Math.max(1, num(loan.soThangVay));
-  // trả cố định/tháng (trả góp điện máy, vay qua app, vay người quen): chỉ biết gốc, số tiền trả mỗi tháng
-  // và số kỳ, không biết lãi suất. Phần chênh (tổng trả − gốc) coi là lãi, chia đều mỗi kỳ; gốc mỗi kỳ = gốc/n.
-  // Tổng trả < gốc (nhập sai) thì không có lãi âm: coi như không lãi, chia đều gốc.
-  if (loan.hinhThuc === 'tra_co_dinh'){
-    var tra = num(loan.soTienTraThang), gocKy = goc0 / n, laiKy = Math.max(0, tra - gocKy), duNoCD = goc0;
-    for (var c=1;c<=n;c++){
-      duNoCD -= gocKy;
-      var mkC = monthKeyAdd(startMk,c);
-      sch.push({ mk: mkC, ngayTra: ngayTraCuaKy(mkC, ngayTrongThang), goc: gocKy, lai: laiKy, tongTra: gocKy + laiKy, duNoConLai: Math.max(0,duNoCD) });
-    }
-    return sch;
-  }
-  if (loan.hinhThuc === 'khong_lai'){
-    var gocThang = goc0 / n, duNo = goc0;
-    for (var i=1;i<=n;i++){
-      duNo -= gocThang;
-      var mkI = monthKeyAdd(startMk,i);
-      sch.push({ mk: mkI, ngayTra: ngayTraCuaKy(mkI, ngayTrongThang), goc: gocThang, lai: 0, tongTra: gocThang, duNoConLai: Math.max(0,duNo) });
-    }
-    return sch;
-  }
-  // goc_deu (chỉ tab Mô phỏng dùng) — mỗi kỳ trả gốc bằng nhau, lãi tính trên dư nợ còn lại nên giảm dần
-  if (loan.hinhThuc === 'goc_deu'){
-    var rg = num(loan.laiSuatNam) / 12 / 100, gocG = goc0 / n, duG = goc0;
-    for (var g=1;g<=n;g++){
-      var laiG = duG * rg;
-      duG -= gocG;
-      var mkG = monthKeyAdd(startMk,g);
-      sch.push({ mk: mkG, ngayTra: ngayTraCuaKy(mkG, ngayTrongThang), goc: gocG, lai: laiG, tongTra: gocG + laiG, duNoConLai: Math.max(0,duG) });
-    }
-    return sch;
-  }
-  // co_lai — trả đều (annuity), lãi %/năm quy đổi tháng
-  var r = num(loan.laiSuatNam) / 12 / 100;
-  var duNo2 = goc0;
-  if (r <= 0){
-    var gocThang2 = goc0 / n;
-    for (var j=1;j<=n;j++){
-      duNo2 -= gocThang2;
-      var mkJ = monthKeyAdd(startMk,j);
-      sch.push({ mk: mkJ, ngayTra: ngayTraCuaKy(mkJ, ngayTrongThang), goc: gocThang2, lai: 0, tongTra: gocThang2, duNoConLai: Math.max(0,duNo2) });
-    }
-    return sch;
-  }
-  var pow = Math.pow(1+r, n);
-  var pmt = goc0 * r * pow / (pow - 1);
-  for (var k=1;k<=n;k++){
-    var laiK = duNo2 * r, gocK = pmt - laiK;
-    duNo2 -= gocK;
-    var mkK = monthKeyAdd(startMk,k);
-    sch.push({ mk: mkK, ngayTra: ngayTraCuaKy(mkK, ngayTrongThang), goc: gocK, lai: laiK, tongTra: pmt, duNoConLai: Math.max(0,duNo2) });
-  }
-  return sch;
-}
-// còn phải thu của 1 khoản cho vay. Đã tất toán = phần còn lại coi như không đòi
-// được (cho luôn / mất) -> không còn nằm trong "sẽ thu được" nữa.
-// daBo = các lần bỏ MỘT PHẦN (không đòi nữa, khoản vẫn mở): [{soTien, ngay}]. Khác tatToan là bỏ hết phần còn lại và đóng khoản.
-function tongDaBo(loan, d){
-  var s = 0;
-  (loan.daBo || []).forEach(function(x){ if (!d || !x.ngay || x.ngay <= d) s += num(x.soTien); });
-  return s;
-}
-// soBo so với phần còn phải thu: 'qua-so' (lớn hơn, không hợp lệ) | 'mot-phan' (chỉ ghi daBo) | 'het' (tất toán cả khoản)
-function loaiBoChoVay(c, soBo){
-  var cl = conLaiPhaiThu(c);
-  if (soBo > cl + 0.01) return 'qua-so';
-  return soBo < cl - 0.01 ? 'mot-phan' : 'het';
-}
-function choVayBoMotPhan(c, soBo){ c.daBo = (c.daBo || []).concat([{ soTien: soBo, ngay: todayStr() }]); }
-// hoàn lần bỏ gần nhất; trả về lần vừa hoàn (null nếu không có gì để hoàn)
-function choVayHoanBo(c){
-  if (c.tatToan || !(c.daBo || []).length) return null;
-  var lan = c.daBo.pop();
-  choVayCapNhatTrangThai(c);
-  return lan;
-}
-// ghi số tiền THỰC THU của khoản cho vay: cộng daThu + giao dịch thu "Thu hồi cho vay" ở Sổ tay (có ref gắn khoản).
-// dongKhoan = tất toán: phần thiếu coi như xóa nợ (tatToan) và đóng khoản. Trả về phần thiếu (>0 nếu còn).
-function choVayGhiThu(c, so, ngay, viId, dongKhoan){
-  var thieu = conLaiPhaiThu(c) - so;
-  c.daThu = num(c.daThu) + so;
-  journalAddRef(ngay, c.id, 'thuHoiChoVay', so, 'Thu hồi cho vay: ' + c.ten, { rid: 't' + Date.now().toString(36), walletId: viId });
-  if (dongKhoan && thieu > 0.01) c.tatToan = { soTien: thieu, ngay: ngay };
-  choVayCapNhatTrangThai(c);
-  invalidateBalanceCache();
-  return thieu;
-}
-// trạng thái khoản cho vay luôn suy ra từ số liệu: đóng khi đã xóa nợ phần còn lại hoặc thu + xóa nợ đủ số cho vay
-function choVayCapNhatTrangThai(c){
-  c.trangThai = (c.tatToan || conLaiPhaiThu(c) <= 0.01) ? 'da_thu_du' : 'dang_cho';
-}
-// lời nhắc khi SỬA số cho vay làm đổi tình trạng khoản (hiện trong hộp xác nhận); '' nếu không có gì đáng nói
-function canhBaoSuaChoVay(c, soTienMoi){
-  if (!c || num(c.soTien) === soTienMoi) return '';
-  var t = Object.assign({}, c, { soTien: soTienMoi });
-  var xongTruoc = choVayDaXong(c), xongSau = !!t.tatToan || conLaiPhaiThu(t) <= 0.01;
-  var daTra = num(c.daThu) + tongDaBo(c), ghi = [];
-  ghi.push('Số cho vay đổi từ ' + fmt(Math.round(num(c.soTien))) + ' thành ' + fmt(Math.round(soTienMoi)) + '.');
-  if (c.tatToan) ghi.push('Khoản này đã xóa nợ ' + fmt(Math.round(num(c.tatToan.soTien))) + ' theo số cũ. Đổi số cho vay không tự đổi phần xóa nợ, nên số thu + xóa nợ sẽ lệch số mới. Muốn chính xác thì bấm "Hủy xóa nợ" trước, sửa số, rồi xóa nợ lại.');
-  else if (soTienMoi < daTra - 0.01) ghi.push('Số mới nhỏ hơn số đã thu + đã xóa nợ (' + fmt(Math.round(daTra)) + '): coi như thu vượt, còn phải thu về 0.');
-  if (xongTruoc && !xongSau) ghi.push('Khoản đang ở mục "Đã xong" sẽ mở lại, còn phải thu ' + fmt(Math.round(conLaiPhaiThu(t))) + '.');
-  else if (!xongTruoc && xongSau && !c.tatToan) ghi.push('Khoản sẽ đóng và chuyển vào mục "Đã xong".');
-  ghi.push('Giao dịch "Cho vay" ở Sổ tay được ghi lại theo số mới.');
-  return ghi.length > 2 ? ghi.join('\n\n') : '';
-}
-// bỏ phần xóa nợ hết (tatToan); trả về false nếu khoản không có gì để hủy
-function choVayHuyXoaNo(c){
-  if (!c || !c.tatToan) return false;
-  c.tatToan = null;
-  choVayCapNhatTrangThai(c);
-  return true;
-}
-function conLaiPhaiThu(loan){
-  if (loan.tatToan) return 0;
-  return Math.max(0, num(loan.soTien) - num(loan.daThu) - tongDaBo(loan));
-}
-// số ngày quá hạn của 1 khoản cho vay (0 nếu chưa tới hạn / đã thu đủ)
-function soNgayQuaHan(loan){
-  if (!loan.ngayDuKienThu || loan.trangThai === 'da_thu_du') return 0;
-  if (conLaiPhaiThu(loan) <= 0) return 0;
-  var d = daysBetween(loan.ngayDuKienThu, todayStr());
-  return d > 0 ? d : 0;
-}
-// tháng dự kiến trả hết nợ (mk của dòng cuối lịch trả)
-function thangDuKienHetNo(loan){
-  var sch = tinhLichTraNo(loan);
-  return sch.length ? sch[sch.length-1].mk : null;
-}
-
-/* ====================================================================
-   SẮP ĐẾN HẠN / QUÁ HẠN — gộp chung Cho vay (ngày dự kiến thu) và Vay-Nợ
-   phải trả (ngày trả của kỳ tới), dùng cho card nhắc ở đầu tab + badge nav.
-   soNgay: dương = còn mấy ngày tới hạn, 0 = đúng hôm nay, âm = đã quá hạn.
-   ==================================================================== */
-function danhSachSapDenHan(nNgay){
-  nNgay = nNgay || 7;
-  var out = [];
-  (state.data.vayNo.choVay||[]).forEach(function(c){
-    if (c.tatToan || c.trangThai === 'da_thu_du') return;
-    if (!c.ngayDuKienThu || conLaiPhaiThu(c) <= 0) return;
-    var soNgay = daysBetween(todayStr(), c.ngayDuKienThu);
-    if (soNgay <= nNgay) out.push({ loai: 'choVay', id: c.id, ten: c.ten, ngay: c.ngayDuKienThu, soNgay: soNgay, soTien: conLaiPhaiThu(c) });
-  });
-  (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(v){
-    if (!loanIsActive(v)) return;
-    var td = tienDoTraNo(v), ky = td.kyTiepTheo;
-    if (!ky) return;
-    var soNgay = daysBetween(todayStr(), ky.ngayTra), qh = kyQuaHan(v);
-    // trễ từ 2 kỳ trở lên: số tiền là tổng các kỳ đang trễ (kỳ cũ nhất thôi là ghi thiếu)
-    if (soNgay <= nNgay) out.push({ loai: 'vayNo', id: v.id, ten: v.ten, ngay: ky.ngayTra, soNgay: soNgay,
-      soTien: qh.n >= 2 ? qh.tong : conThieuKy(v, td.kyTiepIdx, td.sch), soKy: qh.n >= 2 ? qh.n : 0 });
-  });
-  out.sort(function(a,b){ return a.soNgay - b.soNgay; });
-  return out;
-}
-// các kỳ ĐÃ QUA HẠN (ngày trả trước homNay) mà chưa đóng và còn thiếu tiền: { n, tong (tổng còn thiếu), cuNhat (hạn kỳ cũ nhất) }
-// để thẻ khoản vay / danh sách sắp đến hạn ghi đủ số đang trễ, không chỉ kỳ cũ nhất
-function kyQuaHan(loan, homNay){
-  homNay = homNay || todayStr();
-  var sch = tinhLichTraNo(loan), r = { n: 0, tong: 0, cuNhat: null };
-  if (loan.tatToan || !loanIsActive(loan)) return r;
-  sch.forEach(function(row, i){
-    if (row.ngayTra >= homNay || kyDaDong(loan, i)) return;
-    var thieu = conThieuKy(loan, i, sch);
-    if (thieu <= 0) return;
-    r.n++; r.tong += thieu;
-    if (!r.cuNhat || row.ngayTra < r.cuNhat) r.cuNhat = row.ngayTra;
-  });
-  return r;
-}
-
-/* ====================================================================
-   TRẢ NỢ THEO TỪNG KỲ
-   loan.traNo = [{ rid, ky, mk, soTien, ngay, dongKy, truocKhiDungApp? }]
-
-   TÁCH HẲN 2 khái niệm, vì số tiền KHÔNG BAO GIỜ phân biệt được 2 ca này:
-     - đã ghi nhận tiền : có tiền vào kỳ đó. 1 kỳ trả nhiều lần thì cộng dồn.
-     - kỳ ĐÃ ĐÓNG      : dongKy = true, coi như thanh toán xong kỳ đó.
-   Thiếu 50k ở kỳ 500k là trả dở, thiếu 50k ở kỳ 10tr là xong kỳ — nên app
-   không đoán, mà hỏi người dùng đúng lúc trả thiếu (xem vnGhiNhanTra).
-
-   Kỳ đã đóng: phần thiếu chuyển sang mục "chênh lệch", KHÔNG nằm trong dư nợ
-   (tiền thực tế đã ghi ở Sổ tay rồi).
-   Kỳ trả dở : phần còn thiếu VẪN nằm trong dư nợ và trong dự trù tháng đó.
-   ==================================================================== */
-function kyRecords(loan, kyIdx){
-  return (loan.traNo || []).filter(function(r){ return num(r.ky) === num(kyIdx); });
-}
-function kyDaGhiNhan(loan, kyIdx){ return kyRecords(loan, kyIdx).length > 0; }
-// kỳ đã đóng: chỉ cần 1 lần trả trong kỳ được đánh dấu đóng kỳ
-function kyDaDong(loan, kyIdx){
-  return kyRecords(loan, kyIdx).some(function(r){ return !!r.dongKy; });
-}
-// tổng tiền thực tế đã trả cho kỳ kyIdx
-function soTienTraKy(loan, kyIdx){
-  var s = 0;
-  kyRecords(loan, kyIdx).forEach(function(r){ s += num(r.soTien); });
-  return s;
-}
-// số còn thiếu của 1 kỳ so với lịch (>= 0)
-function conThieuKy(loan, kyIdx, sch){
-  sch = sch || tinhLichTraNo(loan);
-  var can = sch[kyIdx] ? num(sch[kyIdx].tongTra) : 0;
-  return Math.max(0, can - soTienTraKy(loan, kyIdx));
-}
-// trạng thái 1 kỳ: 'chua' | 'motphan' | 'du' | 'thieu'
-//   motphan = có tiền vào nhưng CHƯA đóng kỳ  -> vẫn là kỳ đang chờ
-//   thieu   = đã đóng kỳ nhưng tiền ít hơn lịch -> chênh lệch ghi riêng
-function kyStatus(loan, kyIdx, sch){
-  sch = sch || tinhLichTraNo(loan);
-  var can = sch[kyIdx] ? num(sch[kyIdx].tongTra) : 0;
-  if (!kyDaGhiNhan(loan, kyIdx)) return { trangThai: 'chua', da: 0, can: can, lech: -can, dong: false };
-  var da = soTienTraKy(loan, kyIdx);
-  var lech = da - can;
-  if (!kyDaDong(loan, kyIdx)) return { trangThai: 'motphan', da: da, can: can, lech: lech, dong: false };
-  return { trangThai: (lech >= -1 ? 'du' : 'thieu'), da: da, can: can, lech: lech, dong: true };
-}
-// tiến độ trả nợ: đếm kỳ ĐÃ ĐÓNG. Kỳ tiếp theo = kỳ chưa đóng đầu tiên, có thể
-// là kỳ đang trả dở (trả tiếp sẽ cộng dồn vào đúng kỳ đó).
-function tienDoTraNo(loan){
-  var sch = tinhLichTraNo(loan);
-  var daTraKy = 0, kyTiepTheo = null, kyTiepIdx = -1;
-  for (var i=0;i<sch.length;i++){
-    if (kyDaDong(loan, i)) daTraKy++;
-    else if (!kyTiepTheo){ kyTiepTheo = sch[i]; kyTiepIdx = i; }
-  }
-  return { tongKy: sch.length, daTraKy: daTraKy, kyTiepTheo: kyTiepTheo, kyTiepIdx: kyTiepIdx, sch: sch };
-}
-// tổng còn phải trả (gồm lãi) = các kỳ CHƯA ĐÓNG, đã trừ phần đã trả vào kỳ dở.
-// Tất toán -> 0.
-function soTienConLaiPhaiTra(loan){
-  if (loan.tatToan) return 0;
-  var sch = tinhLichTraNo(loan);
-  var s = 0;
-  for (var i = 0; i < sch.length; i++){
-    if (kyDaDong(loan, i)) continue;
-    s += conThieuKy(loan, i, sch);
-  }
-  return s;
-}
-// gốc còn lại sau kỳ đã đóng gần nhất (chưa đóng kỳ nào = toàn bộ gốc). Khác
-// soTienConLaiPhaiTra: số đó cộng cả lãi các kỳ tương lai, còn tất toán sớm
-// thực tế chỉ trả gốc còn lại + lãi tới ngày tất toán -> thường THẤP hơn.
-function gocConLai(loan){
-  var sch = tinhLichTraNo(loan), g = num(loan.soTienGoc);
-  for (var i = 0; i < sch.length; i++){
-    if (kyDaDong(loan, i)) g = sch[i].duNoConLai;
-  }
-  return g;
-}
-// tổng chênh lệch (âm = trả thiếu so với lịch) của các kỳ ĐÃ ĐÓNG. Kỳ đang trả
-// dở không tính vào đây — phần thiếu của nó vẫn đang nằm ở dư nợ.
-function tongLechTraNo(loan){
-  var sch = tinhLichTraNo(loan), s = 0;
-  for (var i=0;i<sch.length;i++){
-    if (!kyDaDong(loan, i)) continue;
-    if (kyRecords(loan, i).every(function(r){ return r.truocKhiDungApp; })) continue;
-    s += soTienTraKy(loan, i) - num(sch[i].tongTra);
-  }
-  return s;
-}
-// dự trù trả nợ tháng mk: kỳ đã đóng thì bỏ qua, kỳ trả dở chỉ dự trù PHẦN CÒN
-// THIẾU (phần đã trả nằm trong Sổ tay rồi, dự trù cả kỳ nữa là tính 2 lần).
-// Kỳ QUÁ HẠN mà chưa đóng dồn vào tháng hiện tại (giống tongThuHoiThang): để ở tháng cũ
-// là khoản phải trả đó biến mất khỏi mọi dự báo.
-// loan.mpTatToanMk: chỉ tab Mô phỏng đặt — từ tháng này trở đi khoản vay đã tất toán, không còn kỳ nào.
-function tongTraNoThang(mk){
-  var curMk = monthKey(todayStr());
-  var s = 0;
-  (state.data.vayNo.vayNoPhaiTra||[]).forEach(function(loan){
-    if (!loanIsActive(loan)) return;
-    var sch = tinhLichTraNo(loan);
-    sch.forEach(function(row, idx){
-      if (loan.mpTatToanMk && row.mk >= loan.mpTatToanMk) return;
-      if (kyDaDong(loan, idx)) return;
-      var eff = (row.mk < curMk) ? curMk : row.mk;
-      if (eff !== mk) return;
-      s += conThieuKy(loan, idx, sch);
-    });
-  });
-  return s;
-}
-// dự trù thu hồi cho vay tháng mk. Khoản đã QUÁ HẠN mà chưa thu được thì dồn vào
-// tháng hiện tại — để quá hạn ở tháng cũ là coi như khoản tiền đó bốc hơi khỏi dự báo.
-function tongThuHoiThang(mk){
-  var curMk = monthKey(todayStr());
-  var s = 0;
-  (state.data.vayNo.choVay||[]).forEach(function(loan){
-    if (loan.trangThai === 'da_thu_du') return;
-    var cl = conLaiPhaiThu(loan);
-    if (cl <= 0 || !loan.ngayDuKienThu) return;       // chưa có ngày dự kiến thu thì không đoán là thu về lúc nào
-    var duKien = monthKey(loan.ngayDuKienThu);
-    var eff = (duKien < curMk) ? curMk : duKien;
-    if (eff === mk) s += cl;
-  });
-  return s;
-}
-
-/* ====================================================================
-   TÀI SẢN RÒNG tại 1 ngày (tab Báo cáo) = tiền trong các ví + cho vay chưa thu − nợ GỐC còn lại.
-   Tính lại theo NGÀY (không dùng số hiện tại) để vẽ được lịch sử từng tháng:
-   - cho vay: số cho vay − các lần thu hồi (ref thuHoiChoVay ở Sổ tay) tới ngày đó; đã tất toán trước ngày đó = 0
-   - vay: gốc − phần GỐC của các lần trả (traNo[].ngay) tới ngày đó, tách gốc theo tỉ lệ goc/tongTra của kỳ;
-     tất toán trước ngày đó = 0. Lãi tương lai không tính (chưa phải nợ).
-   ==================================================================== */
-function _thuHoiTheoKhoan(){
-  var m = {};
-  Object.keys(state.data.journal).forEach(function(d){
-    (state.data.journal[d].refs || []).forEach(function(r){
-      if (r.loai !== 'thuHoiChoVay') return;
-      (m[r.loanId] = m[r.loanId] || []).push({ ngay: d, soTien: num(r.soTien) });
-    });
-  });
-  return m;
-}
-function phaiThuTaiNgay(loan, d, thuHoi){
-  if (!loan.ngayChoVay || loan.ngayChoVay > d) return 0;
-  if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
-  var da = 0;
-  ((thuHoi || _thuHoiTheoKhoan())[loan.id] || []).forEach(function(x){ if (x.ngay <= d) da += x.soTien; });
-  return Math.max(0, num(loan.soTien) - da - tongDaBo(loan, d));
-}
-function noGocTaiNgay(loan, d){
-  if (!loan.ngayVay || loan.ngayVay > d) return 0;
-  if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
-  var sch = tinhLichTraNo(loan), tra = 0;
-  (loan.traNo || []).forEach(function(r){
-    var k = sch[num(r.ky)];
-    if (!k || !r.ngay || r.ngay > d || !(num(k.tongTra) > 0)) return;
-    tra += num(r.soTien) * num(k.goc) / num(k.tongTra);
-  });
-  return Math.max(0, num(loan.soTienGoc) - tra);
-}
-// tài sản ròng tại cuối tháng mk
-function taiSanRongThang(mk, thuHoi){
-  var d = mk + '-31', th = thuHoi || _thuHoiTheoKhoan(), phaiThu = 0, no = 0;
-  (state.data.vayNo.choVay || []).forEach(function(l){ phaiThu += phaiThuTaiNgay(l, d, th); });
-  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(l){ no += noGocTaiNgay(l, d); });
-  var tien = balanceAtEndOfMonth(mk);
-  return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
-}
-// tài sản ròng DỰ KIẾN cuối tháng mk (mk từ tháng hiện tại trở đi); tien = số dư ví dự kiến cuối tháng đó, do nơi gọi chiếu ra.
-// Cùng cách dự trù với tongTraNoThang / tongThuHoiThang: kỳ trả chưa đóng rơi vào tháng của nó (quá hạn dồn vào tháng hiện tại)
-// và làm nợ gốc giảm đúng phần GỐC của số tiền còn thiếu của kỳ; khoản cho vay hết "phải thu" từ tháng dự kiến thu.
-// Khoản vay Mô phỏng chưa tới ngày vay thì tính từ tháng vay; loan.mpTatToanMk: từ tháng đó nợ gốc về 0. Lãi tương lai không tính.
-function taiSanRongDuKien(mk, tien){
-  var today = todayStr(), curMk = monthKey(today), phaiThu = 0, no = 0;
-  (state.data.vayNo.choVay || []).forEach(function(loan){
-    if (loan.trangThai === 'da_thu_du') return;
-    var cl = conLaiPhaiThu(loan);
-    if (cl <= 0) return;
-    if (!loan.ngayDuKienThu){ phaiThu += cl; return; }     // chưa có ngày thu: vẫn là tiền phải thu, chưa biết bao giờ về
-    var duKien = monthKey(loan.ngayDuKienThu);
-    if ((duKien < curMk ? curMk : duKien) > mk) phaiThu += cl;
-  });
-  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){
-    if (!loanIsActive(loan) || !loan.ngayVay || monthKey(loan.ngayVay) > mk) return;
-    if (loan.mpTatToanMk && mk >= loan.mpTatToanMk) return;
-    var sch = tinhLichTraNo(loan);
-    var con = loan.ngayVay > today ? num(loan.soTienGoc) : noGocTaiNgay(loan, today);
-    sch.forEach(function(row, idx){
-      if (loan.mpTatToanMk && row.mk >= loan.mpTatToanMk) return;
-      if (kyDaDong(loan, idx) || !(num(row.tongTra) > 0)) return;
-      if ((row.mk < curMk ? curMk : row.mk) > mk) return;
-      con -= num(row.goc) * conThieuKy(loan, idx, sch) / num(row.tongTra);
-    });
-    no += Math.max(0, con);
-  });
-  return { tien: tien, phaiThu: phaiThu, no: no, rong: tien + phaiThu - no };
-}
-// cột Tài sản ròng chỉ có nghĩa khi có nợ / cho vay đang mở: ròng khác số dư ở ít nhất một tháng của bảng (rows có bal và rong)
-function coCotTaiSanRong(rows){
-  return rows.some(function(r){ return Math.abs(r.rong - r.bal) >= 0.5; });
-}
-
-/* ---- tổng thu / chi cả tháng (dùng cho dự báo ở Dòng tiền, Mô phỏng, Báo cáo) ---- */
-function actualCatMonthAll(kind, mk){
-  var s = 0;
-  Object.keys(state.data.journal).forEach(function(d){
-    if (monthKey(d) !== mk) return;
-    var e = state.data.journal[d];
-    s += (kind==='thu') ? thuTotal(e) : chiTotal(e);
-  });
-  return s;
-}
-// tổng thực tế của 1 danh mục trong 1 tháng (dùng để kiểm tra đã ghi Sổ tay chưa)
-function actualCatInMonth(kind, cid, mk){
-  var s = 0;
-  Object.keys(state.data.journal).forEach(function(d){
-    if (monthKey(d) !== mk) return;
-    var obj = state.data.journal[d][kind] || {};
-    s += num(obj[cid]);
-  });
-  return s;
-}
-// dự trù 1 danh mục cho tháng mk (tháng tương lai). Thứ tự ưu tiên:
-// 1. kế hoạch: khoản định kỳ đang bật + bật "Dùng làm dự báo" + có kỳ phủ tháng mk -> lấy đúng số của kỳ (thay hẳn ước lượng)
-// 2. danh mục: duTruCoBan (lịch Vay - Nợ, hạn mức cố định, trung bình 3 tháng, hạn mức)
-function duTruDanhMucThang(kind, cid, mk){
-  if (mk > monthKey(todayStr()) && !CAT_HE_THONG[kind][cid]){
-    var duBao = dinhKyDuBaoThang(kind, cid, mk);
-    if (duBao != null) return duBao;
-  }
-  return duTruCoBan(kind, cid, mk);
-}
-function duTruCoBan(kind, cid, mk){
-  var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
-  // Trả nợ / Thu hồi cho vay lấy từ lịch Vay - Nợ, không phải ước lượng: cờ "Không tính dự kiến" không áp dụng
-  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
-  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
-  // Cho vay / Nhận tiền vay không đoán, nhưng giao dịch đã GHI ở ngày tương lai (cho vay hẹn tháng sau) là tiền chắc chắn đi / về
-  if (cat0 && cat0.khongDuTru) return (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
-  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
-  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
-  if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : 0;
-  var avg = recentAvgActual(kind, cid, 3);
-  if (avg != null) return avg;
-  var cat = state.data.categories[kind].find(function(c){ return c.id===cid; });
-  return (cat && num(cat.chiTieu) > 0) ? num(cat.chiTieu) : 0;
-}
-function duTruThuThang(mk){
-  var s=0; state.data.categories.thu.forEach(function(c){ s += duTruDanhMucThang('thu', c.id, mk); }); return s;
-}
-function duTruChiThang(mk){
-  var s=0; state.data.categories.chi.forEach(function(c){ s += duTruDanhMucThang('chi', c.id, mk); }); return s;
-}
-// phần Trả nợ / Thu hồi cho vay BIẾT TRƯỚC của tháng mk mà Sổ tay chưa phản ánh.
-// tongTraNoThang/tongThuHoiThang đã tự bỏ phần đã ghi nhận qua khoản vay (kỳ đóng, đã thu),
-// nên chỉ cần trừ thêm phần NHẬP TAY không gắn khoản nào (tiền đó đã đi mà lịch vay vẫn còn nợ).
-// Tính theo từng khoản vay chứ không theo cả danh mục: trả 1 khoản không làm khoản kia mất khỏi dự báo.
-function bietTruocChuaGhi(kind, cid, mk){
-  var known = (kind === 'chi') ? tongTraNoThang(mk) : tongThuHoiThang(mk);
-  if (known <= 0) return 0;
-  var tay = actualCatInMonth(kind, cid, mk);
-  Object.keys(state.data.journal).forEach(function(d){
-    if (monthKey(d) === mk) tay -= entryRefSum(state.data.journal[d], kind, cid);
-  });
-  return Math.max(0, known - Math.max(0, tay));
-}
-// tháng hiện tại: các khoản BIẾT TRƯỚC (Trả nợ/Thu hồi cho vay theo lịch vay, hoặc danh mục có cờ
-// "Cố định theo Chỉ tiêu") mà chưa ghi Sổ tay thì cộng thêm số biết trước đó; các danh mục còn lại
-// (ước lượng, không cố định) vẫn giữ nguyên thực tế (có thể 0)
-function tongThuThangCard(mk){
-  var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return duTruThuThang(mk);
-  var s = actualCatMonthAll('thu', mk);
-  if (mk === currentMk){
-    s += bietTruocChuaGhi('thu', 'thuHoiChoVay', mk);
-    s += dinhKyChuaGhiThang(mk, 'thu');       // lương... đã khai định kỳ mà tháng này chưa ghi
-    state.data.categories.thu.forEach(function(c){
-      if (c.id === 'thuHoiChoVay') return;
-      // danh mục đã có khoản định kỳ chưa ghi thì dùng số định kỳ ở trên, không cộng thêm chỉ tiêu cố định (tránh tính 2 lần)
-      if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk) && !dinhKyChuaGhiThang(mk, 'thu', c.id)){
-        var b = num(c.chiTieu);
-        if (b > 0) s += b;
-      }
-    });
-  }
-  return s;
-}
-function tongChiThangCard(mk){
-  var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return duTruChiThang(mk);
-  var s = actualCatMonthAll('chi', mk);
-  if (mk === currentMk){
-    s += bietTruocChuaGhi('chi', 'traNo', mk);
-    s += dinhKyChuaGhiThang(mk, 'chi');       // tiền nhà... đã khai định kỳ mà tháng này chưa ghi
-    state.data.categories.chi.forEach(function(c){
-      if (c.id === 'traNo') return;
-      if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk) && !dinhKyChuaGhiThang(mk, 'chi', c.id)){
-        var b = num(c.chiTieu);
-        if (b > 0) s += b;
-      }
-    });
-  }
-  return s;
-}
-
-/* ====================================================================
-   SỐ DƯ HIỆN TẠI "ĐÃ ĐIỀU CHỈNH" — dùng ở tab Mô phỏng.
-   Số dư thật trong Sổ tay + các khoản biết trước ĐÃ TỚI HẠN tính tới hôm nay mà chưa ghi (người dùng hay quên ghi):
-     - giao dịch định kỳ (lương, tiền nhà...) đã tới ngày, chưa ghi, chưa bấm Bỏ qua
-     - kỳ trả vay chưa đóng có ngày trả <= hôm nay (kể cả kỳ quá hạn của tháng trước); phần nhập tay "Trả nợ"
-       không gắn khoản trong tháng được trừ bớt (tiền đó đã đi), giống bietTruocChuaGhi
-   KHÔNG tính thu hồi cho vay (tiền người khác trả, chưa chắc đã về) và khoản CHƯA tới ngày.
-   Trả về { goc: số dư thật, tong: số dư đã điều chỉnh, items: [{ten, kind, soTien}] }.
-   ==================================================================== */
-function soDuHienTaiDieuChinh(homNay){
-  var items = [];
-  dinhKyDenHan(homNay).forEach(function(x){
-    items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: x.tien });
-  });
-  var curMk = monthKey(homNay), tongVay = 0;
-  (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){
-    if (!loanIsActive(loan)) return;
-    var sch = tinhLichTraNo(loan);
-    sch.forEach(function(row, idx){
-      if (kyDaDong(loan, idx) || row.ngayTra > homNay) return;
-      tongVay += conThieuKy(loan, idx, sch);
-    });
-  });
-  if (tongVay > 0){
-    var tay = actualCatInMonth('chi', 'traNo', curMk);
-    Object.keys(state.data.journal).forEach(function(d){
-      if (monthKey(d) === curMk) tay -= entryRefSum(state.data.journal[d], 'chi', 'traNo');
-    });
-    tongVay = Math.max(0, tongVay - Math.max(0, tay));
-    if (tongVay > 0) items.push({ ten: 'Trả vay', kind: 'chi', soTien: tongVay });
-  }
-  var goc = balanceAt(homNay), tong = goc;
-  items.forEach(function(x){ tong += (x.kind === 'thu' ? 1 : -1) * x.soTien; });
-  return { goc: goc, tong: tong, items: items };
-}
 
 // ví của khoản vay/cho vay lấy từ ô chọn trong form. Form chỉ có ô này khi có >= 2 ví;
 // không có ô (1 ví) hoặc giá trị lạ -> giữ ví cũ của khoản đó, chưa có thì ví mặc định.
@@ -696,6 +146,9 @@ function vayNoScheduleHtml(loan){
     h += '<div class="vn-ghichu">'+(lech < 0 ? 'Trả thiếu ' : 'Trả thừa ')+'<b>'+fmt(Math.round(Math.abs(lech)))+'</b> ở các kỳ đã đóng. '
       + 'Không cộng ngược vào dư nợ — số tiền thực tế đã ghi ở Sổ tay. Kỳ còn đang trả dở thì phần thiếu vẫn nằm trong dư nợ.</div>';
   }
+  if (sch.length && num(sch[0].lai) > 0 && (loan.hinhThuc === 'co_lai' || loan.hinhThuc === 'goc_deu' || (loan.hinhThuc === 'tra_co_dinh' && loan.cachGoc === 'giam'))){
+    h += '<div class="vn-ghichu">Lãi kỳ đầu tính tròn một tháng. Ngân hàng thường tính theo số ngày thực kể từ ngày giải ngân nên kỳ đầu có thể chênh nhẹ so với lịch này; các kỳ sau thường khớp.</div>';
+  }
   if (loan.tatToan){
     h += '<div class="vn-ghichu">Đã tất toán ngày '+(loan.tatToan.ngay ? ngayVN(loan.tatToan.ngay) : '')+' với số tiền <b>'+fmt(loan.tatToan.soTien)+'</b>.</div>';
   }
@@ -715,7 +168,7 @@ function vnVayCardHtml(v){
   var mo = state.vnDetailId === v.id;
   var h = '<div class="vn-c'+(xong ? ' xong' : '')+'" id="vn-vn-'+esc(v.id)+'">'
     + '<div class="vn-c-h"><b class="vn-c-t">'+esc(v.ten)+'</b>'+chip+'</div>'
-    + '<div class="vn-tags"><span class="vn-tag">'+LOAI_VAY_LABEL[v.loaiVay]+'</span><span class="vn-tag">'+HINH_THUC_LABEL[v.hinhThuc]+'</span>'+(nguoiCuaKhoan(v) ? '<span class="vn-tag">'+icon('user')+' '+esc(nguoiCuaKhoan(v))+'</span>' : '')+'</div>'
+    + '<div class="vn-tags"><span class="vn-tag">'+LOAI_VAY_LABEL[v.loaiVay]+'</span><span class="vn-tag">'+HINH_THUC_LABEL[v.hinhThuc]+'</span>'+(laiThucNam(v) != null ? '<span class="vn-tag" title="Lãi suất thực suy ra từ số tiền vay, số trả mỗi tháng và số kỳ">Lãi thực ≈ '+vnSoChuLai(laiThucNam(v))+'%/năm</span>' : '')+(nguoiCuaKhoan(v) ? '<span class="vn-tag">'+icon('user')+' '+esc(nguoiCuaKhoan(v))+'</span>' : '')+'</div>'
     + '<div class="vn-lbl">Dư nợ còn lại</div><div class="vn-big m">'+fmt(duNo)+'</div>'
     + '<div class="vn-prog"><div class="dt-track sm'+(xong ? '' : ' no')+'"><i style="width:'+pct+'%"></i></div><span>'+td.daTraKy+'/'+td.tongKy+' kỳ</span></div>';
   if (!xong){
@@ -958,7 +411,6 @@ function vayNoFormHtml(){
   var h = '';
   if (editing) h += '<div class="vn-note">'+icon('alert')+' Muốn sửa lịch sử trả nợ thì mở lịch trả của khoản vay (bấm "Xem lịch trả") rồi dùng "Hủy ghi nhận" / "Ghi nhận đã trả" — sửa ở đó mới đồng bộ được với Sổ tay.</div>';
   h += vnF('Tên / mô tả', '<input type="text" id="vn_vn_ten" value="'+esc(d.ten||'')+'" placeholder="VD: Vay mua xe">')
-    + nguoiOHtml('vn_vn_nguoi', d)
     + vnF('Loại vay', vnChipsHtml('vn_vn_loai', LOAI_VAY_LABEL, d.loaiVay))
     + vnF('Hình thức trả', vnChipsHtml('vn_vn_hinh', HINH_THUC_LABEL, d.hinhThuc))
     + '<div class="vn-2">'
@@ -968,9 +420,14 @@ function vayNoFormHtml(){
     + vnF('Kỳ hạn (số tháng)', '<input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="0" min="0">')
     + '</div>'
     + vnF('Ngày đáo hạn', '<input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'">', 'tra_1_lan', 'Trả 1 lần: nhập ngày đáo hạn hoặc kỳ hạn (số tháng).')
-    + vnF('Lãi suất %/năm', '<input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="0" min="0" step="0.01">', 'co_lai goc_deu')
+    + vnF('Lãi suất %/năm', '<input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="0" min="0" step="0.01">', 'co_lai goc_deu tra_1_lan lai_goc_cuoi')
     + vnF('Số tiền trả mỗi tháng', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_traThang" value="'+veSo(d.soTienTraThang)+'" placeholder="0">', 'tra_co_dinh')
+    + vnF('Cách chia gốc và lãi', vnChipsHtml('vn_vn_cachGoc', CACH_GOC_LABEL, d.cachGoc || 'deu'), 'tra_co_dinh',
+        'SPayLater, trả góp điện máy: gốc chia đều, phí cố định mỗi tháng. FE Credit, vay tiêu dùng: lãi tính trên dư nợ còn lại nên đầu kỳ trả nhiều lãi. Chọn sai chỉ lệch số nợ gốc còn lại, không đổi số phải trả mỗi tháng.')
     + vnViSelect('vn_vn_wallet', 'Ví nhận tiền vay / trả nợ', editing)
+    // 3 ô ít dùng gập vào "Thêm chi tiết" (mở sẵn khi sửa khoản đã có giá trị). Ô vẫn nằm trong DOM nên lưu đọc được bình thường.
+    + '<details class="vn-chitiet"'+((editing && (nguoiCuaKhoan(d) || num(d.soTienTatToan) > 0)) ? ' open' : '')+'><summary>Thêm chi tiết <span class="mp-hint">(đối tượng, số tất toán dự kiến'+(editing ? '' : ', số kỳ đã trả')+')</span></summary>'
+    + nguoiOHtml('vn_vn_nguoi', d)
     // số thực trả khi tất toán thường THẤP hơn tổng còn phải trả theo lịch (lãi các kỳ sau
     // không phải trả) -> nhập 1 lần ở đây, hộp thoại Tất toán + tab Mô phỏng lấy làm mặc định
     + vnF('Số tiền tất toán dự kiến <span class="mp-hint">(tùy chọn)</span>', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_tatToan" value="'+veSo(d.soTienTatToan)+'" placeholder="Bỏ trống = tự tính theo gốc còn lại">')
@@ -978,6 +435,7 @@ function vayNoFormHtml(){
     // Khi SỬA thì không được có ô này: sửa số kỳ ở đây sẽ ghi đè lịch sử trả nợ thực tế
     // mà không sinh/xóa giao dịch tương ứng -> số dư lệch. Sửa lịch sử bằng "Hủy ghi nhận" ở lịch trả.
     + (editing ? '' : vnF('Số kỳ đã trả trước khi nhập vào đây', '<input type="number" id="vn_vn_daTraKy" value="" placeholder="0" min="0">'))
+    + '</details>'
     + '<div class="vn-tom" id="vn_tom"></div>';
   return vnSheetKhung(editing ? 'Sửa khoản vay' : 'Thêm khoản vay', h, editing ? 'Lưu thay đổi' : 'Lưu khoản vay', 'vnSaveVayNo', 'vnCancelForm');
 }
@@ -1036,7 +494,7 @@ function vnDocFormVay(){
   return { hinhThuc: g('vn_vn_hinh') || 'khong_lai', soTienGoc: numNonNeg(docSo(g('vn_vn_soTien'))), ngayVay: ngayVay,
     ngayTraHangThang: nt ? Math.min(31, Math.max(1, Math.round(numNonNeg(nt)))) : parseInt(ngayVay.slice(8,10),10),
     soThangVay: numNonNeg(g('vn_vn_soThang')), ngayDaoHan: g('vn_vn_daoHan'), laiSuatNam: numNonNeg(g('vn_vn_laiSuat')),
-    soTienTraThang: numNonNeg(docSo(g('vn_vn_traThang'))) };
+    soTienTraThang: numNonNeg(docSo(g('vn_vn_traThang'))), cachGoc: g('vn_vn_cachGoc') || 'deu' };
 }
 function vnTomCapNhat(){
   var tom = document.getElementById('vn_tom');
@@ -1049,11 +507,17 @@ function vnTomCapNhat(){
   var lai = 0;
   sch.forEach(function(r){ lai += num(r.lai); });
   if (o.hinhThuc === 'tra_1_lan'){
-    tom.innerHTML = 'Trả 1 lần <b>'+fmt(Math.round(sch[0].tongTra))+'</b> vào '+ngayVN(sch[0].ngayTra)+'.';
+    tom.innerHTML = 'Trả 1 lần <b>'+fmt(Math.round(sch[0].tongTra))+'</b> vào '+ngayVN(sch[0].ngayTra)+(lai > 0.5 ? ' (gồm lãi <b>'+fmt(Math.round(lai))+'</b>)' : '')+'.';
+    return;
+  }
+  if (o.hinhThuc === 'lai_goc_cuoi'){
+    tom.innerHTML = (sch.length > 1 ? 'Mỗi tháng trả lãi ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>, ' : '') + 'kỳ cuối ('+vnMkDai(sch[sch.length-1].mk)+') trả thêm gốc: <b>'+fmt(Math.round(sch[sch.length-1].tongTra))+'</b>'
+      + '<br>Tổng lãi ≈ <b>'+fmt(Math.round(lai))+'</b>';
     return;
   }
   tom.innerHTML = (o.hinhThuc === 'goc_deu' ? 'Kỳ đầu trả ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>, giảm dần mỗi tháng' : 'Trả mỗi tháng ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>')
-    + '<br>Tổng lãi ≈ <b>'+fmt(Math.round(lai))+'</b> · trả xong '+vnMkDai(sch[sch.length-1].mk);
+    + '<br>Tổng lãi ≈ <b>'+fmt(Math.round(lai))+'</b> · trả xong '+vnMkDai(sch[sch.length-1].mk)
+    + (laiThucNam(o) != null ? '<br>Lãi suất thực ≈ <b>'+vnSoChuLai(laiThucNam(o))+'%/năm</b> (lãi ngầm mỗi tháng × 12)' : '');
 }
 
 function vnDlMo(cf){
@@ -1309,6 +773,8 @@ function handleVayNoAction(act, el){
       walletId: vnViTuForm('vn_vn_wallet', state.vnFormId ? state.data.vayNo.vayNoPhaiTra.find(function(x){ return x.id===state.vnFormId; }) : null),
       soTienTatToan: numNonNeg(docSo(document.getElementById('vn_vn_tatToan').value))
     };
+    var cgEl = document.getElementById('vn_vn_cachGoc');
+    objVN.cachGoc = (hinh === 'tra_co_dinh' && cgEl && cgEl.value === 'giam') ? 'giam' : '';
     if (hinh === 'tra_1_lan' && !objVN.ngayDaoHan && !objVN.soThangVay){
       toast('Nhập ngày đáo hạn hoặc kỳ hạn (số tháng) cho khoản vay trả 1 lần.', { loai:'warn' }); return true;
     }

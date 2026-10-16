@@ -10,7 +10,7 @@
    - Muốn có số liệu để thử thì bấm "Nạp dữ liệu gốc" — nó CLONE (deep copy)
      dữ liệu thật sang nháp. Sửa nháp sau đó không vọng lại bản gốc.
 
-   Cần state.js (withData, balanceBeforeMonth...), vayno.js (tongThuThangCard,
+   Cần state.js (withData, balanceBeforeMonth...), vayno-tinh.js (tongThuThangCard,
    tongChiThangCard, monthKeyAdd, soTienConLaiPhaiTra, tinhLichTraNo) load trước.
    ==================================================================== */
 
@@ -413,7 +413,7 @@ function renderMoPhong(){
 
   var tile = function(cls, lbl, val, sub, nho){ return '<div class="mp-t '+cls+'"><div class="lbl">'+lbl+'</div><div class="val'+(nho ? ' txt' : '')+'">'+val+'</div>'+(sub ? '<div class="sub">'+sub+'</div>' : '')+'</div>'; };
   html += '<div class="mp-tiles">'
-    + tile('gold', 'Số dư hiện tại', fmt(Math.round(hienTai.tong)), ghiChuHienTai)
+    + tile('gold', 'Số dư tính cả khoản đến hạn', fmt(Math.round(hienTai.tong)), ghiChuHienTai)
     + tile(thangNayMoi < 0 ? 'chi' : '', 'Cuối tháng này — kịch bản', fmt(Math.round(thangNayMoi)),
         Math.round(thangNayMoi) !== Math.round(thangNayGoc) ? 'Chưa điều chỉnh: ' + fmt(Math.round(thangNayGoc)) : '')
     + tile(!coDc ? '' : (chenh >= 0 ? 'thu' : 'chi'), 'Chênh lệch sau ' + hz + ' tháng', coDc ? (chenh >= 0 ? '+' : '') + fmt(chenh) : 'Chưa thay đổi',
@@ -436,7 +436,7 @@ function renderMoPhong(){
     + '<div class="mp-hint c">Chạm hoặc kéo trên biểu đồ để xem từng tháng'+(cung ? ' · chưa điều chỉnh nên hai đường trùng nhau' : '')+'</div>';
   var hien = state.mp.hetThang ? rowsMoi : rowsMoi.slice(0, 6);
   var coRong = coCotTaiSanRong(rowsMoi);   // hết nợ / không cho vay (và kịch bản không thêm vay) thì ròng = số dư, bỏ cột cho đỡ thừa
-  html += '<div class="dt-ml mp-ml'+(coRong ? ' co-rong' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Cân đối</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'<span>Chênh lệch</span></div>';
+  html += '<div class="dt-ml mp-ml'+(coRong ? ' co-rong' : '')+'"><div class="dt-ml-h"><span>Tháng</span><span>Tiền vào − ra</span><span>Số dư</span>'+(coRong ? '<span>Tài sản ròng dự kiến</span>' : '')+'<span>Chênh lệch</span></div>';
   hien.forEach(function(r, idx){
     var g = rowsGoc[idx], lech = Math.round(r.bal - g.bal), cb = r.thu - r.chi;
     html += '<div class="dt-ml-r'+(r.bal < 0 ? ' am' : '')+'"><span class="m"><i class="'+(r.bal < 0 ? 'am' : '')+'"></i>'+dtNhanThang(r.mk)+'</span>'
@@ -447,6 +447,7 @@ function renderMoPhong(){
   html += '</div>';
   if (rowsMoi.length > 6) html += '<button type="button" class="dt-more" data-act="mpHetThang">'+(state.mp.hetThang ? 'Thu gọn' : 'Xem thêm '+(rowsMoi.length - 6)+' tháng')+'</button>';
   html += '<div class="mp-hint c">Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở chế độ Thực tế &amp; dự kiến · số tính bằng ₫</div>'
+    + (hz > 12 ? '<div class="mp-hint c">Từ tháng thứ 13 trở đi chỉ là xu hướng: dự báo giữ nguyên thói quen chi tiêu hiện tại, càng xa càng kém chắc.</div>' : '')
     + (coRong ? '<div class="mp-hint c">Tài sản ròng dự kiến = số dư + cho vay chưa thu − nợ gốc còn lại sau các kỳ trả đã tới tháng đó (theo lịch trả, không tính lãi tương lai). Khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi</div>' : '') + '</div>';
 
   var phai = html.indexOf('<div class="mp-tiles">');

@@ -1,0 +1,21 @@
+name: Kiểm tra
+
+# Chạy bộ test và kiểm số phiên bản ?v= cho mọi pull request và mỗi lần push lên main.
+# Không cần cài gói nào: test chạy bằng Node thuần (xem README mục 5).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Unit test
+        run: node tests/run-tests.js
+      - name: Số phiên bản ?v= khớp nội dung file
+        run: node tools/bump.js --check

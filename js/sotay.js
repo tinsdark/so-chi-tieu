@@ -2,7 +2,7 @@
 /* ====================================================================
    sotay.js — tab "Sổ tay": nhập/sửa/xóa giao dịch theo ngày, tìm kiếm/lọc,
    xuất Excel, và các biểu đồ chi tiêu trong tháng.
-   Cần state.js, drive-sync.js, vayno.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
+   Cần state.js, drive-sync.js, vayno-tinh.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
    ==================================================================== */
 
 
@@ -227,7 +227,7 @@ function qaDongSheet(){
    ==================================================================== */
 // số tiền không đuôi ₫: 3 số hàng chục triệu nằm chung 1 hàng trên điện thoại thì tràn nếu còn ₫
 var soGon = function(v){ return fmt(Math.round(v)).replace(' ₫', ''); };
-function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
+function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock, duHetThang){
   var laThangNay = (mk === monthKey(todayStr()));
   // THU CHI THẬT: thu nhập / chi tiêu thường xuyên, tách VAY NỢ ra dòng riêng (bdThang ở bieudo.js). tongThuTat / tongChiTat là
   // tổng gồm cả vay nợ (số dư ví tính từ đây) nên chỉ dùng khi không có số thật.
@@ -241,13 +241,14 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
     + '<div class="hero-top"><div class="hero-lbl">'+(laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng')+'</div>'+thangNavHtml(mk)+'</div>'
     + '<div class="hero-val">'+so(duCuoi)+'</div>'
     + '<div class="hero-sub">Đầu tháng '+so(duDau)+(laThangNay ? ' · còn '+(daysInMonth(mk) - parseInt(todayStr().slice(8, 10), 10))+' ngày' : '')+'</div>'
+    + ((laThangNay && !beforeLock && duHetThang != null && Math.abs(duHetThang - duCuoi) > 0.5) ? '<div class="hero-sub">Sau các khoản đã ghi trước cho những ngày tới: <b>'+so(duHetThang)+'</b></div>' : '')
     // số dư từng ví ngay dưới số dư tổng: mở app là thấy, không phải cuộn
     + (htAn('sotay', 'vi') ? '' : viTheHtml(mk, beforeLock))
     // thu nhập / chi tiêu / dư thật chung 1 hàng
     + '<div class="hero-nums">'
     +   '<div><div class="l"><i class="dot thu"></i>Thu nhập</div><div class="v">'+soGon(tongThu)+'</div></div>'
     +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+soGon(tongChi)+'</div></div>'
-    +   '<div><div class="l">Dư thật</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
+    +   '<div><div class="l">'+(chenh < 0 ? 'Chi vượt thu' : 'Để dành được')+'</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
     + '</div>'
     + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (laThangNay && !beforeLock && !htAn('sotay', 'tieu')) h += tieuMoiNgayHtml(todayStr());
@@ -261,26 +262,28 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock){
       + '<div class="hero-bud-sub">'+fmt(Math.round(tongDa))+' / '+fmt(Math.round(tongCap))+' · '+Math.round(pct * 100)+'%</div></div>';
   }
   if (!htAn('sotay', 'sosanh')) h += tongQuanSoSanhHtml(mk, tongChi, beforeLock);
-  if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay);
+  if (!beforeLock) h += tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay, duHetThang);
   // lời nhắc (định kỳ, thu/chi theo ngày, vay/nợ, thẻ, ví thiếu tiền, vượt hạn mức, tổng kết tháng) nằm ở CHUÔNG ở header (chuong.js)
   return h + '</div>';
 }
 
 /* Cách tính các số ở thẻ đầu Sổ tay, mỗi dòng có PHÉP TÍNH BẰNG SỐ THẬT của tháng đang xem (giaiThichSo ở state.js).
    ct = bdThang(mk). Số dư: đầu tháng + dư thật + vay nợ ròng (+ điều chỉnh số dư nếu có) = số dư cuối, khớp số dư ví. */
-function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay){
+function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay, duHetThang){
   var vn = ct.vayNo, vao = vn.vay + vn.thuHoi, ra = vn.traNo + vn.choVay, rongNo = vao - ra;
   var dcThu = num(ct.theoCatThu.dieuChinh), dcChi = num(ct.theoCat.dieuChinh), dc = dcThu - dcChi;
   var duThat = ct.tongThuThat - ct.tongChiThat, ds = [];
-  ds.push({ ten: 'Dư thật', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ.', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
+  ds.push({ ten: 'Để dành được', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ. Âm nghĩa là chi vượt thu (hiện là "Chi vượt thu").', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
   ds.push({ ten: 'Thu nhập', ct: 'Tổng thu − nhận vay − thu hồi cho vay − điều chỉnh số dư.',
     pt: ptCong([ct.tongThu, -vao, -dcThu], ct.tongThuThat) });
   ds.push({ ten: 'Chi tiêu', ct: 'Tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
     pt: ptCong([ct.tongChi, -ra, -dcChi], ct.tongChiThat) });
   if (vao + ra > 0.5) ds.push({ ten: 'Vay nợ (tính riêng)', ct: 'Vào (nhận vay + thu hồi cho vay) − ra (trả nợ + cho vay).',
     pt: 'vào ' + ptTong2(vn.vay, vn.thuHoi) + ' · ra ' + ptTong2(vn.traNo, vn.choVay) + ' · ' + ptCong([vao, -ra], rongNo) });
-  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Dư thật + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '') + '.',
-    pt: ptCong([duDau, duThat, rongNo, dc], duCuoi) });
+  var truoc = (laThangNay && duHetThang != null) ? duHetThang - duCuoi : 0;      // thu − chi của các khoản đã ghi trước cho ngày sau hôm nay
+  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Để dành được + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '')
+      + (Math.abs(truoc) > 0.5 ? ' − khoản đã ghi trước cho các ngày sau hôm nay (chưa tới ngày nên chưa tính)' : '') + '.',
+    pt: ptCong([duDau, duThat, rongNo, dc, -truoc], duCuoi) });
   if (tongCap > 0) ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',
     pt: soGt(tongDa) + ' ÷ ' + soGt(tongCap) + ' = ' + Math.round(tongDa / tongCap * 100) + '%, ' + (tongDa > tongCap ? 'vượt ' + soGt(tongDa - tongCap) : 'còn ' + ptCong([tongCap, -tongDa], tongCap - tongDa)) });
   var t = laThangNay ? tieuMoiNgay(todayStr()) : null;
@@ -316,7 +319,7 @@ function tongQuanSoSanhHtml(mk, tongChi, beforeLock){
 function viTheHtml(mk, beforeLock){
   var ws = state.data.wallets || [];
   if (ws.length < 2 || beforeLock) return '';
-  var cuoi = mk + '-31', macDinh = viMacDinhId();
+  var cuoi = (mk === monthKey(todayStr()) ? todayStr() : mk + '-31'), macDinh = viMacDinhId();       // tháng đang chạy: số dư ví tới HÔM NAY
   var dangGhi = walletById(state.qa.wallet) ? state.qa.wallet : viDienSan();
   return '<div class="vi-sec"><div class="vi-sec-head"><h3>Số dư theo ví</h3>'
     + '<button type="button" class="vi-chuyen" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button></div>'
@@ -416,7 +419,10 @@ function renderSoTay(){
   var startMk = (state.data.settings.ngayBatDau || '').slice(0,7);
   var beforeLock = startMk && mk < startMk;
   var duDauThang = beforeLock ? null : balanceBeforeMonth(mk);
-  var duCuoiThang = beforeLock ? null : (duDauThang + tongThu - tongChi);
+  // số dư cuối là số dư TỚI HÔM NAY với tháng đang chạy (cùng số với Dòng tiền → Theo ngày); khoản đã ghi trước cho ngày sau hôm nay
+  // chưa tiêu nên không trừ vào đây. duHetThang = số tới hết tháng (gồm các khoản ghi trước), chỉ để giải thích phần chênh.
+  var duHetThang = beforeLock ? null : (duDauThang + tongThu - tongChi);
+  var duCuoiThang = beforeLock ? null : (mk === monthKey(todayStr()) ? balanceAt(todayStr()) : duHetThang);
 
   var thuCats = state.data.categories.thu;
   var cats = state.data.categories.chi;
@@ -429,7 +435,8 @@ function renderSoTay(){
   var html = '';
   // màn rộng (>=1024px, CSS .cot2): cột trái = tổng quan + ghi nhanh + việc cần làm, cột phải = form + danh sách
   html += '<div class="cot2"><div class="cot-trai">';
-  html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock);
+  html += huongDanHtml();
+  html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock, duHetThang);
   if (beforeLock){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc chốt số dư ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
   }
@@ -951,6 +958,15 @@ function tieuMoiNgay(homNay){
            honNayCon: muc - daHomNay, het: daTruoc + daHomNay >= cap, vuot: Math.max(0, daTruoc + daHomNay - cap),
            coDinhCon: cd.tong, coDinh: cd.ds };
 }
+// tiền THẬT đang có ở các ví dùng hằng ngày tới homNay (không tính thẻ tín dụng và ví để dành); null nếu không có ví nào như vậy
+function tieuViHangNgay(homNay){
+  var co = false, tong = 0;
+  (state.data.wallets || []).forEach(function(w){
+    if (viLaThe(w) || w.deDanh) return;
+    co = true; tong += soDuTheoVi(w.id, homNay);
+  });
+  return co ? tong : null;
+}
 function tieuMoiNgayHtml(homNay){
   var t = tieuMoiNgay(homNay);
   if (!t) return '';
@@ -959,9 +975,41 @@ function tieuMoiNgayHtml(homNay){
   var so = t.het ? (t.vuot > 0 ? 'vượt ' + fmt(Math.round(t.vuot)) : fmt(0)) : fmt(Math.round(Math.abs(t.honNayCon)));
   var phu = (t.het ? '' : 'Mức '+fmt(Math.round(t.muc))+'/ngày · ') + 'còn '+t.soNgay+' ngày'
     + (t.coDinhCon > 0 ? ' · cố định còn phải ra <b>'+fmt(Math.round(t.coDinhCon))+'</b>' : '');
+  // mức này tính từ hạn mức chứ không nhìn ví: ví chỉ còn ít hơn mức được phép tiêu thì nói thẳng
+  var vi = tieuViHangNgay(homNay), canh = '';
+  if (vi != null && !t.het && t.honNayCon > Math.max(0, vi))
+    canh = '<div class="hero-bud-sub"><span class="am">' + (vi < 0 ? 'Ví dùng hằng ngày đang âm <b>' + fmt(Math.round(-vi)) + '</b>' : 'Ví dùng hằng ngày chỉ còn <b>' + fmt(Math.round(vi)) + '</b>') + ', ít hơn mức này.</span></div>';
   return '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span>'
     + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>'
-    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div></div>';
+    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div>' + canh + '</div>';
+}
+/* ---- Thẻ "Bắt đầu" cho tài khoản mới (đầu Sổ tay): 3 bước, tự ẩn khi xong hoặc khi bấm Bỏ qua ----
+   Bước 1: số dư đầu kỳ (đã đặt, hoặc đã có giao dịch thì coi như xong). Bước 2: ghi khoản đầu tiên. Bước 3: đặt hạn mức cho một danh mục chi.
+   "Bỏ qua" chỉ nhớ trên máy này (localStorage), không đổi dữ liệu. Sổ đã có giao dịch và hạn mức thì thẻ không bao giờ hiện. */
+var HD_KEY = 'chitieu_huongdan_v1';
+function huongDanDaBo(){ try{ return localStorage.getItem(HD_KEY) === '1'; }catch(e){ return false; } }
+function huongDanBo(){ try{ localStorage.setItem(HD_KEY, '1'); }catch(e){} }
+function huongDanBuoc(){
+  var d = state.data, coGd = Object.keys(d.journal || {}).some(function(k){ return entryItems(d.journal[k]).length || (d.journal[k].refs || []).length; });
+  var duDau = (d.wallets || []).some(function(w){ return num(w.soDuDauKy) !== 0; });
+  var coHm = (d.categories.chi || []).some(function(c){ return num(c.chiTieu) > 0; });
+  return [ { id: 'tien', xong: duDau || coGd, ten: 'Đặt số dư các ví', phu: 'Số tiền thật trong ví, tài khoản lúc bắt đầu dùng sổ.', nut: 'Đặt số dư' },
+           { id: 'ghi', xong: coGd, ten: 'Ghi khoản đầu tiên', phu: 'Một khoản chi hoặc thu hôm nay. Mất khoảng 10 giây.', nut: 'Ghi ngay' },
+           { id: 'hanmuc', xong: coHm, ten: 'Đặt hạn mức cho một danh mục chi', phu: 'Để app tính "hôm nay còn tiêu được bao nhiêu".', nut: 'Đặt hạn mức' } ];
+}
+function huongDanHtml(){
+  if (!state.data || huongDanDaBo()) return '';
+  var bs = huongDanBuoc(), xong = bs.filter(function(b){ return b.xong; }).length;
+  if (xong === bs.length) return '';
+  var tiep = bs.filter(function(b){ return !b.xong; })[0];
+  return '<div class="card hd-card" id="cardHuongDan"><div class="hd-h"><h3>Bắt đầu với Sổ Tiền</h3><span class="hd-n">'+xong+'/'+bs.length+'</span></div>'
+    + bs.map(function(b){
+        var la = b === tiep;
+        return '<div class="hd-b'+(b.xong ? ' xong' : '')+'"><span class="hd-ic" aria-hidden="true">'+(b.xong ? icon('check') : '')+'</span>'
+          + '<span class="hd-t"><b>'+b.ten+'</b>'+(b.xong ? '' : '<small>'+b.phu+'</small>')+'</span>'
+          + (b.xong ? '' : '<button type="button" class="btn sm'+(la ? '' : ' secondary')+'" data-act="huongDan" data-v="'+b.id+'">'+b.nut+'</button>')+'</div>';
+      }).join('')
+    + '<button type="button" class="hd-bo" data-act="huongDan" data-v="bo">Bỏ qua, tôi tự làm</button></div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);
@@ -1563,6 +1611,11 @@ function handleSoTayAction(act, el){
     }, 320);
   } else if (act === 'goDanhMuc'){
     chuyenTab('danhmuc');
+  } else if (act === 'huongDan'){
+    var hdV = (el.getAttribute && el.getAttribute('data-v')) || '';
+    if (hdV === 'ghi') qaMoSheet();
+    else if (hdV === 'bo'){ huongDanBo(); renderSoTay(); }
+    else { state.dmTab = hdV === 'hanmuc' ? 'danhmuc' : 'tien'; chuyenTab('danhmuc'); if (window.scrollTo) window.scrollTo({ top: 0 }); }
   } else if (act === 'goTheoNgay'){
     state.dtTheoNgay = true; state.dtMoPhong = false;
     chuyenTab('dongtien');

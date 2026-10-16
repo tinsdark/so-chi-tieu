@@ -9,7 +9,7 @@
    không đổi số dư. Ghi giao dịch thật ở Sổ tay cũng làm khoản đó hết nhắc (kỳ đó coi như đã thực hiện).
    Hiện ở CHUÔNG THÔNG BÁO (chuong.js, loại 'cat'): bấm vào mục thì mở Ghi nhanh với đúng danh mục đó (nhacHanGhi), nút "Hoàn thành" tắt nhắc kỳ đó.
    Danh mục hệ thống của Vay - Nợ không có ngày (đi theo lịch vay).
-   Cần state.js (CAT_HE_THONG, catTen, catMau), vayno.js (ngayTraCuaKy, actualCatInMonth), sotay.js (qaMoSheet) load trước.
+   Cần state.js (CAT_HE_THONG, catTen, catMau), vayno-tinh.js (ngayTraCuaKy, actualCatInMonth), sotay.js (qaMoSheet) load trước.
    ==================================================================== */
 
 var NHAC_HAN_NGAY = 7;     // nhắc trước hạn bao nhiêu ngày

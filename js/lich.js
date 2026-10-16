@@ -9,7 +9,7 @@
      - ngày dự kiến thu của khoản cho vay chưa xong,
      - danh mục có "Ngày thu/chi hằng tháng" (bỏ tháng đã có giao dịch / đã bấm Hoàn thành),
      - giao dịch định kỳ đang bật (bỏ tháng đã ghi / đã bỏ qua).
-   Cần state.js, vayno.js (tinhLichTraNo, kyDaDong, conThieuKy, ngayTraCuaKy), nhachan.js (catNgayHan) load trước.
+   Cần state.js, vayno-tinh.js (tinhLichTraNo, kyDaDong, conThieuKy, ngayTraCuaKy), nhachan.js (catNgayHan) load trước.
    ==================================================================== */
 
 var LICH_SO_THANG = 12;

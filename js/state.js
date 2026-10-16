@@ -5,7 +5,7 @@
    render hay xử lý sự kiện của tab nào — chỉ là nền dùng chung.
    Phải load TRƯỚC mọi file js/ khác.
 
-   LƯU Ý: normalizeData() có gọi tinhLichTraNo()/monthKeyAdd() ở vayno.js.
+   LƯU Ý: normalizeData() có gọi tinhLichTraNo()/monthKeyAdd() ở vayno-tinh.js.
    Hợp lệ vì normalizeData chỉ được GỌI sau khi mọi file đã load xong
    (từ driveLoad), không phải lúc parse file này.
    ==================================================================== */
@@ -457,7 +457,7 @@ function ghiChuGon(noiDung, nhan){
 
 /* GIẢI THÍCH CÓ SỐ THẬT: mỗi con số quan trọng được giải thích bằng 2 phần — cách tính bằng chữ, và PHÉP TÍNH bằng chính số trên màn hình
    (VD "80.000 − 1.212.600 = −1.132.600"), để người dùng tự đối chiếu. Dùng:
-     giaiThichSo([ { ten:'Dư thật', ct:'Thu nhập − Chi tiêu', pt: ptCong([thu, -chi], thu - chi) }, ... ], 'Cách tính các số này')
+     giaiThichSo([ { ten:'Để dành được', ct:'Thu nhập − Chi tiêu', pt: ptCong([thu, -chi], thu - chi) }, ... ], 'Cách tính các số này')
    soGt: số nguyên có dấu chấm ngăn nghìn, âm ghi "−". ptCong: các số hạng có dấu cộng / trừ rồi "= kết quả" (số hạng 0 ở sau bị bỏ). */
 function soGt(n){ var r = Math.round(Number(n) || 0); return (r < 0 ? '−' : '') + Math.abs(r).toLocaleString('vi-VN'); }
 function ptCong(ds, kq){
@@ -668,7 +668,7 @@ function normalizeData(d){
   // khoản cho vay đã tất toán (bỏ phần không đòi được) -> không còn chờ thu
   d.vayNo.choVay.forEach(function(c){
     if (c.daThu == null) c.daThu = 0;
-    // các lần xóa nợ một phần (xem tongDaBo ở vayno.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
+    // các lần xóa nợ một phần (xem tongDaBo ở vayno-tinh.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
     c.daBo = Array.isArray(c.daBo) ? c.daBo.filter(function(x){ return x && num(x.soTien) > 0; }) : [];
     if (c.tatToan) c.trangThai = 'da_thu_du';
   });
@@ -949,7 +949,7 @@ function viChotSoDuDauKy(dateStr){
    Dòng được ghi mang dkId (+ dkMk) -> biết chắc khoản nào của tháng nào đã ghi, không
    đoán theo số tiền/danh mục. bo[] = các tháng đã chọn "Bỏ qua".
    Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
-   Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
+   Hàm ngayTraCuaKy (vayno-tinh.js) tự co ngày 31 về cuối tháng ngắn.
    ==================================================================== */
 // KỲ của khoản định kỳ: dk.ky = [{tuMk, soTien}] sắp theo tuMk. Mỗi kỳ chạy từ tuMk đến hết tháng trước tuMk của kỳ sau;
 // kỳ cuối chạy mãi (không có tháng kết thúc). Đổi mức = thêm kỳ mới, kỳ cũ tự đóng và thành "lưu trữ".
@@ -1201,6 +1201,15 @@ function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 // giống num() nhưng chặn số âm -> về 0 (dùng cho các ô nhập tiền)
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }
 function pad2(n){ return n<10 ? '0'+n : ''+n; }
+// sổ chưa có gì để báo cáo / dự báo: không giao dịch, không khoản vay hay cho vay, không giao dịch định kỳ, chưa đặt hạn mức / kế hoạch cho danh mục nào
+// (có hạn mức thì Dòng tiền vẫn dự báo được theo hạn mức nên không phải màn trống)
+function soChuaCoDuLieu(d){
+  d = d || state.data;
+  if (!d) return true;
+  var vn = d.vayNo || {}, cats = d.categories || {};
+  var coHm = ['thu', 'chi'].some(function(k){ return (cats[k] || []).some(function(c){ return num(c.chiTieu) > 0; }); });
+  return !Object.keys(d.journal || {}).length && !(vn.vayNoPhaiTra || []).length && !(vn.choVay || []).length && !(d.dinhKy || []).length && !coHm;
+}
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];

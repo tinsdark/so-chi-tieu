@@ -1,7 +1,7 @@
 "use strict";
 /* ====================================================================
    nhap.js — NHẬP giao dịch từ file CSV / Excel vào Sổ tay.
-   Cần state.js + vayno.js (daysInMonth) + ui.js (docSo/veSo/toast) load trước.
+   Cần state.js + vayno-tinh.js (daysInMonth) + ui.js (docSo/veSo/toast) load trước.
 
    Nguyên tắc an toàn (nhập hàng loạt là thao tác dễ làm bẩn dữ liệu nhất):
    - LUÔN có bước xem trước: bảng các dòng sẽ nhập, dòng lỗi, dòng trùng. Chưa bấm "Nhập" là chưa ghi gì.

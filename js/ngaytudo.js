@@ -11,7 +11,7 @@
      tới khi đủ. Lãi THỰC (đã trừ lạm phát) 0 / 3 / 6% do người dùng chọn. Chỉ là ước lượng, không phải lời khuyên đầu tư.
    - Ghi nhanh: dưới ô số tiền hiện "Khoản này ≈ 0,3 ngày tự do" (chi) / "Khoản này ≈ +0,5 ngày tự do" (thu).
    Chỉ ĐỌC dữ liệu; chỉ lưu trong RAM (state.ntd): không ghi gì lên Drive.
-   Cần state.js, vayno.js (daysInMonth), dongtien.js (forecastEligibleMonths), bieudo.js (bdThang), bieudo.js load trước.
+   Cần state.js, vayno-tinh.js (daysInMonth), dongtien.js (forecastEligibleMonths), bieudo.js (bdThang), bieudo.js load trước.
    ==================================================================== */
 
 var NTD_MOC = [7, 30, 90, 180, 365];

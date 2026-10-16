@@ -71,17 +71,17 @@ function categoryCardHtml(kind, title, cats){
                 + (catAm(c) ? '<span class="dm-chip">Âm lịch ' + c.ngayAm + (c.thangAm ? '/' + c.thangAm : ' hằng tháng') + '</span>' : '')
                 + (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
                 + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '')
-                + (catHanMucTuKeHoach(kind, c.id) ? '<span class="dm-chip">Hạn mức từ kế hoạch</span>' : '');
+                + (catHanMucTuKeHoach(kind, c.id) ? '<span class="dm-chip">' + (kind === 'thu' ? 'Kế hoạch thu từ định kỳ' : 'Hạn mức từ kế hoạch') + '</span>' : '');
       h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
         + '<span class="cat-drag" draggable="true" data-act="dmNop" title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>'
         + '<span class="cat-dot" style="background:'+catMau(kind, c.id)+'"></span>'
         + '<span class="dm-main"><b class="dm-n">'+esc(c.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
-        + '<span class="dm-v">'+(num(c.chiTieu) > 0 ? '<b>'+fmt(c.chiTieu)+'</b><small>/tháng</small>' : '<b class="dm-un">Chưa đặt</b><small>hạn mức</small>')+'</span>'
+        + '<span class="dm-v">'+(num(c.chiTieu) > 0 ? '<b>'+fmt(c.chiTieu)+'</b><small>/tháng</small>' : '<b class="dm-un">Chưa đặt</b><small>' + (kind === 'thu' ? 'kế hoạch thu' : 'hạn mức') + '</small>')+'</span>'
         + dmGo()+'</div>';
     });
-    h += '</div><div class="dm-tong"><span>Tổng hạn mức/tháng</span><b class="'+kind+'">'+fmt(tong)+'</b></div>';
+    h += '</div><div class="dm-tong"><span>' + (kind === 'thu' ? 'Tổng kế hoạch thu/tháng' : 'Tổng hạn mức/tháng') + '</span><b class="'+kind+'">'+fmt(tong)+'</b></div>';
   }
-  return h + ghiChuGon('Hạn mức là số tiền dự định thu / chi mỗi tháng của danh mục, dùng cho thanh tiến độ ở Báo cáo và dự kiến ở Dòng tiền. '
+  return h + ghiChuGon((kind === 'thu' ? 'Kế hoạch thu' : 'Hạn mức') + ' là số tiền dự định ' + (kind === 'thu' ? 'thu' : 'chi') + ' mỗi tháng của danh mục, dùng cho thanh tiến độ ở Báo cáo và dự kiến ở Dòng tiền. '
     + '<b>Không tính dự kiến</b>: không đoán số cho tháng tương lai (khoản không đều đặn). '
     + '<b>Cố định theo Hạn mức</b>: luôn dùng đúng hạn mức cho tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa đổi). '
     + 'Kéo ⠿ để đổi thứ tự (hoặc mở danh mục rồi bấm Lên / Xuống).'
@@ -345,6 +345,84 @@ function backupLoai(name){
   if (!m || !m[1]) return 'Tự động';
   return m[1] === 'thu-cong' ? 'Thủ công' : (BACKUP_NHAN[m[1]] || m[1]);
 }
+/* ---- Tải toàn bộ dữ liệu về máy / khôi phục từ file .json (không cần Drive) ----
+   File xuất là đúng nội dung state.data, cùng định dạng với bản sao lưu trên Drive. Khôi phục đi qua normalizeData như mọi đường nạp dữ liệu. */
+function tenFileXuat(){ return 'so-tien-du-lieu_' + todayStr() + '.json'; }
+// -> { data } nếu text là dữ liệu Sổ Tiền hợp lệ, { loi } nếu không (không đoán, không sửa)
+function docFileKhoiPhuc(text){
+  var j;
+  try{ j = JSON.parse(String(text == null ? '' : text).replace(/^\uFEFF/, '')); }catch(e){ return { loi: 'File không phải JSON hợp lệ.' }; }
+  if (!j || typeof j !== 'object' || Array.isArray(j)) return { loi: 'File không phải dữ liệu Sổ Tiền.' };
+  if (!j.journal || typeof j.journal !== 'object' || Array.isArray(j.journal)) return { loi: 'File thiếu sổ giao dịch (journal), không phải bản dữ liệu hoặc sao lưu Sổ Tiền.' };
+  if (j.categories != null && (typeof j.categories !== 'object' || Array.isArray(j.categories))) return { loi: 'Phần danh mục trong file bị hỏng.' };
+  return { data: j };
+}
+// Phải gọi ĐỒNG BỘ trong cú bấm. iPhone: bảng chia sẻ (Lưu vào Tệp); không có thì tải file về.
+function xuatDuLieuGiao(){
+  var text = JSON.stringify(state.data), ten = tenFileXuat();
+  var blob = new Blob([text], { type: 'application/json' }), file = null;
+  try { file = new File([blob], ten, { type: 'application/json' }); } catch (e) { file = null; }
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })){
+    navigator.share({ files: [file], title: 'Dữ liệu Sổ Tiền' }).catch(function(e){ if (!e || e.name !== 'AbortError') lichTaiXuong(blob, ten); });
+    return 'share';
+  }
+  lichTaiXuong(blob, ten);
+  return 'tai';
+}
+function khoiPhucTuFile(el){
+  var f = el.files && el.files[0];
+  el.value = '';                                  // chọn lại đúng file đó lần sau vẫn nhận
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onerror = function(){ toast('Không đọc được file.', { loai:'err' }); };
+  rd.onload = function(){
+    (async function(){
+      var kq = docFileKhoiPhuc(rd.result);
+      if (kq.loi){ toast(kq.loi, { loai:'err' }); return; }
+      var nNgay = Object.keys(kq.data.journal).length, vn = kq.data.vayNo || {};
+      var tomTat = nNgay + ' ngày có giao dịch, ' + ((vn.vayNoPhaiTra || []).length + (vn.choVay || []).length) + ' khoản vay / cho vay, ' + ((kq.data.wallets || []).length || 1) + ' ví.';
+      if (!await xacNhan('Khôi phục từ file "' + f.name + '"?',
+            'File có ' + tomTat + '\nToàn bộ dữ liệu hiện tại sẽ được thay bằng file này.'
+            + (accessToken ? ' Dữ liệu hiện tại được sao lưu lên Drive trước khi thay.' : ' Đang ngoại tuyến nên dữ liệu hiện tại KHÔNG được sao lưu lên Drive: hãy bấm "Tải dữ liệu về máy" trước nếu muốn giữ.'),
+            { nguyHiem:true, chuOk:'Khôi phục' })) return;
+      try{
+        if (accessToken) await saoLuuNgay('truoc-khoi-phuc', JSON.stringify(state.data));
+        if (state.mp) mpXoaNhap();
+        state.data = normalizeData(kq.data);
+        scheduleSave();
+        toast('Đã khôi phục dữ liệu từ file.');
+      }catch(e){
+        console.error('[chitieu] Khôi phục từ file lỗi:', e);
+        toast('Không khôi phục được: ' + (e && e.message ? e.message : 'lỗi'), { loai:'err' });
+      }
+      renderAll();
+    })();
+  };
+  rd.readAsText(f);
+}
+/* ---- Thuật ngữ: mỗi khái niệm một tên, một câu định nghĩa (khớp README mục "Thuật ngữ"). Test kiểm mỗi tên có thật trong giao diện. ---- */
+var THUAT_NGU = [
+  { ten: 'Số dư hiện tại', nghia: 'Tiền đang có trong tất cả các ví tới hết hôm nay (Sổ tay, tháng đang chạy). Tháng đã qua gọi là "Số dư cuối tháng". Khoản đã ghi trước cho ngày sau hôm nay chưa tính, chỉ hiện ở dòng phụ.' },
+  { ten: 'Số dư theo ví', nghia: 'Tiền trong từng ví tới hôm nay. Ví thẻ tín dụng mang số âm là đang nợ thẻ.' },
+  { ten: 'Thu nhập, Chi tiêu', nghia: 'Thu và chi thường xuyên của tháng. Không gồm nhận vay, thu hồi cho vay, cho vay, trả nợ và điều chỉnh số dư.' },
+  { ten: 'Để dành được', nghia: 'Thu nhập trừ Chi tiêu của tháng, không tính tiền vay. Âm thì hiện "Chi vượt thu". Trả lời câu hỏi "tháng này mình có sống trong khả năng không".' },
+  { ten: 'Tiền vào − ra', nghia: 'Tiền vào ví trừ tiền ra khỏi ví trong tháng, TÍNH CẢ tiền vay và trả nợ vì đó là tiền thật ra vào ví (Dòng tiền). Trả lời câu hỏi "tháng này tiền có đủ không". Khác "Để dành được": vay 50 triệu làm Tiền vào − ra tăng 50 triệu nhưng Để dành được không đổi.' },
+  { ten: 'Chi hằng ngày', nghia: 'Chi của các danh mục không phải chi cố định. Hạn mức, nhịp chi và "Hôm nay còn tiêu được" chỉ xét phần này.' },
+  { ten: 'Chi cố định', nghia: 'Danh mục bật công tắc "Chi cố định" (tiền nhà, tiền net...) và các danh mục hệ thống (Trả nợ, Cho vay, Điều chỉnh số dư). Không đem so với hạn mức chi hằng ngày.' },
+  { ten: 'Hạn mức', nghia: 'Số tiền dự định chi mỗi tháng của một danh mục chi. Với danh mục thu gọi là "Kế hoạch thu".' },
+  { ten: 'Hôm nay còn tiêu được', nghia: '(Tổng hạn mức chi hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay.' },
+  { ten: 'Tài sản ròng thực tế', nghia: 'Tiền các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả. Chỉ tính số đã ghi, không tính lãi tương lai.' },
+  { ten: 'Tài sản ròng dự kiến', nghia: 'Như trên nhưng cho các tháng sắp tới: số dư dự kiến + cho vay chưa thu − nợ gốc còn lại theo lịch trả.' },
+  { ten: 'Dòng tiền tích lũy', nghia: 'Số dư các ví cộng dồn qua từng tháng tới, theo dự báo (khoản định kỳ, lịch trả nợ, hạn mức hoặc trung bình các tháng gần đây).' },
+  { ten: 'Ngày tự do', nghia: 'Tiền các ví ÷ chi thật mỗi ngày: số ngày sống được mà không cần thêm đồng thu nào.' },
+  { ten: 'Lãi thực', nghia: 'Lãi suất suy ra từ số vay, số trả mỗi tháng và số kỳ của khoản "Trả cố định/tháng" (lãi ngầm mỗi tháng × 12). Giúp thấy cái giá thật của trả góp.' }
+];
+function thuatNguCardHtml(){
+  var dl = '<dl class="tn-dl">' + THUAT_NGU.map(function(t){ return '<dt>' + esc(t.ten) + '</dt><dd>' + esc(t.nghia) + '</dd>'; }).join('') + '</dl>';
+  return '<div class="card dm-card">' + dmHead('Các số trong app nghĩa là gì')
+    + '<div class="dm-sub">Mỗi khái niệm một tên, ở mọi tab.</div>'
+    + ghiChuGon(dl, 'Xem bảng thuật ngữ') + '</div>';
+}
 function backupCardHtml(){
   var ds = state.backupDs, mo = !!(ds && state.backupMo);
   var cuoi = null;
@@ -353,6 +431,8 @@ function backupCardHtml(){
     + '<div class="dm-sub">'+(cuoi ? 'Lần cuối: '+esc(backupGio(cuoi))+' · '+esc(backupLoai(cuoi.name).toLowerCase()) : 'Tự lưu mỗi ngày · giữ '+BACKUP_GIU+' bản gần nhất')+'</div>'
     + '<div class="dm-btns">'
     + '<button class="btn sm" data-act="bkTao"'+(state.backupBusy?' disabled':'')+'>Sao lưu ngay</button>'
+    + '<button class="btn secondary sm" data-act="bkTai">Tải dữ liệu về máy</button>'
+    + '<label class="btn secondary sm bk-file">Khôi phục từ file<input type="file" id="bk_file" data-act="bkFile" accept=".json,application/json" hidden></label>'
     + (mo ? '<button class="btn secondary sm" data-act="bkAn">Ẩn các bản sao lưu ('+ds.length+')</button>'
           : '<button class="btn secondary sm" data-act="'+(ds ? 'bkMo' : 'bkXem')+'"'+(state.backupBusy?' disabled':'')+'>Xem các bản sao lưu'+(ds ? ' ('+ds.length+')' : '')+'</button>')
     + '</div>';
@@ -368,7 +448,8 @@ function backupCardHtml(){
   }
   return h + ghiChuGon('Mỗi ngày, lần đầu mở app, app tự lưu 1 bản dữ liệu lên Drive và giữ '+BACKUP_GIU+' bản gần nhất. '
     + gtViDu([ds ? { ten: 'Hiện có', ct: 'Số bản sao lưu đang giữ trên Drive / số bản tối đa.', pt: ds.length + ' / ' + BACKUP_GIU + ' bản' } : null]) + ' '
-    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được.', 'Sao lưu hoạt động thế nào?') + '</div>';
+    + 'Khôi phục sẽ thay toàn bộ dữ liệu hiện tại bằng bản đã chọn — dữ liệu hiện tại cũng được sao lưu lại trước đó nên vẫn quay lại được. '
+    + '"Tải dữ liệu về máy" lưu toàn bộ sổ thành một file .json ngay trên máy (không cần Drive); "Khôi phục từ file" nạp lại file đó.', 'Sao lưu hoạt động thế nào?') + '</div>';
 }
 
 /* Tab Cài đặt chia thành 5 PHẦN bằng thanh chọn (cùng kiểu thanh chọn của Dòng tiền: Theo ngày / Theo tháng / Mô phỏng), không phải danh sách bấm:
@@ -387,7 +468,7 @@ function dmPhanHtml(tab){
   if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
-  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + '</div>';
+  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + '</div>';
   return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
     + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
 }
@@ -423,8 +504,8 @@ function catSheetHtml(f){
   var mau = c ? catMau(f.kind, c.id) : CAT_PALETTE[arr.length % CAT_PALETTE.length];
   var h = vnF('Tên', '<input type="text" id="dm_ten" value="'+esc(d.ten)+'" placeholder="VD: Ăn uống">')
     + (c && catHanMucTuKeHoach(f.kind, c.id)
-        ? vnF('Hạn mức/tháng', '<input type="text" id="dm_base" class="money" value="'+veSo(d.chiTieu)+'" disabled>', '', 'Tự lấy từ kế hoạch (kỳ đang chạy) ở Cài đặt → Kế hoạch. Muốn đổi, sửa ở đó.')
-        : vnF('Hạn mức/tháng', dmMoney('dm_base', d.chiTieu)))
+        ? vnF(f.kind === 'thu' ? 'Kế hoạch thu/tháng' : 'Hạn mức/tháng', '<input type="text" id="dm_base" class="money" value="'+veSo(d.chiTieu)+'" disabled>', '', 'Tự lấy từ kế hoạch (kỳ đang chạy) ở Cài đặt → Kế hoạch. Muốn đổi, sửa ở đó.')
+        : vnF(f.kind === 'thu' ? 'Kế hoạch thu/tháng' : 'Hạn mức/tháng', dmMoney('dm_base', d.chiTieu)))
     + vnF('Màu <span class="mp-hint">(dùng ở biểu đồ)</span>',
         '<div class="dm-mau"><input type="color" id="dm_mau" value="'+mau+'" data-cur="'+mau+'" aria-label="Màu danh mục">'
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')
@@ -636,6 +717,8 @@ function catNameExists(kind, name, excludeId){
 function handleDanhMucAction(act, el){
   if (act === 'bkMo' || act === 'bkAn'){
     state.backupMo = (act === 'bkMo'); renderDanhMuc();
+  } else if (act === 'bkTai'){
+    xuatDuLieuGiao();
   } else if (act === 'bkXem' || act === 'bkTao' || act === 'bkKhoiPhuc'){
     // handler KHÔNG được async (dispatcher đọc giá trị trả về đồng bộ) -> bọc IIFE
     if (state.backupBusy) return true;
@@ -1023,6 +1106,7 @@ function handleDanhMucChange(el){
   if (handleTheChange(el)) return true;
   if (handleHienThiChange(el)) return true;
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
+  if (el.matches('[data-act=bkFile]')){ khoiPhucTuFile(el); return true; }
   if (el.matches('[data-act=dkDuBao]')){ el.setAttribute('data-cham', '1'); return true; }     // người dùng đã tự chọn: thôi tự đổi mặc định
   if (el.matches && el.matches('#dk_cat')){ dkCapNhatDuBao(); return true; }
   if (el.matches('[data-act=dkBat]')){
