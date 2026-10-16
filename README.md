@@ -115,7 +115,7 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 464 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
+- Có 467 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
 
 ---
 
@@ -209,6 +209,7 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - **Mỗi pull request làm thay đổi người dùng nhìn thấy thì thêm MỘT mục lên đầu `NHAT_KY` ở `js/phienban.js`** (số phiên bản năm.tháng.ngày, thêm `.2` nếu cùng ngày có nhiều bản; vài câu ngắn viết cho người dùng, không nhắc tên hàm / file). Test kiểm định dạng, thứ tự và giọng văn.
 - `bump.js` đặt `?v=<hash>` cho các file js/css trong `index.html` theo **nội dung file**. Số này vừa để trình duyệt không giữ file cũ, vừa để app biết có bản mới và báo cho người dùng. Quên chạy thì test sẽ báo lệch.
 - Muốn ép mọi máy đã cài app xóa cache cũ thì tăng `VERSION` trong `sw.js`.
+- Mọi file `js/*.js` dùng chung global (không module), nên test nhóm 7c kiểm: mọi file trong `js/` đều được `index.html` nạp, không có tên khai báo ở cột 0 trùng giữa 2 file (file nạp sau sẽ lặng lẽ đè file trước), và nạp đủ các file đúng thứ tự `index.html` không có `ReferenceError`. Thêm file js mới thì phải thêm cả thẻ `<script>` vào `index.html` đúng chỗ.
 - Tên danh mục, cấu trúc dữ liệu có migration trong `normalizeData()` ở `state.js`. Đổi cấu trúc dữ liệu thì phải thêm migration cho dữ liệu cũ, vì dữ liệu thật của người dùng nằm trên Drive.
 
 ### Nguyên tắc đã áp dụng trong code

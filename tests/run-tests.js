@@ -937,6 +937,74 @@ test('catDangDuocDinhKyDung: liệt kê khoản định kỳ đang trỏ vào da
 });
 
 /* ==================================================================== */
+group('7c. Cấu trúc file js: không trùng tên global, thứ tự nạp trong index.html');
+
+// Mọi file js dùng chung global (không module). Khai báo trùng tên ở 2 file thì file nạp sau lặng lẽ đè file trước
+// (từng có REF_LABEL khai báo 2 lần với 2 giá trị khác nhau). Thứ tự nạp chỉ làm hỏng được phụ thuộc LÚC NẠP
+// (câu lệnh chạy ngay ở cột 0); phụ thuộc lúc chạy (gọi hàm khi bấm nút) thì lúc đó mọi file đã nạp xong.
+var htmlIndex = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+var jsTheoIndex = [];
+htmlIndex.replace(/<script[^>]*\bsrc="js\/([^"?]+\.js)/g, function(_, f){ jsTheoIndex.push(f); return _; });
+var jsTrenDia = fs.readdirSync(JS_DIR).filter(function(f){ return /\.js$/.test(f); });
+function khaiBaoCot0(src){
+  var out = [];
+  src.split('\n').forEach(function(l, i){
+    var m = l.match(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/) || l.match(/^(?:var|let|const)\s+([A-Za-z_$][\w$]*)/);
+    if (m) out.push({ ten: m[1], dong: i + 1 });
+  });
+  return out;
+}
+
+test('mọi file trong js/ đều được index.html nạp, và mọi script js/ trong index.html đều tồn tại', function(){
+  var thieu = jsTrenDia.filter(function(f){ return jsTheoIndex.indexOf(f) < 0; });
+  var thua = jsTheoIndex.filter(function(f){ return jsTrenDia.indexOf(f) < 0; });
+  eq(thieu.join(','), '', 'file có trong js/ nhưng index.html không nạp');
+  eq(thua.join(','), '', 'index.html nạp file không tồn tại');
+  eq(jsTheoIndex.length, new Set(jsTheoIndex).size, 'có file nạp 2 lần');
+});
+
+test('không có tên khai báo ở cột 0 trùng giữa các file js (file nạp sau sẽ đè file trước)', function(){
+  var thay = {}, trung = [];
+  jsTheoIndex.forEach(function(f){
+    khaiBaoCot0(fs.readFileSync(path.join(JS_DIR, f), 'utf8')).forEach(function(d){
+      (thay[d.ten] = thay[d.ten] || []).push(f + ':' + d.dong);
+    });
+  });
+  Object.keys(thay).forEach(function(k){ if (thay[k].length > 1) trung.push(k + ' → ' + thay[k].join(' ; ')); });
+  ok(!trung.length, trung.join(' | '));
+});
+
+test('nạp đủ các file đúng thứ tự index.html vào môi trường trống: không ReferenceError lúc nạp', function(){
+  // proxy "gì cũng được" thay cho DOM / API trình duyệt: chỉ để câu lệnh cột 0 chạy được, không kiểm hành vi
+  function U(){ var f = function(){ return U(); }; return new Proxy(f, { get: function(t, k){ return k === Symbol.toPrimitive ? function(){ return ''; } : (k === 'length' ? 0 : (k === 'then' ? undefined : U())); }, set: function(){ return true; }, apply: function(){ return U(); }, construct: function(){ return U(); }, has: function(){ return true; } }); }
+  var c = {
+    console: console, Math: Math, Date: Date, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String, Boolean: Boolean, RegExp: RegExp,
+    Error: Error, Promise: Promise, Map: Map, Set: Set, Symbol: Symbol, Intl: Intl, URL: URL, TextEncoder: TextEncoder, TextDecoder: TextDecoder,
+    Uint8Array: Uint8Array, ArrayBuffer: ArrayBuffer, parseFloat: parseFloat, parseInt: parseInt, isNaN: isNaN, isFinite: isFinite,
+    encodeURIComponent: encodeURIComponent, decodeURIComponent: decodeURIComponent, escape: escape, unescape: unescape,
+    setTimeout: function(){ return 0; }, clearTimeout: function(){}, setInterval: function(){ return 0; }, clearInterval: function(){}, requestAnimationFrame: function(){ return 0; },
+    document: U(), window: U(), navigator: U(), location: U(), history: U(), screen: U(), crypto: U(), matchMedia: function(){ return U(); },
+    localStorage: { getItem: function(){ return null; }, setItem: function(){}, removeItem: function(){} },
+    sessionStorage: { getItem: function(){ return null; }, setItem: function(){}, removeItem: function(){} },
+    XLSX: {}, Blob: function(){}, File: function(){}, FileReader: function(){}, XMLHttpRequest: function(){},
+    fetch: function(){ return new Promise(function(){}); },     // không bao giờ xong: khỏi lỗi promise rơi ra ngoài test
+    MutationObserver: function(){ return U(); }, IntersectionObserver: function(){ return U(); }, ResizeObserver: function(){ return U(); },
+    alert: function(){}, confirm: function(){ return true; }, prompt: function(){ return null; }
+  };
+  c.globalThis = c; vm.createContext(c);
+  var chuSoHuu = {};
+  jsTheoIndex.forEach(function(f){ khaiBaoCot0(fs.readFileSync(path.join(JS_DIR, f), 'utf8')).forEach(function(d){ if (!chuSoHuu[d.ten]) chuSoHuu[d.ten] = f; }); });
+  jsTheoIndex.forEach(function(f, i){
+    try{ vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), c, { filename: f }); }
+    catch(e){
+      var m = String(e.message).match(/^(\w+) is not defined/), goiY = '';
+      if (m && chuSoHuu[m[1]] && jsTheoIndex.indexOf(chuSoHuu[m[1]]) > i) goiY = ' — "' + m[1] + '" khai báo ở ' + chuSoHuu[m[1]] + ' nhưng index.html nạp file đó SAU ' + f;
+      throw new Error(f + ' lỗi lúc nạp: ' + e.message + goiY);
+    }
+  });
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){
