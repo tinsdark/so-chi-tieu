@@ -211,8 +211,6 @@ function kyQuaHan(loan, homNay){
   });
   return r;
 }
-// số khoản sắp/đã tới hạn trong N ngày — dùng cho badge trên tab nav
-function vnBadgeCount(nNgay){ return danhSachSapDenHan(nNgay || 7).length; }
 
 /* ====================================================================
    TRẢ NỢ THEO TỪNG KỲ
