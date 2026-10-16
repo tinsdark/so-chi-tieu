@@ -612,13 +612,6 @@ function loanRevertRef(r){
 }
 
 /* ---- xóa khoản vay: báo rõ sẽ xóa những giao dịch nào, số dư đổi thế nào ---- */
-var REF_LABEL = {
-  nhanTienVay: 'Nhận tiền vay',
-  thuHoiChoVay: 'Thu hồi cho vay',
-  choVay: 'Cho vay (chi)',
-  traNo: 'Trả nợ',
-  tatToan: 'Tất toán'
-};
 function vnLoanRefs(loanId){
   var out = [];
   Object.keys(state.data.journal).forEach(function(date){

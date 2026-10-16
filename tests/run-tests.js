@@ -937,6 +937,157 @@ test('catDangDuocDinhKyDung: liệt kê khoản định kỳ đang trỏ vào da
 });
 
 /* ==================================================================== */
+group('7c. Cấu trúc file js: không trùng tên global, thứ tự nạp trong index.html');
+
+// Mọi file js dùng chung global (không module). Khai báo trùng tên ở 2 file thì file nạp sau lặng lẽ đè file trước
+// (từng có REF_LABEL khai báo 2 lần với 2 giá trị khác nhau). Thứ tự nạp chỉ làm hỏng được phụ thuộc LÚC NẠP
+// (câu lệnh chạy ngay ở cột 0); phụ thuộc lúc chạy (gọi hàm khi bấm nút) thì lúc đó mọi file đã nạp xong.
+var htmlIndex = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+var jsTheoIndex = [];
+htmlIndex.replace(/<script[^>]*\bsrc="js\/([^"?]+\.js)/g, function(_, f){ jsTheoIndex.push(f); return _; });
+var jsTrenDia = fs.readdirSync(JS_DIR).filter(function(f){ return /\.js$/.test(f); });
+function khaiBaoCot0(src){
+  var out = [];
+  src.split('\n').forEach(function(l, i){
+    var m = l.match(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/) || l.match(/^(?:var|let|const)\s+([A-Za-z_$][\w$]*)/);
+    if (m) out.push({ ten: m[1], dong: i + 1 });
+  });
+  return out;
+}
+
+test('mọi file trong js/ đều được index.html nạp, và mọi script js/ trong index.html đều tồn tại', function(){
+  var thieu = jsTrenDia.filter(function(f){ return jsTheoIndex.indexOf(f) < 0; });
+  var thua = jsTheoIndex.filter(function(f){ return jsTrenDia.indexOf(f) < 0; });
+  eq(thieu.join(','), '', 'file có trong js/ nhưng index.html không nạp');
+  eq(thua.join(','), '', 'index.html nạp file không tồn tại');
+  eq(jsTheoIndex.length, new Set(jsTheoIndex).size, 'có file nạp 2 lần');
+});
+
+test('không có tên khai báo ở cột 0 trùng giữa các file js (file nạp sau sẽ đè file trước)', function(){
+  var thay = {}, trung = [];
+  jsTheoIndex.forEach(function(f){
+    khaiBaoCot0(fs.readFileSync(path.join(JS_DIR, f), 'utf8')).forEach(function(d){
+      (thay[d.ten] = thay[d.ten] || []).push(f + ':' + d.dong);
+    });
+  });
+  Object.keys(thay).forEach(function(k){ if (thay[k].length > 1) trung.push(k + ' → ' + thay[k].join(' ; ')); });
+  ok(!trung.length, trung.join(' | '));
+});
+
+test('nạp đủ các file đúng thứ tự index.html vào môi trường trống: không ReferenceError lúc nạp', function(){
+  // proxy "gì cũng được" thay cho DOM / API trình duyệt: chỉ để câu lệnh cột 0 chạy được, không kiểm hành vi
+  function U(){ var f = function(){ return U(); }; return new Proxy(f, { get: function(t, k){ return k === Symbol.toPrimitive ? function(){ return ''; } : (k === 'length' ? 0 : (k === 'then' ? undefined : U())); }, set: function(){ return true; }, apply: function(){ return U(); }, construct: function(){ return U(); }, has: function(){ return true; } }); }
+  var c = {
+    console: console, Math: Math, Date: Date, JSON: JSON, Object: Object, Array: Array, Number: Number, String: String, Boolean: Boolean, RegExp: RegExp,
+    Error: Error, Promise: Promise, Map: Map, Set: Set, Symbol: Symbol, Intl: Intl, URL: URL, TextEncoder: TextEncoder, TextDecoder: TextDecoder,
+    Uint8Array: Uint8Array, ArrayBuffer: ArrayBuffer, parseFloat: parseFloat, parseInt: parseInt, isNaN: isNaN, isFinite: isFinite,
+    encodeURIComponent: encodeURIComponent, decodeURIComponent: decodeURIComponent, escape: escape, unescape: unescape,
+    setTimeout: function(){ return 0; }, clearTimeout: function(){}, setInterval: function(){ return 0; }, clearInterval: function(){}, requestAnimationFrame: function(){ return 0; },
+    document: U(), window: U(), navigator: U(), location: U(), history: U(), screen: U(), crypto: U(), matchMedia: function(){ return U(); },
+    localStorage: { getItem: function(){ return null; }, setItem: function(){}, removeItem: function(){} },
+    sessionStorage: { getItem: function(){ return null; }, setItem: function(){}, removeItem: function(){} },
+    XLSX: {}, Blob: function(){}, File: function(){}, FileReader: function(){}, XMLHttpRequest: function(){},
+    fetch: function(){ return new Promise(function(){}); },     // không bao giờ xong: khỏi lỗi promise rơi ra ngoài test
+    MutationObserver: function(){ return U(); }, IntersectionObserver: function(){ return U(); }, ResizeObserver: function(){ return U(); },
+    alert: function(){}, confirm: function(){ return true; }, prompt: function(){ return null; }
+  };
+  c.globalThis = c; vm.createContext(c);
+  var chuSoHuu = {};
+  jsTheoIndex.forEach(function(f){ khaiBaoCot0(fs.readFileSync(path.join(JS_DIR, f), 'utf8')).forEach(function(d){ if (!chuSoHuu[d.ten]) chuSoHuu[d.ten] = f; }); });
+  jsTheoIndex.forEach(function(f, i){
+    try{ vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), c, { filename: f }); }
+    catch(e){
+      var m = String(e.message).match(/^(\w+) is not defined/), goiY = '';
+      if (m && chuSoHuu[m[1]] && jsTheoIndex.indexOf(chuSoHuu[m[1]]) > i) goiY = ' — "' + m[1] + '" khai báo ở ' + chuSoHuu[m[1]] + ' nhưng index.html nạp file đó SAU ' + f;
+      throw new Error(f + ' lỗi lúc nạp: ' + e.message + goiY);
+    }
+  });
+});
+
+/* ==================================================================== */
+group('7d. Bất biến giữa các cài đặt song song: cùng một con số tính ở 2 nơi phải bằng nhau');
+
+// Hồ sơ ngẫu nhiên (seed cố định) gồm danh mục thường, chi cố định, "không tính dự kiến", danh mục hệ thống và cả khoản ghi trước
+// cho ngày sau hôm nay. Mỗi bất biến so 2 hàm độc lập cùng trả một đại lượng: lệch là có 1 trong 2 nơi đã trôi.
+function dbHoSoNgauNhien(seed, coTuongLai){
+  var s = seed >>> 0, r = function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  var d = baseData(); d.settings = { soDuDauKy: Math.round(r() * 5e6), ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' };
+  d.categories = { thu: [{ id: 'luong', ten: 'Lương', chiTieu: 0 }], chi: [
+    { id: 'an', ten: 'Ăn', chiTieu: r() < 0.8 ? 3000000 : 0 }, { id: 'xang', ten: 'Xăng', chiTieu: r() < 0.5 ? 1000000 : 0 },
+    { id: 'nha', ten: 'Nhà', chiTieu: r() < 0.7 ? 4000000 : 0, khoanCoDinh: true }, { id: 'kdt', ten: 'Khác', chiTieu: 2000000, khongDuTru: true }] };
+  var cats = ['an', 'xang', 'nha', 'kdt', 'choVay', 'traNo', 'dieuChinh'], thus = ['luong', 'nhanTienVay', 'thuHoiChoVay', 'dieuChinh'];
+  for (var m = 7; m <= 10; m++){
+    var nd = m === 10 ? (coTuongLai ? 31 : 15) : 28;
+    for (var dd = 1; dd <= nd; dd++){
+      if (r() < 0.55) continue;
+      var e = { thu: {}, chi: {}, ghiChu: '', refs: [] }, k = 1 + Math.floor(r() * 3);
+      for (var i = 0; i < k; i++){ var c = cats[Math.floor(r() * cats.length)]; e.chi[c] = (e.chi[c] || 0) + Math.round(r() * 500) * 1000; }
+      if (r() < 0.2){ var t = thus[Math.floor(r() * thus.length)]; e.thu[t] = Math.round(r() * 2000) * 1000; }
+      d.journal['2026-' + ctx.pad2(m) + '-' + ctx.pad2(dd)] = e;
+    }
+  }
+  return d;
+}
+function dbLoiBatBien(kiem, soHoSo){
+  var loi = [];
+  for (var seed = 1; seed <= (soHoSo || 60); seed++){
+    setToday('2026-10-15');
+    var coTL = (seed % 2) === 0;
+    loadData(dbHoSoNgauNhien(seed, coTL));
+    kiem(seed, coTL).forEach(function(l){ loi.push('hồ sơ ' + seed + ': ' + l); });
+  }
+  setToday('2026-10-01');
+  return loi;
+}
+
+test('Chi thật của tháng: bdThang (Sổ tay / Báo cáo) = tetChiTrong (Quỹ Tết) cho cả tháng', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    ['2026-07', '2026-08', '2026-09'].forEach(function(mk){
+      var a = ctx.bdThang(mk).tongChiThat, b = ctx.tetChiTrong(mk + '-01', mk + '-' + ctx.daysInMonth(mk)).tong;
+      if (Math.abs(a - b) > 0.5) o.push(mk + ' bdThang=' + a + ' tetChiTrong=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Chi thật tới ngày N: bdThang = bdUocTinhChiThang.daChi (ước tính cuối tháng ở Báo cáo)', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    [1, 8, 15].forEach(function(den){
+      var a = ctx.bdThang('2026-10', den).tongChiThat, b = ctx.bdUocTinhChiThang('2026-10', den).daChi;
+      if (Math.abs(a - b) > 0.5) o.push('đến ngày ' + den + ' bdThang=' + a + ' bdUoc=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Đã chi hằng ngày có hạn mức: tieuMoiNgay (Hôm nay còn tiêu được) = Σ hạn mức hằng ngày ở thẻ Hạn mức (khi chưa có khoản ghi trước)', function(){
+  var loi = dbLoiBatBien(function(seed, coTL){
+    if (coTL) return [];
+    var tm = ctx.tieuMoiNgay('2026-10-15'), sum = 0;
+    ctx.hanMucThangRows('2026-10').forEach(function(x){ if (!x.coDinh) sum += x.da; });
+    var got = tm ? tm.daTruoc + tm.daHomNay : 0;
+    return Math.abs(sum - got) > 0.5 ? ['tieuMoiNgay=' + got + ' hanMucThangRows=' + sum] : [];
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Số dư liền mạch: cuối tháng M = đầu tháng M+1', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    ['2026-07', '2026-08', '2026-09'].forEach(function(mk){
+      var a = ctx.balanceAtEndOfMonth(mk), b = ctx.balanceBeforeMonth(ctx.monthKeyAdd(mk, 1));
+      if (Math.abs(a - b) > 0.5) o.push(mk + ' cuối=' + a + ' đầu sau=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){

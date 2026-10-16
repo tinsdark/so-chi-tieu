@@ -99,7 +99,7 @@ var REF_MAP = {
 var REF_LABEL = {
   nhanTienVay:  'Nhận tiền vay',
   thuHoiChoVay: 'Thu hồi cho vay',
-  choVay:       'Cho vay',
+  choVay:       'Cho vay (chi)',
   traNo:        'Trả nợ',
   tatToan:      'Tất toán'
 };
