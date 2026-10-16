@@ -581,8 +581,10 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 function khoiDongGhiNhanh(){
   var gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
   if (!moNgoaiTuyen()){
+    // ghiThongBao nằm TRONG #app: phải showApp() thì mới có chiều cao (trước đây quên, trang chỉ hiện hình nền trống)
+    showApp();
     var tb = document.getElementById('ghiThongBao');
-    if (tb){ tb.style.display = ''; tb.innerHTML = '<b>Chưa thấy dữ liệu Sổ Tiền trên máy này.</b><br>Mở app Sổ Tiền một lần rồi quay lại. Nếu vẫn vậy thì iPhone không cho hai biểu tượng dùng chung dữ liệu, và Ghi nhanh trên màn hình chính dùng không được.'; }
+    if (tb){ tb.style.display = ''; tb.innerHTML = '<b>Biểu tượng này không thấy dữ liệu của app Sổ Tiền.</b><br>Nếu chưa mở Sổ Tiền lần nào trên máy này thì mở nó trước. Nếu đã mở rồi mà vẫn vậy, nhiều khả năng điện thoại giữ bộ nhớ riêng cho từng biểu tượng ở màn hình chính (iPhone thường như vậy), nên Ghi nhanh không đọc được dữ liệu Sổ Tiền và dùng không được. Khi đó hãy ghi bằng app Sổ Tiền, hoặc bằng Phím tắt (hướng dẫn trong README mục 7.1).'; }
     return false;
   }
   document.body.classList.add('ghi-san');

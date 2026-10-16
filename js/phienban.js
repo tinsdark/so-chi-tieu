@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.11', ngay: '2026-10-16', ten: 'Sửa Ghi nhanh trên màn hình chính bị trống',
+    muc: ['Mở biểu tượng Ghi nhanh mà nó không thấy dữ liệu thì không còn hiện màn trống trơn, mà báo rõ lý do và cách ghi khác.'] },
   { ban: '2026.10.16.10', ngay: '2026-10-16', ten: 'Biểu tượng riêng cho Ghi nhanh',
     muc: ['App con Ghi nhanh trên màn hình chính có biểu tượng riêng: dấu cộng trên nền nâu, giống nút Ghi nhanh trong app, để không nhầm với biểu tượng Sổ Tiền.'] },
   { ban: '2026.10.16.9', ngay: '2026-10-16', ten: 'App con Ghi nhanh trên màn hình chính',

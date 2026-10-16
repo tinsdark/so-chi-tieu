@@ -1484,11 +1484,12 @@ test('khoiDongGhiNhanh: có dữ liệu thì mở bảng Ghi nhanh, KHÔNG đồ
   var kho = khoGia(), goi = [], lop = {}, thongBao = { style: {}, innerHTML: '' }, cong = { style: {} };
   var fake = { getElementById: function(id){ return id === 'ghiThongBao' ? thongBao : (id === 'authGate' ? cong : null); }, querySelectorAll: function(){ return []; },
     body: { classList: { add: function(c){ lop[c] = true; }, remove: function(c){ delete lop[c]; }, contains: function(c){ return !!lop[c]; } } }, addEventListener: function(){} };
-  var kp = thayTam({ localStorage: kho, document: fake, showApp: function(){}, renderAll: function(){}, qaMoSheet: function(){ goi.push('qaMoSheet'); },
+  var kp = thayTam({ localStorage: kho, document: fake, showApp: function(){ goi.push('showApp'); }, renderAll: function(){}, qaMoSheet: function(){ goi.push('qaMoSheet'); },
     findFile: function(){ goi.push('findFile'); return Promise.resolve(null); }, thuXinTokenAmTham: function(){ goi.push('thuXinToken'); return Promise.resolve(null); }, requestToken: function(){ goi.push('requestToken'); return Promise.resolve(); } });
   try{
     ctx.state.data = null;
-    eq(ctx.khoiDongGhiNhanh(), false, 'chưa có dữ liệu: không mở'); ok(thongBao.innerHTML.indexOf('Chưa thấy dữ liệu') >= 0, 'báo rõ'); eq(thongBao.style.display, '', 'hiện thông báo'); eq(goi.indexOf('qaMoSheet'), -1, 'không mở bảng');
+    eq(ctx.khoiDongGhiNhanh(), false, 'chưa có dữ liệu: không mở'); ok(thongBao.innerHTML.indexOf('không thấy dữ liệu') >= 0, 'báo rõ');
+    ok(goi.indexOf('showApp') >= 0, 'phải showApp(): thông báo nằm trong #app, #app ẩn thì thông báo không hiện (người dùng chỉ thấy hình nền trống)'); eq(thongBao.style.display, '', 'hiện thông báo'); eq(goi.indexOf('qaMoSheet'), -1, 'không mở bảng');
     kho.setItem('chitieu_synced_v1', JSON.stringify({ data: duLieuMay(), savedAt: 1000, baseModified: 'T1' }));
     thongBao.innerHTML = ''; ctx.state.data = null;
     eq(ctx.khoiDongGhiNhanh(), true, 'có dữ liệu: mở'); ok(goi.indexOf('qaMoSheet') >= 0, 'mở bảng Ghi nhanh'); eq(lop['ghi-san'], true, 'đánh dấu chế độ Ghi nhanh'); eq(ctx.state.tab, 'sotay', 'bảng Ghi nhanh thuộc tab Sổ tay');
