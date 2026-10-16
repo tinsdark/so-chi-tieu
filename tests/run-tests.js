@@ -1838,6 +1838,32 @@ test('tongQuanHtml: không có chip lời nhắc; không có việc gì thì chu
 });
 
 /* ==================================================================== */
+test('Sổ tay: số dư hiện tại là số dư TỚI HÔM NAY, bằng số của Dòng tiền → Theo ngày; khoản ghi trước cho ngày sau chỉ hiện ở dòng phụ', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:10000000, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.wallets = [{ id:'a', ten:'Tiền mặt', soDuDauKy:4000000 }, { id:'b', ten:'Techcom', soDuDauKy:6000000 }];
+  d.journal['2026-10-03'] = { thu:{}, chi:{ an:500000 }, ghiChu:'', refs:[], items:[{ iid:'i1', kind:'chi', catId:'an', soTien:500000, walletId:'a' }] };
+  d.journal['2026-10-20'] = { thu:{ luong:2000000 }, chi:{ an:300000 }, ghiChu:'', refs:[], items:[{ iid:'i2', kind:'thu', catId:'luong', soTien:2000000, walletId:'b' }, { iid:'i3', kind:'chi', catId:'an', soTien:300000, walletId:'a' }] };
+  loadData(d);
+  var root = { innerHTML: '' }; ctx.state.soTayMonth = '2026-10';
+  var rs0 = ctx.renderSoTay; ctx.renderSoTay = renderThat.renderSoTay;
+  voiDom({ tabContent: root }, null, function(){ ctx.renderSoTay(); });
+  var h = root.innerHTML, hom = ctx.balanceAt('2026-10-10');
+  eq(hom, 9500000, 'số dư tới hôm nay = 10tr − 500k (khoản ngày 20 chưa tới)');
+  var iHero = h.indexOf('hero-val'), so = h.slice(iHero, iHero + 80);
+  ok(so.indexOf(ctx.fmt(9500000)) > 0, 'số to ở thẻ đầu là số dư hôm nay: ' + so);
+  ok(h.indexOf('Sau các khoản đã ghi trước cho những ngày tới') > 0 && h.indexOf(ctx.fmt(11200000)) > 0, 'dòng phụ cho số tới hết tháng 11.200.000');
+  ok(h.indexOf('khoản đã ghi trước cho các ngày sau hôm nay') > 0, 'Cách tính nói rõ phần chênh');
+  eq(kiemPhepCong(h).loi.join(' | '), '', 'phép cộng trong Cách tính vẫn đúng');
+  // dải ví cũng tính tới hôm nay: Tiền mặt 4tr − 500k, Techcom 6tr (khoản 2tr ngày 20 chưa tính)
+  ok(h.indexOf(ctx.fmt(3500000)) > 0 && h.indexOf(ctx.fmt(6000000)) > 0 && h.indexOf(ctx.fmt(8000000)) < 0, 'số dư từng ví tới hôm nay');
+  // không có khoản ghi trước thì không có dòng phụ
+  d.journal = { '2026-10-03': d.journal['2026-10-03'] }; loadData(d);
+  voiDom({ tabContent: root }, null, function(){ ctx.renderSoTay(); });
+  ok(root.innerHTML.indexOf('Sau các khoản đã ghi trước') < 0, 'không có khoản ghi trước: không hiện dòng phụ');
+  ctx.renderSoTay = rs0; setToday('2026-10-01');
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
@@ -2347,8 +2373,8 @@ test('Tab Mô phỏng: ô đầu là "Số dư hiện tại" (kèm khoản đã 
   var rm0 = ctx.renderMoPhong; ctx.renderMoPhong = renderThat.renderMoPhong;
   try{ voiDom({ tabContent: root }, null, function(){ ctx.renderMoPhong(); }); } finally { ctx.renderMoPhong = rm0; }
   var h = root.innerHTML;
-  ok(h.indexOf('Số dư hiện tại') >= 0, 'có ô Số dư hiện tại');
-  ok(h.indexOf(ctx.fmt(21000000)) >= 0, 'giá trị đã điều chỉnh 21tr: ' + h.slice(h.indexOf('Số dư hiện tại'), h.indexOf('Số dư hiện tại') + 400));
+  ok(h.indexOf('Số dư tính cả khoản đến hạn') >= 0, 'có ô Số dư tính cả khoản đến hạn (không còn gọi là "hiện tại" để khỏi nhầm với số dư ở Sổ tay)');
+  ok(h.indexOf(ctx.fmt(21000000)) >= 0, 'giá trị đã điều chỉnh 21tr: ' + h.slice(h.indexOf('Số dư tính cả khoản đến hạn'), h.indexOf('Số dư tính cả khoản đến hạn') + 400));
   ok(h.indexOf('Đã tính thêm 3 khoản đến hạn chưa ghi') >= 0 && h.indexOf('Lương +') >= 0, 'nói rõ đã cộng khoản nào');
   ok(h.indexOf('Số dư cuối kỳ') < 0, 'không còn ô cuối kỳ');
   ok(h.indexOf('Cuối tháng này — kịch bản') >= 0 && h.indexOf('Chênh lệch sau 12 tháng') >= 0, 'các ô còn lại');

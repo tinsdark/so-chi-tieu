@@ -413,7 +413,7 @@ function renderMoPhong(){
 
   var tile = function(cls, lbl, val, sub, nho){ return '<div class="mp-t '+cls+'"><div class="lbl">'+lbl+'</div><div class="val'+(nho ? ' txt' : '')+'">'+val+'</div>'+(sub ? '<div class="sub">'+sub+'</div>' : '')+'</div>'; };
   html += '<div class="mp-tiles">'
-    + tile('gold', 'Số dư hiện tại', fmt(Math.round(hienTai.tong)), ghiChuHienTai)
+    + tile('gold', 'Số dư tính cả khoản đến hạn', fmt(Math.round(hienTai.tong)), ghiChuHienTai)
     + tile(thangNayMoi < 0 ? 'chi' : '', 'Cuối tháng này — kịch bản', fmt(Math.round(thangNayMoi)),
         Math.round(thangNayMoi) !== Math.round(thangNayGoc) ? 'Chưa điều chỉnh: ' + fmt(Math.round(thangNayGoc)) : '')
     + tile(!coDc ? '' : (chenh >= 0 ? 'thu' : 'chi'), 'Chênh lệch sau ' + hz + ' tháng', coDc ? (chenh >= 0 ? '+' : '') + fmt(chenh) : 'Chưa thay đổi',
