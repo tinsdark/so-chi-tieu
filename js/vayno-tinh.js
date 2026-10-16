@@ -496,29 +496,29 @@ function actualCatInMonth(kind, cid, mk){
 }
 // dự trù 1 danh mục cho tháng mk (tháng tương lai). Thứ tự ưu tiên:
 // 1. kế hoạch: khoản định kỳ đang bật + bật "Dùng làm dự báo" + có kỳ phủ tháng mk -> lấy đúng số của kỳ (thay hẳn ước lượng)
-// 2. danh mục: duTruCoBan (lịch Vay - Nợ, hạn mức cố định, trung bình 3 tháng, hạn mức)
-function duTruDanhMucThang(kind, cid, mk){
+// 2. danh mục: lịch Vay - Nợ, hạn mức cố định, trung bình 3 tháng, hạn mức
+// MỘT nguồn duy nhất cho mọi nơi (hàng từng danh mục ở Dòng tiền, tổng dự kiến, tích lũy, Mô phỏng):
+// duTruGoiY trả null = "không có gợi ý" (màn hiện "—"), duTruDanhMucThang là bản số (null -> 0).
+function duTruGoiY(kind, cid, mk){
   if (mk > monthKey(todayStr()) && !CAT_HE_THONG[kind][cid]){
     var duBao = dinhKyDuBaoThang(kind, cid, mk);
     if (duBao != null) return duBao;
   }
-  return duTruCoBan(kind, cid, mk);
-}
-function duTruCoBan(kind, cid, mk){
   var cat0 = state.data.categories[kind].find(function(c){ return c.id===cid; });
   // Trả nợ / Thu hồi cho vay lấy từ lịch Vay - Nợ, không phải ước lượng: cờ "Không tính dự kiến" không áp dụng
-  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
-  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
+  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk) || null;
+  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || null;
   // Cho vay / Nhận tiền vay không đoán, nhưng giao dịch đã GHI ở ngày tương lai (cho vay hẹn tháng sau) là tiền chắc chắn đi / về
-  if (cat0 && cat0.khongDuTru) return (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
-  if (kind==='chi' && cid==='traNo') return tongTraNoThang(mk);
-  if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk);
-  if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : 0;
+  if (cat0 && cat0.khongDuTru){
+    var ghi = (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
+    return ghi > 0 ? ghi : null;
+  }
+  if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : null;
   var avg = recentAvgActual(kind, cid, 3);
   if (avg != null) return avg;
-  var cat = state.data.categories[kind].find(function(c){ return c.id===cid; });
-  return (cat && num(cat.chiTieu) > 0) ? num(cat.chiTieu) : 0;
+  return (cat0 && num(cat0.chiTieu) > 0) ? num(cat0.chiTieu) : null;
 }
+function duTruDanhMucThang(kind, cid, mk){ return num(duTruGoiY(kind, cid, mk)); }
 function duTruThuThang(mk){
   var s=0; state.data.categories.thu.forEach(function(c){ s += duTruDanhMucThang('thu', c.id, mk); }); return s;
 }
