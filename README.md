@@ -65,8 +65,8 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 - **Cảnh báo khoản chi bất thường.** Khi bấm Lưu ở Ghi nhanh (hoặc sửa số tiền một dòng ở Sổ tay), app so số tiền với các khoản chi CÙNG DANH MỤC trong 6 tháng qua. Chỉ hỏi lại ("Có gõ thừa số 0 không?") khi đủ 4 điều kiện: có ít nhất 5 khoản trong lịch sử, số mới > 3 lần trung vị, số mới lớn hơn mọi khoản đã ghi (khoản lớn lâu lâu mới có thì không bị coi là nhầm), và từ 50.000 trở lên. Danh mục hệ thống không xét. Dùng chung hộp "Kiểm tra trước khi ghi" với cảnh báo ví âm; không chặn, bấm "Vẫn ghi" là ghi. Code: `chiBatThuong` ở `sotay.js`, `thongDiepBatThuong` ở `canhbao.js`.
 - **Chi hằng ngày theo thứ trong tuần.** Báo cáo → Biểu đồ chi tiêu → tab Xu hướng, cuối tab: trung bình chi mỗi ngày theo từng thứ (T2 tới CN), gộp tháng đang xem + 2 tháng trước. Chỉ tính chi hằng ngày (không gồm khoản cố định và vay nợ); ngày không chi tính 0 đồng; bỏ ngày tương lai và ngày trước giao dịch đầu tiên của sổ; chưa đủ cả 7 thứ có dữ liệu thì không hiện. Có mục "Cách tính" bằng số thật. Chỉ đọc dữ liệu. Code: `bdTheoThu`, `bdTheoThuHtml` ở `bieudo.js`.
 
-- **Đăng nhập Google, dữ liệu ở Drive của bạn.** Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
-- **Dùng khi mất mạng.** Có bản nháp và bản sao dữ liệu trong `localStorage`; có mạng lại thì tự đồng bộ. Service worker giữ khung app để mở được offline.
+- **Dữ liệu nằm trên máy, Google Drive là nơi đồng bộ.** Có dữ liệu trên máy thì mở app là vào thẳng (không màn đăng nhập, không chờ Drive); máy mới mới hiện màn đầu (đăng nhập lấy dữ liệu Drive, hoặc dùng ngay không cần đăng nhập). Đồng bộ tự chạy khi còn token; không thì chạm dòng trạng thái trên đầu trang hoặc nút Đồng bộ ở Cài đặt (còn token thì không hiện cửa sổ Google). Drive chưa ai đổi từ lần đồng bộ cuối thì giữ bản máy và đẩy lên, máy không có thay đổi thì lấy bản Drive về, chỉ hỏi khi cả hai cùng đổi (`quyetDinhDongBo`). Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
+- **Dùng khi mất mạng.** Dữ liệu và các thay đổi chưa đồng bộ (bản nháp) nằm trong `localStorage`. Service worker giữ khung app để mở được offline.
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, **tải toàn bộ dữ liệu về file `.json` trên máy** và **khôi phục từ file** (Cài đặt → Ứng dụng → Sao lưu; `tenFileXuat`, `docFileKhoiPhuc`, `xuatDuLieuGiao`, `khoiPhucTuFile` ở `danhmuc.js`: cùng định dạng với bản sao lưu Drive, đi qua `normalizeData`, từ chối file không có `journal`; khi đang ngoại tuyến thì cảnh báo bản hiện tại chưa được sao lưu lên Drive), xem danh sách và **khôi phục** một bản ngay trong tab Cài đặt. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô; sai 5 lần liên tiếp thì phải chờ, mỗi lần bị khóa chờ lâu hơn: 30 giây, 1, 2, 5, 15 phút, lưu ở `localStorage` nên tải lại trang không xóa được), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
@@ -115,7 +115,7 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 471 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
+- Có 489 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
 
 ---
 
@@ -146,7 +146,7 @@ js/
   tet.js            Tết đếm ngược và Quỹ Tết (số Tết năm ngoái, gợi ý, tạo mục tiêu tiết kiệm)
   thetindung.js     Ví loại thẻ tín dụng / trả sau: dư nợ, sao kê, hạn thanh toán, nút Thanh toán thẻ
   nguoi.js          Đối tượng trong Vay - Nợ: Sổ nợ theo đối tượng + Chia hóa đơn nhóm
-  nhap.js           Nhập giao dịch từ CSV / Excel
+  nhap.js           Nhập giao dịch từ CSV / Excel, và khoản ghi nhanh từ Phím tắt iPhone
   danhmuc.js        Tab Cài đặt: danh mục, ví, định kỳ, mục tiêu, chốt số dư, sao lưu, khóa app
   dongtien.js       Tab Dòng tiền (Theo tháng) + thanh chọn 3 chế độ
   theongay.js       Dòng tiền · Theo ngày: hôm nay, từng ngày tháng này, tiền 30 ngày tới
@@ -239,7 +239,8 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 
 - Khóa PIN là khóa **màn hình**, không mã hóa dữ liệu trong `localStorage`. Ai mở được DevTools trên máy vẫn đọc được. Mục đích chỉ là người khác cầm máy đang mở app không xem được số tiền.
 - Quên PIN thì chỉ còn cách xóa khóa cùng dữ liệu lưu trên máy đó rồi đăng nhập Google lại (dữ liệu trên Drive vẫn còn).
-- Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`; quá hạn thì phải đăng nhập lại.
+- Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`. Hết hạn thì app vẫn dùng bình thường bằng dữ liệu trên máy, chỉ việc đồng bộ Drive cần bấm lại. Hẹn giờ chỉ chạy khi app đang mở (web app không chạy nền được trên iPhone).
+- **Dữ liệu chính nằm trên máy**: mất máy hoặc xóa dữ liệu trình duyệt trước khi đồng bộ thì mất phần chưa đồng bộ. App nhắc khi đã từ 3 ngày chưa đồng bộ. "Đăng xuất" ở Cài đặt xóa cả dữ liệu trên máy (kể cả phần chưa đồng bộ).
 - Hộp thoại có ô nhập (hỏi số, hỏi chữ, nhập PIN) vẫn hiện giữa màn hình, không phải bảng trượt, để bàn phím điện thoại không che nút.
 - Cần mạng ở lần mở đầu để tải thư viện Google đăng nhập và SheetJS (từ `cdn.sheetjs.com`).
 - **Kiểm xung đột Drive có một khe hở nhỏ**: `driveSave` đọc `modifiedTime` rồi mới ghi, hai yêu cầu riêng. Hai máy cùng ghi đúng trong khoảng đó có thể ghi đè nhau. Rất hiếm; phía sau còn có nháp trên máy và 10 bản sao lưu để quay lại.
@@ -260,7 +261,22 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
    - **Xuất file `.ics`** rồi nhập vào Lịch iPhone, kèm báo thức nhắc trước hạn. Không cần server nhưng là ảnh chụp tại thời điểm xuất, dữ liệu đổi thì phải xuất lại. Cần thử: iOS có giữ báo thức trong file khi nhập không, và app mở từ màn hình chính có tải được file `.ics` để nhập không.
    - **Tạo sự kiện thẳng vào Google Calendar** qua đăng nhập Google sẵn có (tự cập nhật, đồng bộ sang Lịch iPhone nếu tài khoản Google đã thêm vào máy). Phải xin thêm quyền Lịch (quyền nhạy cảm hơn `drive.file` hiện tại, đổi màn hình đồng ý và `privacy.html`).
    - **Thông báo đẩy (Web Push)**: cần có server riêng, trái nguyên tắc "không server", không chọn.
-2. **Đường dẫn ghi nhanh** (ví dụ `?them=45000&ghichu=...`) kết hợp iPhone Shortcuts để tin nhắn ngân hàng mở app với số tiền và nội dung điền sẵn. Không cần AI hay server. **Cần nghiên cứu thêm trước khi làm:** Shortcuts có mở được PWA ổn trên máy dùng thật không, và cú pháp đọc nội dung tin nhắn của từng ngân hàng.
+2. ~~**Đường dẫn ghi nhanh** (ví dụ `?them=45000&ghichu=...`) kết hợp iPhone Shortcuts~~ **Đã thay bằng cách ở dưới** ("Ghi nhanh không cần mở app"): link từ Phím tắt mở Safari chứ không chắc vào app đã cài, hai nơi có thể không chung dữ liệu. Ý ban đầu: kết hợp iPhone Shortcuts để tin nhắn ngân hàng mở app với số tiền và nội dung điền sẵn. Không cần AI hay server. **Cần nghiên cứu thêm trước khi làm:** Shortcuts có mở được PWA ổn trên máy dùng thật không, và cú pháp đọc nội dung tin nhắn của từng ngân hàng.
+
+**Yêu cầu đã chốt với người dùng (iPhone, nhập tiền tay, không dùng SMS):**
+1. Mở app không bảng chọn, không bắt đăng nhập Google; dùng dữ liệu trên máy.
+2. Drive là nút đồng bộ, hạn chế tối đa việc phải đăng nhập lại (làm: đồng bộ ngầm khi còn token, nút còn token thì không hiện cửa sổ Google).
+3. Ghi nhanh **không cần mở app**; mở app thì có danh sách khoản kèm số tiền để chọn ghi (làm bằng Phím tắt, xem bên dưới).
+4. Mở app để xem bình thường, không ép vào Ghi nhanh.
+
+**Ghi nhanh không cần mở app (iPhone).** Phím tắt (Shortcuts) hỏi số tiền và danh mục rồi lưu mỗi khoản thành một file CSV nhỏ trong Tệp; mở app thì chọn các file đó, thấy danh sách, tick khoản nào ghi. Đặt phím tắt ở widget màn hình chính, widget màn hình khóa hoặc chạm hai lần mặt lưng (Cài đặt → Trợ năng → Cảm ứng → Chạm vào mặt sau). **Chưa kiểm trên iPhone thật**; tên hành động có thể khác chút theo bản iOS. Cách dựng một phím tắt cho khoản chi:
+1. **Hỏi nhập liệu** (Ask for Input), kiểu Số, câu hỏi "Số tiền?".
+2. **Chọn từ danh sách** (Choose from List): mỗi dòng một danh mục chi, gõ **đúng tên trong app**, không có dấu phẩy hay ngoặc kép.
+3. **Ngày hiện tại** (Current Date) rồi **Định dạng ngày** (Format Date), kiểu tùy chỉnh `yyyy-MM-dd`; thêm một cái nữa kiểu `yyyy-MM-dd-HH-mm-ss` làm tên file.
+4. **Văn bản** (Text) gồm 2 dòng, dòng cuối kết thúc bằng dấu phẩy (ô Ghi chú để trống):
+   `Ngày,Loại,Số tiền,Danh mục,Ghi chú` / `<ngày>,chi,<số tiền>,<danh mục đã chọn>,`
+5. **Lưu tệp** (Save File): tắt "Hỏi nơi lưu", chọn một thư mục trong iCloud Drive (ví dụ "Sổ Tiền ghi nhanh"), tên file `ghi-nhanh-<giờ>.csv`. **Tên file phải bắt đầu bằng `ghi-nhanh-`**, app dựa vào đó để biết đây là khoản ghi nhanh.
+Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu` và danh sách danh mục. Trong app: Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày" → chọn **nhiều file cùng lúc** → xem danh sách → **Ghi N khoản**. App nhớ mã từng khoản đã nhập (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi; hai khoản giống hệt trong ngày vẫn là hai khoản; xóa khoản đã nhập rồi cũng không sống lại. Bỏ tick thì khoản đó không ghi lần này và còn trong danh sách lần sau. Xóa các file trong Tệp khi đã ghi xong cho gọn (không bắt buộc). Chưa làm được: tự hiện danh sách khi mở app, vì web app không tự đọc được file ngoài nó; bước chọn file cần chạm một lần.
 
 ### 7.2. Hướng phát triển tương lai
 

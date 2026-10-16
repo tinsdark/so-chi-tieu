@@ -311,7 +311,8 @@ function khoaCardHtml(){
 function taiKhoanCardHtml(){
   var tk = docTaiKhoan();
   return '<div class="card dm-card">'+dmHead('Tài khoản')
-    + (tk ? '<div class="dm-sub">Đang đăng nhập: <b>'+esc(tk.ten || tk.email)+'</b>'+(tk.ten && tk.email ? ' · '+esc(tk.email) : '')+'</div>' : '')
+    + (tk && !state.offline ? '<div class="dm-sub">Đang đăng nhập: <b>'+esc(tk.ten || tk.email)+'</b>'+(tk.ten && tk.email ? ' · '+esc(tk.email) : '')+'</div>' : '')
+    + (state.offline ? '<div class="dm-sub">Đang dùng dữ liệu trên máy, chưa kết nối Google Drive. Bấm "Đồng bộ" ở trên đầu trang hoặc ở mục Giao diện và làm mới.</div>' : '')
     + '<div class="dm-sub">Đăng xuất khỏi Google và <b>xóa dữ liệu trên máy này</b>. Chỉ làm khi đổi máy hoặc muốn dọn sạch.</div>'
     + '<button class="btn danger" data-act="dangXuat">Đăng xuất và xóa dữ liệu trên máy</button>'
     + ghiChuGon('Dữ liệu chính của app nằm trên máy này; Drive là bản đồng bộ. Đăng xuất xóa bản trên máy (kể cả thay đổi chưa đồng bộ), bản trên Drive vẫn còn nguyên. Muốn giữ dữ liệu thì đừng đăng xuất, cứ đóng app.', 'Đăng xuất có mất dữ liệu không?') + '</div>';
