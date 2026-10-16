@@ -1005,6 +1005,89 @@ test('nạp đủ các file đúng thứ tự index.html vào môi trường tr�
 });
 
 /* ==================================================================== */
+group('7d. Bất biến giữa các cài đặt song song: cùng một con số tính ở 2 nơi phải bằng nhau');
+
+// Hồ sơ ngẫu nhiên (seed cố định) gồm danh mục thường, chi cố định, "không tính dự kiến", danh mục hệ thống và cả khoản ghi trước
+// cho ngày sau hôm nay. Mỗi bất biến so 2 hàm độc lập cùng trả một đại lượng: lệch là có 1 trong 2 nơi đã trôi.
+function dbHoSoNgauNhien(seed, coTuongLai){
+  var s = seed >>> 0, r = function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  var d = baseData(); d.settings = { soDuDauKy: Math.round(r() * 5e6), ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' };
+  d.categories = { thu: [{ id: 'luong', ten: 'Lương', chiTieu: 0 }], chi: [
+    { id: 'an', ten: 'Ăn', chiTieu: r() < 0.8 ? 3000000 : 0 }, { id: 'xang', ten: 'Xăng', chiTieu: r() < 0.5 ? 1000000 : 0 },
+    { id: 'nha', ten: 'Nhà', chiTieu: r() < 0.7 ? 4000000 : 0, khoanCoDinh: true }, { id: 'kdt', ten: 'Khác', chiTieu: 2000000, khongDuTru: true }] };
+  var cats = ['an', 'xang', 'nha', 'kdt', 'choVay', 'traNo', 'dieuChinh'], thus = ['luong', 'nhanTienVay', 'thuHoiChoVay', 'dieuChinh'];
+  for (var m = 7; m <= 10; m++){
+    var nd = m === 10 ? (coTuongLai ? 31 : 15) : 28;
+    for (var dd = 1; dd <= nd; dd++){
+      if (r() < 0.55) continue;
+      var e = { thu: {}, chi: {}, ghiChu: '', refs: [] }, k = 1 + Math.floor(r() * 3);
+      for (var i = 0; i < k; i++){ var c = cats[Math.floor(r() * cats.length)]; e.chi[c] = (e.chi[c] || 0) + Math.round(r() * 500) * 1000; }
+      if (r() < 0.2){ var t = thus[Math.floor(r() * thus.length)]; e.thu[t] = Math.round(r() * 2000) * 1000; }
+      d.journal['2026-' + ctx.pad2(m) + '-' + ctx.pad2(dd)] = e;
+    }
+  }
+  return d;
+}
+function dbLoiBatBien(kiem, soHoSo){
+  var loi = [];
+  for (var seed = 1; seed <= (soHoSo || 60); seed++){
+    setToday('2026-10-15');
+    var coTL = (seed % 2) === 0;
+    loadData(dbHoSoNgauNhien(seed, coTL));
+    kiem(seed, coTL).forEach(function(l){ loi.push('hồ sơ ' + seed + ': ' + l); });
+  }
+  setToday('2026-10-01');
+  return loi;
+}
+
+test('Chi thật của tháng: bdThang (Sổ tay / Báo cáo) = tetChiTrong (Quỹ Tết) cho cả tháng', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    ['2026-07', '2026-08', '2026-09'].forEach(function(mk){
+      var a = ctx.bdThang(mk).tongChiThat, b = ctx.tetChiTrong(mk + '-01', mk + '-' + ctx.daysInMonth(mk)).tong;
+      if (Math.abs(a - b) > 0.5) o.push(mk + ' bdThang=' + a + ' tetChiTrong=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Chi thật tới ngày N: bdThang = bdUocTinhChiThang.daChi (ước tính cuối tháng ở Báo cáo)', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    [1, 8, 15].forEach(function(den){
+      var a = ctx.bdThang('2026-10', den).tongChiThat, b = ctx.bdUocTinhChiThang('2026-10', den).daChi;
+      if (Math.abs(a - b) > 0.5) o.push('đến ngày ' + den + ' bdThang=' + a + ' bdUoc=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Đã chi hằng ngày có hạn mức: tieuMoiNgay (Hôm nay còn tiêu được) = Σ hạn mức hằng ngày ở thẻ Hạn mức (khi chưa có khoản ghi trước)', function(){
+  var loi = dbLoiBatBien(function(seed, coTL){
+    if (coTL) return [];
+    var tm = ctx.tieuMoiNgay('2026-10-15'), sum = 0;
+    ctx.hanMucThangRows('2026-10').forEach(function(x){ if (!x.coDinh) sum += x.da; });
+    var got = tm ? tm.daTruoc + tm.daHomNay : 0;
+    return Math.abs(sum - got) > 0.5 ? ['tieuMoiNgay=' + got + ' hanMucThangRows=' + sum] : [];
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+test('Số dư liền mạch: cuối tháng M = đầu tháng M+1', function(){
+  var loi = dbLoiBatBien(function(){
+    var o = [];
+    ['2026-07', '2026-08', '2026-09'].forEach(function(mk){
+      var a = ctx.balanceAtEndOfMonth(mk), b = ctx.balanceBeforeMonth(ctx.monthKeyAdd(mk, 1));
+      if (Math.abs(a - b) > 0.5) o.push(mk + ' cuối=' + a + ' đầu sau=' + b);
+    });
+    return o;
+  });
+  ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){
