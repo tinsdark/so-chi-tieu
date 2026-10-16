@@ -538,44 +538,40 @@ function bietTruocChuaGhi(kind, cid, mk){
   });
   return Math.max(0, known - Math.max(0, tay));
 }
-// tháng hiện tại: các khoản BIẾT TRƯỚC (Trả nợ/Thu hồi cho vay theo lịch vay, hoặc danh mục có cờ
-// "Cố định theo Chỉ tiêu") mà chưa ghi Sổ tay thì cộng thêm số biết trước đó; các danh mục còn lại
-// (ước lượng, không cố định) vẫn giữ nguyên thực tế (có thể 0)
-function tongThuThangCard(mk){
+// 1 danh mục / 1 tháng, số HIỂN THỊ ở Dòng tiền (hàng từng danh mục) và là phần tử cộng của thẻ tổng. MỘT nguồn duy nhất:
+// - tháng tương lai: gợi ý (duTruGoiY, null = không có gợi ý)
+// - tháng hiện tại: thực tế + các khoản BIẾT TRƯỚC mà chưa ghi Sổ tay (Trả nợ / Thu hồi cho vay theo lịch vay; khoản định kỳ
+//   chưa ghi; danh mục "Cố định theo Hạn mức" chưa có ghi). Danh mục đã có khoản định kỳ chưa ghi thì dùng số định kỳ,
+//   không cộng thêm hạn mức cố định (tránh tính 2 lần). Các danh mục còn lại (ước lượng) giữ nguyên thực tế (có thể 0)
+// - tháng đã qua: thực tế
+function duKienThangCat(kind, cid, mk){
   var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return duTruThuThang(mk);
-  var s = actualCatMonthAll('thu', mk);
+  if (mk > currentMk) return duTruGoiY(kind, cid, mk);
+  var av = actualCatInMonth(kind, cid, mk);
   if (mk === currentMk){
-    s += bietTruocChuaGhi('thu', 'thuHoiChoVay', mk);
-    s += dinhKyChuaGhiThang(mk, 'thu');       // lương... đã khai định kỳ mà tháng này chưa ghi
-    state.data.categories.thu.forEach(function(c){
-      if (c.id === 'thuHoiChoVay') return;
-      // danh mục đã có khoản định kỳ chưa ghi thì dùng số định kỳ ở trên, không cộng thêm chỉ tiêu cố định (tránh tính 2 lần)
-      if (c.coDinhChiTieu && !actualCatInMonth('thu', c.id, mk) && !dinhKyChuaGhiThang(mk, 'thu', c.id)){
-        var b = num(c.chiTieu);
-        if (b > 0) s += b;
-      }
-    });
+    if ((kind === 'chi' && cid === 'traNo') || (kind === 'thu' && cid === 'thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
+    var dkChua = dinhKyChuaGhiThang(mk, kind, cid);
+    if (dkChua > 0) return av + dkChua;
+    if (!av){
+      var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
+      if (cat0 && cat0.coDinhChiTieu && num(cat0.chiTieu) > 0) return num(cat0.chiTieu);
+    }
+  }
+  return av;
+}
+// tổng thu / chi cả tháng của thẻ. Tháng hiện tại = tổng thực tế + phần "biết trước chưa ghi" của TỪNG danh mục còn tồn tại
+// (khoản định kỳ trỏ vào danh mục đã xóa không còn nơi hiển thị nên không được cộng, giống tháng tương lai)
+function tongThangCard(kind, mk){
+  var currentMk = monthKey(todayStr());
+  if (mk > currentMk) return kind === 'thu' ? duTruThuThang(mk) : duTruChiThang(mk);
+  var s = actualCatMonthAll(kind, mk);
+  if (mk === currentMk){
+    state.data.categories[kind].forEach(function(c){ s += duKienThangCat(kind, c.id, mk) - actualCatInMonth(kind, c.id, mk); });
   }
   return s;
 }
-function tongChiThangCard(mk){
-  var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return duTruChiThang(mk);
-  var s = actualCatMonthAll('chi', mk);
-  if (mk === currentMk){
-    s += bietTruocChuaGhi('chi', 'traNo', mk);
-    s += dinhKyChuaGhiThang(mk, 'chi');       // tiền nhà... đã khai định kỳ mà tháng này chưa ghi
-    state.data.categories.chi.forEach(function(c){
-      if (c.id === 'traNo') return;
-      if (c.coDinhChiTieu && !actualCatInMonth('chi', c.id, mk) && !dinhKyChuaGhiThang(mk, 'chi', c.id)){
-        var b = num(c.chiTieu);
-        if (b > 0) s += b;
-      }
-    });
-  }
-  return s;
-}
+function tongThuThangCard(mk){ return tongThangCard('thu', mk); }
+function tongChiThangCard(mk){ return tongThangCard('chi', mk); }
 
 /* ====================================================================
    SỐ DƯ HIỆN TẠI "ĐÃ ĐIỀU CHỈNH" — dùng ở tab Mô phỏng.

@@ -440,6 +440,10 @@ function catTen(kind, catId){
 // danh mục do tab Vay - Nợ sinh/dùng: xóa đi là tiền khoản vay mất chỗ hiển thị
 var CAT_HE_THONG = { thu: { nhanTienVay: 1, thuHoiChoVay: 1, dieuChinh: 1 }, chi: { choVay: 1, traNo: 1, dieuChinh: 1 } };
 // số NGÀY trong Sổ tay còn tiền ở danh mục này (>0 thì không được xóa danh mục)
+// các khoản định kỳ đang trỏ vào danh mục này (bật hay tắt đều tính): xóa danh mục sẽ làm chúng mồ côi
+function catDangDuocDinhKyDung(kind, catId){
+  return (state.data.dinhKy || []).filter(function(dk){ return dk.kind === kind && dk.catId === catId; });
+}
 function catDangCoTien(kind, catId){
   var n = 0;
   Object.keys(state.data.journal).forEach(function(d){

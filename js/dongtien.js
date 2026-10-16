@@ -59,24 +59,7 @@ function dtBase(kind, cid){
 // gợi ý cho 1 danh mục / 1 tháng: dùng chung nguồn với tổng dự kiến (duTruGoiY ở vayno-tinh.js), null = không có gợi ý ("—")
 function dtSuggest(kind, cid, mk){ return duTruGoiY(kind, cid, mk); }
 // ô hiển thị: tháng đã qua / đang chạy -> thực tế (tháng đang chạy cộng khoản biết trước chưa ghi), tương lai -> gợi ý
-function dtCell(kind, cid, mk){
-  var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return dtSuggest(kind, cid, mk);
-  var av = actualCatInMonth(kind, cid, mk);
-  if (mk === currentMk){
-    if ((kind === 'chi' && cid === 'traNo') || (kind === 'thu' && cid === 'thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
-    var dkChua = dinhKyChuaGhiThang(mk, kind, cid);
-    if (dkChua > 0) return av + dkChua;
-    if (!av){
-      var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-      if (cat0 && cat0.coDinhChiTieu){
-        var bF = dtBase(kind, cid);
-        if (bF > 0) return bF;
-      }
-    }
-  }
-  return av;
-}
+function dtCell(kind, cid, mk){ return duKienThangCat(kind, cid, mk); }
 function dtNgay(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
 function dtNhanThang(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(2, 4); }
 // các kỳ trả nợ còn phải trả rơi vào tháng mk (kỳ quá hạn dồn vào tháng hiện tại, giống tongTraNoThang)
