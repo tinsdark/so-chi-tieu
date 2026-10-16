@@ -52,9 +52,9 @@ function vnTongQuanHtml(){
   var rong = tongNo - phaiThu;
   var pct = can > 0 ? Math.min(100, Math.round(da / can * 100)) : 0;
   var h = '<div class="card vn-tq"><div class="vn-lbl">Còn phải trả (gồm lãi)</div><div class="vn-big">'+fmt(tongNo)+'</div>'
-    + (tongNo - noGoc >= 1 ? '<div class="vn-sub">trong đó gốc <b>'+fmt(noGoc)+'</b> · lãi chưa tới hạn <b>'+fmt(tongNo - noGoc)+'</b></div>' : '')
+    + (tongNo - noGoc >= 1 ? '<div class="vn-sub">gốc <b>'+fmt(noGoc)+'</b> · lãi <b>'+fmt(tongNo - noGoc)+'</b></div>' : '')
     + '<div class="vn-tq-r"><div><div class="vn-lbl">Cho vay chờ thu</div><b class="thu">'+fmt(phaiThu)+'</b></div>'
-    + (Math.abs(rong) >= 1 ? vnChip(rong > 0 ? 'red' : 'ok', (rong > 0 ? 'Nợ sau khi trừ tiền cho vay ' : 'Tiền cho vay nhiều hơn nợ ')+fmt(Math.abs(rong))) : '')
+    + (phaiThu > 0 && Math.abs(rong) >= 1 ? vnChip(rong > 0 ? 'red' : 'ok', (rong > 0 ? 'Nợ sau khi trừ tiền cho vay ' : 'Tiền cho vay nhiều hơn nợ ')+fmt(Math.abs(rong))) : '')
     + '</div>';
   if (can > 0){
     h += '<div class="vn-th"><div class="vn-th-h"><span>'+monthLabel(curMk)+' cần trả</span><b>'+fmt(can)+'</b></div>'
