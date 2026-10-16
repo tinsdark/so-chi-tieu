@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.6', ngay: '2026-10-16', ten: 'Bảng thuật ngữ có thêm số nợ',
+    muc: ['Cài đặt → Ứng dụng → "Các số trong app nghĩa là gì" giải thích thêm "Còn phải trả (gồm lãi)" và "Nợ sau khi trừ tiền cho vay".'] },
   { ban: '2026.10.16.5', ngay: '2026-10-16', ten: 'Thẻ Vay - Nợ gọn hơn',
     muc: ['Vay - Nợ: dòng "gốc … · lãi …" ngắn lại cho vừa một dòng; chỉ hiện "Nợ sau khi trừ tiền cho vay" khi có khoản cho vay chờ thu (không còn lặp lại đúng số nợ ở trên).'] },
   { ban: '2026.10.16.4', ngay: '2026-10-16', ten: 'Gọi tên các số nợ rõ hơn',
