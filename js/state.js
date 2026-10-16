@@ -48,8 +48,9 @@ var state = {
   soTayTo: '',
   coBanMoi: false,        // trên mạng đã có bản app mới hơn bản đang chạy (xem kiemTraBanMoi ở app.js)
   taiLoi: false,          // lần tải Drive gần nhất THẤT BẠI (khác với 'chưa có file'): cấm tạo file mới đè lên file thật
-  offline: false,         // đang mở ở chế độ ngoại tuyến (chưa đăng nhập Google, dữ liệu là bản lưu trên máy)
-  offlineTu: null,        // thời điểm của bản dữ liệu ngoại tuyến (ms)
+  offline: false,         // đang dùng dữ liệu trên máy, CHƯA kết nối Drive (không có token): thay đổi nằm trong nháp, bấm "Đồng bộ" để đẩy lên
+  offlineTu: null,        // thời điểm của bản dữ liệu trên máy đang mở (ms)
+  lanDongBoCuoi: null,    // lần đồng bộ Drive gần nhất của máy này (ms); null = chưa đồng bộ lần nào
   imp: null,              // nhập CSV/Excel đang làm dở ở Sổ tay (xem js/nhap.js)
   dmTab: 'danhmuc',       // phần đang xem ở tab Cài đặt: danhmuc | tien | kehoach | hienthi | ungdung (xem DM_TAB ở danhmuc.js)
   dmForm: null,           // bảng trượt sửa danh mục / ví / số dư đầu kỳ ở tab Cài đặt: { loai:'cat'|'cfg'|'vi', kind?, id? }

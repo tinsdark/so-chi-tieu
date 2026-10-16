@@ -206,19 +206,32 @@ function readLocalDraft(){
    đồng bộ": app tải bản Drive rồi hỏi khôi phục nháp (kèm cảnh báo nếu Drive đã đổi từ lúc đó).
    ==================================================================== */
 function moNgoaiTuyen(){
-  var snap = readSyncedSnapshot();
-  if (!snap) return;
-  var dr = readLocalDraft();
-  var dungNhap = !!(dr && dr.savedAt >= snap.savedAt);    // nháp mới hơn bản đồng bộ = các sửa ngoại tuyến trước đó
+  var snap = readSyncedSnapshot(), dr = readLocalDraft();
+  if (!snap && !dr) return false;
+  var dungNhap = !!(dr && (!snap || dr.savedAt >= snap.savedAt));    // nháp mới hơn bản đồng bộ = các sửa chưa lên Drive
   state.data = normalizeData(JSON.parse(JSON.stringify(dungNhap ? dr.data : snap.data)));
   state.driveModified = (dungNhap ? dr.baseModified : snap.baseModified) || null;
   state.driveFileId = null;
   state.dirty = dungNhap;
   state.offline = true;
   state.offlineTu = dungNhap ? dr.savedAt : snap.savedAt;
+  state.lanDongBoCuoi = snap ? snap.savedAt : null;       // bản đồng bộ gần nhất (nháp mới hơn thì vẫn là mốc này)
   state.errorMsg = null;
   state.loading = false;
   accessToken = null;
+  showApp();
+  renderAll();
+  return true;
+}
+// máy chưa có dữ liệu và người dùng chọn dùng ngay, chưa đăng nhập: bản mặc định nằm trên máy, đồng bộ Drive sau
+function batDauTrenMay(){
+  state.data = normalizeData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+  state.driveModified = null; state.driveFileId = null; state.taiLoi = false;
+  state.dirty = true;                       // chưa đồng bộ lần nào
+  state.offline = true; state.offlineTu = Date.now(); state.lanDongBoCuoi = null;
+  state.errorMsg = null; state.loading = false;
+  accessToken = null;
+  saveLocalDraft();                         // có bản trên máy ngay: lần sau mở thẳng vào, không hiện lại màn đầu
   showApp();
   renderAll();
 }
@@ -355,10 +368,29 @@ async function driveSave(){
     // Giữ state.dirty = true: pollRefresh sẽ không nạp đè dữ liệu Drive lên thay đổi chưa lưu,
     // và nháp cục bộ được giữ nguyên làm bản sao cuối cùng.
     console.error('[chitieu] Lưu Drive thất bại:', e);
+    if (laLoiXacThuc(e)){
+      // token hết hạn / bị thu hồi và xin lại âm thầm không được: dừng thử (mỗi lần thử có thể bật cửa sổ Google).
+      // Thay đổi vẫn nằm trong nháp trên máy; người dùng bấm "Đồng bộ" khi tiện.
+      if (saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+      state.saving = false;
+      veCheDoMay();
+      return;
+    }
     state.errorMsg = 'Lưu lên Google Drive thất bại (' + (e && e.message ? e.message : 'lỗi mạng') + '). Sẽ thử lại.';
     saveTimer = setTimeout(driveSave, 4000);
   }
   state.saving = false;
+  renderSyncStatus();
+}
+// lỗi do phiên Google (không phải mạng): GIS trả {type} / {error}, driveFetch ném 'token-expired', Drive trả 401
+function laLoiXacThuc(e){
+  return !!(e && (e.type || e.error || e.message === 'token-expired' || /:401$/.test(String(e.message || ''))));
+}
+// bỏ kết nối Drive nhưng GIỮ dữ liệu trên máy: mọi thay đổi đã nằm trong nháp, đồng bộ sau
+function veCheDoMay(){
+  accessToken = null;
+  state.offline = true;
+  state.errorMsg = null;
   renderSyncStatus();
 }
 
@@ -496,11 +528,82 @@ async function pollRefresh(){
 
 // Cảnh báo khi đóng tab/refresh mà còn thay đổi chưa đồng bộ lên Drive
 window.addEventListener('beforeunload', function(e){
-  if (!state.dirty && !state.saving) return;
+  if (!accessToken || (!state.dirty && !state.saving)) return;
   e.preventDefault();
   e.returnValue = '';   // Chrome yêu cầu set returnValue để hiện hộp xác nhận
   return '';
 });
+
+/* ====================================================================
+   ĐỒNG BỘ DỮ LIỆU TRÊN MÁY VỚI DRIVE — dữ liệu chính nằm trên máy, Drive là nơi đồng bộ / sao lưu.
+   Mở app luôn vào thẳng bằng dữ liệu trên máy. Đồng bộ tự chạy khi còn token; không còn token thì chỉ hiện nút
+   "Đồng bộ" (không bao giờ chặn). Trường hợp thường gặp (Drive chưa ai đổi từ lần đồng bộ cuối) xử lý im lặng;
+   chỉ hỏi khi CẢ HAI bên cùng đổi.
+   quyetDinhDongBo là hàm thuần (không đụng Drive / DOM) để test:
+   - 'tao-file'  Drive chưa có file (bị xóa / tài khoản mới): đẩy bản trên máy lên. Chỉ khi người dùng tự bấm, để khỏi
+                 tự đổ dữ liệu vào nhầm tài khoản Google.
+   - 'day-len'   Drive không đổi kể từ lần đồng bộ cuối: giữ bản trên máy, đẩy lên nếu có thay đổi.
+   - 'lay-ve'    máy không có thay đổi chưa lên, Drive có bản mới (máy khác sửa): lấy về.
+   - 'hoi'       cả hai cùng đổi, hoặc máy chưa có mốc nào: hỏi (luồng cũ: tải Drive rồi hỏi khôi phục nháp).
+   - 'cho'       chưa nên tự làm: chờ người dùng bấm "Đồng bộ".
+   ==================================================================== */
+function quyetDinhDongBo(o){
+  if (!o.coFile) return o.chuDong ? 'tao-file' : 'cho';
+  if (o.mocCu && o.modifiedTime === o.mocCu) return 'day-len';
+  if (o.mocCu && !o.dirty) return 'lay-ve';
+  return o.chuDong ? 'hoi' : 'cho';
+}
+// số ngày kể từ lần đồng bộ cuối (chưa đồng bộ lần nào thì tính từ ngày bắt đầu sổ). Để nhắc, không để chặn.
+function soNgayChuaDongBo(now, lanCuoi, ngayBatDau){
+  var moc = lanCuoi || (ngayBatDau ? new Date(ngayBatDau + 'T00:00:00').getTime() : null);
+  return moc ? Math.max(0, Math.floor((now - moc) / 864e5)) : 0;
+}
+var _dangDongBo = false;
+// accessToken đã có. chuDong = người dùng tự bấm (được phép hiện hộp hỏi); false = chạy ngầm khi mở app
+async function dongBoDrive(chuDong){
+  if (_dangDongBo) return;
+  _dangDongBo = true;
+  var dirtyCu = state.dirty;
+  try{
+    var file = await findFile();
+    var qd = quyetDinhDongBo({ coFile: !!file, modifiedTime: file && file.modifiedTime, mocCu: state.driveModified, dirty: state.dirty, chuDong: !!chuDong });
+    // đang gõ / mở form thì không tự thay dữ liệu bên dưới
+    if (qd === 'lay-ve' && !chuDong && (isFormOpen() || isTypingNow())) qd = 'cho';
+    if (qd === 'cho'){ veCheDoMay(); return; }
+    if (qd === 'tao-file'){
+      state.driveFileId = null; state.driveModified = null; state.taiLoi = false;
+      state.offline = false; state.dirty = true;
+      scheduleSave();
+    } else if (qd === 'day-len'){
+      state.driveFileId = file.id; state.taiLoi = false; state.errorMsg = null; state.offline = false;
+      try{ _textDriveLanTai = await driveDocText(file.id); }catch(e){ _textDriveLanTai = null; }   // để sao lưu hằng ngày
+      if (state.dirty) await driveSave();
+      else { state.lastSync = new Date(); saveSyncedSnapshot(); }
+      backupHangNgay();
+    } else {
+      // 'lay-ve' và 'hoi': tải Drive; có nháp trên máy thì checkLocalDraft hỏi khôi phục (luồng cũ)
+      state.offline = false; state.dirty = false;
+      if (!await driveLoad()){ state.dirty = dirtyCu; veCheDoMay(); return; }
+      backupHangNgay();
+      renderAll();
+      if (qd === 'hoi') await checkLocalDraft();
+    }
+    renderAll();
+    startPolling();
+  }catch(e){
+    console.error('[chitieu] Đồng bộ Drive thất bại:', e);
+    veCheDoMay();
+    if (chuDong) toast('Chưa đồng bộ được Drive. Dữ liệu vẫn nằm trên máy, thử lại sau.', { loai:'warn' });
+  }finally{
+    _dangDongBo = false;
+  }
+}
+// nút "Đồng bộ": còn token lưu sẵn thì đồng bộ luôn (không hiện cửa sổ Google), hết rồi mới đăng nhập
+async function dongBoNgay(){
+  var tok = readSavedToken();
+  if (tok){ accessToken = tok; await dongBoDrive(true); return; }
+  await signIn();
+}
 
 /* ---------------- auth flow ---------------- */
 function showApp(){
@@ -532,14 +635,10 @@ function showGate(msg){
   gateMsg(msg);
   var gy = document.getElementById('iosHint');
   if (gy) gy.style.display = iosNenGoiYCai() ? '' : 'none';
-  var bo = document.getElementById('btnOffline');
+  var bo = document.getElementById('btnOffline');    // "Dùng không cần đăng nhập": máy chưa có dữ liệu mà chưa muốn đăng nhập
   if (bo){
-    var snap = readSyncedSnapshot();
-    bo.style.display = snap ? '' : 'none';
-    if (snap){
-      var t = new Date(snap.savedAt);
-      bo.innerHTML = '<b>Mở ngoại tuyến</b><small>Dữ liệu trên máy lúc ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ' ' + t.toLocaleDateString('vi-VN') + '</small>';
-    }
+    bo.style.display = '';
+    bo.innerHTML = '<b>Dùng không cần đăng nhập</b><small>Dữ liệu lưu trên máy này, đồng bộ Google Drive sau cũng được</small>';
   }
 }
 
@@ -572,20 +671,26 @@ async function thuXinTokenAmTham(){
   }catch(e){ return null; }
 }
 
-async function tiepTucPhienDangNhap(){
-  var tok = readSavedToken() || await thuXinTokenAmTham();
-  if (!tok) return false;
-  accessToken = tok;
+// khởi động: đã có dữ liệu trên máy thì vào thẳng (không màn đăng nhập, không chờ Drive) rồi đồng bộ nền nếu không cần
+// người dùng chạm gì. Máy chưa có dữ liệu thì mới hiện màn đầu (đăng nhập lấy dữ liệu Drive, hoặc dùng ngay không đăng nhập).
+async function khoiDong(){
+  if (moNgoaiTuyen()){
+    var tok = readSavedToken() || await thuXinTokenAmTham();
+    if (tok){ accessToken = tok; taiThongTinTaiKhoan(); await dongBoDrive(false); }
+    else renderSyncStatus();
+    return;
+  }
+  var tok2 = readSavedToken();
+  if (!tok2){ showGate(''); return; }
+  accessToken = tok2;
   taiThongTinTaiKhoan();
-  gateMsg('Đang vào bằng phiên đăng nhập gần nhất…');
   var ok = false;
   try{ ok = await driveLoad(); }catch(e){ ok = false; }
   if (!ok){
-    // token đã chết / không có mạng: bỏ dữ liệu mặc định driveLoad vừa dựng tạm, quay về màn đăng nhập
+    // lỗi tải KHÔNG có nghĩa token chết (mạng chưa lên, Drive lỗi thoáng qua): giữ token, để lần sau thử lại
     accessToken = null; state.data = null; state.taiLoi = false;
-    clearSavedToken();
-    showGate('Phiên đăng nhập đã hết hạn hoặc không có mạng. Bấm đăng nhập để vào lại.');
-    return false;
+    showGate('Chưa kết nối được Google Drive. Bấm đăng nhập để thử lại.');
+    return;
   }
   state.offline = false; state.dirty = false;
   showApp();
@@ -594,12 +699,13 @@ async function tiepTucPhienDangNhap(){
   await checkLocalDraft();
   renderAll();
   startPolling();
-  return true;
 }
 
 async function signIn(){
   if (!window.google || !google.accounts || !google.accounts.oauth2){
-    gateMsg('Đang tải Google Sign-In… thử lại sau 1-2 giây.');
+    // đang dùng dữ liệu trên máy thì màn đăng nhập đang ẩn: báo bằng toast để người dùng thấy
+    if (state.data) toast('Chưa tải được Google Sign-In (kiểm tra kết nối mạng). Dữ liệu vẫn nằm trên máy, thử lại sau.', { loai:'warn' });
+    else gateMsg('Đang tải Google Sign-In… thử lại sau 1-2 giây.');
     return;
   }
   if (!tokenClient) initTokenClient();
@@ -609,7 +715,8 @@ async function signIn(){
     // đăng nhập chủ động có thể là tài khoản Google khác -> bỏ thông tin cũ, lấy lại
     try{ localStorage.removeItem(TAI_KHOAN_KEY); }catch(e){}
     taiThongTinTaiKhoan();
-    // từ ngoại tuyến đăng nhập lại: các sửa ngoại tuyến nằm trong nháp, checkLocalDraft sẽ hỏi khôi phục
+    if (state.data && state.offline){ await dongBoDrive(true); return; }    // đã có dữ liệu trên máy: đồng bộ, không tải đè
+    // máy chưa có dữ liệu: lấy từ Drive. Nháp (nếu có) nằm trong localStorage, checkLocalDraft sẽ hỏi khôi phục
     state.offline = false; state.dirty = false;
     showApp();
     await driveLoad();
@@ -619,6 +726,7 @@ async function signIn(){
     renderAll();
     startPolling();
   }catch(e){
+    if (state.data){ toast('Đăng nhập thất bại hoặc bị hủy. Dữ liệu vẫn nằm trên máy.', { loai:'warn' }); return; }
     showGate('Đăng nhập thất bại hoặc bị hủy. Thử lại.');
   }
 }
@@ -633,7 +741,8 @@ function signOut(){
   clearSavedToken();
   try{ localStorage.removeItem(DA_DN_KEY); }catch(e){}
   try{ localStorage.removeItem(TAI_KHOAN_KEY); }catch(e){}
-  try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại để mở ngoại tuyến
+  try{ localStorage.removeItem(SYNCED_KEY); }catch(e){}   // đăng xuất tường minh = không để dữ liệu tiền lại trên máy
+  clearLocalDraft();                                       // cả nháp: còn nháp thì mở lại app vẫn vào thẳng bằng dữ liệu cũ
   if (state.mp) mpXoaNhap();   // nháp là bản sao dữ liệu thật, không để lại sau khi đăng xuất
   showGate('');
 }

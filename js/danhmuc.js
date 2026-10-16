@@ -256,8 +256,8 @@ function giaoDienCardHtml(){
   return '<div class="card dm-card">' + dmHead('Giao diện và làm mới')
     + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Giao diện</b><span class="dm-s">Tự động theo cài đặt của điện thoại, hoặc chọn sáng / tối</span></span></div>'
     + '<div class="dt-mode gd-seg" role="group" aria-label="Giao diện">' + seg + '</div>'
-    + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Làm mới dữ liệu</b><span class="dm-s">' + (state.offline ? 'Đang dùng bản lưu trên máy: bấm để đăng nhập và đồng bộ' : 'Tải lại từ Google Drive. Trên điện thoại cũng kéo xuống ở đầu trang được') + '</span></span>'
-    + '<button type="button" class="btn secondary sm" data-act="lamMoi">' + (state.offline ? 'Đăng nhập' : 'Làm mới') + '</button></div></div>';
+    + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">' + (state.offline ? 'Đồng bộ Google Drive' : 'Làm mới dữ liệu') + '</b><span class="dm-s">' + (state.offline ? 'Đang dùng dữ liệu trên máy. Bấm để đồng bộ với Drive (còn phiên đăng nhập thì không phải đăng nhập lại)' : 'Tải lại từ Google Drive. Trên điện thoại cũng kéo xuống ở đầu trang được') + '</span></span>'
+    + '<button type="button" class="btn secondary sm" data-act="lamMoi">' + (state.offline ? 'Đồng bộ' : 'Làm mới') + '</button></div></div>';
 }
 function caiAppCardHtml(){
   var h = '<div class="card dm-card">'+dmHead('Cài lên điện thoại / máy tính');
@@ -312,9 +312,9 @@ function taiKhoanCardHtml(){
   var tk = docTaiKhoan();
   return '<div class="card dm-card">'+dmHead('Tài khoản')
     + (tk ? '<div class="dm-sub">Đang đăng nhập: <b>'+esc(tk.ten || tk.email)+'</b>'+(tk.ten && tk.email ? ' · '+esc(tk.email) : '')+'</div>' : '')
-    + '<div class="dm-sub">Đăng xuất khỏi Google trên máy này.</div>'
-    + '<button class="btn danger" data-act="dangXuat">Đăng xuất</button>'
-    + ghiChuGon('Dữ liệu trên Google Drive vẫn còn nguyên; chỉ bản lưu để mở ngoại tuyến trên máy này bị xóa.', 'Đăng xuất có mất dữ liệu không?') + '</div>';
+    + '<div class="dm-sub">Đăng xuất khỏi Google và <b>xóa dữ liệu trên máy này</b>. Chỉ làm khi đổi máy hoặc muốn dọn sạch.</div>'
+    + '<button class="btn danger" data-act="dangXuat">Đăng xuất và xóa dữ liệu trên máy</button>'
+    + ghiChuGon('Dữ liệu chính của app nằm trên máy này; Drive là bản đồng bộ. Đăng xuất xóa bản trên máy (kể cả thay đổi chưa đồng bộ), bản trên Drive vẫn còn nguyên. Muốn giữ dữ liệu thì đừng đăng xuất, cứ đóng app.', 'Đăng xuất có mất dữ liệu không?') + '</div>';
 }
 
 /* ---- Sao lưu dữ liệu: danh sách + khôi phục (logic Drive nằm ở drive-sync.js) ---- */
@@ -779,9 +779,9 @@ function handleDanhMucAction(act, el){
     })();
   } else if (act === 'dangXuat'){
     (async function(){
-      if (!await xacNhan('Đăng xuất khỏi Google?',
-            'Dữ liệu trên Google Drive vẫn còn. Bản lưu để mở ngoại tuyến trên máy này sẽ bị xóa; các thay đổi chưa kịp đồng bộ (nếu có) cũng nằm trong đó.' + (state.dirty ? '\n\nĐang có thay đổi CHƯA đồng bộ lên Drive.' : ''),
-            { nguyHiem:true, chuOk:'Đăng xuất' })) return;
+      if (!await xacNhan('Đăng xuất và xóa dữ liệu trên máy?',
+            'Dữ liệu trên Google Drive vẫn còn. Bản dữ liệu trên máy này sẽ bị xóa; các thay đổi chưa kịp đồng bộ (nếu có) cũng nằm trong đó.' + (state.dirty ? '\n\nĐang có thay đổi CHƯA đồng bộ lên Drive.' : ''),
+            { nguyHiem:true, chuOk:'Xóa và đăng xuất' })) return;
       signOut();
     })();
   } else if (act === 'dmNop'){
