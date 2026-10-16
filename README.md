@@ -70,6 +70,7 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, **tải toàn bộ dữ liệu về file `.json` trên máy** và **khôi phục từ file** (Cài đặt → Ứng dụng → Sao lưu; `tenFileXuat`, `docFileKhoiPhuc`, `xuatDuLieuGiao`, `khoiPhucTuFile` ở `danhmuc.js`: cùng định dạng với bản sao lưu Drive, đi qua `normalizeData`, từ chối file không có `journal`; khi đang ngoại tuyến thì cảnh báo bản hiện tại chưa được sao lưu lên Drive), xem danh sách và **khôi phục** một bản ngay trong tab Cài đặt. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô; sai 5 lần liên tiếp thì phải chờ, mỗi lần bị khóa chờ lâu hơn: 30 giây, 1, 2, 5, 15 phút, lưu ở `localStorage` nên tải lại trang không xóa được), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
+- **Phiên bản và cập nhật** (Cài đặt → Ứng dụng): số phiên bản (`PHIEN_BAN`), mã bản, nút "Kiểm tra bản mới" / "Cập nhật" và nhật ký thay đổi (`NHAT_KY` ở `js/phienban.js`, bản mới nhất mở sẵn).
 - **Giao diện** sáng / tối / tự động theo điện thoại (chọn ở **Cài đặt → Ứng dụng → thẻ "Giao diện và làm mới"**, cùng nút **Làm mới dữ liệu**; header chỉ còn tìm kiếm, thông báo, ẩn số), tối ưu điện thoại (thanh tab dưới đáy, kéo xuống để làm mới, vuốt ngày, animation tôn trọng `prefers-reduced-motion`) và màn rộng ≥1024px chia 2 cột. Thêm / sửa luôn qua **bảng trượt từ đáy** (cùng một khung ở Sổ tay, Mô phỏng, Vay - Nợ, Danh mục), nút Lưu cố định ở đáy bảng để bàn phím không che.
 - **Biểu đồ tự vẽ bằng SVG**, không dùng thư viện biểu đồ, nên xem được cả khi offline.
 - Có trang [Chính sách quyền riêng tư](privacy.html).
@@ -90,6 +91,8 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 | **Chi cố định** | Danh mục bật công tắc "Chi cố định" (tiền nhà, tiền net...) và các danh mục hệ thống (Trả nợ, Cho vay, Điều chỉnh số dư). Không đem so với hạn mức chi hằng ngày. |
 | **Hạn mức** | Số tiền dự định chi mỗi tháng của một danh mục chi. Với danh mục thu gọi là "Kế hoạch thu". |
 | **Hôm nay còn tiêu được** | (Tổng hạn mức chi hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay. |
+| **Còn phải trả (gồm lãi)** | Tổng số còn phải đóng của các khoản vay, GỒM lãi các kỳ chưa tới hạn (Vay - Nợ). Phần gốc và phần lãi chưa tới hạn hiện ở dòng phụ dưới số lớn. |
+| **Nợ sau khi trừ tiền cho vay** | Còn phải trả trừ tiền cho vay chờ thu (Vay - Nợ). Chưa tính tiền trong ví, nên KHÁC Tài sản ròng ở Báo cáo; chỉ hiện khi có khoản cho vay chờ thu. |
 | **Tài sản ròng thực tế** | Tiền các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả. Chỉ tính số đã ghi, không tính lãi tương lai. |
 | **Tài sản ròng dự kiến** | Như trên nhưng cho các tháng sắp tới: số dư dự kiến + cho vay chưa thu − nợ gốc còn lại theo lịch trả. |
 | **Dòng tiền tích lũy** | Số dư các ví cộng dồn qua từng tháng tới, theo dự báo (khoản định kỳ, lịch trả nợ, hạn mức hoặc trung bình các tháng gần đây). |

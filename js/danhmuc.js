@@ -411,6 +411,8 @@ var THUAT_NGU = [
   { ten: 'Chi cố định', nghia: 'Danh mục bật công tắc "Chi cố định" (tiền nhà, tiền net...) và các danh mục hệ thống (Trả nợ, Cho vay, Điều chỉnh số dư). Không đem so với hạn mức chi hằng ngày.' },
   { ten: 'Hạn mức', nghia: 'Số tiền dự định chi mỗi tháng của một danh mục chi. Với danh mục thu gọi là "Kế hoạch thu".' },
   { ten: 'Hôm nay còn tiêu được', nghia: '(Tổng hạn mức chi hằng ngày − đã chi trước hôm nay) ÷ số ngày còn lại (tính cả hôm nay), rồi trừ phần đã tiêu hôm nay.' },
+  { ten: 'Còn phải trả (gồm lãi)', nghia: 'Tổng số còn phải đóng của các khoản vay, GỒM lãi các kỳ chưa tới hạn (Vay - Nợ). Phần gốc và phần lãi chưa tới hạn hiện ở dòng phụ dưới số lớn.' },
+  { ten: 'Nợ sau khi trừ tiền cho vay', nghia: 'Còn phải trả trừ tiền cho vay chờ thu (Vay - Nợ). Chưa tính tiền trong ví, nên KHÁC Tài sản ròng ở Báo cáo; chỉ hiện khi có khoản cho vay chờ thu.' },
   { ten: 'Tài sản ròng thực tế', nghia: 'Tiền các ví + tiền cho vay chưa thu về − nợ gốc còn phải trả. Chỉ tính số đã ghi, không tính lãi tương lai.' },
   { ten: 'Tài sản ròng dự kiến', nghia: 'Như trên nhưng cho các tháng sắp tới: số dư dự kiến + cho vay chưa thu − nợ gốc còn lại theo lịch trả.' },
   { ten: 'Dòng tiền tích lũy', nghia: 'Số dư các ví cộng dồn qua từng tháng tới, theo dự báo (khoản định kỳ, lịch trả nợ, hạn mức hoặc trung bình các tháng gần đây).' },
