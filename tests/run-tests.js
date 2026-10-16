@@ -1928,6 +1928,25 @@ test('Tải dữ liệu về file .json rồi khôi phục: vòng khứ hồi gi
   setToday('2026-10-01');
 });
 
+test('Khóa PIN: sai 5 lần phải chờ lâu dần (30 giây, 1, 2, 5, 15 phút), lưu trên máy nên tải lại trang không xóa được', function(){
+  // lock.js chạm DOM nên không nạp cả file: cắt đúng khối hàm thuần ở đầu file
+  var src = fs.readFileSync(path.join(JS_DIR, 'lock.js'), 'utf8');
+  var i = src.indexOf('var KHOA_CHO_KEY'), j = src.indexOf('var _khoaSai');
+  ok(i > 0 && j > i, 'tìm thấy khối hàm thuần');
+  vm.runInContext(src.slice(i, j), ctx);
+  eq([1, 2, 3, 4, 5, 6, 9].map(ctx.khoaChoGiay).join(','), '30,60,120,300,900,900,900', 'chờ tăng dần rồi giữ tối đa 15 phút');
+  eq(ctx.khoaChoGiay(0), 30, 'đầu vào lạ về mức thấp nhất'); eq(ctx.khoaChoGiay(NaN), 30);
+  eq(ctx.khoaChoChu(30), '30 giây'); eq(ctx.khoaChoChu(60), '1 phút'); eq(ctx.khoaChoChu(900), '15 phút');
+  var luu = {}, ls0 = ctx.localStorage;
+  ctx.localStorage = { getItem: function(k){ return k in luu ? luu[k] : null; }, setItem: function(k, v){ luu[k] = String(v); }, removeItem: function(k){ delete luu[k]; } };
+  try{
+    eq(JSON.stringify(ctx.khoaDocCho()), '{"lan":0,"den":0}', 'chưa có gì');
+    ctx.khoaGhiCho({ lan: 3, den: 1234 }); eq(JSON.stringify(ctx.khoaDocCho()), '{"lan":3,"den":1234}', 'đọc lại đúng (giữ qua lần tải trang)');
+    luu['chitieu_khoa_cho_v1'] = '{hỏng'; eq(JSON.stringify(ctx.khoaDocCho()), '{"lan":0,"den":0}', 'JSON hỏng: về mặc định, không báo lỗi');
+    luu['chitieu_khoa_cho_v1'] = JSON.stringify({ lan: -5, den: 'x' }); eq(JSON.stringify(ctx.khoaDocCho()), '{"lan":0,"den":0}', 'số lạ bị chuẩn hóa');
+  } finally { ctx.localStorage = ls0; }
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
