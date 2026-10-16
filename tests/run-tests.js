@@ -2001,6 +2001,26 @@ test('Người mới: sổ trống thì có thẻ Bắt đầu 3 bước, Dòng 
   } finally { ctx.localStorage = ls0; setToday('2026-10-01'); }
 });
 
+test('Vay "Trả 1 lần" có lãi đơn và "Lãi hằng tháng, gốc cuối kỳ": số tính tay', function(){
+  var base = { id:'x', ten:'Vay', soTienGoc:10000000, ngayVay:'2026-01-10', ngayTraHangThang:10, traNo:[], trangThai:'dang_vay' };
+  // trả 1 lần 10tr, 12%/năm, 6 tháng: lãi đơn 10tr × 12% × 6/12 = 600.000 -> 10.600.000
+  var a = ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'tra_1_lan', laiSuatNam:12, soThangVay:6 }));
+  eq(a.length, 1); eq(a[0].tongTra, 10600000, '10tr + 600k lãi'); eq(a[0].lai, 600000); eq(a[0].goc, 10000000); eq(a[0].mk, '2026-07');
+  eq(ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'tra_1_lan', soThangVay:6 }))[0].tongTra, 10000000, 'không nhập lãi thì như cũ: chỉ trả gốc');
+  // đáo hạn theo ngày, không nhập kỳ hạn: tính số tháng từ ngày vay (T1) tới tháng đáo hạn (T4) = 3 tháng -> lãi 300.000
+  eq(ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'tra_1_lan', laiSuatNam:12, ngayDaoHan:'2026-04-10' }))[0].lai, 300000, 'lãi theo 3 tháng từ ngày vay tới ngày đáo hạn');
+  // lãi hằng tháng, gốc cuối kỳ: 10tr, 12%/năm, 6 tháng -> mỗi tháng 100.000, kỳ cuối 100.000 + 10.000.000
+  var b = ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'lai_goc_cuoi', laiSuatNam:12, soThangVay:6 }));
+  eq(b.length, 6); eq(b.slice(0, 5).every(function(k){ return k.tongTra === 100000 && k.goc === 0; }), true, '5 tháng đầu chỉ trả lãi 100.000');
+  eq(b[5].tongTra, 10100000, 'kỳ cuối lãi + gốc'); eq(b[5].duNoConLai, 0); eq(b[0].duNoConLai, 10000000, 'dư nợ gốc không giảm trước kỳ cuối');
+  var tl = 0; b.forEach(function(k){ tl += k.lai; }); eq(tl, 600000, 'tổng lãi 600.000');
+  // không lãi suất: chỉ có kỳ cuối (trả gốc), không có kỳ 0 đồng
+  var c = ctx.tinhLichTraNo(Object.assign({}, base, { hinhThuc:'lai_goc_cuoi', laiSuatNam:0, soThangVay:6 }));
+  eq(c.length, 1); eq(c[0].tongTra, 10000000); eq(c[0].mk, '2026-07');
+  ctx.state.vnFormKind = 'vayNoPhaiTra'; ctx.state.vnFormId = null;
+  var f = ctx.vayNoFormHtml(); ok(f.indexOf('Lãi hằng tháng, gốc cuối kỳ') > 0, 'form có hình thức mới'); ok(/data-ht="[^"]*tra_1_lan[^"]*"[^>]*><div class="qa-lbl">Lãi suất/.test(f), 'ô lãi suất hiện cho Trả 1 lần'); ctx.state.vnFormKind = null;
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
@@ -6395,7 +6415,7 @@ test('KB8 Dữ liệu cũ: không có ví, không items, khoản vay kiểu cũ 
 });
 
 test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay mọi hình thức, cho vay, định kỳ, chuyển ví, ngày hôm nay bất kỳ', function(){
-  var hinh = ['khong_lai', 'co_lai', 'tra_co_dinh', 'goc_deu', 'tra_1_lan'];
+  var hinh = ['khong_lai', 'co_lai', 'tra_co_dinh', 'goc_deu', 'tra_1_lan', 'lai_goc_cuoi'];
   for (var seed = 1; seed <= 150; seed++){
     var r = kbRng(seed * 7919), nhan = 'KB9 seed ' + seed, d = kbDuLieu({ settings: { soDuDauKy: Math.round(r() * 20000000), ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } });
     d.wallets = [{ id: 'w0', ten: 'Ví 0', soDuDauKy: Math.round(r() * 5000000) }];

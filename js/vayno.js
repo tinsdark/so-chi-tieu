@@ -8,8 +8,9 @@
 
 var LOAI_VAY_LABEL = { ngan_hang:'Ngân hàng', vi:'Ví', ban_be:'Bạn bè', nguoi_than:'Người thân' };
 var CACH_GOC_LABEL = { deu:'Gốc chia đều + phí cố định', giam:'Lãi trên dư nợ giảm dần' };
-var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng', goc_deu:'Gốc đều, lãi giảm dần' };
+var HINH_THUC_LABEL = { tra_1_lan:'Trả 1 lần', khong_lai:'Không lãi suất', co_lai:'Có lãi suất', tra_co_dinh:'Trả cố định/tháng', lai_goc_cuoi:'Lãi hằng tháng, gốc cuối kỳ', goc_deu:'Gốc đều, lãi giảm dần' };
 
+function monthsBetweenMk(a, b){ var x = a.split('-'), y = b.split('-'); return (parseInt(y[0], 10) - parseInt(x[0], 10)) * 12 + (parseInt(y[1], 10) - parseInt(x[1], 10)); }
 function monthKeyAdd(mk, n){
   var p = mk.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10) + n;
   while (m > 12){ m -= 12; y++; }
@@ -70,7 +71,19 @@ function tinhLichTraNoTho(loan){
   if (loan.hinhThuc === 'tra_1_lan'){
     var mkDue = loan.ngayDaoHan ? monthKey(loan.ngayDaoHan) : monthKeyAdd(startMk, num(loan.soThangVay) || 0);
     var ngayTraDue = loan.ngayDaoHan || ngayTraCuaKy(mkDue, ngayTrongThang);
-    sch.push({ mk: mkDue, ngayTra: ngayTraDue, goc: goc0, lai: 0, tongTra: goc0, duNoConLai: 0 });
+    // có nhập lãi suất thì lãi ĐƠN: gốc × lãi %/năm × số tháng ÷ 12 (số tháng = kỳ hạn nhập, không thì tính từ ngày vay tới tháng đáo hạn)
+    var thangDao = num(loan.soThangVay) > 0 ? num(loan.soThangVay) : Math.max(0, monthsBetweenMk(startMk, mkDue));
+    var laiMot = goc0 * numNonNeg(loan.laiSuatNam) / 100 * thangDao / 12;
+    sch.push({ mk: mkDue, ngayTra: ngayTraDue, goc: goc0, lai: laiMot, tongTra: goc0 + laiMot, duNoConLai: 0 });
+    return sch;
+  }
+  // lai_goc_cuoi: mỗi tháng chỉ trả lãi (gốc × lãi %/năm ÷ 12), kỳ cuối trả thêm toàn bộ gốc. Không lãi suất thì chỉ có kỳ cuối (trả gốc).
+  if (loan.hinhThuc === 'lai_goc_cuoi'){
+    var nL = Math.max(1, num(loan.soThangVay)), laiThangL = goc0 * numNonNeg(loan.laiSuatNam) / 100 / 12;
+    for (var u = (laiThangL > 0 ? 1 : nL); u <= nL; u++){
+      var mkU = monthKeyAdd(startMk, u), cuoiU = u === nL;
+      sch.push({ mk: mkU, ngayTra: ngayTraCuaKy(mkU, ngayTrongThang), goc: cuoiU ? goc0 : 0, lai: laiThangL, tongTra: (cuoiU ? goc0 : 0) + laiThangL, duNoConLai: cuoiU ? 0 : goc0 });
+    }
     return sch;
   }
   var n = Math.max(1, num(loan.soThangVay));
@@ -107,7 +120,7 @@ function tinhLichTraNoTho(loan){
     }
     return sch;
   }
-  // goc_deu (chỉ tab Mô phỏng dùng) — mỗi kỳ trả gốc bằng nhau, lãi tính trên dư nợ còn lại nên giảm dần
+  // goc_deu (form khoản vay và tab Mô phỏng đều dùng) — mỗi kỳ trả gốc bằng nhau, lãi tính trên dư nợ còn lại nên giảm dần
   if (loan.hinhThuc === 'goc_deu'){
     var rg = num(loan.laiSuatNam) / 12 / 100, gocG = goc0 / n, duG = goc0;
     for (var g=1;g<=n;g++){
@@ -1015,7 +1028,7 @@ function vayNoFormHtml(){
     + vnF('Kỳ hạn (số tháng)', '<input type="number" id="vn_vn_soThang" value="'+(d.soThangVay||'')+'" placeholder="0" min="0">')
     + '</div>'
     + vnF('Ngày đáo hạn', '<input type="date" id="vn_vn_daoHan" value="'+(d.ngayDaoHan||'')+'">', 'tra_1_lan', 'Trả 1 lần: nhập ngày đáo hạn hoặc kỳ hạn (số tháng).')
-    + vnF('Lãi suất %/năm', '<input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="0" min="0" step="0.01">', 'co_lai goc_deu')
+    + vnF('Lãi suất %/năm', '<input type="number" id="vn_vn_laiSuat" value="'+(d.laiSuatNam||'')+'" placeholder="0" min="0" step="0.01">', 'co_lai goc_deu tra_1_lan lai_goc_cuoi')
     + vnF('Số tiền trả mỗi tháng', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_traThang" value="'+veSo(d.soTienTraThang)+'" placeholder="0">', 'tra_co_dinh')
     + vnF('Cách chia gốc và lãi', vnChipsHtml('vn_vn_cachGoc', CACH_GOC_LABEL, d.cachGoc || 'deu'), 'tra_co_dinh',
         'SPayLater, trả góp điện máy: gốc chia đều, phí cố định mỗi tháng. FE Credit, vay tiêu dùng: lãi tính trên dư nợ còn lại nên đầu kỳ trả nhiều lãi. Chọn sai chỉ lệch số nợ gốc còn lại, không đổi số phải trả mỗi tháng.')
@@ -1102,7 +1115,12 @@ function vnTomCapNhat(){
   var lai = 0;
   sch.forEach(function(r){ lai += num(r.lai); });
   if (o.hinhThuc === 'tra_1_lan'){
-    tom.innerHTML = 'Trả 1 lần <b>'+fmt(Math.round(sch[0].tongTra))+'</b> vào '+ngayVN(sch[0].ngayTra)+'.';
+    tom.innerHTML = 'Trả 1 lần <b>'+fmt(Math.round(sch[0].tongTra))+'</b> vào '+ngayVN(sch[0].ngayTra)+(lai > 0.5 ? ' (gồm lãi <b>'+fmt(Math.round(lai))+'</b>)' : '')+'.';
+    return;
+  }
+  if (o.hinhThuc === 'lai_goc_cuoi'){
+    tom.innerHTML = (sch.length > 1 ? 'Mỗi tháng trả lãi ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>, ' : '') + 'kỳ cuối ('+vnMkDai(sch[sch.length-1].mk)+') trả thêm gốc: <b>'+fmt(Math.round(sch[sch.length-1].tongTra))+'</b>'
+      + '<br>Tổng lãi ≈ <b>'+fmt(Math.round(lai))+'</b>';
     return;
   }
   tom.innerHTML = (o.hinhThuc === 'goc_deu' ? 'Kỳ đầu trả ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>, giảm dần mỗi tháng' : 'Trả mỗi tháng ≈ <b>'+fmt(Math.round(sch[0].tongTra))+'</b>')
