@@ -755,7 +755,8 @@ function taiSanRongCardHtml(mk){
   }
   h += '<div class="tsr-tbl"><div><span>Số dư các ví</span><b>'+bdTien(cur.tien)+'</b></div>'
     + (cur.phaiThu > 0 ? '<div><span>+ Cho vay chưa thu</span><b class="thu">'+bdTien(cur.phaiThu)+'</b></div>' : '')
-    + (cur.no > 0 ? '<div><span>− Nợ gốc còn lại</span><b class="chi">'+bdTien(cur.no)+'</b></div>' : '') + '</div>';
+    + (cur.no > 0 ? '<div><span>− Nợ gốc còn lại (chưa tính lãi)</span><b class="chi">'+bdTien(cur.no)+'</b></div>' : '') + '</div>'
+    + (cur.no > 0 ? '<div class="vn-sub" style="margin-top:6px">Số nợ đầy đủ, gồm cả lãi, xem ở tab Vay - Nợ.</div>' : '');
   var ml = [], mv = [], m = mk;
   for (var i = 0; i < 12; i++){
     if (startLock && m < startLock) break;

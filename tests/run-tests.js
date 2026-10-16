@@ -2131,7 +2131,8 @@ test('Vay-Nợ: thẻ tổng quan cộng đúng nợ / cho vay / tháng này; S�
   try{ voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); }); } finally { ctx.renderVayNo = rv0; }
   var h = root.innerHTML;
   ok(h.indexOf('5.400.000') >= 0, 'còn nợ = 6.000.000 − 600.000');
-  ok(h.indexOf('Nợ ròng') >= 0 && h.indexOf('4.900.000') >= 0, 'nợ ròng = nợ − cho vay chờ thu (500.000)');
+  ok(h.indexOf('Nợ sau khi trừ tiền cho vay') >= 0 && h.indexOf('4.900.000') >= 0, 'nợ sau khi trừ cho vay = nợ − cho vay chờ thu (500.000)');
+  ok(h.indexOf('Còn phải trả (gồm lãi)') >= 0 && h.indexOf('lãi chưa tới hạn') >= 0, 'nhãn rõ gồm lãi + dòng tách gốc / lãi');
   ok(h.indexOf('<b>60%</b>') >= 0, 'tháng này đã trả 600.000 / 1.000.000');
   ok(h.indexOf('kỳ 1') >= 0 || h.indexOf('Kỳ 1 còn thiếu') >= 0, 'thẻ ghi rõ kỳ đang trả dở còn thiếu');
   setToday('2026-10-01');
