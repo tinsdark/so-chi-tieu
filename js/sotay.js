@@ -435,6 +435,7 @@ function renderSoTay(){
   var html = '';
   // màn rộng (>=1024px, CSS .cot2): cột trái = tổng quan + ghi nhanh + việc cần làm, cột phải = form + danh sách
   html += '<div class="cot2"><div class="cot-trai">';
+  html += huongDanHtml();
   html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock, duHetThang);
   if (beforeLock){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc chốt số dư ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
@@ -981,6 +982,34 @@ function tieuMoiNgayHtml(homNay){
   return '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span>'
     + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>'
     + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div>' + canh + '</div>';
+}
+/* ---- Thẻ "Bắt đầu" cho tài khoản mới (đầu Sổ tay): 3 bước, tự ẩn khi xong hoặc khi bấm Bỏ qua ----
+   Bước 1: số dư đầu kỳ (đã đặt, hoặc đã có giao dịch thì coi như xong). Bước 2: ghi khoản đầu tiên. Bước 3: đặt hạn mức cho một danh mục chi.
+   "Bỏ qua" chỉ nhớ trên máy này (localStorage), không đổi dữ liệu. Sổ đã có giao dịch và hạn mức thì thẻ không bao giờ hiện. */
+var HD_KEY = 'chitieu_huongdan_v1';
+function huongDanDaBo(){ try{ return localStorage.getItem(HD_KEY) === '1'; }catch(e){ return false; } }
+function huongDanBo(){ try{ localStorage.setItem(HD_KEY, '1'); }catch(e){} }
+function huongDanBuoc(){
+  var d = state.data, coGd = Object.keys(d.journal || {}).some(function(k){ return entryItems(d.journal[k]).length || (d.journal[k].refs || []).length; });
+  var duDau = (d.wallets || []).some(function(w){ return num(w.soDuDauKy) !== 0; });
+  var coHm = (d.categories.chi || []).some(function(c){ return num(c.chiTieu) > 0; });
+  return [ { id: 'tien', xong: duDau || coGd, ten: 'Đặt số dư các ví', phu: 'Số tiền thật trong ví, tài khoản lúc bắt đầu dùng sổ.', nut: 'Đặt số dư' },
+           { id: 'ghi', xong: coGd, ten: 'Ghi khoản đầu tiên', phu: 'Một khoản chi hoặc thu hôm nay. Mất khoảng 10 giây.', nut: 'Ghi ngay' },
+           { id: 'hanmuc', xong: coHm, ten: 'Đặt hạn mức cho một danh mục chi', phu: 'Để app tính "hôm nay còn tiêu được bao nhiêu".', nut: 'Đặt hạn mức' } ];
+}
+function huongDanHtml(){
+  if (!state.data || huongDanDaBo()) return '';
+  var bs = huongDanBuoc(), xong = bs.filter(function(b){ return b.xong; }).length;
+  if (xong === bs.length) return '';
+  var tiep = bs.filter(function(b){ return !b.xong; })[0];
+  return '<div class="card hd-card" id="cardHuongDan"><div class="hd-h"><h3>Bắt đầu với Sổ Tiền</h3><span class="hd-n">'+xong+'/'+bs.length+'</span></div>'
+    + bs.map(function(b){
+        var la = b === tiep;
+        return '<div class="hd-b'+(b.xong ? ' xong' : '')+'"><span class="hd-ic" aria-hidden="true">'+(b.xong ? icon('check') : '')+'</span>'
+          + '<span class="hd-t"><b>'+b.ten+'</b>'+(b.xong ? '' : '<small>'+b.phu+'</small>')+'</span>'
+          + (b.xong ? '' : '<button type="button" class="btn sm'+(la ? '' : ' secondary')+'" data-act="huongDan" data-v="'+b.id+'">'+b.nut+'</button>')+'</div>';
+      }).join('')
+    + '<button type="button" class="hd-bo" data-act="huongDan" data-v="bo">Bỏ qua, tôi tự làm</button></div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);
@@ -1582,6 +1611,11 @@ function handleSoTayAction(act, el){
     }, 320);
   } else if (act === 'goDanhMuc'){
     chuyenTab('danhmuc');
+  } else if (act === 'huongDan'){
+    var hdV = (el.getAttribute && el.getAttribute('data-v')) || '';
+    if (hdV === 'ghi') qaMoSheet();
+    else if (hdV === 'bo'){ huongDanBo(); renderSoTay(); }
+    else { state.dmTab = hdV === 'hanmuc' ? 'danhmuc' : 'tien'; chuyenTab('danhmuc'); if (window.scrollTo) window.scrollTo({ top: 0 }); }
   } else if (act === 'goTheoNgay'){
     state.dtTheoNgay = true; state.dtMoPhong = false;
     chuyenTab('dongtien');

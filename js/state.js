@@ -1201,6 +1201,15 @@ function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 // giống num() nhưng chặn số âm -> về 0 (dùng cho các ô nhập tiền)
 function numNonNeg(v){ var n = num(v); return n < 0 ? 0 : n; }
 function pad2(n){ return n<10 ? '0'+n : ''+n; }
+// sổ chưa có gì để báo cáo / dự báo: không giao dịch, không khoản vay hay cho vay, không giao dịch định kỳ, chưa đặt hạn mức / kế hoạch cho danh mục nào
+// (có hạn mức thì Dòng tiền vẫn dự báo được theo hạn mức nên không phải màn trống)
+function soChuaCoDuLieu(d){
+  d = d || state.data;
+  if (!d) return true;
+  var vn = d.vayNo || {}, cats = d.categories || {};
+  var coHm = ['thu', 'chi'].some(function(k){ return (cats[k] || []).some(function(c){ return num(c.chiTieu) > 0; }); });
+  return !Object.keys(d.journal || {}).length && !(vn.vayNoPhaiTra || []).length && !(vn.choVay || []).length && !(d.dinhKy || []).length && !coHm;
+}
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 var MONTH_NAMES = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];

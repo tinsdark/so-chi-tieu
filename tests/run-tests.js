@@ -1967,6 +1967,40 @@ test('Hôm nay còn tiêu được: ví dùng hằng ngày ít tiền hơn mức
   setToday('2026-10-01');
 });
 
+test('Người mới: sổ trống thì có thẻ Bắt đầu 3 bước, Dòng tiền và Báo cáo chỉ hiện một thẻ trống; có dữ liệu thì mọi thứ biến mất', function(){
+  setToday('2026-10-15');
+  var ls0 = ctx.localStorage, luu = {};
+  ctx.localStorage = { getItem: function(k){ return k in luu ? luu[k] : null; }, setItem: function(k, v){ luu[k] = String(v); }, removeItem: function(k){ delete luu[k]; } };
+  try{
+    loadData(baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-15', thangBatDauDuTru:'2026-10' } }));
+    eq(ctx.soChuaCoDuLieu(), true, 'sổ mới tinh là sổ trống');
+    var hd = ctx.huongDanHtml();
+    ok(hd.indexOf('id="cardHuongDan"') > 0 && hd.indexOf('0/3') > 0 && hd.indexOf('Đặt số dư các ví') > 0 && hd.indexOf('Ghi khoản đầu tiên') > 0 && hd.indexOf('Đặt hạn mức') > 0, 'thẻ Bắt đầu 0/3');
+    // Dòng tiền: một thẻ thay cho bảng 12 tháng toàn số 0
+    var root = { innerHTML: '' }, vd = function(fn){ voiDom({ tabContent: root }, null, fn); };
+    vd(function(){ ctx.renderDongTien(); });
+    ok(root.innerHTML.indexOf('Chưa có gì để dự báo') > 0 && root.innerHTML.indexOf('data-act="qaMo"') > 0 && root.innerHTML.indexOf('dt-ml') < 0, 'Dòng tiền: màn trống gọn, không có bảng tháng');
+    vd(function(){ ctx.renderBaoCao(); });
+    ok(root.innerHTML.indexOf('Chưa có gì để báo cáo') > 0 && root.innerHTML.indexOf('cardHanMuc') < 0 && root.innerHTML.indexOf('cardNgayTuDo') < 0, 'Báo cáo: một thẻ trống thay cho các thẻ trống');
+    // bỏ qua: nhớ trên máy, không đổi dữ liệu
+    var truoc = JSON.stringify(ctx.state.data); ctx.huongDanBo(); eq(ctx.huongDanHtml(), '', 'bấm Bỏ qua thì thẻ ẩn'); eq(JSON.stringify(ctx.state.data), truoc, 'không đổi dữ liệu');
+    luu = {};
+    // làm dần từng bước
+    var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-15', thangBatDauDuTru:'2026-10' } }); d.wallets = [{ id:'a', ten:'Tiền mặt', soDuDauKy:2000000 }]; loadData(d);
+    ok(ctx.huongDanHtml().indexOf('1/3') > 0, 'đặt số dư xong: 1/3');
+    ctx.entryAddItem('2026-10-15', 'chi', 'an', 50000, 'phở', 'a'); ctx.invalidateBalanceCache();
+    ok(ctx.huongDanHtml().indexOf('2/3') > 0 && ctx.soChuaCoDuLieu() === false, 'ghi khoản đầu tiên: 2/3, không còn là sổ trống');
+    vd(function(){ ctx.renderDongTien(); }); ok(root.innerHTML.indexOf('Chưa có gì để dự báo') < 0, 'có dữ liệu: Dòng tiền vẽ đủ');
+    ctx.state.data.categories.chi[0].chiTieu = 3000000;
+    eq(ctx.huongDanHtml(), '', 'đủ 3 bước thì thẻ tự biến mất');
+    // người dùng cũ (đã có giao dịch và hạn mức): không bao giờ thấy thẻ
+    loadData(dataBaoCao()); eq(ctx.huongDanHtml(), '', 'sổ đang dùng không có thẻ Bắt đầu');
+    // chỉ có hạn mức (chưa có giao dịch): Dòng tiền vẫn dự báo theo hạn mức nên không phải màn trống
+    var d2 = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-15', thangBatDauDuTru:'2026-10' } }); d2.categories.chi[0].chiTieu = 3000000; loadData(d2);
+    eq(ctx.soChuaCoDuLieu(), false, 'đặt hạn mức rồi thì không còn là sổ trống');
+  } finally { ctx.localStorage = ls0; setToday('2026-10-01'); }
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){

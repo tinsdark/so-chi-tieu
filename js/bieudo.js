@@ -800,6 +800,12 @@ function renderBaoCao(){
   };
   // Báo cáo có nhiều thẻ nên dài: giữ BC_GIU thẻ đầu, gập phần còn lại sau nút "Xem thêm", kèm hàng chip nhảy nhanh tới từng thẻ.
   // Màn rộng (>= 1024px) hiện hết như cũ (CSS ẩn chip và nút).
+  if (soChuaCoDuLieu()){       // sổ trống: một thẻ thay cho ba thẻ trống mỗi thẻ một đoạn giải thích
+    root.innerHTML = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk)
+      + '<div class="card empty-card"><h3>Chưa có gì để báo cáo</h3><p>Ghi vài khoản thu chi ở Sổ tay, đặt hạn mức cho các danh mục chi, rồi quay lại đây: hạn mức, tài sản ròng, biểu đồ và nhận xét sẽ hiện ra.</p>'
+      + '<button type="button" class="btn" data-act="qaMo">Ghi khoản đầu tiên</button></div></div></div>';
+    return;
+  }
   var ids = htHien('baocao').filter(function(id){ return the[id] != null && the[id] !== ''; });
   var giu = ids.slice(0, BC_GIU), them = ids.slice(BC_GIU);
   if (them.length < 2){ giu = ids; them = []; }       // chỉ dư 1 thẻ thì không đáng gập

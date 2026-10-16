@@ -474,6 +474,13 @@ function renderDongTien(){
   if (mk < minMk) mk = minMk;
   if (mk > maxMk) mk = maxMk;
   state.dtMk = mk;
+  if (soChuaCoDuLieu()){        // sổ trống: bảng 12 tháng toàn số 0 không nói được gì, chỉ rối mắt
+    root.innerHTML = dtCheDoHtml() + '<div class="card empty-card"><h3>Chưa có gì để dự báo</h3>'
+      + '<p>Dòng tiền cho thấy tiền của bạn sẽ ra sao 12 tháng tới. Ghi vài khoản thu chi ở Sổ tay (hoặc thêm khoản lương, tiền nhà ở Cài đặt → Kế hoạch) rồi quay lại đây.</p>'
+      + '<button type="button" class="btn" data-act="qaMo">Ghi khoản đầu tiên</button></div>';
+    if (typeof mpSheetVe === 'function') mpSheetVe();
+    return;
+  }
   var d = dtThangDuLieu(mk);
   var rows = dtDuKienRows(Math.max(DT_SO_THANG, 1));
   var html = dtCheDoHtml() + '<div class="cot2"><div class="cot-trai">'
