@@ -6492,6 +6492,19 @@ test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay m
   }
 });
 
+test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){
+  var fs = require('fs'), root = require('path').join(__dirname, '..');
+  var html = fs.readFileSync(root + '/index.html', 'utf8');
+  var m = html.match(/<script[^>]*cdn\.sheetjs\.com[^>]*>/);
+  ok(m, 'có thẻ SheetJS');
+  ok(/integrity="sha384-[A-Za-z0-9+\/]{64}"/.test(m[0]), 'integrity sha384 64 ký tự');
+  ok(/crossorigin="anonymous"/.test(m[0]), 'crossorigin');
+  var sw = fs.readFileSync(root + '/sw.js', 'utf8');
+  ok(/'opaque' && req\.mode === 'cors'/.test(sw), 'sw bỏ opaque cũ');
+  ok(!/VERSION = 'v4'/.test(sw), 'đã tăng VERSION sw');
+  ok(/typeof XLSX === 'undefined'/.test(fs.readFileSync(root + '/js/nhap.js', 'utf8')), 'guard XLSX ở nhập file');
+});
+
 console.log('\n' + '='.repeat(60));
 console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
 if (fail){

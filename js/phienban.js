@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.3', ngay: '2026-10-16', ten: 'Khóa thư viện Excel',
+    muc: ['Thư viện đọc / ghi file Excel được kiểm tra chữ ký khi tải, tránh bị thay đổi nội dung giữa đường. Nhập và xuất Excel dùng như cũ; chưa tải được thư viện thì báo rõ thay vì lỗi khó hiểu.'] },
   { ban: '2026.10.16.2', ngay: '2026-10-16', ten: 'Mục Phiên bản và cập nhật',
     muc: ['Cài đặt → Ứng dụng có mục "Phiên bản và cập nhật": xem bản đang dùng, kiểm tra bản mới và đọc những gì đã đổi.'] },
   { ban: '2026.10.16', ngay: '2026-10-16', ten: 'Số liệu nhất quán, xuất / nhập file, người mới',
