@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.12', ngay: '2026-10-16', ten: 'Gỡ app con Ghi nhanh',
+    muc: ['Gỡ app con "Ghi nhanh" trên màn hình chính: iPhone giữ bộ nhớ riêng cho từng biểu tượng nên nó không đọc được dữ liệu Sổ Tiền. Nếu đã thêm biểu tượng đó ra màn hình chính thì xóa đi. Ghi nhanh vẫn dùng trong app như thường, và ghi nhanh không cần mở app thì dùng Phím tắt (hướng dẫn trong README).'] },
   { ban: '2026.10.16.11', ngay: '2026-10-16', ten: 'Sửa Ghi nhanh trên màn hình chính bị trống',
     muc: ['Mở biểu tượng Ghi nhanh mà nó không thấy dữ liệu thì không còn hiện màn trống trơn, mà báo rõ lý do và cách ghi khác.'] },
   { ban: '2026.10.16.10', ngay: '2026-10-16', ten: 'Biểu tượng riêng cho Ghi nhanh',

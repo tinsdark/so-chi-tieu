@@ -259,16 +259,6 @@ function giaoDienCardHtml(){
     + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">' + (state.offline ? 'Đồng bộ Google Drive' : 'Làm mới dữ liệu') + '</b><span class="dm-s">' + (state.offline ? 'Đang dùng dữ liệu trên máy. Bấm để đồng bộ với Drive (còn phiên đăng nhập thì không phải đăng nhập lại)' : 'Tải lại từ Google Drive. Trên điện thoại cũng kéo xuống ở đầu trang được') + '</span></span>'
     + '<button type="button" class="btn secondary sm" data-act="lamMoi">' + (state.offline ? 'Đồng bộ' : 'Làm mới') + '</button></div></div>';
 }
-// thẻ "Ghi nhanh trên màn hình chính": biểu tượng riêng mở thẳng bảng Ghi nhanh (ghi.html), dùng chung dữ liệu với app này
-function ghiNhanhCardHtml(){
-  var url = (typeof location !== 'undefined' && /^https?:$/.test(location.protocol)) ? new URL('ghi.html', location.href).href : 'ghi.html';
-  return '<div class="card dm-card">' + dmHead('Ghi nhanh trên màn hình chính')
-    + '<div class="dm-sub">Một biểu tượng riêng mở thẳng bảng Ghi nhanh, giống hệt bảng trong app, ghi xong là xong. Dùng chung dữ liệu với app này, không giữ bản riêng nào.</div>'
-    + '<div class="dm-sub"><code id="ghiUrl" style="overflow-wrap:anywhere">' + esc(url) + '</code></div>'
-    + '<button type="button" class="btn secondary sm" data-act="ghiSaoChep">Sao chép địa chỉ</button>'
-    + ghiChuGon('Mở địa chỉ trên bằng <b>Safari</b> → <b>Chia sẻ</b> → <b>Thêm vào Màn hình chính</b>. Mở biểu tượng mới: thấy bảng Ghi nhanh là dùng được. '
-      + 'Nếu nó báo "chưa thấy dữ liệu" thì iPhone không cho hai biểu tượng dùng chung dữ liệu, và Ghi nhanh trên màn hình chính dùng không được.', 'Cách thêm vào màn hình chính') + '</div>';
-}
 function caiAppCardHtml(){
   var h = '<div class="card dm-card">'+dmHead('Cài lên điện thoại / máy tính');
   if (dangChayNhuApp()){
@@ -498,7 +488,7 @@ function dmPhanHtml(tab){
   if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
-  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + ghiNhanhCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + phienBanCardHtml() + '</div>';
+  if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + phienBanCardHtml() + '</div>';
   return '<div class="dm-grid dm-cap">' + categoryCardHtml('thu', 'Danh mục khoản thu', state.data.categories.thu)
     + categoryCardHtml('chi', 'Danh mục khoản chi', state.data.categories.chi) + '</div>';
 }
@@ -809,10 +799,6 @@ function handleDanhMucAction(act, el){
     state.dmForm = { loai:'vi', id:'' }; renderDanhMuc();
   } else if (act === 'dmSuaVi'){
     state.dmForm = { loai:'vi', id: el.getAttribute('data-id') }; renderDanhMuc();
-  } else if (act === 'ghiSaoChep'){
-    var uGhi = (document.getElementById('ghiUrl') || {}).textContent || '';
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(uGhi).then(function(){ toast('Đã sao chép địa chỉ.'); }, function(){ toast(uGhi, { giay: 15 }); });
-    else toast(uGhi, { giay: 15 });
   } else if (act === 'themeDat'){
     datTheme(el.getAttribute('data-v')); renderDanhMuc();
   } else if (act === 'lamMoi'){

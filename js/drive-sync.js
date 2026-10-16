@@ -179,12 +179,10 @@ async function driveLoad(){
 /* ---- bản nháp cục bộ: chống mất dữ liệu nếu mất mạng/đóng tab trước khi Drive lưu xong ---- */
 function saveLocalDraft(){
   // baseModified = mốc Drive mà bản nháp này dựa trên: sau này khôi phục nháp mới biết Drive đã đổi chưa
-  var t = Date.now(); _mocMay = t;
-  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: t, baseModified: state.driveModified || null })); }catch(e){}
+  try{ localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
 }
 function saveSyncedSnapshot(){
-  var t = Date.now(); _mocMay = t;
-  try{ localStorage.setItem(SYNCED_KEY, JSON.stringify({ data: state.data, savedAt: t, baseModified: state.driveModified || null })); }catch(e){}
+  try{ localStorage.setItem(SYNCED_KEY, JSON.stringify({ data: state.data, savedAt: Date.now(), baseModified: state.driveModified || null })); }catch(e){}
 }
 function readSyncedSnapshot(){
   try{
@@ -218,7 +216,6 @@ function moNgoaiTuyen(){
   state.offline = true;
   state.offlineTu = dungNhap ? dr.savedAt : snap.savedAt;
   state.lanDongBoCuoi = snap ? snap.savedAt : null;       // bản đồng bộ gần nhất (nháp mới hơn thì vẫn là mốc này)
-  _mocMay = Math.max(snap ? num(snap.savedAt) : 0, dr ? num(dr.savedAt) : 0);
   state.errorMsg = null;
   state.loading = false;
   accessToken = null;
@@ -536,62 +533,6 @@ window.addEventListener('beforeunload', function(e){
   e.returnValue = '';   // Chrome yêu cầu set returnValue để hiện hộp xác nhận
   return '';
 });
-
-/* ====================================================================
-   HAI BẢN APP DÙNG CHUNG MỘT CHỖ LƯU: app chính (index.html) và app con "Ghi nhanh" (ghi.html, biểu tượng riêng trên màn hình
-   chính) đọc / ghi CÙNG bản nháp và bản đồng bộ trong localStorage — không có bản sao thứ hai nên không có hai dữ liệu để lệch.
-   Nguy cơ duy nhất: một bản nằm im trong nền với dữ liệu cũ trong bộ nhớ rồi ghi đè phần bản kia vừa thêm.
-   Cách chặn: _mocMay = mốc (savedAt) của bản mới nhất mà bản app NÀY đã nạp hoặc tự ghi. Khi app hiện lại, khi nhận tín hiệu
-   'storage', và ngay trước khi ghi nhanh, nếu trên máy có bản mới hơn thì nạp lại nó. Mọi thay đổi đã nằm trong nháp ngay khi sửa
-   nên nạp lại là an toàn, không cần gộp.
-   ==================================================================== */
-var _mocMay = 0;
-function coBanMoiHonTrenMay(mocMay, draft, snap){
-  return Math.max(draft ? num(draft.savedAt) : 0, snap ? num(snap.savedAt) : 0) > mocMay;
-}
-// đang gõ trong vùng nội dung (ô tìm kiếm, form...) thì vẽ lại sẽ làm mất chữ; bảng Ghi nhanh nằm ngoài vùng này nên không bị
-function dangGoTrongTrang(){
-  var el = document.activeElement, tc = document.getElementById('tabContent');
-  return !!(el && tc && tc.contains && tc.contains(el) && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
-}
-// true nếu đã nạp lại
-function napLaiTuMay(){
-  if (!state.data || state.saving || isFormOpen() || dangGoTrongTrang()) return false;
-  var dr = readLocalDraft(), snap = readSyncedSnapshot();
-  if (!coBanMoiHonTrenMay(_mocMay, dr, snap)) return false;
-  var dungNhap = !!(dr && (!snap || dr.savedAt >= snap.savedAt));
-  var nguon = dungNhap ? dr : snap;
-  state.data = normalizeData(JSON.parse(JSON.stringify(nguon.data)));
-  invalidateBalanceCache();
-  _mocMay = Math.max(num(dr && dr.savedAt), num(snap && snap.savedAt));
-  // có thay đổi chưa lên Drive: bản có kết nối thì đẩy lên. KHÔNG gọi scheduleSave: nó ghi lại bản nháp (mốc mới) làm bản kia
-  // nạp lại rồi ghi lại, hai bản cùng có kết nối sẽ đẩy nhau mãi. Nháp đã nằm trên máy rồi, chỉ cần lên lịch đẩy.
-  if (dungNhap){
-    state.dirty = true;
-    if (accessToken){ changeSeq++; if (saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(driveSave, 1500); }
-  }
-  renderAll();
-  return true;
-}
-window.addEventListener('storage', function(e){ if (e.key === LOCAL_DRAFT_KEY || e.key === SYNCED_KEY) napLaiTuMay(); });
-document.addEventListener('visibilitychange', function(){ if (!document.hidden) napLaiTuMay(); });
-
-// trang Ghi nhanh (ghi.html): chỉ mở bản dữ liệu trên máy rồi bật bảng Ghi nhanh. KHÔNG đồng bộ, KHÔNG xin token, KHÔNG bật cửa sổ
-// Google, KHÔNG giữ dữ liệu riêng. Chưa có dữ liệu (chưa mở app chính, hoặc iPhone không cho hai biểu tượng dùng chung) thì báo rõ.
-function khoiDongGhiNhanh(){
-  var gate = document.getElementById('authGate'); if (gate) gate.style.display = 'none';
-  if (!moNgoaiTuyen()){
-    // ghiThongBao nằm TRONG #app: phải showApp() thì mới có chiều cao (trước đây quên, trang chỉ hiện hình nền trống)
-    showApp();
-    var tb = document.getElementById('ghiThongBao');
-    if (tb){ tb.style.display = ''; tb.innerHTML = '<b>Biểu tượng này không thấy dữ liệu của app Sổ Tiền.</b><br>Nếu chưa mở Sổ Tiền lần nào trên máy này thì mở nó trước. Nếu đã mở rồi mà vẫn vậy, nhiều khả năng điện thoại giữ bộ nhớ riêng cho từng biểu tượng ở màn hình chính (iPhone thường như vậy), nên Ghi nhanh không đọc được dữ liệu Sổ Tiền và dùng không được. Khi đó hãy ghi bằng app Sổ Tiền, hoặc bằng Phím tắt (hướng dẫn trong README mục 7.1).'; }
-    return false;
-  }
-  document.body.classList.add('ghi-san');
-  state.tab = 'sotay';
-  qaMoSheet();
-  return true;
-}
 
 /* ====================================================================
    ĐỒNG BỘ DỮ LIỆU TRÊN MÁY VỚI DRIVE — dữ liệu chính nằm trên máy, Drive là nơi đồng bộ / sao lưu.

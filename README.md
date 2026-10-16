@@ -67,7 +67,6 @@ Phím tắt khác (desktop): `N` thêm giao dịch, `/` tìm kiếm (mọi thứ
 
 - **Dữ liệu nằm trên máy, Google Drive là nơi đồng bộ.** Có dữ liệu trên máy thì mở app là vào thẳng (không màn đăng nhập, không chờ Drive); máy mới mới hiện màn đầu (đăng nhập lấy dữ liệu Drive, hoặc dùng ngay không cần đăng nhập). Đồng bộ tự chạy khi còn token; không thì chạm dòng trạng thái trên đầu trang hoặc nút Đồng bộ ở Cài đặt (còn token thì không hiện cửa sổ Google). Drive chưa ai đổi từ lần đồng bộ cuối thì giữ bản máy và đẩy lên, máy không có thay đổi thì lấy bản Drive về, chỉ hỏi khi cả hai cùng đổi (`quyetDinhDongBo`). Chỉ xin quyền `drive.file` (chỉ thấy file do app tạo), lưu 1 file `chitieu-canhan-data.json`. Không có server nào khác.
 - **Dùng khi mất mạng.** Dữ liệu và các thay đổi chưa đồng bộ (bản nháp) nằm trong `localStorage`. Service worker giữ khung app để mở được offline.
-- **App con "Ghi nhanh" trên màn hình chính** (`ghi.html`, Cài đặt → Ứng dụng có địa chỉ và cách thêm). Một biểu tượng riêng mở thẳng bảng Ghi nhanh, **giống hệt** bảng trong app chính vì dùng chung code (`ghi.html` sinh từ `index.html`, chỉ ẩn phần còn lại). Là phiên tạm: chỉ đọc / ghi đúng CHỖ LƯU của app chính (bản nháp và bản đồng bộ trong `localStorage`), không giữ bản riêng, không đồng bộ Drive, không xin token, không bật cửa sổ Google; có khóa PIN thì khóa như app chính. Ghi xong hiện màn "Xong" (kèm Hoàn tác); lần mở lại sau đó là tải mới hoàn toàn. **iPhone không cho web app tự đóng mình** nên không tự thoát được, phải vuốt lên. Hai bản dùng chung một chỗ lưu nên có cơ chế chống đè nhau: `_mocMay` (mốc bản mới nhất mà bản này đã nạp / tự ghi); khi app hiện lại, khi nhận tín hiệu `storage`, và ngay trước khi ghi nhanh, nếu trên máy có bản mới hơn thì nạp lại (`napLaiTuMay` ở `drive-sync.js`). **Chỉ dùng được khi iPhone cho hai biểu tượng dùng chung dữ liệu**, chưa kiểm trên iPhone thật; không thì trang báo "Chưa thấy dữ liệu". Test nhóm 7g.
 - **Sao lưu hằng ngày** lên Drive (giữ vài bản gần nhất), sao lưu thủ công bất cứ lúc nào, **tải toàn bộ dữ liệu về file `.json` trên máy** và **khôi phục từ file** (Cài đặt → Ứng dụng → Sao lưu; `tenFileXuat`, `docFileKhoiPhuc`, `xuatDuLieuGiao`, `khoiPhucTuFile` ở `danhmuc.js`: cùng định dạng với bản sao lưu Drive, đi qua `normalizeData`, từ chối file không có `journal`; khi đang ngoại tuyến thì cảnh báo bản hiện tại chưa được sao lưu lên Drive), xem danh sách và **khôi phục** một bản ngay trong tab Cài đặt. Trước khi khôi phục hoặc khi bản nháp đè lên bản Drive, app tự sao lưu bản hiện tại để còn quay lại được.
 - **Khóa app trên từng máy**: mã PIN 6 số (băm PBKDF2-SHA256, không lưu PIN thô; sai 5 lần liên tiếp thì phải chờ, mỗi lần bị khóa chờ lâu hơn: 30 giây, 1, 2, 5, 15 phút, lưu ở `localStorage` nên tải lại trang không xóa được), mở nhanh bằng vân tay / Face ID (WebAuthn).
 - **Ô tiền thông minh**: gõ phép tính, gõ `45k`, `1,5tr`, phím nhanh `000`.
@@ -116,7 +115,7 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 494 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
+- Có 489 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
 
 ---
 
@@ -126,9 +125,6 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 index.html          Khung trang, nạp các file js theo đúng thứ tự
 style.css           Toàn bộ CSS (biến màu sáng/tối)
 manifest.json       Cấu hình PWA (tên, icon, màu)
-ghi.html            App con "Ghi nhanh" (biểu tượng riêng trên màn hình chính). SINH TỰ ĐỘNG từ index.html bằng tools/bump.js, KHÔNG sửa tay
-ghi.webmanifest     Manifest của app con (mở thẳng ghi.html)
-brand/ghi-nhanh.svg Nguồn logo app con (dấu cộng kem trên nền nâu, giống nút Ghi nhanh trong app); icons/ghi-*.png là bản xuất ra 180 / 192 / 512 từ file này
 sw.js               Service worker (mạng trước, cache khi offline)
 privacy.html        Chính sách quyền riêng tư
 js/
@@ -171,7 +167,7 @@ js/
   motion.js         Animation dùng chung
   app.js            Khởi động, render tổng, dispatcher sự kiện, phím tắt
 tests/run-tests.js  Unit test (Node, không cần cài gói nào)
-tools/bump.js       Cập nhật số phiên bản ?v= trong index.html và sinh lại ghi.html từ index.html
+tools/bump.js       Cập nhật số phiên bản ?v= trong index.html
 fonts/ icons/ img/  Font, icon, ảnh nền
 brand/              Logo TinsDark (tinsdark.svg là file gốc của icons/; tinsdark-maskable.svg cho icon maskable), so-tien-logo.svg là logo sổ cũ
 ```
@@ -206,7 +202,7 @@ Mở `http://localhost:8080`.
 
 ```bash
 node tests/run-tests.js     # chạy unit test, phải 0 fail (cũng chạy tự động trên mỗi pull request: .github/workflows/test.yml)
-node tools/bump.js          # chạy SAU MỖI lần sửa js/*.js, style.css hoặc index.html (cũng sinh lại ghi.html)
+node tools/bump.js          # chạy SAU MỖI lần sửa js/*.js hoặc style.css
 node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp không
 ```
 
@@ -272,7 +268,6 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 2. Drive là nút đồng bộ, hạn chế tối đa việc phải đăng nhập lại (làm: đồng bộ ngầm khi còn token, nút còn token thì không hiện cửa sổ Google).
 3. Ghi nhanh **không cần mở app**; mở app thì có danh sách khoản kèm số tiền để chọn ghi (làm bằng Phím tắt, xem bên dưới).
 4. Mở app để xem bình thường, không ép vào Ghi nhanh.
-5. (Thêm sau) Cách ghi nhanh thứ hai: app con "Ghi nhanh" trên màn hình chính, giống hệt Ghi nhanh của app chính, ghi xong là xong, không giữ dữ liệu riêng (xem mục 1).
 
 **Ghi nhanh không cần mở app (iPhone).** Phím tắt (Shortcuts) hỏi số tiền và danh mục rồi lưu mỗi khoản thành một file CSV nhỏ trong Tệp; mở app thì chọn các file đó, thấy danh sách, tick khoản nào ghi. Đặt phím tắt ở widget màn hình chính, widget màn hình khóa hoặc chạm hai lần mặt lưng (Cài đặt → Trợ năng → Cảm ứng → Chạm vào mặt sau). **Chưa kiểm trên iPhone thật**; tên hành động có thể khác chút theo bản iOS. Cách dựng một phím tắt cho khoản chi:
 1. **Hỏi nhập liệu** (Ask for Input), kiểu Số, câu hỏi "Số tiền?".
@@ -281,7 +276,7 @@ Chia hai nhóm: **cần triển khai** (đã chốt sẽ làm, sắp xếp thứ
 4. **Văn bản** (Text) gồm 2 dòng, dòng cuối kết thúc bằng dấu phẩy (ô Ghi chú để trống):
    `Ngày,Loại,Số tiền,Danh mục,Ghi chú` / `<ngày>,chi,<số tiền>,<danh mục đã chọn>,`
 5. **Lưu tệp** (Save File): tắt "Hỏi nơi lưu", chọn một thư mục trong iCloud Drive (ví dụ "Sổ Tiền ghi nhanh"), tên file `ghi-nhanh-<giờ>.csv`. **Tên file phải bắt đầu bằng `ghi-nhanh-`**, app dựa vào đó để biết đây là khoản ghi nhanh.
-Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu` và danh sách danh mục. Trong app: Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày" → chọn **nhiều file cùng lúc** → xem danh sách → **Ghi N khoản**. App nhớ mã từng khoản đã nhập (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi; hai khoản giống hệt trong ngày vẫn là hai khoản; xóa khoản đã nhập rồi cũng không sống lại. Bỏ tick thì khoản đó không ghi lần này và còn trong danh sách lần sau. Xóa các file trong Tệp khi đã ghi xong cho gọn (không bắt buộc). Chưa làm được: tự hiện danh sách khi mở app, vì web app không tự đọc được file ngoài nó; bước chọn file cần chạm một lần. Nếu iPhone cho hai biểu tượng dùng chung dữ liệu thì dùng app con "Ghi nhanh" tiện hơn, không cần Phím tắt.
+Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu` và danh sách danh mục. Trong app: Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày" → chọn **nhiều file cùng lúc** → xem danh sách → **Ghi N khoản**. App nhớ mã từng khoản đã nhập (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi; hai khoản giống hệt trong ngày vẫn là hai khoản; xóa khoản đã nhập rồi cũng không sống lại. Bỏ tick thì khoản đó không ghi lần này và còn trong danh sách lần sau. Xóa các file trong Tệp khi đã ghi xong cho gọn (không bắt buộc). Chưa làm được: tự hiện danh sách khi mở app, vì web app không tự đọc được file ngoài nó; bước chọn file cần chạm một lần.
 
 ### 7.2. Hướng phát triển tương lai
 
@@ -304,5 +299,7 @@ Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu` và danh sách d
 - **"Lương tự trả" cho thu nhập không đều:** phải chọn mức ổn định (trung vị / phân vị), chạm vào cách dự báo Dòng tiền, cần cờ "chi phí công việc" để tính thu ròng cho tài xế / shipper, và hỏng nếu người dùng tiêu luôn phần dư. Quá khó so với giá trị, bỏ.
 - **Sổ gia đình ghép từ các sổ riêng** (xuất bản chia sẻ qua Zalo): gần với "dùng chung sổ", bỏ.
 - **Máy tính Gross → Net và thuế TNCN:** biểu thuế / mức giảm trừ đổi liên tục, không tự kiểm chứng được số hiện hành, bỏ.
+
+- **App con "Ghi nhanh" trên màn hình chính** (một biểu tượng riêng mở thẳng bảng Ghi nhanh, dùng chung dữ liệu với app chính): đã làm rồi gỡ (PR 108 đến 110). Trên iPhone mỗi biểu tượng ở màn hình chính có bộ nhớ riêng nên app con không đọc được dữ liệu của app chính: người dùng mở ra chỉ thấy màn trống. Android / máy tính thì chung bộ nhớ nhưng người dùng dùng iPhone. Muốn ghi nhanh không cần mở app thì dùng Phím tắt (mục 7.1). Nếu làm lại thì phải có kênh chuyển dữ liệu giữa hai biểu tượng (Drive, Sao chép/Dán, hoặc file), hoặc đặt cài đặt "mở app là bật sẵn bảng Ghi nhanh" ngay trong app chính.
 
 Phần này ghi lại khi có ý tưởng mới.
