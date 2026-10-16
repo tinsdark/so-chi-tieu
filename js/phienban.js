@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.4', ngay: '2026-10-16', ten: 'Gọi tên các số nợ rõ hơn',
+    muc: ['Vay - Nợ: "Còn nợ" đổi thành "Còn phải trả (gồm lãi)", có dòng tách phần gốc và phần lãi chưa tới hạn. "Nợ ròng" đổi thành "Nợ sau khi trừ tiền cho vay" để không nhầm với Tài sản ròng.','Báo cáo → Tài sản ròng: ghi rõ "Nợ gốc còn lại (chưa tính lãi)" và nhắc số nợ đầy đủ ở tab Vay - Nợ.'] },
   { ban: '2026.10.16.3', ngay: '2026-10-16', ten: 'Khóa thư viện Excel',
     muc: ['Thư viện đọc / ghi file Excel được kiểm tra chữ ký khi tải, tránh bị thay đổi nội dung giữa đường. Nhập và xuất Excel dùng như cũ; chưa tải được thư viện thì báo rõ thay vì lỗi khó hiểu.'] },
   { ban: '2026.10.16.2', ngay: '2026-10-16', ten: 'Mục Phiên bản và cập nhật',
