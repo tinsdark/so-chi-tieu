@@ -297,7 +297,19 @@ if (_ihd) _ihd.addEventListener('click', function(){
   try{ localStorage.setItem('chitieu_ios_hint', '1'); }catch(e){}
   document.getElementById('iosHint').style.display = 'none';
 });
-khoiDong();     // có dữ liệu trên máy thì vào thẳng, không màn đăng nhập (xem drive-sync.js)
+if (document.documentElement.hasAttribute('data-ghi')){
+  // trang Ghi nhanh (ghi.html): phiên tạm. Hiện lại sau khi đã ghi xong thì tải mới hoàn toàn từ dữ liệu chung, không giữ gì cũ.
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && !state.qa.open && document.body.classList.contains('ghi-san')) location.reload(); });
+  var _qaSheetVeGoc = qaSheetVe;
+  qaSheetVe = function(){
+    _qaSheetVeGoc();
+    var x = document.getElementById('ghiXongTxt');
+    if (x) x.textContent = state.qa.last ? state.qa.last.text : 'Chưa ghi khoản nào.';
+  };
+  khoiDongGhiNhanh();
+} else {
+  khoiDong();     // có dữ liệu trên máy thì vào thẳng, không màn đăng nhập (xem drive-sync.js)
+}
 
 // service worker (cần HTTPS hoặc localhost; mở bằng file:// thì bỏ qua) — xem sw.js
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){

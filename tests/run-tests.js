@@ -1413,6 +1413,103 @@ test('settings.maDaNhap: qua lưu / nạp lại vẫn còn, dữ liệu cũ khô
 });
 
 /* ==================================================================== */
+group('7g. App con "Ghi nhanh" (ghi.html): dùng chung một chỗ lưu với app chính, không giữ bản riêng');
+
+function bumpTool(){ return require(path.join(__dirname, '..', 'tools', 'bump.js')); }
+// một "bản app khác" ghi vào cùng localStorage sau khi bản này đã nạp: savedAt lớn hơn mốc bản này đang giữ
+function banKiaGhi(kho, khoa, d, savedAt){ kho.setItem(khoa, JSON.stringify({ data: d, savedAt: savedAt, baseModified: null })); }
+
+test('coBanMoiHonTrenMay: chỉ true khi trên máy có bản mới hơn mốc bản này đang giữ', function(){
+  var f = ctx.coBanMoiHonTrenMay;
+  eq(f(100, null, null), false, 'không có gì trên máy');
+  eq(f(100, { savedAt: 100 }, { savedAt: 50 }), false, 'bằng mốc: là bản của chính mình');
+  eq(f(100, { savedAt: 101 }, null), true, 'nháp mới hơn');
+  eq(f(100, null, { savedAt: 200 }), true, 'bản đồng bộ mới hơn');
+  eq(f(100, { savedAt: 90 }, { savedAt: 80 }), false, 'cả hai cũ hơn');
+});
+
+test('napLaiTuMay: bản kia vừa ghi thì nạp lại; bản của chính mình thì không; đang lưu / đang mở form thì chờ', function(){
+  var hen = [], kho = khoGia(), goi = [], kp = thayTam({ localStorage: kho, renderAll: function(){ goi.push('renderAll'); }, scheduleSave: function(){ goi.push('scheduleSave'); },
+    setTimeout: function(fn, ms){ hen.push(fn === ctx.driveSave ? 'driveSave' : 'khac'); return 1; }, clearTimeout: function(){} });
+  try{
+    loadData(duLieuMay()); ctx.state.offline = true; ctx.accessToken = null; ctx.state.dirty = false; ctx.state.saving = false;
+    ctx.saveLocalDraft();                                   // bản này tự ghi: mốc = savedAt của chính nó
+    eq(ctx.napLaiTuMay(), false, 'tự ghi xong không nạp lại chính mình');
+    var kia = duLieuMay(function(d){ d.journal['2026-10-06'] = { thu: {}, chi: { an: 70000 }, ghiChu: '', refs: [] }; });
+    var moc = Date.now() + 1000;
+    banKiaGhi(kho, 'chitieu_draft_v1', kia, moc);
+    ctx.state.saving = true; eq(ctx.napLaiTuMay(), false, 'đang lưu: chờ'); ctx.state.saving = false;
+    ctx.state.editingDate = '2026-10-05'; eq(ctx.napLaiTuMay(), false, 'đang sửa 1 ngày: không vẽ lại đè lên form'); ctx.state.editingDate = null;
+    eq(ctx.napLaiTuMay(), true, 'bản kia vừa ghi: nạp lại');
+    ok(ctx.state.data.journal['2026-10-06'], 'có khoản của bản kia'); eq(ctx.state.dirty, true, 'còn thay đổi chưa lên Drive'); ok(goi.indexOf('renderAll') >= 0, 'vẽ lại');
+    eq(goi.indexOf('scheduleSave'), -1, 'không có kết nối Drive thì không đẩy');
+    eq(ctx.napLaiTuMay(), false, 'nạp rồi thì lần sau không nạp nữa');
+    // bản này có kết nối Drive: nạp xong phải đẩy lên Drive
+    var kia2 = duLieuMay(function(d){ d.journal['2026-10-07'] = { thu: {}, chi: { an: 1000 }, ghiChu: '', refs: [] }; });
+    banKiaGhi(kho, 'chitieu_draft_v1', kia2, moc + 5000);
+    ctx.accessToken = 'tok'; goi.length = 0; hen.length = 0;
+    var nhapTruoc = kho.getItem('chitieu_draft_v1');
+    eq(ctx.napLaiTuMay(), true, 'nạp lần nữa'); eq(hen.join(','), 'driveSave', 'có kết nối Drive: lên lịch đẩy lên');
+    eq(goi.indexOf('scheduleSave'), -1, 'KHÔNG gọi scheduleSave: nó ghi lại nháp, hai bản cùng có kết nối sẽ đẩy nhau mãi');
+    eq(kho.getItem('chitieu_draft_v1'), nhapTruoc, 'và không ghi lại bản nháp (nên bản kia không nhận tín hiệu mới)');
+    // bản kia vừa đồng bộ Drive (chỉ có bản đồng bộ mới hơn, không có nháp): nạp, không đánh dấu chưa lưu
+    kho.removeItem('chitieu_draft_v1'); ctx.state.dirty = false; ctx.accessToken = null;
+    banKiaGhi(kho, 'chitieu_synced_v1', duLieuMay(), moc + 9000);
+    eq(ctx.napLaiTuMay(), true, 'bản đồng bộ mới hơn: nạp'); eq(ctx.state.dirty, false, 'không phải thay đổi chưa lưu');
+  } finally { kp(); ctx.state.offline = false; ctx.state.dirty = false; ctx.accessToken = null; }
+});
+
+test('Ghi nhanh: ngay trước khi ghi nạp lại bản mới nhất, nên khoản mới cộng lên bản kia chứ không đè mất khoản bản kia vừa ghi', function(){
+  setToday('2026-10-10');
+  var qa0 = ctx.state.qa;       // test này đổi state.qa: trả lại nguyên trạng để không ảnh hưởng test sau
+  var kho = khoGia(), kp = thayTam({ localStorage: kho, renderAll: function(){}, renderSoTay: function(){}, renderSyncStatus: function(){}, toast: function(){},
+    docSo: function(v){ return Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')) || 0; } });
+  try{
+    loadData(dataGhiNhanh());
+    ctx.state.offline = true; ctx.accessToken = null;
+    ctx.saveLocalDraft();
+    ctx.state.qa = { kind: 'chi', cat: { chi: 'an' }, amt: '', note: '', date: '', wallet: '' };
+    // bản kia (app chính) ghi 25.000 vào Ăn trong lúc bản này nằm im với dữ liệu cũ
+    var kia = dataGhiNhanh(); kia.journal['2026-10-10'] = { thu: {}, chi: { an: 25000 }, ghiChu: '', refs: [], items: [{ iid: 'x1', kind: 'chi', catId: 'an', soTien: 25000, ghiChu: '', walletId: '' }] };
+    banKiaGhi(kho, 'chitieu_draft_v1', kia, Date.now() + 1000);
+    var dom = { qa_amount: { value: '45.000' }, qa_note: { value: '' }, qa_date: { value: '2026-10-10' } };
+    voiDom(dom, null, function(){ ctx.handleSoTayAction('qaSave', {}); });
+    eq(ctx.num(ctx.state.data.journal['2026-10-10'].chi.an), 70000, 'cả 25.000 của bản kia và 45.000 vừa ghi');
+    var luu = JSON.parse(kho.getItem('chitieu_draft_v1'));
+    eq(ctx.num(luu.data.journal['2026-10-10'].chi.an), 70000, 'và nháp trên máy đã có cả hai');
+  } finally { kp(); ctx.state.qa = qa0; ctx.state.offline = false; ctx.state.dirty = false; setToday('2026-10-01'); }
+});
+
+test('khoiDongGhiNhanh: có dữ liệu thì mở bảng Ghi nhanh, KHÔNG đồng bộ / xin token; chưa có dữ liệu thì báo rõ', function(){
+  var kho = khoGia(), goi = [], lop = {}, thongBao = { style: {}, innerHTML: '' }, cong = { style: {} };
+  var fake = { getElementById: function(id){ return id === 'ghiThongBao' ? thongBao : (id === 'authGate' ? cong : null); }, querySelectorAll: function(){ return []; },
+    body: { classList: { add: function(c){ lop[c] = true; }, remove: function(c){ delete lop[c]; }, contains: function(c){ return !!lop[c]; } } }, addEventListener: function(){} };
+  var kp = thayTam({ localStorage: kho, document: fake, showApp: function(){}, renderAll: function(){}, qaMoSheet: function(){ goi.push('qaMoSheet'); },
+    findFile: function(){ goi.push('findFile'); return Promise.resolve(null); }, thuXinTokenAmTham: function(){ goi.push('thuXinToken'); return Promise.resolve(null); }, requestToken: function(){ goi.push('requestToken'); return Promise.resolve(); } });
+  try{
+    ctx.state.data = null;
+    eq(ctx.khoiDongGhiNhanh(), false, 'chưa có dữ liệu: không mở'); ok(thongBao.innerHTML.indexOf('Chưa thấy dữ liệu') >= 0, 'báo rõ'); eq(thongBao.style.display, '', 'hiện thông báo'); eq(goi.indexOf('qaMoSheet'), -1, 'không mở bảng');
+    kho.setItem('chitieu_synced_v1', JSON.stringify({ data: duLieuMay(), savedAt: 1000, baseModified: 'T1' }));
+    thongBao.innerHTML = ''; ctx.state.data = null;
+    eq(ctx.khoiDongGhiNhanh(), true, 'có dữ liệu: mở'); ok(goi.indexOf('qaMoSheet') >= 0, 'mở bảng Ghi nhanh'); eq(lop['ghi-san'], true, 'đánh dấu chế độ Ghi nhanh'); eq(ctx.state.tab, 'sotay', 'bảng Ghi nhanh thuộc tab Sổ tay');
+    eq(ctx.accessToken, null, 'không có token'); eq(goi.indexOf('findFile'), -1, 'không gọi Drive'); eq(goi.indexOf('thuXinToken'), -1, 'không xin token âm thầm'); eq(goi.indexOf('requestToken'), -1, 'không bật cửa sổ Google');
+  } finally { kp(); ctx.state.offline = false; ctx.state.data = null; }
+});
+
+test('ghi.html là bản SINH TỰ ĐỘNG từ index.html (không có bản sao thủ công để lệch) và có manifest riêng', function(){
+  var b = bumpTool(), root = path.join(__dirname, '..');
+  var index = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), ghi = fs.readFileSync(path.join(root, 'ghi.html'), 'utf8');
+  eq(ghi, b.taoGhi(index), 'ghi.html = taoGhi(index.html) — nếu lệch chạy: node tools/bump.js');
+  eq(JSON.stringify(b.filesInIndex(ghi)), JSON.stringify(b.filesInIndex(index)), 'cùng danh sách và thứ tự file js / css, cùng ?v=');
+  ok(ghi.indexOf('<html lang="vi" data-ghi>') >= 0 && ghi.indexOf('ghi.webmanifest') >= 0 && ghi.indexOf('<body class="ghi">') >= 0, 'chế độ Ghi nhanh, manifest riêng');
+  ok(ghi.indexOf('href="manifest.json"') < 0, 'không dùng manifest của app chính');
+  var man = JSON.parse(fs.readFileSync(path.join(root, 'ghi.webmanifest'), 'utf8'));
+  eq(man.start_url, './ghi.html', 'mở thẳng trang Ghi nhanh'); eq(man.id, './ghi.html', 'là app riêng, không trùng app chính'); eq(man.display, 'standalone', 'toàn màn hình');
+  man.icons.forEach(function(ic){ ok(fs.existsSync(path.join(root, ic.src)), 'có file icon ' + ic.src); });
+  ok(/<title>Ghi nhanh<\/title>/.test(ghi), 'tiêu đề');
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){
@@ -6541,7 +6638,7 @@ test('Cài đặt → Ứng dụng: thẻ "Giao diện và làm mới" đứng �
   ok(h.indexOf('data-act="lamMoi"') > 0 && h.indexOf('>Làm mới<') > 0, 'nút làm mới');
   ctx.state.offline = true; ok(ctx.giaoDienCardHtml().indexOf('>Đồng bộ<') > 0, 'đang dùng dữ liệu trên máy thì nút là Đồng bộ'); ctx.state.offline = false;
   var src = fs.readFileSync(path.join(JS_DIR, 'danhmuc.js'), 'utf8');
-  ok(src.indexOf("giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml()") > 0, 'phần Ứng dụng: thẻ này đứng đầu');
+  ok(src.indexOf("giaoDienCardHtml() + caiAppCardHtml() + ghiNhanhCardHtml() + lichCardHtml()") > 0, 'phần Ứng dụng: thẻ này đứng đầu');
   ok(ctx.dmPhanHtml('tien').indexOf('Giao diện và làm mới') < 0 && ctx.dmPhanHtml('danhmuc').indexOf('Giao diện và làm mới') < 0, 'không lẫn sang phần khác');
 });
 test('style.css: có màu hành động tách khỏi đỏ; --primary chỉ còn cho tên app, dòng số dư, tiêu đề nhóm', function(){
