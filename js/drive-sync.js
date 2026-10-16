@@ -111,10 +111,6 @@ async function findFile(){
   files.sort(function(a,b){ return new Date(b.modifiedTime) - new Date(a.modifiedTime); });
   return files[0];
 }
-async function findFileId(){
-  var f = await findFile();
-  return f ? f.id : null;
-}
 
 /* ====================================================================
    CHỐNG GHI ĐÈ KHI DÙNG 2 MÁY
@@ -209,7 +205,6 @@ function readLocalDraft(){
    Sửa được: thay đổi vào nháp trên máy, KHÔNG gửi lên Drive. Khi có mạng, bấm "Đăng nhập để
    đồng bộ": app tải bản Drive rồi hỏi khôi phục nháp (kèm cảnh báo nếu Drive đã đổi từ lúc đó).
    ==================================================================== */
-function coTheMoNgoaiTuyen(){ return !!readSyncedSnapshot(); }
 function moNgoaiTuyen(){
   var snap = readSyncedSnapshot();
   if (!snap) return;

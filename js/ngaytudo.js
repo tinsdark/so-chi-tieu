@@ -132,7 +132,7 @@ function ntdGiaiThich(t, tietKiem, lai){
   var ds = [
     { ten: 'Chi mỗi ngày', ct: 'Chi thật (không gồm vay nợ) ÷ số ngày, ' + (c.dangDo ? 'tháng này tới hết hôm qua (mới dùng app, chưa có tháng trọn nào).' : 'của ' + c.ds.length + ' tháng trọn gần nhất (' + c.ds.map(function(x){ return monthLabel(x.mk); }).join(', ') + ').'),
       pt: '(' + tuChi + ') ÷ (' + tuNgay + ') = ' + soGt(c.chiNgay) },
-    { ten: 'Ngày tự do', ct: 'Tiền các ví hôm nay ÷ chi mỗi ngày' + (t.tien <= 0 ? ' (ví đang không có tiền nên là 0)' : '') + '.',
+    { ten: 'Ngày tự do', ct: 'Số dư các ví hôm nay ÷ chi mỗi ngày' + (t.tien <= 0 ? ' (ví đang không có tiền nên là 0)' : '') + '.',
       pt: soGt(t.tien) + ' ÷ ' + soGt(c.chiNgay) + ' = ' + ntdSoChu(t.ngay) + ' ngày' },
     { ten: 'Số tiền để tự do tài chính', ct: 'Quy tắc 25 lần: sống bằng khoảng 4% mỗi năm của số tiền này. Giả định chi tiêu sau này bằng chi tiêu hiện tại.',
       pt: NTD_HE_SO + ' × ' + soGt(c.chiNgay * 365) + ' = ' + soGt(canCo) },
@@ -154,7 +154,7 @@ function ntdCardHtml(){
   var moc = ntdMoc(t.ngay), tk = ntdTietKiem(t), lai = ntdLai(), max = ntdTietKiemToiDa(t), xh = ntdXuHuong();
   var h = '<div class="card bc-card ntd-card" id="cardNgayTuDo"><h3 class="bc-h"><span>Ngày tự do</span></h3>'
     + '<div class="ntd-big"><b>' + ntdNgayChu(t.ngay) + '</b><span>ngày</span></div>'
-    + '<div class="ntd-sub">Tiền các ví <b>' + fmt(Math.round(t.tien)) + '</b>, chi thật khoảng <b>' + fmt(Math.round(t.c.chiNgay)) + '</b> mỗi ngày: đủ sống '
+    + '<div class="ntd-sub">Số dư các ví <b>' + fmt(Math.round(t.tien)) + '</b>, chi thật khoảng <b>' + fmt(Math.round(t.c.chiNgay)) + '</b> mỗi ngày: đủ sống '
     + (t.ngay > 0 ? 'khoảng <b>' + ntdNgayChu(t.ngay) + ' ngày</b> mà không cần thêm đồng thu nào.' : 'chưa được ngày nào (ví đang không có tiền).') + '</div>'
     + '<div class="ntd-bar" role="progressbar" aria-valuenow="' + moc.pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + moc.pct + '%"></i></div>'
     + '<div class="ntd-moc">' + (moc.toi ? 'Còn <b>' + ntdNgayChu(moc.toi - t.ngay) + ' ngày</b> tới mốc ' + moc.toi + ' ngày' + (moc.truoc ? ' (đã qua mốc ' + moc.truoc + ')' : '')

@@ -123,8 +123,6 @@ function timDongHtml(r, i){
   return '<button type="button" class="tim-r" data-act="timDen" data-i="' + i + '"><span class="tim-r-b"><b>' + timDanhDau(r.tieu, q) + '</b><small>' + timDanhDau(r.phu || '', q) + '</small></span>'
     + (r.tien ? '<span class="tim-r-t ' + (r.tien.charAt(0) === '+' ? 'thu' : (r.tien.charAt(0) === '−' ? 'chi' : '')) + '">' + esc(r.tien) + '</span>' : '') + '</button>';
 }
-// danh sách phẳng của các kết quả đang hiện (để chọn bằng phím mũi tên / bấm theo số thứ tự)
-function timPhang(nhom){ var out = []; nhom.forEach(function(n){ n.ds.forEach(function(r){ out.push(r); }); }); return out; }
 function timKetQuaHtml(q){
   var nhom = timTatCa(q), i = 0;
   if (!String(q).trim()){
