@@ -166,7 +166,7 @@ function mmFormHtml(){
     + vnF('Món định mua', '<input type="text" id="cc_ten" value="' + esc(c.ten) + '" placeholder="VD: Điện thoại">')
     + '<div class="vn-2">' + vnF('Giá', dmMoney('cc_gia', c.gia))
     + (nhieuVi ? vnF('Trả từ ví', '<select id="cc_vi">' + viOptionsHtml(c.vi || viMacDinhId()) + '</select>') : '') + '</div>'
-    + '<div class="vn-2">' + vnF('Trả góp (tháng)', '<input type="number" id="cc_thang" min="0" inputmode="numeric" value="' + esc(c.thang) + '" placeholder="Bỏ trống = trả đủ">')
+    + '<div class="vn-2">' + vnF('Trả góp (tháng)', '<input type="number" id="cc_thang" min="0" inputmode="numeric" value="' + esc(c.thang) + '" placeholder="Trống = trả đủ">')
     + vnF('Lãi %/năm', '<input type="number" id="cc_lai" min="0" step="0.1" inputmode="decimal" value="' + esc(c.lai) + '" placeholder="0 = góp 0%">') + '</div>'
     + vnF('Muốn giữ lại tối thiểu <span class="mp-hint">(không để số dư xuống dưới)</span>', dmMoney('cc_giu', c.giu))
     + '<div class="cc-btns"><button type="button" class="btn" data-act="mmKiemTra">Kiểm tra</button>'

@@ -447,6 +447,7 @@ function renderMoPhong(){
   html += '</div>';
   if (rowsMoi.length > 6) html += '<button type="button" class="dt-more" data-act="mpHetThang">'+(state.mp.hetThang ? 'Thu gọn' : 'Xem thêm '+(rowsMoi.length - 6)+' tháng')+'</button>';
   html += '<div class="mp-hint c">Cách tính giống thẻ "Dòng tiền tích lũy tương lai" ở chế độ Thực tế &amp; dự kiến · số tính bằng ₫</div>'
+    + (hz > 12 ? '<div class="mp-hint c">Từ tháng thứ 13 trở đi chỉ là xu hướng: dự báo giữ nguyên thói quen chi tiêu hiện tại, càng xa càng kém chắc.</div>' : '')
     + (coRong ? '<div class="mp-hint c">Tài sản ròng dự kiến = số dư + cho vay chưa thu − nợ gốc còn lại sau các kỳ trả đã tới tháng đó (theo lịch trả, không tính lãi tương lai). Khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi</div>' : '') + '</div>';
 
   var phai = html.indexOf('<div class="mp-tiles">');

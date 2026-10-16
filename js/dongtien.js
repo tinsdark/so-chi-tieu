@@ -371,6 +371,7 @@ function dtDuKienHtml(rowsAll, selMk){
     + '<div class="vn-lbl">Số dư dự kiến cuối '+vnTMk(cuoi.mk)+'</div><div class="vn-big m'+(cuoi.bal < 0 ? ' am' : '')+'">'+fmt(cuoi.bal)+'</div>'
     + '<div class="vn-sub">Thấp nhất '+fmt(thap.bal)+' vào '+vnTMk(thap.mk)+'</div>'
     + chart + list
+    + (horizon > 12 ? '<div class="dt-foot"><span>Từ tháng thứ 13 trở đi chỉ là xu hướng: dự báo giữ nguyên thói quen chi tiêu hiện tại, càng xa càng kém chắc.</span></div>' : '')
     + '<div class="dt-foot"><span>* gợi ý theo hạn mức và lịch trả nợ · số tính bằng ₫'+(coRong ? ' · Tài sản ròng dự kiến = số dư + cho vay chưa thu − nợ gốc còn lại theo lịch trả (không tính lãi tương lai); khác "Tài sản ròng thực tế" ở Báo cáo, chỉ tính số đã ghi' : '')+'</span></div>'
     + ghiChuGon('Tháng chưa tới: số liệu là gợi ý — TB của tối đa 3 tháng ĐÃ HOÀN CHỈNH gần nhất tính từ '
       + monthLabel(state.data.settings.thangBatDauDuTru || startMk) + ' ('

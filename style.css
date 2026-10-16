@@ -62,7 +62,7 @@ button{cursor:pointer;font-family:inherit}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);position:sticky;top:var(--header-h,52px);background:var(--bg);z-index:19}
 .tab{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tab.active{color:var(--action);border-bottom-color:var(--action)}
-.tab-badge{display:inline-block;margin-left:5px;background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:1;padding:2px 5px;border-radius:999px;vertical-align:middle}
+.tab-badge{display:inline-block;margin-left:5px;background:var(--red);color:#fff;font-size:11px;font-weight:700;line-height:1;padding:2px 5px;border-radius:999px;vertical-align:middle}
 .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
 /* thẻ / form là đích cuộn (scrollIntoView ở chip "khoản định kỳ đến hạn", "danh mục vượt hạn mức", sửa một ngày...): chừa chỗ cho header dán
    đầu trang (và thanh tab dán ở trên khi màn rộng). Điện thoại: thanh tab nằm đáy nên chỉ chừa header. */
@@ -113,7 +113,7 @@ tr.balance-row td{font-weight:700;background:var(--row-bal);color:var(--primary-
 .th-month{text-align:center}
 .dt-suggest{font-style:italic;color:var(--muted)}
 .cat-label{display:flex;align-items:center;gap:6px}
-.cat-tag{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--hover);color:var(--muted)}
+.cat-tag{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--hover);color:var(--muted)}
 .group-title{font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--primary-d)}
 .group-title:first-child{margin-top:0}
 .icon-btn{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
@@ -582,17 +582,17 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 
 /* lịch nhiệt */
 .bd-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px}
-.bd-cal .dw{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px}
+.bd-cal .dw{font-size:11px;color:var(--muted);text-align:center;padding-bottom:2px}
 .bd-cal .c{aspect-ratio:1;border-radius:9px;position:relative;padding:4px 5px;font-size:10.5px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .bd-cal .c.fut{border:1px dashed var(--border);color:var(--muted);font-weight:500;cursor:default}
 .bd-cal .c.emp{background:var(--hover);color:var(--muted);font-weight:500}
 .bd-cal .c.hot{color:#fff}
 .bd-cal .c.sel{outline:2.5px solid var(--text);outline-offset:1px}
 .bd-cal .g{position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--bd-thu)}
-.bd-cal .a{position:absolute;left:5px;bottom:4px;font-size:9px;font-weight:700}
+.bd-cal .a{position:absolute;left:5px;bottom:4px;font-size:10px;font-weight:700}
 .bd-dtl{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--hover);border-radius:12px;padding:10px 12px;font-size:13px}
 .bd-dtl b{font-variant-numeric:tabular-nums}.bd-dtl b.chi{color:var(--bd-chi)}.bd-dtl b.thu{color:var(--bd-thu)}
-.bd-scale{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted);margin-top:10px}
+.bd-scale{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted);margin-top:10px}
 .bd-scale .sc{display:flex;gap:3px}.bd-scale .sc i{width:16px;height:10px;border-radius:3px}
 .bd-top{display:grid;gap:6px;margin-top:12px}
 .bd-top .t{font-size:12px;font-weight:700}
@@ -1765,3 +1765,10 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .empty-card{padding:20px 18px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .empty-card h3{margin:0;font-size:17px}
 .empty-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;max-width:60ch}
+
+/* Form vay: ba ô ít dùng gập vào "Thêm chi tiết" */
+.vn-chitiet{margin-top:6px}
+.vn-chitiet>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:10px 0;min-height:44px;display:flex;align-items:center;gap:6px;list-style:none}
+.vn-chitiet>summary::-webkit-details-marker{display:none}
+.vn-chitiet>summary::before{content:'+';font-weight:700;width:18px;text-align:center}
+.vn-chitiet[open]>summary::before{content:'−'}

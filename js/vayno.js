@@ -1006,7 +1006,6 @@ function vayNoFormHtml(){
   var h = '';
   if (editing) h += '<div class="vn-note">'+icon('alert')+' Muốn sửa lịch sử trả nợ thì mở lịch trả của khoản vay (bấm "Xem lịch trả") rồi dùng "Hủy ghi nhận" / "Ghi nhận đã trả" — sửa ở đó mới đồng bộ được với Sổ tay.</div>';
   h += vnF('Tên / mô tả', '<input type="text" id="vn_vn_ten" value="'+esc(d.ten||'')+'" placeholder="VD: Vay mua xe">')
-    + nguoiOHtml('vn_vn_nguoi', d)
     + vnF('Loại vay', vnChipsHtml('vn_vn_loai', LOAI_VAY_LABEL, d.loaiVay))
     + vnF('Hình thức trả', vnChipsHtml('vn_vn_hinh', HINH_THUC_LABEL, d.hinhThuc))
     + '<div class="vn-2">'
@@ -1021,6 +1020,9 @@ function vayNoFormHtml(){
     + vnF('Cách chia gốc và lãi', vnChipsHtml('vn_vn_cachGoc', CACH_GOC_LABEL, d.cachGoc || 'deu'), 'tra_co_dinh',
         'SPayLater, trả góp điện máy: gốc chia đều, phí cố định mỗi tháng. FE Credit, vay tiêu dùng: lãi tính trên dư nợ còn lại nên đầu kỳ trả nhiều lãi. Chọn sai chỉ lệch số nợ gốc còn lại, không đổi số phải trả mỗi tháng.')
     + vnViSelect('vn_vn_wallet', 'Ví nhận tiền vay / trả nợ', editing)
+    // 3 ô ít dùng gập vào "Thêm chi tiết" (mở sẵn khi sửa khoản đã có giá trị). Ô vẫn nằm trong DOM nên lưu đọc được bình thường.
+    + '<details class="vn-chitiet"'+((editing && (nguoiCuaKhoan(d) || num(d.soTienTatToan) > 0)) ? ' open' : '')+'><summary>Thêm chi tiết <span class="mp-hint">(đối tượng, số tất toán dự kiến'+(editing ? '' : ', số kỳ đã trả')+')</span></summary>'
+    + nguoiOHtml('vn_vn_nguoi', d)
     // số thực trả khi tất toán thường THẤP hơn tổng còn phải trả theo lịch (lãi các kỳ sau
     // không phải trả) -> nhập 1 lần ở đây, hộp thoại Tất toán + tab Mô phỏng lấy làm mặc định
     + vnF('Số tiền tất toán dự kiến <span class="mp-hint">(tùy chọn)</span>', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_vn_tatToan" value="'+veSo(d.soTienTatToan)+'" placeholder="Bỏ trống = tự tính theo gốc còn lại">')
@@ -1028,6 +1030,7 @@ function vayNoFormHtml(){
     // Khi SỬA thì không được có ô này: sửa số kỳ ở đây sẽ ghi đè lịch sử trả nợ thực tế
     // mà không sinh/xóa giao dịch tương ứng -> số dư lệch. Sửa lịch sử bằng "Hủy ghi nhận" ở lịch trả.
     + (editing ? '' : vnF('Số kỳ đã trả trước khi nhập vào đây', '<input type="number" id="vn_vn_daTraKy" value="" placeholder="0" min="0">'))
+    + '</details>'
     + '<div class="vn-tom" id="vn_tom"></div>';
   return vnSheetKhung(editing ? 'Sửa khoản vay' : 'Thêm khoản vay', h, editing ? 'Lưu thay đổi' : 'Lưu khoản vay', 'vnSaveVayNo', 'vnCancelForm');
 }
