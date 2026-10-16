@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'amlich.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
+['state.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -2984,7 +2984,7 @@ test('handleBieuDoAction: đổi tab / kiểu / chọn lát / chọn ngày chỉ
 test('Chart.js đã gỡ: không còn nạp thư viện, không còn <canvas> biểu đồ', function(){
   var root = path.join(__dirname, '..');
   ok(fs.readFileSync(path.join(root, 'index.html'), 'utf8').indexOf('chart.js') < 0, 'index.html còn nạp Chart.js');
-  ['sotay.js', 'vayno.js', 'mophong.js'].forEach(function(f){
+  ['sotay.js', 'vayno-tinh.js', 'vayno.js', 'mophong.js'].forEach(function(f){
     var c = fs.readFileSync(path.join(root, 'js', f), 'utf8');
     ok(c.indexOf('new Chart') < 0 && c.indexOf('<canvas') < 0, f + ' còn dùng Chart.js');
   });

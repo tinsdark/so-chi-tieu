@@ -8,7 +8,7 @@
    - Giá trị còn lại: khấu hao ĐỀU theo số năm dự định dùng, về 0 khi dùng đủ. Chỉ là ước lượng để tham khảo.
    - Hạn bảo hành: "sắp hết" khi còn <= 30 ngày. Chỉ nhắc trong app.
    - Sổ này chỉ ghi nhớ: KHÔNG đụng Sổ tay, số dư hay Tài sản ròng. "Mua rồi" ở Muốn mua có công tắc thêm món vào sổ này (ddThem).
-   Cần state.js, loihua.js (lhSoNgay), danhmuc.js, vayno.js (vnF, vnSheetKhung, monthKeyAdd, ngayTraCuaKy), congcu.js load trước.
+   Cần state.js, loihua.js (lhSoNgay), danhmuc.js, vayno.js (vnF, vnSheetKhung), vayno-tinh.js (monthKeyAdd, ngayTraCuaKy), congcu.js load trước.
    ==================================================================== */
 
 var DD_NAM_MAC_DINH = 3;

@@ -2,7 +2,7 @@
 /* ====================================================================
    dongtien.js — tab "Dòng tiền" (chế độ "Thực tế & dự kiến"): thẻ cân đối của 1 tháng,
    thu / chi theo từng danh mục, dòng tiền tích lũy tương lai (6 / 12 / 24 tháng); bảng cả năm cũ nằm sau nút "Xem bảng cả năm".
-   Cần state.js, vayno.js (tongTraNoThang, tongThuHoiThang) load trước.
+   Cần state.js, vayno-tinh.js (tongTraNoThang, tongThuHoiThang) load trước.
    ==================================================================== */
 
 /* ====================================================================

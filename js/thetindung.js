@@ -13,7 +13,7 @@
      (w.laiSuatThe = %/năm, 0 = không ước tính): nếu CHỈ trả tối thiểu thì phần sao kê còn lại chịu lãi khoảng
      (còn phải trả − tối thiểu) × lãi suất năm ÷ 12 cho MỘT tháng. Đây là ước lượng thô để thấy cái giá của việc trả thiếu, không phải số ngân hàng tính
      (ngân hàng tính lãi theo ngày từ ngày mua và có phí trả chậm). Trả góp và phí trả chậm chưa có.
-   Cần state.js (soDuTheoVi, chuyenViThem, viCanhBaoAm...), vayno.js (ngayTraCuaKy, monthKeyAdd, vnF, vnSheetKhung),
+   Cần state.js (soDuTheoVi, chuyenViThem, viCanhBaoAm...), vayno-tinh.js (ngayTraCuaKy, monthKeyAdd), vayno.js (vnF, vnSheetKhung),
    nhachan.js (nhacHanNhan) load trước; danhmuc.js (dmToggle, dmMoney) chỉ cần lúc vẽ.
    ==================================================================== */
 

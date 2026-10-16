@@ -5,7 +5,7 @@
    render hay xử lý sự kiện của tab nào — chỉ là nền dùng chung.
    Phải load TRƯỚC mọi file js/ khác.
 
-   LƯU Ý: normalizeData() có gọi tinhLichTraNo()/monthKeyAdd() ở vayno.js.
+   LƯU Ý: normalizeData() có gọi tinhLichTraNo()/monthKeyAdd() ở vayno-tinh.js.
    Hợp lệ vì normalizeData chỉ được GỌI sau khi mọi file đã load xong
    (từ driveLoad), không phải lúc parse file này.
    ==================================================================== */
@@ -668,7 +668,7 @@ function normalizeData(d){
   // khoản cho vay đã tất toán (bỏ phần không đòi được) -> không còn chờ thu
   d.vayNo.choVay.forEach(function(c){
     if (c.daThu == null) c.daThu = 0;
-    // các lần xóa nợ một phần (xem tongDaBo ở vayno.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
+    // các lần xóa nợ một phần (xem tongDaBo ở vayno-tinh.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
     c.daBo = Array.isArray(c.daBo) ? c.daBo.filter(function(x){ return x && num(x.soTien) > 0; }) : [];
     if (c.tatToan) c.trangThai = 'da_thu_du';
   });
@@ -949,7 +949,7 @@ function viChotSoDuDauKy(dateStr){
    Dòng được ghi mang dkId (+ dkMk) -> biết chắc khoản nào của tháng nào đã ghi, không
    đoán theo số tiền/danh mục. bo[] = các tháng đã chọn "Bỏ qua".
    Chỉ xét THÁNG HIỆN TẠI: khoản của tháng cũ mà quên thì không dồn nhắc mãi.
-   Hàm ngayTraCuaKy (vayno.js) tự co ngày 31 về cuối tháng ngắn.
+   Hàm ngayTraCuaKy (vayno-tinh.js) tự co ngày 31 về cuối tháng ngắn.
    ==================================================================== */
 // KỲ của khoản định kỳ: dk.ky = [{tuMk, soTien}] sắp theo tuMk. Mỗi kỳ chạy từ tuMk đến hết tháng trước tuMk của kỳ sau;
 // kỳ cuối chạy mãi (không có tháng kết thúc). Đổi mức = thêm kỳ mới, kỳ cũ tự đóng và thành "lưu trữ".

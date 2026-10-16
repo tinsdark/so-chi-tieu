@@ -2,7 +2,7 @@
 /* ====================================================================
    sotay.js — tab "Sổ tay": nhập/sửa/xóa giao dịch theo ngày, tìm kiếm/lọc,
    xuất Excel, và các biểu đồ chi tiêu trong tháng.
-   Cần state.js, drive-sync.js, vayno.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
+   Cần state.js, drive-sync.js, vayno-tinh.js (conLaiPhaiThu, loanIsActive, tienDoTraNo) load trước.
    ==================================================================== */
 
 

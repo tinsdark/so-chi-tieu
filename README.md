@@ -112,7 +112,7 @@ Mỗi khái niệm một tên, dùng thống nhất ở mọi tab. Bảng này c
 - Cho vay có 2 nút trên thẻ: **Tất toán** ghi số tiền THỰC THU (chọn ngày, ví) thành giao dịch thu "Thu hồi cho vay" ở Sổ tay, gắn đúng khoản (thu thiếu thì chọn: thu một phần, hoặc tất toán với phần thiếu thành xóa nợ). **Xóa nợ** bỏ phần không đòi được, không ghi giao dịch: xóa hết thì đóng khoản (`tatToan`), xóa một phần thì ghi `daBo` (`[{soTien, ngay}]`), khoản vẫn mở, có nút Hoàn lại lần xóa nợ. Tài sản ròng theo ngày trừ đúng các lần xóa nợ tới ngày đó. Các thao tác có thể gây bất ngờ đều hỏi xác nhận kèm giải thích: tất toán bỏ phần thiếu, ngày thu ở tương lai, Hủy xóa nợ, Hoàn lại lần xóa nợ, sửa số cho vay làm đổi tình trạng khoản (mở lại / đóng / đã xóa nợ theo số cũ), xóa ngày thu ở Sổ tay khi khoản đã tất toán (khoản mở lại). Khoản cho vay đã xong (thu đủ hoặc đã xóa nợ) và khoản vay đã trả hết nằm trong mục **Đã xong (N)** gấp lại ở cuối từng danh sách.
 - Mọi hộp xác nhận / chọn một (`xacNhan`, `chonMot` trong `ui.js`) hiện dạng bảng trượt từ đáy trên điện thoại, giữa màn hình trên desktop.
 - Thẻ Tài khoản (Danh mục) hiện tên / email Google, lấy từ Drive `about.get` (không cần thêm quyền), lưu `localStorage` và xóa khi đăng xuất.
-- Có 449 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
+- Có 452 unit test cho phần logic thuần và các đoạn HTML sinh ra, đang pass hết, gồm nhóm KB: 9 kịch bản người dùng (sinh viên, nhân viên có thẻ và vay, freelancer, người hay cho vay, sổ trống, số cực đoan, ngày biên, dữ liệu cũ, 150 hồ sơ ngẫu nhiên) kiểm các bất biến: sổ khớp, tổng ví bằng số dư, không NaN, không lộ undefined trên màn hình.
 
 ---
 
@@ -129,7 +129,8 @@ js/
   ui.js             Toast, hộp thoại, chế độ tối
   lock.js           Khóa PIN + vân tay / Face ID
   drive-sync.js     Đăng nhập Google, đọc/ghi Drive, bản nháp, sao lưu
-  vayno.js          Tab Vay - Nợ: tính lịch trả nợ, thẻ khoản vay / cho vay, lịch trả theo kỳ, bảng trượt thêm-sửa và ghi nhận trả
+  vayno-tinh.js     Logic thuần của Vay - Nợ (không chạm DOM): lịch trả nợ, lãi thực, trạng thái kỳ, dư nợ / phải thu, tài sản ròng, dự trù từng tháng. Nạp trước vayno.js
+  vayno.js          Giao diện tab Vay - Nợ: thẻ khoản vay / cho vay, lịch trả theo kỳ, bảng trượt thêm-sửa, ghi nhận trả và các hành động của tab
   sotay.js          Tab Sổ tay (ghi nhanh, danh sách ngày, xuất Excel)
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
   nhan.js           Nhãn (tag) cho giao dịch + thẻ "Theo nhãn" ở Báo cáo
@@ -234,6 +235,9 @@ node tools/bump.js --check  # chỉ kiểm tra số phiên bản có khớp khô
 - Token Google chỉ sống khoảng 1 giờ (app không có server nên không có refresh token), nên app lưu token tạm trong `localStorage`; quá hạn thì phải đăng nhập lại.
 - Hộp thoại có ô nhập (hỏi số, hỏi chữ, nhập PIN) vẫn hiện giữa màn hình, không phải bảng trượt, để bàn phím điện thoại không che nút.
 - Cần mạng ở lần mở đầu để tải thư viện Google đăng nhập và SheetJS (từ `cdn.sheetjs.com`).
+- **Kiểm xung đột Drive có một khe hở nhỏ**: `driveSave` đọc `modifiedTime` rồi mới ghi, hai yêu cầu riêng. Hai máy cùng ghi đúng trong khoảng đó có thể ghi đè nhau. Rất hiếm; phía sau còn có nháp trên máy và 10 bản sao lưu để quay lại.
+- **Mỗi lần lưu gửi cả file lên Drive.** Dữ liệu tăng khoảng 136 KB mỗi năm ghi đều (sổ 3 năm, 3.140 giao dịch: 413 KB). Chưa cần làm gì; xem lại khi file vượt khoảng 1 MB (7 – 8 năm), lúc đó cân nhắc lưu theo năm.
+- **Thư viện SheetJS tải từ CDN chưa khóa bằng mã băm (`integrity`)** và trang chưa có Content-Security-Policy. Việc còn lại để làm: tính mã băm SHA-384 của file `xlsx-0.20.3` trên máy có mạng tới `cdn.sheetjs.com` rồi thêm `integrity` + `crossorigin` vào thẻ script (thử lại chức năng nhập file sau khi thêm); đặt CSP khi thử được đăng nhập Google thật.
 
 ---
 

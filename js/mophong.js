@@ -10,7 +10,7 @@
    - Muốn có số liệu để thử thì bấm "Nạp dữ liệu gốc" — nó CLONE (deep copy)
      dữ liệu thật sang nháp. Sửa nháp sau đó không vọng lại bản gốc.
 
-   Cần state.js (withData, balanceBeforeMonth...), vayno.js (tongThuThangCard,
+   Cần state.js (withData, balanceBeforeMonth...), vayno-tinh.js (tongThuThangCard,
    tongChiThangCard, monthKeyAdd, soTienConLaiPhaiTra, tinhLichTraNo) load trước.
    ==================================================================== */
 

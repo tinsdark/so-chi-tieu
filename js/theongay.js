@@ -6,7 +6,7 @@
    2. Từng ngày    : ngày nào của tháng này trong mức / vượt mức (tnNgayThang).
    3. 30 ngày tới  : số dư dự kiến từng ngày, ngày thấp nhất, các ngày có tiền vào / ra (tnLichTien).
    "Chi hằng ngày" = danh mục chi KHÔNG phải khoản cố định và có hạn mức (hanMucHangNgay ở sotay.js).
-   Chỉ ĐỌC dữ liệu, không ghi gì. Cần state.js, vayno.js, sotay.js (hanMucHangNgay, tieuMoiNgay, catChiCoDinh),
+   Chỉ ĐỌC dữ liệu, không ghi gì. Cần state.js, vayno-tinh.js, sotay.js (hanMucHangNgay, tieuMoiNgay, catChiCoDinh),
    nhachan.js (catNgayHan), bieudo.js (bdLine, bdThang, bdNhipNgayThuong, BD_DAYS), dongtien.js (dtCheDoHtml) load trước.
    ==================================================================== */
 

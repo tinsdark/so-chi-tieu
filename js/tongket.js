@@ -5,7 +5,7 @@
    tài sản ròng so với tháng trước, danh mục chi hằng ngày tăng mạnh nhất.
    Sổ tay chỉ có 1 chip "Tổng kết tháng N ›" trong 7 ngày đầu tháng để dẫn sang đây (tkGoiY), không có thẻ riêng.
    Chỉ ĐỌC dữ liệu. Ngày trong mức tính theo hạn mức HIỆN TẠI (xem tnNgayThang, theongay.js): đổi hạn mức rồi xem lại tháng cũ
-   thì số ngày này đổi theo. Cần state.js, vayno.js (taiSanRongThang), sotay.js (hanMucHangNgay, catChiHangNgay),
+   thì số ngày này đổi theo. Cần state.js, vayno-tinh.js (taiSanRongThang), sotay.js (hanMucHangNgay, catChiHangNgay),
    bieudo.js (bdThang, bdThangTruoc, bdTien), theongay.js (tnNgayThang) load trước.
    ==================================================================== */
 
