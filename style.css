@@ -1777,3 +1777,12 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .tn-dl{margin:0;display:flex;flex-direction:column;gap:10px}
 .tn-dl dt{font-weight:700;font-size:13.5px;margin:0}
 .tn-dl dd{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
+
+/* Phiên bản và cập nhật (Cài đặt → Ứng dụng) */
+.pb-ban{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:2px 0 4px}
+.pb-ban b{font-size:20px}
+.pb-ban span{font-size:12.5px;color:var(--muted)}
+.pb-m{padding:10px 0;border-top:1px solid var(--border)}
+.pb-m b{display:block;font-size:14px}
+.pb-m small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.pb-m ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.5}

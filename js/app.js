@@ -258,6 +258,18 @@ async function kiemTraBanMoi(){
     if (m && m[1] !== APP_VER){ state.coBanMoi = true; renderSyncStatus(); }
   }catch(e){ /* mất mạng: bỏ qua, lần sau kiểm tra lại */ }
 }
+// nút "Kiểm tra bản mới" ở Cài đặt → Ứng dụng: như kiemTraBanMoi nhưng chạy ngay (không chờ 1 phút) và báo kết quả cho người bấm
+async function kiemTraBanMoiTay(){
+  if (!APP_VER || !/^https?:$/.test(location.protocol)){ toast('Chế độ này không kiểm tra được bản mới.', { loai:'warn' }); return; }
+  try{
+    var res = await fetch('index.html?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('http ' + res.status);
+    var m = /js\/app\.js\?v=([^"'&]+)/.exec(await res.text());
+    if (m && m[1] !== APP_VER){ state.coBanMoi = true; renderSyncStatus(); toast('Có bản mới. Bấm "Cập nhật ngay".'); }
+    else toast('Đang dùng bản mới nhất.');
+  }catch(e){ toast('Không kiểm tra được (mất mạng?). Thử lại sau.', { loai:'warn' }); }
+  if (state.tab === 'danhmuc') renderDanhMuc();
+}
 function capNhatApp(){
   // đang lưu dở thì tải lại là bỏ dở lần lưu (nháp vẫn giữ nhưng cứ đợi xong cho chắc)
   if (state.dirty || state.saving){ toast('Đang lưu dữ liệu — đợi vài giây rồi bấm Cập nhật lại.', { loai:'warn' }); return; }
