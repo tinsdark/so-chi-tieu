@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.9', ngay: '2026-10-16', ten: 'App con Ghi nhanh trên màn hình chính',
+    muc: ['Có thể thêm một biểu tượng "Ghi nhanh" ra màn hình chính: mở là thấy ngay bảng Ghi nhanh giống hệt trong app, ghi xong hiện "Xong" (có Hoàn tác). Nó dùng chung dữ liệu với app chính, không giữ bản riêng. Địa chỉ và cách thêm ở Cài đặt → Ứng dụng.',
+      'Hai bản app cùng ghi không còn đè nhau: app hiện lại hoặc sắp ghi nhanh thì tự lấy bản mới nhất trước. Ghi chú ở Cài đặt về app trên màn hình chính đã sửa cho đúng cách mở app mới.'] },
   { ban: '2026.10.16.8', ngay: '2026-10-16', ten: 'Mở app là vào thẳng, ghi nhanh bằng Phím tắt',
     muc: ['Mở app là vào thẳng bằng dữ liệu trên máy, không còn màn đăng nhập hay bảng chọn (chỉ máy mới chưa có dữ liệu mới hiện màn đầu). Google Drive là nơi đồng bộ: app tự đồng bộ khi còn phiên đăng nhập, không thì chạm dòng trạng thái trên đầu trang hoặc nút Đồng bộ ở Cài đặt. Chỉ hỏi khi cả máy này và Drive cùng có thay đổi.',
       'Ghi nhanh bằng Phím tắt trên iPhone, không cần mở app: mỗi khoản lưu thành một file nhỏ. Mở app, chọn các file đó ở nút nhập trong Sổ tay, xem danh sách kèm số tiền rồi tick khoản nào ghi. Hai khoản giống hệt trong ngày vẫn là hai khoản, chọn lại file cũ không bị ghi trùng. Cách dựng phím tắt nằm trong README.',
