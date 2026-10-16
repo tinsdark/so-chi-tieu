@@ -9,6 +9,10 @@
      nên nhập lại cùng 1 file 2 lần không nhân đôi tiền.
    - Mọi dòng nhập đi qua entryAddItem (đúng đường lưu của Sổ tay) và được hoàn tác 1 lần.
    - Phần PHÂN TÍCH (parse, đoán cột, gộp danh mục) là hàm thuần, không đụng DOM -> test được.
+   - KHOẢN GHI NHANH từ Phím tắt iPhone (README mục "Ghi nhanh không cần mở app"): mỗi khoản là 1 file CSV tên bắt đầu bằng
+     "ghi-nhanh-". Chọn nhiều file một lúc (nhapGopFile gộp lại, thêm cột Mã = tên file + số dòng). Dòng có Mã chỉ trùng khi
+     Mã đã nhập (settings.maDaNhap), KHÔNG so nội dung: hai ly cà phê 25.000 cùng ngày vẫn là hai khoản, nhập lại file cũ
+     không nhân đôi, xóa khoản đã nhập rồi cũng không sống lại. Mỗi dòng có ô tick: bỏ tick = không ghi lần này.
    - Phần thập phân của số tiền bị bỏ (VND không có lẻ), "1.500.000" / "1,500,000" / "-50.000đ" đều đọc được.
    ==================================================================== */
 
@@ -21,6 +25,24 @@ function nhapChuKy(rows, coHeader){
   if (!coHeader || !rows.length) return '';
   return rows[0].map(function(c){ return nhapBoDau(c); }).join('|');
 }
+// ds = [{ ten, rows }] (mỗi file đã parse). Nhiều file, hoặc file tên "ghi-nhanh-...": gộp lại và thêm cột Mã.
+// -> { rows, maCot (-1 nếu không thêm), loi }
+function nhapGopFile(ds){
+  if (!ds.length) return { rows: [], maCot: -1, loi: '' };
+  if (ds.length === 1 && !/^ghi-nhanh/i.test(ds[0].ten)) return { rows: ds[0].rows, maCot: -1, loi: '' };
+  var nCot = 0, chuKy = null, header = null, out = [];
+  ds.forEach(function(f){ f.rows.forEach(function(r){ nCot = Math.max(nCot, r.length); }); });
+  var pad = function(r){ var x = r.slice(); while (x.length < nCot) x.push(''); return x; };
+  for (var i = 0; i < ds.length; i++){
+    var rows = ds[i].rows, ch = nhapCoHeader(rows), ck = nhapChuKy(rows, ch);
+    if (chuKy !== null && ck !== chuKy) return { rows: [], maCot: -1, loi: 'Các file phải cùng kiểu cột (cùng dòng tiêu đề). "' + ds[i].ten + '" khác các file trước.' };
+    chuKy = ck;
+    if (ch && !header) header = pad(rows[0]).concat(['Mã']);
+    rows.slice(ch ? 1 : 0).forEach(function(r, j){ out.push(pad(r).concat([ds[i].ten + '#' + (j + 1)])); });
+  }
+  return { rows: header ? [header].concat(out) : out, maCot: nCot, loi: '' };
+}
+
 var NHAP_MAU_GIU = 10;
 function nhapLuuMau(imp){
   var ck = nhapChuKy(imp.rows, imp.coHeader);
@@ -160,12 +182,15 @@ function nhapPhanTich(imp){
     (d.categories[kind] || []).forEach(function(c){ if (!r && !(kind === 'thu' ? VN_ONLY_THU : VN_ONLY_CHI)[c.id] && nhapBoDau(c.ten) === t) r = c; });
     return r;
   };
-  var out = { dong: [], catCanChon: {}, nLoi: 0, nTrung: 0, nOk: 0, tongThu: 0, tongChi: 0 };
+  var daMa = {};
+  (d.settings.maDaNhap || []).forEach(function(m){ daMa[m] = true; });
+  var maCot = imp.maCot == null ? -1 : imp.maCot;
+  var out = { dong: [], catCanChon: {}, nLoi: 0, nTrung: 0, nBo: 0, nOk: 0, tongThu: 0, tongChi: 0 };
   var start = d.settings.ngayBatDau || '';
   for (var i = tuHang; i < imp.rows.length; i++){
     var r = imp.rows[i];
     var x = { stt: i + 1, ngay: nhapParseNgay(cell(r, imp.map.ngay)), kind: '', soTien: 0, catTen: '', note: String(cell(r, imp.map.note) == null ? '' : cell(r, imp.map.note)).trim(),
-              catId: '', catMoi: '', loi: '', canhBao: '', trung: false };
+              catId: '', catMoi: '', loi: '', canhBao: '', trung: false, ma: maCot >= 0 ? String(cell(r, maCot) == null ? '' : cell(r, maCot)) : '', bo: false };
     var tien = nhapParseTien(cell(r, imp.map.tien));
     if (!x.ngay) x.loi = 'Ngày không đọc được';
     else if (isNaN(tien) || tien === 0) x.loi = 'Số tiền không đọc được hoặc bằng 0';
@@ -192,10 +217,15 @@ function nhapPhanTich(imp){
       }
       if (!x.loi){
         if (start && x.ngay < start) x.canhBao = 'trước mốc chốt số dư ' + start + ' (không tính vào số dư)';
-        if (imp.boTrung && daCo[x.ngay + '|' + x.kind + '|' + Math.round(x.soTien) + '|' + nhapBoDau(x.note)]){ x.trung = true; }
+        // dòng có Mã (ghi nhanh): trùng khi mã đã nhập, không so nội dung; dòng thường: so ngày + loại + số tiền + nội dung
+        if (imp.boTrung){
+          if (x.ma) x.trung = !!daMa[x.ma];
+          else if (daCo[x.ngay + '|' + x.kind + '|' + Math.round(x.soTien) + '|' + nhapBoDau(x.note)]) x.trung = true;
+        }
+        if (!x.trung && imp.bo && imp.bo[x.stt]) x.bo = true;
       }
     }
-    if (x.loi) out.nLoi++; else if (x.trung) out.nTrung++; else { out.nOk++; if (x.kind === 'thu') out.tongThu += x.soTien; else out.tongChi += x.soTien; }
+    if (x.loi) out.nLoi++; else if (x.trung) out.nTrung++; else if (x.bo) out.nBo++; else { out.nOk++; if (x.kind === 'thu') out.tongThu += x.soTien; else out.tongChi += x.soTien; }
     out.dong.push(x);
   }
   return out;
@@ -203,9 +233,9 @@ function nhapPhanTich(imp){
 
 // Ghi các dòng hợp lệ (không lỗi, không trùng) vào Sổ tay. Trả về thông tin để hoàn tác.
 function nhapThucHien(imp, kq){
-  var tao = {}, moi = [], da = [];
+  var tao = {}, moi = [], da = [], maMoi = [];
   kq.dong.forEach(function(x){
-    if (x.loi || x.trung) return;
+    if (x.loi || x.trung || x.bo) return;
     var catId = x.catId;
     if (!catId){
       var k = x.kind + '|' + nhapBoDau(x.catMoi);
@@ -222,11 +252,15 @@ function nhapThucHien(imp, kq){
     e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + ghi : ghi;
     it.gc = ghi;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     da.push({ date: x.ngay, iid: it.iid, note: ghi });
+    if (x.ma){ maMoi.push(x.ma); state.data.settings.maDaNhap.push(x.ma); }
   });
-  return { da: da, moi: moi };
+  state.data.settings.maDaNhap = state.data.settings.maDaNhap.slice(-2000);
+  return { da: da, moi: moi, ma: maMoi };
 }
 
 function nhapHoanTac(r){
+  var ma = {}; (r.ma || []).forEach(function(m){ ma[m] = true; });
+  state.data.settings.maDaNhap = (state.data.settings.maDaNhap || []).filter(function(m){ return !ma[m]; });   // hoàn tác thì lần sau còn nhập lại được
   r.da.forEach(function(x){
     var e = state.data.journal[x.date];
     if (e) journalRemoveNote(e, x.note);
@@ -279,65 +313,104 @@ function nhapSoDuongTuDong(rows, coHeader, map){
   return am ? 'thu' : 'chi';
 }
 
+// bố cục riêng cho KHOẢN GHI NHANH (Phím tắt): danh sách có ô tick lên đầu, phần ghép cột thu vào mục gập
+// (tự mở khi có danh mục mới hoặc dòng lỗi, vì khi đó người dùng cần xem)
+function nhapGhiNhanhHtml(imp, kq, cauHinh){
+  var h = '<div class="card gn-card"><h3>Khoản ghi nhanh chờ ghi vào Sổ tay</h3>';
+  h += '<div style="margin:2px 0 6px;font-size:13px">Sẽ ghi <b>'+kq.nOk+'</b> khoản'
+    + (kq.nOk ? ' (thu <span style="color:var(--green)">'+fmt(Math.round(kq.tongThu))+'</span>, chi <span style="color:var(--red)">'+fmt(Math.round(kq.tongChi))+'</span>)' : '')
+    + (kq.nTrung ? ' · <span style="color:var(--amber)">'+kq.nTrung+' khoản đã nhập trước đó</span>' : '')
+    + (kq.nBo ? ' · <span style="color:var(--amber)">'+kq.nBo+' khoản bạn bỏ tick</span>' : '')
+    + (kq.nLoi ? ' · <span style="color:var(--red)">'+kq.nLoi+' dòng lỗi</span>' : '') + '</div>';
+  var cbNhap = canhBaoNhap(kq, imp.viId);
+  if (cbNhap.length) h += '<div class="vn-note">' + icon('alert') + '<span>' + cbNhap.map(esc).join('<br>') + '<br><small>Vẫn ghi được; đây chỉ là nhắc trước khi bạn bấm.</small></span></div>';
+  var SHOW = 60;
+  kq.dong.slice(0, SHOW).forEach(function(x){
+    var tt = x.loi ? '<span style="color:var(--red)">'+esc(x.loi)+'</span>'
+      : (x.trung ? '<span style="color:var(--amber)">đã nhập trước đó</span>'
+      : (x.bo ? '<span style="color:var(--amber)">không ghi lần này</span>'
+      : (x.canhBao ? '<span style="color:var(--amber)">'+esc(x.canhBao)+'</span>' : '')));
+    var cat = x.catId ? catTen(x.kind, x.catId) : (x.catMoi ? '＋ ' + x.catMoi : '');
+    var tick = (x.loi || x.trung) ? '<span class="gn-tick"></span>' : '<input type="checkbox" data-act="impBo" data-stt="'+x.stt+'" aria-label="Ghi khoản này"'+(x.bo ? '' : ' checked')+'>';
+    h += '<label class="gn-row'+((x.loi || x.trung || x.bo) ? ' mo' : '')+'">'+tick
+      + '<span class="gn-main"><b>'+esc(cat || '—')+'</b>'+(x.note ? ' · '+esc(x.note) : '')+'<small>'+(x.ngay ? ngayVN(x.ngay) : '—')+(tt ? ' · '+tt : '')+'</small></span>'
+      + '<span class="gn-tien '+(x.kind === 'thu' ? 'thu' : 'chi')+'">'+(x.soTien ? (x.kind === 'thu' ? '+' : '−')+fmt(Math.round(x.soTien)) : '—')+'</span></label>';
+  });
+  if (kq.dong.length > SHOW) h += '<div class="empty" style="padding:6px 0 0;text-align:left">… và '+(kq.dong.length - SHOW)+' khoản nữa (đều được xử lý như trên).</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+    + '<button class="btn" data-act="impNhap"'+(kq.nOk ? '' : ' disabled')+'>Ghi '+kq.nOk+' khoản</button>'
+    + '<button class="btn secondary" data-act="impMo">Chọn file khác</button>'
+    + '<button class="btn secondary" data-act="impHuy">Hủy</button></div>';
+  var moSan = kq.nLoi > 0 || kq.dong.some(function(x){ return x.catMoi; });
+  h += '<details class="gn-cfg"'+(moSan ? ' open' : '')+'><summary>Cách ghép cột và danh mục'+(imp.dungMau ? ' (đã dùng lại cách ghép lần trước)' : '')+'</summary>'+cauHinh+'</details></div>';
+  return h;
+}
 function nhapCardHtml(){
   var imp = state.imp;
   if (!imp) return '';
   if (imp.buoc === 'chon'){
     return '<div class="card"><h3>Nhập từ CSV / Excel</h3>'
       + '<div class="empty" style="padding:0 0 10px;text-align:left">Chọn file có các cột ngày, số tiền, nội dung (và tùy chọn: loại thu/chi, danh mục). '
-      + 'File CSV nên lưu dạng <b>UTF-8</b> để không lỗi tiếng Việt. Sẽ có bước xem trước, chưa ghi gì cho tới khi bạn bấm Nhập.</div>'
-      + '<input type="file" id="imp_file" data-act="impFile" accept=".csv,.tsv,.txt,.xlsx,.xls">'
+      + 'File CSV nên lưu dạng <b>UTF-8</b> để không lỗi tiếng Việt. Sẽ có bước xem trước, chưa ghi gì cho tới khi bạn bấm Nhập.<br>'
+      + '<b>Khoản ghi nhanh từ Phím tắt iPhone:</b> chọn <b>nhiều file cùng lúc</b> (các file tên "ghi-nhanh-…"), bạn sẽ thấy danh sách và tick khoản nào ghi.</div>'
+      + '<input type="file" id="imp_file" data-act="impFile" accept=".csv,.tsv,.txt,.xlsx,.xls" multiple>'
       + '<div style="margin-top:10px"><button class="btn secondary sm" data-act="impHuy">Hủy</button></div></div>';
   }
   var kq = nhapPhanTich(imp);
   var nCot = imp.rows.reduce(function(m, r){ return Math.max(m, r.length); }, 0);
-  var h = '<div class="card"><h3>Nhập từ file: '+esc(imp.ten)+'</h3>';
-  if (imp.dungMau) h += '<div class="empty" style="padding:0 0 10px;text-align:left">'+icon('check')+' File cùng kiểu với lần nhập trước: đã dùng lại cách ghép cột, danh mục mặc định và ví của lần đó. Kiểm tra lại bên dưới nếu cần.</div>';
-  h += '<label style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><input type="checkbox" data-act="impHeader"'+(imp.coHeader ? ' checked' : '')+'> Dòng đầu là tiêu đề cột</label>';
-  h += '<div class="form-row">'
+  var ch = '';
+  ch += '<label style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><input type="checkbox" data-act="impHeader"'+(imp.coHeader ? ' checked' : '')+'> Dòng đầu là tiêu đề cột</label>';
+  ch += '<div class="form-row">'
     + '<div><label>Cột Ngày *</label><select data-act="impMap" data-f="ngay">'+nhapOptCot(imp, nCot, imp.map.ngay)+'</select></div>'
     + '<div><label>Cột Số tiền *</label><select data-act="impMap" data-f="tien">'+nhapOptCot(imp, nCot, imp.map.tien)+'</select></div>'
     + '<div><label>Cột Loại thu/chi</label><select data-act="impMap" data-f="loai">'+nhapOptCot(imp, nCot, imp.map.loai)+'</select></div>'
     + '<div><label>Cột Danh mục</label><select data-act="impMap" data-f="cat">'+nhapOptCot(imp, nCot, imp.map.cat)+'</select></div>'
     + '<div><label>Cột Nội dung</label><select data-act="impMap" data-f="note">'+nhapOptCot(imp, nCot, imp.map.note)+'</select></div>'
     + '</div>';
-  h += '<div class="form-row">'
+  ch += '<div class="form-row">'
     + '<div><label>Số dương là</label><select data-act="impSoDuong"><option value="chi"'+(imp.soDuong === 'chi' ? ' selected' : '')+'>Khoản chi</option><option value="thu"'+(imp.soDuong === 'thu' ? ' selected' : '')+'>Khoản thu</option></select></div>'
     + '<div><label>Danh mục mặc định cho khoản chi (khi ô trống)</label><select data-act="impCatMD" data-k="chi"><option value="">— không có —</option>'+nhapOptCat(imp.catMD.chi, 'chi')+'</select></div>'
     + '<div><label>Danh mục mặc định cho khoản thu (khi ô trống)</label><select data-act="impCatMD" data-k="thu"><option value="">— không có —</option>'+nhapOptCat(imp.catMD.thu, 'thu')+'</select></div>'
     + ((state.data.wallets || []).length > 1 ? '<div><label>Ví</label><select data-act="impVi">'+viOptionsHtml(imp.viId)+'</select></div>' : '')
     + '</div>';
-  h += '<label style="display:flex;align-items:center;gap:6px;margin:4px 0 10px"><input type="checkbox" data-act="impTrung"'+(imp.boTrung ? ' checked' : '')+'> Bỏ qua dòng trùng với giao dịch đã có (cùng ngày, loại, số tiền, nội dung)</label>';
+  ch += '<label style="display:flex;align-items:center;gap:6px;margin:4px 0 10px"><input type="checkbox" data-act="impTrung"'+(imp.boTrung ? ' checked' : '')+'> Bỏ qua dòng trùng với giao dịch đã có (cùng ngày, loại, số tiền, nội dung)</label>';
 
   var keys = Object.keys(kq.catCanChon);
   if (keys.length){
-    h += '<div class="empty" style="padding:0 0 6px;text-align:left"><b>Ghép danh mục trong file với danh mục của app</b></div>'
+    ch += '<div class="empty" style="padding:0 0 6px;text-align:left"><b>Ghép danh mục trong file với danh mục của app</b></div>'
       + '<div class="table-wrap"><table><thead><tr><th style="text-align:left">Trong file</th><th>Loại</th><th style="text-align:left">Thành danh mục</th></tr></thead><tbody>';
     keys.forEach(function(k){
       var c = kq.catCanChon[k];
-      h += '<tr><td style="text-align:left">'+esc(c.ten)+'</td><td>'+(c.kind === 'thu' ? 'Thu' : 'Chi')+'</td>'
+      ch += '<tr><td style="text-align:left">'+esc(c.ten)+'</td><td>'+(c.kind === 'thu' ? 'Thu' : 'Chi')+'</td>'
         + '<td style="text-align:left"><select data-act="impCat" data-key="'+esc(k)+'">'
         + '<option value="+"'+(c.chon === '+' ? ' selected' : '')+'>＋ Tạo danh mục mới "'+esc(c.ten)+'"</option>'
         + nhapOptCat(c.chon, c.kind) + '</select></td></tr>';
     });
-    h += '</tbody></table></div>';
+    ch += '</tbody></table></div>';
   }
 
+  if (imp.maCot >= 0) return nhapGhiNhanhHtml(imp, kq, ch);
+  var h = '<div class="card"><h3>Nhập từ file: '+esc(imp.ten)+'</h3>';
+  if (imp.dungMau) h += '<div class="empty" style="padding:0 0 10px;text-align:left">'+icon('check')+' File cùng kiểu với lần nhập trước: đã dùng lại cách ghép cột, danh mục mặc định và ví của lần đó. Kiểm tra lại bên dưới nếu cần.</div>';
+  h += ch;
   h += '<div style="margin:10px 0;font-size:13px">Sẽ nhập <b>'+kq.nOk+'</b> dòng'
     + (kq.nOk ? ' (thu <span style="color:var(--green)">'+fmt(Math.round(kq.tongThu))+'</span>, chi <span style="color:var(--red)">'+fmt(Math.round(kq.tongChi))+'</span>)' : '')
     + (kq.nTrung ? ' · <span style="color:var(--amber)">'+kq.nTrung+' dòng trùng bỏ qua</span>' : '')
+    + (kq.nBo ? ' · <span style="color:var(--amber)">'+kq.nBo+' dòng bạn bỏ tick</span>' : '')
     + (kq.nLoi ? ' · <span style="color:var(--red)">'+kq.nLoi+' dòng lỗi bỏ qua</span>' : '') + '</div>';
 
   var cbNhap = canhBaoNhap(kq, imp.viId);
   if (cbNhap.length) h += '<div class="vn-note">' + icon('alert') + '<span>' + cbNhap.map(esc).join('<br>') + '<br><small>Vẫn nhập được; đây chỉ là nhắc trước khi bạn bấm Nhập.</small></span></div>';
-  var SHOW = 12;
-  h += '<div class="table-wrap"><table><thead><tr><th>#</th><th>Ngày</th><th>Loại</th><th>Số tiền</th><th style="text-align:left">Danh mục</th><th style="text-align:left">Nội dung</th><th style="text-align:left">Trạng thái</th></tr></thead><tbody>';
+  var SHOW = 60;
+  h += '<div class="table-wrap"><table><thead><tr><th></th><th>#</th><th>Ngày</th><th>Loại</th><th>Số tiền</th><th style="text-align:left">Danh mục</th><th style="text-align:left">Nội dung</th><th style="text-align:left">Trạng thái</th></tr></thead><tbody>';
   kq.dong.slice(0, SHOW).forEach(function(x){
     var tt = x.loi ? '<span style="color:var(--red)">'+esc(x.loi)+'</span>'
-      : (x.trung ? '<span style="color:var(--amber)">Trùng — bỏ qua</span>'
-      : (x.canhBao ? '<span style="color:var(--amber)">'+esc(x.canhBao)+'</span>' : '<span style="color:var(--green)">OK</span>'));
+      : (x.trung ? '<span style="color:var(--amber)">'+(x.ma ? 'Đã nhập trước đó' : 'Trùng')+' — bỏ qua</span>'
+      : (x.bo ? '<span style="color:var(--amber)">Bỏ tick — không ghi lần này</span>'
+      : (x.canhBao ? '<span style="color:var(--amber)">'+esc(x.canhBao)+'</span>' : '<span style="color:var(--green)">OK</span>')));
     var cat = x.catId ? catTen(x.kind, x.catId) : (x.catMoi ? '＋ ' + x.catMoi : '');
-    h += '<tr><td>'+x.stt+'</td><td>'+(x.ngay ? ngayVN(x.ngay) : '—')+'</td><td>'+(x.kind ? (x.kind === 'thu' ? 'Thu' : 'Chi') : '—')+'</td>'
+    var hopTick = (x.loi || x.trung) ? '' : '<input type="checkbox" data-act="impBo" data-stt="'+x.stt+'" aria-label="Ghi khoản này"'+(x.bo ? '' : ' checked')+'>';
+    h += '<tr><td>'+hopTick+'</td><td>'+x.stt+'</td><td>'+(x.ngay ? ngayVN(x.ngay) : '—')+'</td><td>'+(x.kind ? (x.kind === 'thu' ? 'Thu' : 'Chi') : '—')+'</td>'
       + '<td style="color:var(--'+(x.kind === 'thu' ? 'green' : 'red')+')">'+(x.soTien ? fmt(Math.round(x.soTien)) : '—')+'</td>'
       + '<td style="text-align:left">'+esc(cat)+'</td><td style="text-align:left;white-space:normal">'+esc(x.note)+'</td><td style="text-align:left;white-space:normal">'+tt+'</td></tr>';
   });
@@ -396,28 +469,40 @@ function handleNhapAction(act, el){
   return true;
 }
 
+// ds = [{ ten, rows }] đã đọc từ các file đã chọn -> { loi } hoặc { imp } sẵn sàng cho bước xem trước.
+// Hàm thuần (không đụng DOM) để test đúng đường mà nút "Chọn file" chạy.
+function nhapTaoImp(ds){
+  var gop = nhapGopFile(ds);
+  if (gop.loi) return { loi: gop.loi };
+  var rows = gop.rows;
+  if (!rows.length) return { loi: 'File trống hoặc không đọc được dòng nào.' };
+  if (rows.length > NHAP_TOI_DA) return { loi: 'File có ' + rows.length + ' dòng, vượt giới hạn ' + NHAP_TOI_DA + '. Hãy chia nhỏ file.' };
+  var coHeader = nhapCoHeader(rows);
+  var map = nhapDoanCot(rows, coHeader);
+  var imp = { buoc: 'xem', ten: ds.length > 1 ? ds.length + ' file ghi nhanh' : ds[0].ten, rows: rows, coHeader: coHeader, map: map, maCot: gop.maCot, bo: {},
+    soDuong: nhapSoDuongTuDong(rows, coHeader, map), catMD: { thu: '', chi: '' }, catMap: {},
+    viId: viDienSan(), boTrung: true };
+  // file cùng kiểu (cùng dòng tiêu đề) đã từng nhập: dùng lại cách ghép cột / danh mục mặc định / ví của lần trước
+  var mau = state.data.settings.mauNhap[nhapChuKy(rows, coHeader)];
+  if (mau){
+    imp.map = JSON.parse(JSON.stringify(mau.map)); imp.soDuong = mau.soDuong || imp.soDuong;
+    imp.catMD = JSON.parse(JSON.stringify(mau.catMD || { thu: '', chi: '' }));
+    if (walletById(mau.viId)) imp.viId = mau.viId;
+    imp.dungMau = true;
+  }
+  return { imp: imp };
+}
+
 function handleNhapChange(el){
   var imp = state.imp;
   if (!imp) return false;
   if (el.matches('[data-act=impFile]')){
-    var f = el.files && el.files[0];
-    if (!f) return true;
-    nhapDocFile(f).then(function(rows){
-      if (!rows.length){ toast('File trống hoặc không đọc được dòng nào.', { loai:'err' }); return; }
-      if (rows.length > NHAP_TOI_DA){ toast('File có '+rows.length+' dòng, vượt giới hạn '+NHAP_TOI_DA+'. Hãy chia nhỏ file.', { loai:'err' }); return; }
-      var coHeader = nhapCoHeader(rows);
-      var map = nhapDoanCot(rows, coHeader);
-      state.imp = { buoc: 'xem', ten: f.name, rows: rows, coHeader: coHeader, map: map,
-        soDuong: nhapSoDuongTuDong(rows, coHeader, map), catMD: { thu: '', chi: '' }, catMap: {},
-        viId: viDienSan(), boTrung: true };
-      // file cùng kiểu (cùng dòng tiêu đề) đã từng nhập: dùng lại cách ghép cột / danh mục mặc định / ví của lần trước
-      var mau = state.data.settings.mauNhap[nhapChuKy(rows, coHeader)];
-      if (mau){
-        state.imp.map = JSON.parse(JSON.stringify(mau.map)); state.imp.soDuong = mau.soDuong || state.imp.soDuong;
-        state.imp.catMD = JSON.parse(JSON.stringify(mau.catMD || { thu: '', chi: '' }));
-        if (walletById(mau.viId)) state.imp.viId = mau.viId;
-        state.imp.dungMau = true;
-      }
+    var dsFile = Array.prototype.slice.call(el.files || []);
+    if (!dsFile.length) return true;
+    Promise.all(dsFile.map(function(fl){ return nhapDocFile(fl).then(function(r){ return { ten: fl.name, rows: r }; }); })).then(function(ds){
+      var kq = nhapTaoImp(ds);
+      if (kq.loi){ toast(kq.loi, { loai:'err' }); return; }
+      state.imp = kq.imp;
       renderSoTay();
     }).catch(function(e){
       console.error('[chitieu] Đọc file nhập lỗi:', e);
@@ -438,6 +523,7 @@ function handleNhapChange(el){
   } else if (el.matches('[data-act=impSoDuong]')){ imp.soDuong = el.value === 'thu' ? 'thu' : 'chi'; renderSoTay();
   } else if (el.matches('[data-act=impCatMD]')){ imp.catMD[el.getAttribute('data-k') === 'thu' ? 'thu' : 'chi'] = el.value; renderSoTay();
   } else if (el.matches('[data-act=impVi]')){ imp.viId = el.value; renderSoTay();
+  } else if (el.matches('[data-act=impBo]')){ imp.bo = imp.bo || {}; imp.bo[parseInt(el.getAttribute('data-stt'), 10)] = !el.checked; renderSoTay();
   } else if (el.matches('[data-act=impTrung]')){ imp.boTrung = el.checked; renderSoTay();
   } else if (el.matches('[data-act=impCat]')){ imp.catMap[el.getAttribute('data-key')] = el.value; renderSoTay();
   } else {

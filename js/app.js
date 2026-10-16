@@ -12,6 +12,13 @@ function renderSyncStatus(){
   if (!el) return;
   el.classList.remove('err','ok');
   if (state.saving){ el.textContent = 'Đang lưu…'; }
+  else if (state.offline){
+    // dùng dữ liệu trên máy: dữ liệu đã nằm an toàn trong máy, chỉ còn chuyện đã lên Drive chưa
+    var lc = state.lanDongBoCuoi ? new Date(state.lanDongBoCuoi) : null;
+    el.textContent = state.dirty ? 'Đã lưu trên máy · chưa đồng bộ Drive'
+      : (lc ? 'Đã lưu trên máy · đồng bộ Drive lần cuối ' + pad2(lc.getDate()) + '/' + pad2(lc.getMonth() + 1) : 'Đã lưu trên máy');
+    el.classList.add('ok');
+  }
   else if (state.dirty){ el.textContent = 'Có thay đổi chưa lưu…'; }
   else if (state.errorMsg){ el.textContent = state.errorMsg; el.classList.add('err'); }
   else if (state.lastSync){
@@ -20,17 +27,20 @@ function renderSyncStatus(){
   } else {
     el.textContent = '';
   }
+  // dùng dữ liệu trên máy: chạm vào dòng trạng thái để đồng bộ Drive (không phải chờ banner nhắc)
+  if (state.offline){ el.setAttribute('data-act', 'dangNhapLai'); el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); el.title = 'Chạm để đồng bộ Google Drive'; }
+  else { el.removeAttribute('data-act'); el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('title'); }
   var banner = document.getElementById('bannerZone');
   if (banner){
     // bản mới luôn hiện đầu tiên, độc lập với các cảnh báo khác
     var bMoi = state.coBanMoi
       ? '<div class="banner banner-moi">'+icon('refresh')+' Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
     if (state.offline){
-      var tu = state.offlineTu ? new Date(state.offlineTu) : null;
-      banner.innerHTML = bMoi + '<div class="banner">'+icon('alert')+' Đang ngoại tuyến'
-        + (tu ? ' — dữ liệu trên máy lúc ' + pad2(tu.getHours()) + ':' + pad2(tu.getMinutes()) + ' ' + tu.toLocaleDateString('vi-VN') : '')
-        + '. Thay đổi chỉ lưu trên máy, chưa lên Drive. '
-        + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đăng nhập để đồng bộ</button></div>';
+      // nhắc nhẹ khi lâu chưa đồng bộ (mở app bình thường không bị làm phiền)
+      var soNgay = soNgayChuaDongBo(Date.now(), state.lanDongBoCuoi, state.data && state.data.settings && state.data.settings.ngayBatDau);
+      banner.innerHTML = bMoi + (soNgay >= 3 ? '<div class="banner">'+icon('alert')+' Đã '+soNgay+' ngày chưa đồng bộ Google Drive, dữ liệu mới chỉ nằm trên máy này. '
+        + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đồng bộ</button></div>' : '')
+        + (state.errorMsg ? '<div class="banner">' + icon('alert') + ' ' + state.errorMsg + '</div>' : '');
     } else {
       banner.innerHTML = bMoi + (state.errorMsg ? '<div class="banner">' + icon('alert') + ' ' + state.errorMsg + '</div>' : '');
     }
@@ -185,12 +195,12 @@ document.addEventListener('keydown', function(ev){
 })();
 
 document.getElementById('btnSignIn').addEventListener('click', signIn);
-document.getElementById('btnOffline').addEventListener('click', moNgoaiTuyen);
+document.getElementById('btnOffline').addEventListener('click', batDauTrenMay);
 document.getElementById('btnAnSo').addEventListener('click', doiAnSo);
 
 // làm mới dữ liệu từ Drive: nút ở Cài đặt → Ứng dụng ("lamMoi") và kéo xuống ở đầu trang (motion.js)
 async function lamMoiDuLieu(){
-  if (state.offline){ signIn(); return; }     // chưa có token Drive: làm mới = đăng nhập lại
+  if (state.offline){ dongBoNgay(); return; }   // chưa kết nối Drive: làm mới = đồng bộ
   state.errorMsg = null;
   var tuLoi = state.taiLoi;                   // lần trước tải lỗi: các sửa trong lúc đó chỉ nằm ở nháp trên máy
   var ok = await driveLoad();
@@ -212,7 +222,7 @@ document.addEventListener('change', function(ev){
 
 // dispatcher: thử lần lượt handler của từng tab, dừng ở handler đầu tiên xử lý được (trả về true)
 function handleAction(act, el){
-  if (act === 'dangNhapLai'){ signIn(); return; }
+  if (act === 'dangNhapLai'){ dongBoNgay(); return; }
   if (act === 'capNhatApp'){ capNhatApp(); return; }
   if (handleSoTayAction(act, el)) return;
   if (handleNhapAction(act, el)) return;
@@ -287,7 +297,7 @@ if (_ihd) _ihd.addEventListener('click', function(){
   try{ localStorage.setItem('chitieu_ios_hint', '1'); }catch(e){}
   document.getElementById('iosHint').style.display = 'none';
 });
-tiepTucPhienDangNhap();     // còn phiên đăng nhập chưa hết hạn thì vào thẳng
+khoiDong();     // có dữ liệu trên máy thì vào thẳng, không màn đăng nhập (xem drive-sync.js)
 
 // service worker (cần HTTPS hoặc localhost; mở bằng file:// thì bỏ qua) — xem sw.js
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){

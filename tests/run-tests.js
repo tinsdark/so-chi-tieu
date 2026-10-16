@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
+['state.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -57,6 +57,9 @@ function test(name, fn){
   }
 }
 function group(name){ console.log('\n' + name); }
+// test async: xếp hàng, chạy tuần tự SAU mọi test thường (mỗi test tự dựng dữ liệu của nó), có chờ Promise và báo lỗi đúng chỗ
+var hangDoiAsync = [];
+function testAsync(name, fn){ hangDoiAsync.push({ name: name, fn: fn }); }
 function ok(cond, msg){ if (!cond) throw new Error(msg || 'điều kiện không đúng'); }
 function eq(actual, expected, msg){
   if (actual !== expected) throw new Error((msg||'') + ' — mong đợi ' + JSON.stringify(expected) + ', nhận được ' + JSON.stringify(actual));
@@ -1085,6 +1088,328 @@ test('Số dư liền mạch: cuối tháng M = đầu tháng M+1', function(){
     return o;
   });
   ok(!loi.length, loi.slice(0, 3).join(' | '));
+});
+
+/* ==================================================================== */
+group('7e. Mở bằng dữ liệu trên máy, đồng bộ Drive là nút bấm (drive-sync.js)');
+
+// kho localStorage giả có nhớ dữ liệu (môi trường test mặc định getItem luôn trả null)
+function khoGia(){ var m = {}; return { getItem: function(k){ return k in m ? m[k] : null; }, setItem: function(k, v){ m[k] = String(v); }, removeItem: function(k){ delete m[k]; } }; }
+// thay tạm các hàm / biến toàn cục của ctx, trả hàm khôi phục
+function thayTam(over){
+  var cu = {}, keys = Object.keys(over);
+  keys.forEach(function(k){ cu[k] = ctx[k]; ctx[k] = over[k]; });
+  return function(){ keys.forEach(function(k){ ctx[k] = cu[k]; }); };
+}
+function duLieuMay(them){ var d = baseData(); d.settings.ngayBatDau = '2026-10-01'; d.journal['2026-10-05'] = { thu: {}, chi: { an: 50000 }, ghiChu: '', refs: [] }; if (them) them(d); return d; }
+// các hàm Drive / giao diện giả; ghi lại thứ tự gọi vào goi
+function drGia(goi, o){
+  o = o || {};
+  var ghi = function(ten, tra){ return function(){ goi.push(ten); return tra; }; };
+  return {
+    localStorage: o.kho || khoGia(), showApp: ghi('showApp'), showGate: function(m){ goi.push('showGate:' + (m || '')); }, renderAll: function(){}, renderSyncStatus: function(){},
+    findFile: function(){ goi.push('findFile'); if (o.loiTim) return Promise.reject(o.loiTim); return Promise.resolve(o.file === undefined ? null : o.file); },
+    driveDocText: function(){ goi.push('driveDocText'); return Promise.resolve('{}'); },
+    driveLoad: function(){ goi.push('driveLoad'); return Promise.resolve(o.taiOk !== false); },
+    driveSave: function(){ goi.push('driveSave'); return Promise.resolve(); },
+    checkLocalDraft: function(){ goi.push('checkLocalDraft'); return Promise.resolve(); },
+    backupHangNgay: ghi('backup'), startPolling: ghi('polling'), scheduleSave: ghi('scheduleSave'), taiThongTinTaiKhoan: function(){},
+    thuXinTokenAmTham: function(){ goi.push('thuXinToken'); return Promise.resolve(null); },
+    toast: ghi('toast'), isFormOpen: function(){ return !!o.dangMoForm; }, isTypingNow: function(){ return false; }
+  };
+}
+function dsVaoMayOffline(d, mocDrive, dirty){
+  loadData(d || duLieuMay());
+  ctx.state.driveModified = mocDrive === undefined ? 'T1' : mocDrive; ctx.state.dirty = !!dirty; ctx.state.offline = true;
+  ctx.state.driveFileId = null; ctx.accessToken = 'tok';
+}
+
+test('quyetDinhDongBo: Drive chưa đổi thì giữ bản máy; chỉ hỏi khi cả hai cùng đổi hoặc chưa có mốc', function(){
+  var q = ctx.quyetDinhDongBo;
+  eq(q({ coFile: false, chuDong: true }), 'tao-file', 'Drive chưa có file, người dùng tự bấm: đẩy bản máy lên');
+  eq(q({ coFile: false, chuDong: false }), 'cho', 'Drive chưa có file, chạy ngầm: không tự đổ dữ liệu vào tài khoản có thể là nhầm');
+  [true, false].forEach(function(cd){ [true, false].forEach(function(dirty){
+    eq(q({ coFile: true, modifiedTime: 'T1', mocCu: 'T1', dirty: dirty, chuDong: cd }), 'day-len', 'Drive không đổi từ lần đồng bộ cuối (dirty=' + dirty + ', chủ động=' + cd + ')');
+  }); });
+  eq(q({ coFile: true, modifiedTime: 'T2', mocCu: 'T1', dirty: false, chuDong: false }), 'lay-ve', 'máy không đổi, Drive có bản mới: lấy về, kể cả chạy ngầm');
+  eq(q({ coFile: true, modifiedTime: 'T2', mocCu: 'T1', dirty: true, chuDong: true }), 'hoi', 'cả hai cùng đổi, người dùng bấm: hỏi');
+  eq(q({ coFile: true, modifiedTime: 'T2', mocCu: 'T1', dirty: true, chuDong: false }), 'cho', 'cả hai cùng đổi, chạy ngầm: không tự hỏi');
+  eq(q({ coFile: true, modifiedTime: 'T2', mocCu: null, dirty: false, chuDong: true }), 'hoi', 'máy chưa có mốc (chưa đồng bộ lần nào): hỏi chứ không tự lấy về');
+  eq(q({ coFile: true, modifiedTime: 'T2', mocCu: null, dirty: false, chuDong: false }), 'cho', 'chưa có mốc, chạy ngầm: chờ bấm');
+});
+
+test('laLoiXacThuc: lỗi do phiên Google khác lỗi mạng', function(){
+  var f = ctx.laLoiXacThuc;
+  ok(f({ type: 'popup_closed' }) && f({ type: 'popup_failed_to_open' }), 'GIS error_callback');
+  ok(f({ error: 'access_denied' }), 'GIS callback có error');
+  ok(f(new Error('token-expired')) && f(new Error('save-failed:401')) && f(new Error('search-failed:401')), 'hết phiên / Drive trả 401');
+  ok(!f(new Error('save-failed:500')) && !f(new Error('Failed to fetch')) && !f(null), 'lỗi mạng / lỗi máy chủ thì không phải lỗi xác thực');
+});
+
+test('soNgayChuaDongBo: tính từ lần đồng bộ cuối, chưa đồng bộ lần nào thì từ ngày bắt đầu sổ', function(){
+  var now = new Date('2026-10-20T10:00:00').getTime(), ngay = 864e5;
+  eq(ctx.soNgayChuaDongBo(now, now - 5 * ngay - 1000, '2026-01-01'), 5, '5 ngày trước');
+  eq(ctx.soNgayChuaDongBo(now, now - 1000, '2026-01-01'), 0, 'vừa đồng bộ');
+  eq(ctx.soNgayChuaDongBo(now, null, '2026-10-10'), 10, 'chưa đồng bộ lần nào: từ ngày bắt đầu');
+  eq(ctx.soNgayChuaDongBo(now, null, ''), 0, 'không có mốc nào: không nhắc');
+  eq(ctx.soNgayChuaDongBo(now, now + ngay, ''), 0, 'đồng hồ lệch về tương lai: không âm');
+});
+
+test('moNgoaiTuyen: vào thẳng bằng dữ liệu trên máy (chỉ có bản đồng bộ / chỉ có nháp / nháp mới hơn / không có gì)', function(){
+  var kho = khoGia(), kp = thayTam({ localStorage: kho, showApp: function(){}, renderAll: function(){} });
+  try{
+    ctx.state.data = null;
+    eq(ctx.moNgoaiTuyen(), false, 'máy chưa có gì: không mở');
+    eq(ctx.state.data, null, 'và không đụng state');
+    var dA = duLieuMay(), dB = duLieuMay(function(d){ d.journal['2026-10-06'] = { thu: {}, chi: { an: 70000 }, ghiChu: '', refs: [] }; });
+    kho.setItem('chitieu_synced_v1', JSON.stringify({ data: dA, savedAt: 1000, baseModified: 'T1' }));
+    eq(ctx.moNgoaiTuyen(), true, 'chỉ có bản đồng bộ: mở');
+    eq(ctx.state.offline, true, 'chế độ trên máy'); eq(ctx.state.dirty, false, 'không có nháp thì không có gì chờ lên Drive');
+    eq(ctx.state.driveModified, 'T1', 'giữ mốc Drive để sau này biết Drive có đổi không'); eq(ctx.state.lanDongBoCuoi, 1000, 'lần đồng bộ cuối');
+    eq(Object.keys(ctx.state.data.journal).length, 1, 'dữ liệu của bản đồng bộ');
+    kho.setItem('chitieu_draft_v1', JSON.stringify({ data: dB, savedAt: 2000, baseModified: 'T1' }));
+    ctx.moNgoaiTuyen();
+    eq(Object.keys(ctx.state.data.journal).length, 2, 'nháp mới hơn thì dùng nháp'); eq(ctx.state.dirty, true, 'còn thay đổi chưa lên Drive'); eq(ctx.state.lanDongBoCuoi, 1000, 'lần đồng bộ cuối vẫn là bản đồng bộ');
+    kho.setItem('chitieu_draft_v1', JSON.stringify({ data: dB, savedAt: 500, baseModified: 'T0' }));
+    ctx.moNgoaiTuyen();
+    eq(Object.keys(ctx.state.data.journal).length, 1, 'nháp cũ hơn bản đồng bộ thì bỏ qua'); eq(ctx.state.dirty, false, 'nháp cũ không tính là thay đổi chờ');
+    kho.removeItem('chitieu_synced_v1');
+    kho.setItem('chitieu_draft_v1', JSON.stringify({ data: dB, savedAt: 700, baseModified: null }));
+    eq(ctx.moNgoaiTuyen(), true, 'chỉ có nháp (dùng không đăng nhập, chưa đồng bộ lần nào): vẫn mở'); eq(ctx.state.dirty, true, 'chưa đồng bộ'); eq(ctx.state.lanDongBoCuoi, null, 'chưa đồng bộ lần nào');
+  } finally { kp(); ctx.state.offline = false; }
+});
+
+test('batDauTrenMay: dùng ngay không đăng nhập; lần sau mở thẳng vào, không hiện lại màn đầu', function(){
+  var kho = khoGia(), kp = thayTam({ localStorage: kho, showApp: function(){}, renderAll: function(){} });
+  try{
+    ctx.state.data = null;
+    ctx.batDauTrenMay();
+    eq(ctx.state.offline, true, 'chế độ trên máy'); ok(ctx.state.data && ctx.state.data.journal, 'có dữ liệu mặc định');
+    eq(ctx.state.lanDongBoCuoi, null, 'chưa đồng bộ lần nào');
+    ctx.state.data = null; ctx.state.offline = false;
+    eq(ctx.moNgoaiTuyen(), true, 'mở lại thấy dữ liệu trên máy ngay, dù chưa ghi gì');
+  } finally { kp(); ctx.state.offline = false; }
+});
+
+testAsync('dongBoDrive: Drive không đổi → giữ bản máy, KHÔNG tải đè, KHÔNG hỏi; có thay đổi thì đẩy lên', async function(){
+  var goi = [], kp = thayTam(drGia(goi, { file: { id: 'f1', modifiedTime: 'T1' } }));
+  try{
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(false);
+    eq(goi.indexOf('driveLoad'), -1, 'không tải đè dữ liệu trên máy'); eq(goi.indexOf('checkLocalDraft'), -1, 'không hỏi gì'); eq(goi.indexOf('driveSave'), -1, 'không có gì để đẩy');
+    eq(ctx.state.offline, false, 'đã nối Drive'); eq(ctx.state.driveFileId, 'f1', 'nhớ file Drive'); ok(goi.indexOf('backup') >= 0 && goi.indexOf('polling') >= 0, 'sao lưu ngày và bật cập nhật định kỳ');
+    goi.length = 0;
+    dsVaoMayOffline(null, 'T1', true);
+    await ctx.dongBoDrive(false);
+    ok(goi.indexOf('driveSave') >= 0, 'có thay đổi thì đẩy lên'); eq(goi.indexOf('driveLoad'), -1, 'vẫn không tải đè'); eq(goi.indexOf('checkLocalDraft'), -1, 'vẫn không hỏi');
+  } finally { kp(); ctx.accessToken = null; ctx.state.offline = false; ctx.state.dirty = false; }
+});
+
+testAsync('dongBoDrive: Drive có bản mới và máy không có thay đổi → lấy về im lặng; cả hai cùng đổi → chỉ hỏi khi người dùng bấm', async function(){
+  var goi = [], kp = thayTam(drGia(goi, { file: { id: 'f1', modifiedTime: 'T2' } }));
+  try{
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(false);
+    ok(goi.indexOf('driveLoad') >= 0, 'lấy bản mới về'); eq(goi.indexOf('checkLocalDraft'), -1, 'không có thay đổi của máy nên không hỏi'); eq(ctx.state.offline, false, 'đã nối Drive');
+    goi.length = 0;
+    dsVaoMayOffline(null, 'T1', true);
+    await ctx.dongBoDrive(false);
+    eq(goi.indexOf('driveLoad'), -1, 'chạy ngầm mà cả hai cùng đổi: KHÔNG tự tải đè'); eq(goi.indexOf('driveSave'), -1, 'cũng không tự ghi đè Drive');
+    eq(ctx.accessToken, null, 'bỏ kết nối để không có đường ghi nhầm'); eq(ctx.state.offline, true, 'vẫn dùng dữ liệu trên máy'); eq(ctx.state.dirty, true, 'thay đổi vẫn chờ');
+    goi.length = 0;
+    dsVaoMayOffline(null, 'T1', true);
+    await ctx.dongBoDrive(true);
+    ok(goi.indexOf('driveLoad') >= 0 && goi.indexOf('checkLocalDraft') >= 0, 'người dùng bấm Đồng bộ: tải Drive rồi hỏi khôi phục nháp (luồng cũ)');
+  } finally { kp(); ctx.accessToken = null; ctx.state.offline = false; ctx.state.dirty = false; }
+});
+
+testAsync('dongBoDrive: đang mở form thì không tự thay dữ liệu bên dưới; chưa có mốc thì chờ bấm', async function(){
+  var goi = [], kp = thayTam(drGia(goi, { file: { id: 'f1', modifiedTime: 'T2' }, dangMoForm: true }));
+  try{
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(false);
+    eq(goi.indexOf('driveLoad'), -1, 'form đang mở: không tải'); eq(ctx.state.offline, true, 'giữ dữ liệu trên máy');
+  } finally { kp(); }
+  goi.length = 0; kp = thayTam(drGia(goi, { file: { id: 'f1', modifiedTime: 'T2' } }));
+  try{
+    dsVaoMayOffline(null, null, false);
+    await ctx.dongBoDrive(false);
+    eq(goi.indexOf('driveLoad'), -1, 'máy chưa có mốc Drive: chạy ngầm không tự lấy về'); eq(ctx.state.offline, true, 'chờ bấm');
+  } finally { kp(); ctx.accessToken = null; ctx.state.offline = false; }
+});
+
+testAsync('dongBoDrive: Drive chưa có file → chỉ tự tạo khi người dùng bấm; lỗi mạng / tải lỗi → về dữ liệu trên máy, không văng', async function(){
+  var kLog = thayTam({ console: { log: console.log, warn: console.warn, error: function(){} } });
+  var goi = [], kp = thayTam(drGia(goi, { file: null }));
+  try{
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(false);
+    eq(goi.indexOf('scheduleSave'), -1, 'chạy ngầm: không tự tạo file (có thể là nhầm tài khoản)'); eq(ctx.accessToken, null, 'bỏ kết nối');
+    goi.length = 0;
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(true);
+    ok(goi.indexOf('scheduleSave') >= 0, 'bấm Đồng bộ: tạo file từ bản trên máy'); eq(ctx.state.driveFileId, null, 'chưa có file, driveSave sẽ tạo'); eq(ctx.state.driveModified, null, 'không còn mốc cũ');
+  } finally { kp(); }
+  goi.length = 0; kp = thayTam(drGia(goi, { loiTim: new Error('Failed to fetch') }));
+  try{
+    dsVaoMayOffline(null, 'T1', true);
+    await ctx.dongBoDrive(false);
+    eq(ctx.accessToken, null, 'lỗi mạng: bỏ kết nối'); eq(ctx.state.offline, true, 'dùng dữ liệu trên máy'); eq(ctx.state.dirty, true, 'thay đổi vẫn chờ');
+    eq(goi.indexOf('toast'), -1, 'chạy ngầm: không làm phiền');
+    await ctx.dongBoDrive(true);
+    ok(goi.indexOf('toast') >= 0, 'người dùng bấm mà lỗi: có báo');
+  } finally { kp(); }
+  goi.length = 0; kp = thayTam(drGia(goi, { file: { id: 'f1', modifiedTime: 'T2' }, taiOk: false }));
+  try{
+    dsVaoMayOffline(null, 'T1', false);
+    await ctx.dongBoDrive(false);
+    eq(ctx.state.offline, true, 'tải lỗi: vẫn dùng dữ liệu trên máy'); eq(ctx.accessToken, null, 'bỏ kết nối');
+  } finally { kp(); kLog(); ctx.accessToken = null; ctx.state.offline = false; ctx.state.dirty = false; }
+});
+
+testAsync('driveSave: hết phiên Google thì dừng thử lại và về dữ liệu trên máy (trước đây thử lại mỗi 4 giây, mỗi lần có thể bật cửa sổ Google)', async function(){
+  var kLog = thayTam({ console: { log: console.log, warn: console.warn, error: function(){} } });
+  var hen = [], kp = thayTam({ localStorage: khoGia(), renderSyncStatus: function(){}, setTimeout: function(fn, ms){ hen.push(ms); return 1; }, clearTimeout: function(){},
+    driveFetch: function(){ return Promise.reject({ type: 'popup_closed' }); } });
+  try{
+    loadData(duLieuMay()); ctx.state.driveFileId = 'f1'; ctx.state.driveModified = null; ctx.state.taiLoi = false; ctx.state.saving = false; ctx.state.dirty = true;
+    ctx.accessToken = 'tok';
+    await ctx.driveSave();
+    eq(ctx.accessToken, null, 'bỏ kết nối'); eq(ctx.state.offline, true, 'dùng dữ liệu trên máy'); eq(ctx.state.dirty, true, 'thay đổi vẫn chờ lên Drive'); eq(hen.length, 0, 'không đặt lịch thử lại');
+    // lỗi mạng thường thì vẫn thử lại như cũ
+    kp(); hen = [];
+    kp = thayTam({ localStorage: khoGia(), renderSyncStatus: function(){}, setTimeout: function(fn, ms){ hen.push(ms); return 1; }, clearTimeout: function(){},
+      driveFetch: function(){ return Promise.reject(new Error('Failed to fetch')); } });
+    ctx.accessToken = 'tok'; ctx.state.offline = false; ctx.state.saving = false;
+    await ctx.driveSave();
+    eq(ctx.accessToken, 'tok', 'lỗi mạng không bỏ kết nối'); eq(hen.length, 1, 'lên lịch thử lại');
+  } finally { kp(); kLog(); ctx.accessToken = null; ctx.state.offline = false; ctx.state.dirty = false; }
+});
+
+testAsync('khoiDong: có dữ liệu trên máy thì vào thẳng, không hiện màn đăng nhập; máy mới mới hiện; lỗi tải KHÔNG xóa token còn hạn', async function(){
+  var goi = [], kho = khoGia(), kp = thayTam(drGia(goi, { kho: kho, file: { id: 'f1', modifiedTime: 'T1' } }));
+  try{
+    // 1) có dữ liệu trên máy, không token
+    kho.setItem('chitieu_synced_v1', JSON.stringify({ data: duLieuMay(), savedAt: 1000, baseModified: 'T1' }));
+    ctx.state.data = null; ctx.accessToken = null;
+    await ctx.khoiDong();
+    eq(goi.filter(function(g){ return g.indexOf('showGate') === 0; }).length, 0, 'không hiện màn đăng nhập');
+    eq(ctx.state.offline, true, 'đang dùng dữ liệu trên máy'); eq(goi.indexOf('findFile'), -1, 'không có token thì không gọi Drive');
+    // 2) có dữ liệu trên máy + còn token: đồng bộ nền, vẫn không màn đăng nhập
+    goi.length = 0; ctx.state.data = null;
+    kho.setItem('chitieu_tok_v1', JSON.stringify({ t: 'tok', exp: Date.now() + 3600000 }));
+    await ctx.khoiDong();
+    eq(goi.filter(function(g){ return g.indexOf('showGate') === 0; }).length, 0, 'không màn đăng nhập'); ok(goi.indexOf('findFile') >= 0, 'đồng bộ nền'); eq(ctx.state.offline, false, 'đã nối Drive');
+    // 3) máy mới, không token
+    goi.length = 0; kho.removeItem('chitieu_synced_v1'); kho.removeItem('chitieu_tok_v1'); ctx.state.data = null; ctx.state.offline = false; ctx.accessToken = null;
+    await ctx.khoiDong();
+    ok(goi.indexOf('showGate:') >= 0, 'máy chưa có gì: hiện màn đầu');
+    // 4) máy chưa có dữ liệu, có token còn hạn nhưng tải Drive lỗi (mạng chưa lên): GIỮ token
+    goi.length = 0; kp(); kp = thayTam(drGia(goi, { kho: kho, taiOk: false }));
+    kho.setItem('chitieu_tok_v1', JSON.stringify({ t: 'tok', exp: Date.now() + 3600000 }));
+    await ctx.khoiDong();
+    eq(ctx.readSavedToken(), 'tok', 'token còn hạn không bị xóa vì một lần tải lỗi'); ok(goi.some(function(g){ return g.indexOf('showGate:') === 0; }), 'hiện màn đầu để thử lại');
+  } finally { kp(); ctx.accessToken = null; ctx.state.offline = false; ctx.state.dirty = false; ctx.state.data = null; }
+});
+
+test('signOut: xóa cả bản đồng bộ lẫn nháp trên máy (còn nháp thì mở lại app vẫn vào thẳng bằng dữ liệu cũ)', function(){
+  var kho = khoGia(), goi = [], kp = thayTam(drGia(goi, { kho: kho }));
+  try{
+    kho.setItem('chitieu_synced_v1', JSON.stringify({ data: duLieuMay(), savedAt: 1000, baseModified: 'T1' }));
+    kho.setItem('chitieu_draft_v1', JSON.stringify({ data: duLieuMay(), savedAt: 2000, baseModified: 'T1' }));
+    ctx.accessToken = null;
+    ctx.signOut();
+    eq(kho.getItem('chitieu_synced_v1'), null, 'bản đồng bộ đã xóa'); eq(kho.getItem('chitieu_draft_v1'), null, 'nháp đã xóa');
+    eq(ctx.moNgoaiTuyen(), false, 'mở lại không còn dữ liệu cũ nào'); ok(goi.some(function(g){ return g.indexOf('showGate') === 0; }), 'về màn đầu');
+  } finally { kp(); ctx.state.offline = false; }
+});
+
+/* ==================================================================== */
+group('7f. Ghi nhanh bằng Phím tắt iPhone: nhập nhiều file, mã riêng từng khoản, tick bỏ khoản không ghi');
+
+// mỗi lần bấm phím tắt tạo 1 file CSV tên ghi-nhanh-<giờ>.csv (cùng dòng tiêu đề)
+var GN_DAU = 'Ngày,Loại,Số tiền,Danh mục,Ghi chú';
+function gnFile(gio, dong){ return { ten: 'ghi-nhanh-2026-10-16-' + gio + '.csv', rows: ctx.nhapParseCsv(GN_DAU + '\n' + dong) }; }
+function gnImp(ds){ var k = ctx.nhapTaoImp(ds); ok(!k.loi, 'dựng imp: ' + k.loi); return k.imp; }
+function gnData(){ var d = baseData(); d.settings.ngayBatDau = '2026-10-01'; d.wallets = [{ id: 'w1', ten: 'Tiền mặt', soDuDauKy: 1000000 }]; return d; }
+var GN_BA_FILE = [gnFile('09-12-33', '2026-10-16,chi,25000,Ăn,cà phê'), gnFile('09-40-02', '2026-10-16,chi,25000,Ăn,cà phê'), gnFile('12-05-10', '2026-10-16,thu,500000,Lương,')];
+
+test('nhapGopFile: file thường giữ nguyên; nhiều file / file ghi-nhanh thì gộp và thêm cột Mã; khác kiểu cột thì báo lỗi', function(){
+  var bank = { ten: 'sao-ke.csv', rows: ctx.nhapParseCsv('Ngày,Số tiền,Nội dung\n2026-10-01,-50000,Cơm') };
+  var g = ctx.nhapGopFile([bank]);
+  eq(g.maCot, -1, 'một file thường không thêm mã'); eq(g.rows, bank.rows, 'giữ nguyên rows');
+  g = ctx.nhapGopFile([GN_BA_FILE[0]]);
+  eq(g.maCot, 5, 'một file tên ghi-nhanh cũng thêm mã (cột thứ 6)'); eq(g.rows[0][5], 'Mã', 'tiêu đề cột mã');
+  g = ctx.nhapGopFile(GN_BA_FILE);
+  eq(g.loi, '', 'cùng kiểu thì gộp được'); eq(g.rows.length, 4, '1 dòng tiêu đề + 3 khoản'); eq(g.maCot, 5, 'cột mã');
+  var ma = g.rows.slice(1).map(function(r){ return r[5]; });
+  eq(new Set(ma).size, 3, 'ba mã khác nhau dù hai khoản giống hệt nhau'); eq(ma[0], 'ghi-nhanh-2026-10-16-09-12-33.csv#1', 'mã = tên file + số dòng');
+  g = ctx.nhapGopFile([GN_BA_FILE[0], bank]);
+  ok(g.loi.indexOf('cùng kiểu cột') >= 0, 'khác dòng tiêu đề: báo lỗi chứ không trộn: ' + g.loi);
+  g = ctx.nhapGopFile([{ ten: 'ghi-nhanh-a.csv', rows: ctx.nhapParseCsv('2026-10-16,chi,10000,Ăn,') }, { ten: 'ghi-nhanh-b.csv', rows: ctx.nhapParseCsv('2026-10-16,chi,20000,Ăn,') }]);
+  eq(g.rows.length, 2, 'file không có dòng tiêu đề vẫn gộp được'); eq(g.rows[0].length, 6, 'thêm cột mã');
+});
+
+test('ghi nhanh: dòng tiêu đề Ngày / Loại / Số tiền / Danh mục / Ghi chú được nhận đúng cột, danh mục khớp theo tên', function(){
+  loadData(gnData());
+  var imp = gnImp(GN_BA_FILE);
+  eq(imp.coHeader, true, 'có tiêu đề');
+  var m = imp.map; eq([m.ngay, m.loai, m.tien, m.cat, m.note].join(','), '0,1,2,3,4', 'đoán đúng cột');
+  var kq = ctx.nhapPhanTich(imp);
+  eq(kq.nOk, 3, 'cả 3 khoản hợp lệ'); eq(kq.nLoi, 0, 'không lỗi'); eq(kq.nTrung, 0, 'không trùng');
+  eq(kq.tongChi, 50000, 'hai khoản chi 25.000'); eq(kq.tongThu, 500000, 'một khoản thu');
+  eq(kq.dong[0].catId, 'an', 'Ăn khớp danh mục có sẵn'); eq(kq.dong[2].catId, 'luong', 'Lương khớp danh mục thu');
+});
+
+test('ghi nhanh: hai khoản GIỐNG HỆT trong ngày vẫn là hai khoản; nhập lại file cũ không nhân đôi; xóa khoản rồi không sống lại; hoàn tác thì nhập lại được', function(){
+  loadData(gnData());
+  var kq = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  var imp = gnImp(GN_BA_FILE), r = ctx.nhapThucHien(imp, kq);
+  eq(r.da.length, 3, 'ghi đủ 3 khoản (không mất ly cà phê thứ hai)');
+  eq(ctx.state.data.journal['2026-10-16'].items.filter(function(it){ return it.catId === 'an'; }).length, 2, 'hai khoản Ăn');
+  eq(ctx.state.data.settings.maDaNhap.length, 3, 'nhớ 3 mã đã nhập');
+  var lai = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  eq(lai.nTrung, 3, 'nhập lại cùng các file: cả 3 là đã nhập'); eq(lai.nOk, 0, 'không nhân đôi');
+  // xóa 1 khoản vừa nhập ở Sổ tay, file vẫn còn trong Tệp: không sống lại
+  var it0 = ctx.state.data.journal['2026-10-16'].items.filter(function(it){ return it.catId === 'an'; })[0];
+  ctx.entryDeleteItem('2026-10-16', it0.iid);
+  eq(ctx.nhapPhanTich(gnImp(GN_BA_FILE)).nOk, 0, 'xóa khoản rồi nhập lại file: không sống lại');
+  // hoàn tác: mã được trả, nhập lại được
+  loadData(gnData());
+  var imp2 = gnImp(GN_BA_FILE), kq2 = ctx.nhapPhanTich(imp2), r2 = ctx.nhapThucHien(imp2, kq2);
+  ctx.nhapHoanTac(r2);
+  eq(ctx.state.data.settings.maDaNhap.length, 0, 'hoàn tác trả lại mã'); eq(ctx.nhapPhanTich(gnImp(GN_BA_FILE)).nOk, 3, 'nhập lại được');
+});
+
+test('ghi nhanh: bỏ tick thì khoản đó không ghi, không tính vào tổng, lần sau vẫn còn trong danh sách', function(){
+  loadData(gnData());
+  var imp = gnImp(GN_BA_FILE);
+  var stt = ctx.nhapPhanTich(imp).dong.map(function(x){ return x.stt; });
+  imp.bo = {}; imp.bo[stt[0]] = true;                // bỏ tick khoản đầu tiên
+  var kq = ctx.nhapPhanTich(imp);
+  eq(kq.nBo, 1, 'một dòng bỏ tick'); eq(kq.nOk, 2, 'còn 2 dòng sẽ ghi'); eq(kq.tongChi, 25000, 'tổng không tính dòng bỏ tick');
+  var r = ctx.nhapThucHien(imp, kq);
+  eq(r.da.length, 2, 'chỉ ghi 2 khoản'); eq(ctx.state.data.settings.maDaNhap.length, 2, 'chỉ nhớ mã 2 khoản đã ghi');
+  var lai = ctx.nhapPhanTich(gnImp(GN_BA_FILE));
+  eq(lai.nOk, 1, 'khoản bỏ tick vẫn còn trong danh sách lần sau'); eq(lai.nTrung, 2, 'hai khoản đã ghi thì là đã nhập');
+});
+
+test('nhập file ngân hàng thường vẫn như cũ: không có mã, trùng so theo ngày + loại + số tiền + nội dung', function(){
+  loadData(gnData());
+  var f = { ten: 'sao-ke.csv', rows: ctx.nhapParseCsv('Ngày,Số tiền,Nội dung\n2026-10-01,-50000,Cơm\n2026-10-01,-50000,Cơm') };
+  var imp = gnImp([f]); imp.catMD.chi = 'chi|an';
+  var kq = ctx.nhapPhanTich(imp);
+  eq(imp.maCot, -1, 'không có cột mã'); eq(kq.nOk, 2, 'trong cùng file hai dòng giống nhau đều nhập (chỉ so với dữ liệu ĐÃ CÓ)');
+  ctx.nhapThucHien(imp, kq);
+  eq(ctx.nhapPhanTich(imp).nTrung, 2, 'nhập lại file đó: trùng theo nội dung như cũ'); eq(ctx.state.data.settings.maDaNhap.length, 0, 'không ghi mã');
+});
+
+test('settings.maDaNhap: qua lưu / nạp lại vẫn còn, dữ liệu cũ không có thì thành danh sách rỗng, giữ tối đa 2000', function(){
+  loadData(gnData());
+  eq(Array.isArray(ctx.state.data.settings.maDaNhap), true, 'dữ liệu cũ: mặc định rỗng');
+  var d = gnData(); d.settings.maDaNhap = []; for (var i = 0; i < 2100; i++) d.settings.maDaNhap.push('m' + i); d.settings.maDaNhap.push(42);
+  var n = ctx.normalizeData(JSON.parse(JSON.stringify(d)));
+  eq(n.settings.maDaNhap.length, 2000, 'cắt còn 2000, bỏ phần tử không phải chuỗi'); eq(n.settings.maDaNhap[1999], 'm2099', 'giữ các mã mới nhất');
 });
 
 /* ==================================================================== */
@@ -6214,7 +6539,7 @@ test('Cài đặt → Ứng dụng: thẻ "Giao diện và làm mới" đứng �
   ['auto', 'light', 'dark'].forEach(function(v){ ok(h.indexOf('data-act="themeDat" data-v="' + v + '"') > 0, 'có lựa chọn ' + v); });
   ok(h.indexOf('data-v="auto" class="on" aria-pressed="true"') > 0 && h.indexOf('data-v="dark" class="" aria-pressed="false"') > 0, 'mặc định Tự động');
   ok(h.indexOf('data-act="lamMoi"') > 0 && h.indexOf('>Làm mới<') > 0, 'nút làm mới');
-  ctx.state.offline = true; ok(ctx.giaoDienCardHtml().indexOf('>Đăng nhập<') > 0, 'đang dùng bản lưu trên máy thì nút là Đăng nhập'); ctx.state.offline = false;
+  ctx.state.offline = true; ok(ctx.giaoDienCardHtml().indexOf('>Đồng bộ<') > 0, 'đang dùng dữ liệu trên máy thì nút là Đồng bộ'); ctx.state.offline = false;
   var src = fs.readFileSync(path.join(JS_DIR, 'danhmuc.js'), 'utf8');
   ok(src.indexOf("giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml()") > 0, 'phần Ứng dụng: thẻ này đứng đầu');
   ok(ctx.dmPhanHtml('tien').indexOf('Giao diện và làm mới') < 0 && ctx.dmPhanHtml('danhmuc').indexOf('Giao diện và làm mới') < 0, 'không lẫn sang phần khác');
@@ -6811,11 +7136,19 @@ test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; n
   ok(/typeof XLSX === 'undefined'/.test(fs.readFileSync(root + '/js/nhap.js', 'utf8')), 'guard XLSX ở nhập file');
 });
 
-console.log('\n' + '='.repeat(60));
-console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
-if (fail){
-  console.log('\nCác test fail:');
-  failures.forEach(function(f){ console.log('  - ' + f.name + ': ' + f.msg); });
-}
-console.log('='.repeat(60));
-process.exit(fail ? 1 : 0);
+(async function ketThuc(){
+  if (hangDoiAsync.length) console.log('\nTest bất đồng bộ');
+  for (var i = 0; i < hangDoiAsync.length; i++){
+    var t = hangDoiAsync[i];
+    try{ await t.fn(); pass++; console.log('  ✓ ' + t.name); }
+    catch(e){ fail++; failures.push({ name: t.name, msg: e.message }); console.log('  ✗ ' + t.name + '\n      ' + e.message); }
+  }
+  console.log('\n' + '='.repeat(60));
+  console.log('KẾT QUẢ: ' + pass + ' pass, ' + fail + ' fail');
+  if (fail){
+    console.log('\nCác test fail:');
+    failures.forEach(function(f){ console.log('  - ' + f.name + ': ' + f.msg); });
+  }
+  console.log('='.repeat(60));
+  process.exit(fail ? 1 : 0);
+})();

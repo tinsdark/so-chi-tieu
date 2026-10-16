@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sổ Tiền">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="style.css?v=cd93fb0a">
+<link rel="stylesheet" href="style.css?v=31523775">
 </head>
 <body>
 
@@ -25,13 +25,13 @@
     </div>
     <div class="gate-body">
       <h2>Chào mừng bạn</h2>
-      <p>Đăng nhập Google để đồng bộ dữ liệu qua Google Drive của chính bạn.</p>
+      <p>Đăng nhập Google để lấy dữ liệu từ Google Drive của chính bạn, hoặc dùng ngay không cần đăng nhập.</p>
       <button id="btnSignIn" class="btn-google"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Đăng nhập với Google</span></button>
       <button id="btnOffline" class="btn-offline" style="display:none"></button>
       <div class="gate-msg" id="authMsg" role="status"></div>
       <ul class="gate-ds">
-        <li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Dữ liệu nằm ở Google Drive của bạn, không qua máy chủ nào khác</li>
-        <li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18z"/></svg>Xem và ghi được cả khi mất mạng, có mạng tự đồng bộ</li>
+        <li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Dữ liệu lưu trên máy bạn, đồng bộ qua Google Drive của chính bạn, không qua máy chủ nào khác</li>
+        <li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18z"/></svg>Mở là vào thẳng, xem và ghi được cả khi mất mạng; đồng bộ Drive khi bạn bấm</li>
         <li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Miễn phí, không quảng cáo</li>
       </ul>
       <p class="gate-priv"><a href="privacy.html">Chính sách quyền riêng tư</a></p>
@@ -71,44 +71,44 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<script src="js/state.js?v=cd93fb0a"></script>
-<script src="js/amlich.js?v=cd93fb0a"></script>
-<script src="js/ui.js?v=cd93fb0a"></script>
-<script src="js/lock.js?v=cd93fb0a"></script>
-<script src="js/drive-sync.js?v=cd93fb0a"></script>
-<script src="js/vayno-tinh.js?v=cd93fb0a"></script>
-<script src="js/vayno.js?v=cd93fb0a"></script>
-<script src="js/sotay.js?v=cd93fb0a"></script>
-<script src="js/nhachan.js?v=cd93fb0a"></script>
-<script src="js/bieudo.js?v=cd93fb0a"></script>
-<script src="js/nhan.js?v=cd93fb0a"></script>
-<script src="js/nguoi.js?v=cd93fb0a"></script>
-<script src="js/lich.js?v=cd93fb0a"></script>
-<script src="js/doisoat.js?v=cd93fb0a"></script>
-<script src="js/thetindung.js?v=cd93fb0a"></script>
-<script src="js/nhap.js?v=cd93fb0a"></script>
-<script src="js/danhmuc.js?v=cd93fb0a"></script>
-<script src="js/ngansach.js?v=cd93fb0a"></script>
-<script src="js/dongtien.js?v=cd93fb0a"></script>
-<script src="js/theongay.js?v=cd93fb0a"></script>
-<script src="js/tongket.js?v=cd93fb0a"></script>
-<script src="js/congcu.js?v=cd93fb0a"></script>
-<script src="js/giocong.js?v=cd93fb0a"></script>
-<script src="js/ngaytudo.js?v=cd93fb0a"></script>
-<script src="js/tet.js?v=cd93fb0a"></script>
-<script src="js/loihua.js?v=cd93fb0a"></script>
-<script src="js/somung.js?v=cd93fb0a"></script>
-<script src="js/dodac.js?v=cd93fb0a"></script>
-<script src="js/ht.js?v=cd93fb0a"></script>
-<script src="js/tim.js?v=cd93fb0a"></script>
-<script src="js/canhbao.js?v=cd93fb0a"></script>
-<script src="js/chuong.js?v=cd93fb0a"></script>
-<script src="js/hienthi.js?v=cd93fb0a"></script>
-<script src="js/diemnhan.js?v=cd93fb0a"></script>
-<script src="js/mophong.js?v=cd93fb0a"></script>
-<script src="js/motion.js?v=cd93fb0a"></script>
-<script src="js/phienban.js?v=cd93fb0a"></script>
-<script src="js/app.js?v=cd93fb0a"></script>
+<script src="js/state.js?v=31523775"></script>
+<script src="js/amlich.js?v=31523775"></script>
+<script src="js/ui.js?v=31523775"></script>
+<script src="js/lock.js?v=31523775"></script>
+<script src="js/drive-sync.js?v=31523775"></script>
+<script src="js/vayno-tinh.js?v=31523775"></script>
+<script src="js/vayno.js?v=31523775"></script>
+<script src="js/sotay.js?v=31523775"></script>
+<script src="js/nhachan.js?v=31523775"></script>
+<script src="js/bieudo.js?v=31523775"></script>
+<script src="js/nhan.js?v=31523775"></script>
+<script src="js/nguoi.js?v=31523775"></script>
+<script src="js/lich.js?v=31523775"></script>
+<script src="js/doisoat.js?v=31523775"></script>
+<script src="js/thetindung.js?v=31523775"></script>
+<script src="js/nhap.js?v=31523775"></script>
+<script src="js/danhmuc.js?v=31523775"></script>
+<script src="js/ngansach.js?v=31523775"></script>
+<script src="js/dongtien.js?v=31523775"></script>
+<script src="js/theongay.js?v=31523775"></script>
+<script src="js/tongket.js?v=31523775"></script>
+<script src="js/congcu.js?v=31523775"></script>
+<script src="js/giocong.js?v=31523775"></script>
+<script src="js/ngaytudo.js?v=31523775"></script>
+<script src="js/tet.js?v=31523775"></script>
+<script src="js/loihua.js?v=31523775"></script>
+<script src="js/somung.js?v=31523775"></script>
+<script src="js/dodac.js?v=31523775"></script>
+<script src="js/ht.js?v=31523775"></script>
+<script src="js/tim.js?v=31523775"></script>
+<script src="js/canhbao.js?v=31523775"></script>
+<script src="js/chuong.js?v=31523775"></script>
+<script src="js/hienthi.js?v=31523775"></script>
+<script src="js/diemnhan.js?v=31523775"></script>
+<script src="js/mophong.js?v=31523775"></script>
+<script src="js/motion.js?v=31523775"></script>
+<script src="js/phienban.js?v=31523775"></script>
+<script src="js/app.js?v=31523775"></script>
 
 </body>
 </html>

@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.8', ngay: '2026-10-16', ten: 'Mở app là vào thẳng, ghi nhanh bằng Phím tắt',
+    muc: ['Mở app là vào thẳng bằng dữ liệu trên máy, không còn màn đăng nhập hay bảng chọn (chỉ máy mới chưa có dữ liệu mới hiện màn đầu). Google Drive là nơi đồng bộ: app tự đồng bộ khi còn phiên đăng nhập, không thì chạm dòng trạng thái trên đầu trang hoặc nút Đồng bộ ở Cài đặt. Chỉ hỏi khi cả máy này và Drive cùng có thay đổi.',
+      'Ghi nhanh bằng Phím tắt trên iPhone, không cần mở app: mỗi khoản lưu thành một file nhỏ. Mở app, chọn các file đó ở nút nhập trong Sổ tay, xem danh sách kèm số tiền rồi tick khoản nào ghi. Hai khoản giống hệt trong ngày vẫn là hai khoản, chọn lại file cũ không bị ghi trùng. Cách dựng phím tắt nằm trong README.',
+      'Đăng xuất ở Cài đặt giờ ghi rõ là xóa cả dữ liệu trên máy. Hết phiên Google không còn làm app thử đăng nhập lại liên tục, và lỗi tải Drive lúc mở app không còn làm mất phiên đăng nhập còn hạn.'] },
   { ban: '2026.10.16.7', ngay: '2026-10-16', ten: 'Dòng tiền khớp số khi ghi trước cho tháng sau',
     muc: ['Dòng tiền → Theo tháng: khoản Cho vay hoặc Nhận tiền vay đã ghi trước cho một tháng sau giờ hiện đúng ở dòng của danh mục đó, không còn hiện 0 trong khi Tiền vào − ra đã tính khoản này.','Không xóa được danh mục đang dùng cho một khoản định kỳ (trước đây xóa được, rồi khoản định kỳ đó làm số tháng này lệch với các dòng). Xóa hoặc đổi danh mục của khoản định kỳ trước.'] },
   { ban: '2026.10.16.6', ngay: '2026-10-16', ten: 'Bảng thuật ngữ có thêm số nợ',

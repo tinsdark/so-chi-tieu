@@ -55,6 +55,7 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status{font-size:12px;color:var(--muted);white-space:nowrap}
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
+.sync-status[data-act]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 button{cursor:pointer;font-family:inherit}
 #btnRefresh,#btnTheme,#btnAnSo,#btnPhimTat,#btnTim{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
 #btnRefresh:hover,#btnTheme:hover,#btnAnSo:hover,#btnPhimTat:hover,#btnTim:hover{background:var(--hover)}
@@ -1786,3 +1787,15 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .pb-m b{display:block;font-size:14px}
 .pb-m small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
 .pb-m ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.5}
+
+/* Khoản ghi nhanh chờ nhập (nhap.js nhapGhiNhanhHtml): mỗi khoản một dòng có ô tick, số tiền bên phải */
+.gn-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}
+.gn-row.mo{opacity:.55}
+.gn-row input[type=checkbox]{width:20px;height:20px;flex:none}
+.gn-tick{width:20px;height:20px;flex:none}
+.gn-main{flex:1;min-width:0;overflow-wrap:anywhere}
+.gn-main small{display:block;color:var(--muted);font-size:12px}
+.gn-tien{font-weight:600;white-space:nowrap}
+.gn-tien.thu{color:var(--green)} .gn-tien.chi{color:var(--red)}
+.gn-cfg{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
+.gn-cfg summary{cursor:pointer;color:var(--muted);font-size:13px}
