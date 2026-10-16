@@ -127,6 +127,7 @@ style.css           Toàn bộ CSS (biến màu sáng/tối)
 manifest.json       Cấu hình PWA (tên, icon, màu)
 sw.js               Service worker (mạng trước, cache khi offline)
 privacy.html        Chính sách quyền riêng tư
+kiemtra.html        Trang kiểm tra TẠM cho iPhone (có dùng chung bộ nhớ với app đã cài không, Phím tắt mở Safari hay app); chỉ đọc, xóa file này khi đã có kết quả
 js/
   state.js          Dữ liệu mặc định, state chung, hàm tiện ích (ngày, tiền, số dư)
   ui.js             Toast, hộp thoại, chế độ tối
