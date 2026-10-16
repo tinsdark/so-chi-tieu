@@ -71,17 +71,17 @@ function categoryCardHtml(kind, title, cats){
                 + (catAm(c) ? '<span class="dm-chip">Âm lịch ' + c.ngayAm + (c.thangAm ? '/' + c.thangAm : ' hằng tháng') + '</span>' : '')
                 + (c.coDinhChiTieu ? '<span class="dm-chip">Cố định theo Hạn mức</span>' : '')
                 + (c.khongDuTru ? '<span class="dm-chip">Không tính dự kiến</span>' : '')
-                + (catHanMucTuKeHoach(kind, c.id) ? '<span class="dm-chip">Hạn mức từ kế hoạch</span>' : '');
+                + (catHanMucTuKeHoach(kind, c.id) ? '<span class="dm-chip">' + (kind === 'thu' ? 'Kế hoạch thu từ định kỳ' : 'Hạn mức từ kế hoạch') + '</span>' : '');
       h += '<div class="cat-item dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaCat" data-kind="'+kind+'" data-id="'+esc(c.id)+'" aria-label="Sửa danh mục '+esc(c.ten)+'">'
         + '<span class="cat-drag" draggable="true" data-act="dmNop" title="Kéo để đổi thứ tự" aria-hidden="true">⠿</span>'
         + '<span class="cat-dot" style="background:'+catMau(kind, c.id)+'"></span>'
         + '<span class="dm-main"><b class="dm-n">'+esc(c.ten)+'</b>'+(chips ? '<span class="dm-chips">'+chips+'</span>' : '')+'</span>'
-        + '<span class="dm-v">'+(num(c.chiTieu) > 0 ? '<b>'+fmt(c.chiTieu)+'</b><small>/tháng</small>' : '<b class="dm-un">Chưa đặt</b><small>hạn mức</small>')+'</span>'
+        + '<span class="dm-v">'+(num(c.chiTieu) > 0 ? '<b>'+fmt(c.chiTieu)+'</b><small>/tháng</small>' : '<b class="dm-un">Chưa đặt</b><small>' + (kind === 'thu' ? 'kế hoạch thu' : 'hạn mức') + '</small>')+'</span>'
         + dmGo()+'</div>';
     });
-    h += '</div><div class="dm-tong"><span>Tổng hạn mức/tháng</span><b class="'+kind+'">'+fmt(tong)+'</b></div>';
+    h += '</div><div class="dm-tong"><span>' + (kind === 'thu' ? 'Tổng kế hoạch thu/tháng' : 'Tổng hạn mức/tháng') + '</span><b class="'+kind+'">'+fmt(tong)+'</b></div>';
   }
-  return h + ghiChuGon('Hạn mức là số tiền dự định thu / chi mỗi tháng của danh mục, dùng cho thanh tiến độ ở Báo cáo và dự kiến ở Dòng tiền. '
+  return h + ghiChuGon((kind === 'thu' ? 'Kế hoạch thu' : 'Hạn mức') + ' là số tiền dự định ' + (kind === 'thu' ? 'thu' : 'chi') + ' mỗi tháng của danh mục, dùng cho thanh tiến độ ở Báo cáo và dự kiến ở Dòng tiền. '
     + '<b>Không tính dự kiến</b>: không đoán số cho tháng tương lai (khoản không đều đặn). '
     + '<b>Cố định theo Hạn mức</b>: luôn dùng đúng hạn mức cho tháng tương lai, không lấy trung bình 3 tháng thực tế (dùng khi lương / hạn mức vừa đổi). '
     + 'Kéo ⠿ để đổi thứ tự (hoặc mở danh mục rồi bấm Lên / Xuống).'
@@ -423,8 +423,8 @@ function catSheetHtml(f){
   var mau = c ? catMau(f.kind, c.id) : CAT_PALETTE[arr.length % CAT_PALETTE.length];
   var h = vnF('Tên', '<input type="text" id="dm_ten" value="'+esc(d.ten)+'" placeholder="VD: Ăn uống">')
     + (c && catHanMucTuKeHoach(f.kind, c.id)
-        ? vnF('Hạn mức/tháng', '<input type="text" id="dm_base" class="money" value="'+veSo(d.chiTieu)+'" disabled>', '', 'Tự lấy từ kế hoạch (kỳ đang chạy) ở Cài đặt → Kế hoạch. Muốn đổi, sửa ở đó.')
-        : vnF('Hạn mức/tháng', dmMoney('dm_base', d.chiTieu)))
+        ? vnF(f.kind === 'thu' ? 'Kế hoạch thu/tháng' : 'Hạn mức/tháng', '<input type="text" id="dm_base" class="money" value="'+veSo(d.chiTieu)+'" disabled>', '', 'Tự lấy từ kế hoạch (kỳ đang chạy) ở Cài đặt → Kế hoạch. Muốn đổi, sửa ở đó.')
+        : vnF(f.kind === 'thu' ? 'Kế hoạch thu/tháng' : 'Hạn mức/tháng', dmMoney('dm_base', d.chiTieu)))
     + vnF('Màu <span class="mp-hint">(dùng ở biểu đồ)</span>',
         '<div class="dm-mau"><input type="color" id="dm_mau" value="'+mau+'" data-cur="'+mau+'" aria-label="Màu danh mục">'
         + '<button type="button" class="btn secondary sm" data-act="dmMauMacDinh">Về màu mặc định</button></div>')

@@ -1864,6 +1864,39 @@ test('Sổ tay: số dư hiện tại là số dư TỚI HÔM NAY, bằng số c
   ctx.renderSoTay = rs0; setToday('2026-10-01');
 });
 
+test('Trả cố định/tháng: lãi suất ngầm đúng; cách chia "Lãi trên dư nợ giảm dần" ra nợ gốc còn lại thật; "Gốc chia đều" giữ nguyên cách cũ', function(){
+  // 10tr, trả 1tr x 12 tháng: lãi ngầm ≈ 2,92%/tháng (giải phương trình PMT bằng tay: PMT(2,92%, 12, 10tr) ≈ 1tr)
+  var r = ctx.laiNgamThang(10000000, 1000000, 12);
+  near(r, 0.0292, 0.0002, 'lãi ngầm tháng ≈ 2,92%');
+  eq(ctx.laiNgamThang(10000000, 800000, 12), 0, 'tổng trả ≤ gốc thì không có lãi');
+  var base = { id:'x', ten:'FE', hinhThuc:'tra_co_dinh', soTienGoc:10000000, soTienTraThang:1000000, soThangVay:12, ngayVay:'2026-01-10', ngayTraHangThang:10, traNo:[], trangThai:'dang_vay' };
+  var deu = ctx.tinhLichTraNo(Object.assign({}, base)), giam = ctx.tinhLichTraNo(Object.assign({}, base, { cachGoc:'giam' }));
+  near(deu[5].duNoConLai, 5000000, 1, 'gốc chia đều: sau kỳ 6 còn đúng nửa gốc (cách cũ không đổi)');
+  near(giam[5].duNoConLai, 5431070, 2, 'dư nợ giảm dần: sau kỳ 6 còn 5.431.070 (tính tay: lãi từng kỳ trên dư nợ)');
+  near(giam[2].duNoConLai, 7814195, 2, 'sau kỳ 3 còn 7.814.195');
+  near(giam[0].lai, 10000000 * r, 1, 'lãi kỳ 1 = dư nợ × lãi ngầm');
+  var tongGoc = 0; giam.forEach(function(k){ tongGoc += k.goc; });
+  near(tongGoc, 10000000, 1, 'tổng gốc các kỳ = số vay'); near(giam[11].duNoConLai, 0, 0.01, 'kỳ cuối hết nợ');
+  near(giam[11].tongTra, 1000000, 2, 'số trả mỗi tháng vẫn ≈ 1tr, kể cả kỳ cuối');
+  ok(giam[0].goc < giam[11].goc, 'gốc tăng dần, lãi giảm dần');
+  // lãi thực suy ra: SPayLater 10tr, 12 kỳ, phí 2,95%/tháng trên gốc = 833.333 + 295.000 = 1.128.333 mỗi tháng ≈ 5,00%/tháng ≈ 60%/năm
+  near(ctx.laiThucNam({ hinhThuc:'tra_co_dinh', soTienGoc:10000000, soTienTraThang:1128333.33, soThangVay:12 }), 60, 0.3, 'SPayLater 12 kỳ ≈ 60%/năm');
+  near(ctx.laiThucNam(base), 35.0, 0.3, 'khoản 10tr trả 1tr x 12 ≈ 35%/năm');
+  eq(ctx.laiThucNam({ hinhThuc:'co_lai', soTienGoc:1, soTienTraThang:1, soThangVay:1 }), null, 'không phải trả cố định thì không hiện lãi thực');
+  eq(ctx.laiThucNam({ hinhThuc:'tra_co_dinh', soTienGoc:12000000, soTienTraThang:1000000, soThangVay:12 }), null, 'không lãi thì null');
+  // thẻ khoản vay hiện nhãn lãi thực; form có chip chọn cách chia
+  setToday('2026-10-01');
+  var d = baseData(); d.vayNo.vayNoPhaiTra = [Object.assign({}, base, { ngayVay:'2026-09-10', loaiVay:'ngan_hang', cachGoc:'giam' })]; loadData(d);
+  var rv0 = ctx.renderVayNo; ctx.renderVayNo = renderThat.renderVayNo; var root = { innerHTML: '' };
+  voiDom({ tabContent: root }, null, function(){ ctx.renderVayNo(); });
+  ctx.renderVayNo = rv0;
+  ok(root.innerHTML.indexOf('Lãi thực ≈ 35') > 0, 'thẻ khoản vay có nhãn Lãi thực ≈ 35%/năm');
+  ctx.state.vnFormKind = 'vayNoPhaiTra'; ctx.state.vnFormId = null;
+  var f = ctx.vayNoFormHtml();
+  ok(f.indexOf('id="vn_vn_cachGoc"') > 0 && f.indexOf('Gốc chia đều + phí cố định') > 0 && f.indexOf('Lãi trên dư nợ giảm dần') > 0, 'form có chip chọn cách chia gốc');
+  ctx.state.vnFormKind = null;
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
@@ -6268,7 +6301,7 @@ test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay m
     for (var i = 0, nv = Math.floor(r() * 3); i < nv; i++){
       d.vayNo.vayNoPhaiTra.push({ id: 'v' + i, ten: 'Vay ' + i, hinhThuc: hinh[Math.floor(r() * hinh.length)], soTienGoc: 1000000 + Math.round(r() * 90) * 1000000,
         laiSuatNam: Math.round(r() * 20), soTienTraThang: 0, ngayVay: kbNgay(2026, 6 + Math.floor(r() * 4), 1 + Math.floor(r() * 28)), ngayTraHangThang: 1 + Math.floor(r() * 31),
-        soThangVay: 1 + Math.floor(r() * 36), walletId: 'w0', traNo: [], trangThai: 'dang_vay' });
+        soThangVay: 1 + Math.floor(r() * 36), walletId: 'w0', traNo: [], trangThai: 'dang_vay', cachGoc: r() < 0.5 ? 'giam' : '' });
       var v = d.vayNo.vayNoPhaiTra[i]; v.soTienTraThang = Math.ceil(v.soTienGoc / v.soThangVay * 1.1);
     }
     for (var j = 0, nc = Math.floor(r() * 3); j < nc; j++)
