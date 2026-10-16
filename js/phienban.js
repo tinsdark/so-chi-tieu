@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.16.10', ngay: '2026-10-16', ten: 'Biểu tượng riêng cho Ghi nhanh',
+    muc: ['App con Ghi nhanh trên màn hình chính có biểu tượng riêng: dấu cộng trên nền nâu, giống nút Ghi nhanh trong app, để không nhầm với biểu tượng Sổ Tiền.'] },
   { ban: '2026.10.16.9', ngay: '2026-10-16', ten: 'App con Ghi nhanh trên màn hình chính',
     muc: ['Có thể thêm một biểu tượng "Ghi nhanh" ra màn hình chính: mở là thấy ngay bảng Ghi nhanh giống hệt trong app, ghi xong hiện "Xong" (có Hoàn tác). Nó dùng chung dữ liệu với app chính, không giữ bản riêng. Địa chỉ và cách thêm ở Cài đặt → Ứng dụng.',
       'Hai bản app cùng ghi không còn đè nhau: app hiện lại hoặc sắp ghi nhanh thì tự lấy bản mới nhất trước. Ghi chú ở Cài đặt về app trên màn hình chính đã sửa cho đúng cách mở app mới.'] },
