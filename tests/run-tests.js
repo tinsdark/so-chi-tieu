@@ -1947,6 +1947,26 @@ test('Khóa PIN: sai 5 lần phải chờ lâu dần (30 giây, 1, 2, 5, 15 phú
   } finally { ctx.localStorage = ls0; }
 });
 
+test('Hôm nay còn tiêu được: ví dùng hằng ngày ít tiền hơn mức này thì báo; thẻ tín dụng và ví để dành không tính', function(){
+  setToday('2026-10-10');
+  var d = baseData({ settings:{ soDuDauKy:0, ngayBatDau:'2026-10-01', thangBatDauDuTru:'2026-10' } });
+  d.categories.chi = [{ id:'an', ten:'Ăn', chiTieu:3100000 }];
+  d.wallets = [{ id:'tm', ten:'Tiền mặt', soDuDauKy:50000 }, { id:'dd', ten:'Để dành', soDuDauKy:90000000, deDanh:true },
+               { id:'the', ten:'Thẻ', soDuDauKy:0, the:true, hanMucThe:10000000, ngaySaoKe:25, ngayTraThe:15 }];
+  loadData(d);
+  var t = ctx.tieuMoiNgay('2026-10-10'); eq(Math.round(t.muc), 140909, 'mức/ngày = 3.100.000 ÷ 22 ngày còn lại (tính cả hôm nay)');
+  eq(ctx.tieuViHangNgay('2026-10-10'), 50000, 'chỉ ví tiền mặt (ví để dành 90tr và thẻ không tính)');
+  var h = ctx.tieuMoiNgayHtml('2026-10-10');
+  ok(h.indexOf('Ví dùng hằng ngày chỉ còn <b>50.000') > 0, 'báo ví chỉ còn 50.000: ' + h);
+  ctx.entryAddItem('2026-10-05', 'thu', 'luong', 5000000, 'lương', 'tm'); ctx.invalidateBalanceCache();
+  ok(ctx.tieuMoiNgayHtml('2026-10-10').indexOf('Ví dùng hằng ngày') < 0, 'ví đủ tiền thì không báo');
+  d.wallets = [{ id:'tm', ten:'Tiền mặt', soDuDauKy:-200000 }]; loadData(d);
+  ok(ctx.tieuMoiNgayHtml('2026-10-10').indexOf('đang âm <b>200.000') > 0, 'ví âm thì báo đang âm');
+  d.wallets = [{ id:'dd', ten:'Để dành', soDuDauKy:90000000, deDanh:true }]; loadData(d);
+  eq(ctx.tieuViHangNgay('2026-10-10'), null, 'chỉ có ví để dành: không có số để so'); ok(ctx.tieuMoiNgayHtml('2026-10-10').indexOf('Ví dùng hằng ngày') < 0);
+  setToday('2026-10-01');
+});
+
 group('U. Điện thoại: Dòng tiền xem từng tháng, bảng Vay-Nợ dạng thẻ, Đăng xuất ở Cài đặt');
 
 test('Dòng tiền trên điện thoại: chỉ 1 cột tháng + hàng nút chọn tháng; bấm nút đổi tháng; máy tính vẫn đủ cột', function(){
@@ -5358,7 +5378,7 @@ test('theTinh: tối thiểu = % số sao kê − đã trả, lãi ước tính 
   var t0 = ctx.theTinh(ctx.walletById('wt'), '2026-10-10'); eq(t0.toiThieu, null); eq(t0.laiUocTinh, null); eq(t0.conNeuToiThieu, null);
   theTT(5, 30);
   var t = ctx.theTinh(ctx.walletById('wt'), '2026-10-10');
-  eq(t.soSaoKe, 3000000); eq(t.conPhaiTra, 3000000); eq(t.toiThieu, 150000, '5% × 3.000.000'); eq(t.conNeuToiThieu, 2850000); near(t.laiUocTinh, 2850000 * 30 / 100 / 12, 0.01, 'lãi 30%/năm ÷ 12 trên 2.850.000'); eq(Math.round(t.laiUocTinh), 71250);
+  eq(t.soSaoKe, 3000000); eq(t.conPhaiTra, 3000000); eq(t.toiThieu, 150000, '5% × 3.000.000'); eq(t.conNeuToiThieu, 2850000); near(t.laiUocTinh, 3000000 * 30 / 100 / 12, 0.01, 'lãi 30%/năm ÷ 12 trên TOÀN BỘ 3.000.000 chưa trả đủ'); eq(Math.round(t.laiUocTinh), 75000);
   theTT(5, 30, [{ id: 'c1', ngay: '2026-10-05', tuVi: 'w1', denVi: 'wt', soTien: 100000, ghiChu: '' }]);
   var t2 = ctx.theTinh(ctx.walletById('wt'), '2026-10-10'); eq(t2.daTra, 100000); eq(t2.toiThieu, 50000, 'đã trả 100.000 thì tối thiểu còn 50.000'); eq(t2.conPhaiTra, 2900000);
   theTT(5, 30, [{ id: 'c2', ngay: '2026-10-05', tuVi: 'w1', denVi: 'wt', soTien: 200000, ghiChu: '' }]);
@@ -5376,10 +5396,10 @@ test('normalizeData: tyLeToiThieu / laiSuatThe ép về 0..100, bỏ khi trống
 test('thẻ hiện dòng tối thiểu + lãi ước tính; bảng Thanh toán có nút điền nhanh và cách tính bằng số thật; form lưu 2 trường mới', function(){
   theTT(5, 30);
   var w = ctx.walletById('wt'), h = ctx.theDongHtml(w);
-  ok(h.indexOf('Tối thiểu 150.000') > 0 && h.indexOf('5% sao kê') > 0 && h.indexOf('còn nợ 2.850.000') > 0 && h.indexOf('lãi ước tính ~71.250 ₫/tháng') > 0, h);
+  ok(h.indexOf('Tối thiểu 150.000') > 0 && h.indexOf('5% sao kê') > 0 && h.indexOf('còn nợ 2.850.000') > 0 && h.indexOf('lãi ước tính ~75.000 ₫/tháng') > 0, h);
   var s = ctx.theTraSheetHtml({ id: 'wt' });
   ok(s.indexOf('data-act="theDien" data-v="150000"') > 0 && s.indexOf('data-act="theDien" data-v="3000000"') > 0 && s.indexOf('data-act="theDien" data-v="5000000"') > 0, 'ba nút: tối thiểu / còn phải trả / hết dư nợ');
-  ok(s.indexOf('3.000.000 × 5% = 150.000') > 0 && s.indexOf('(3.000.000 − 150.000) × 30% ÷ 12 = 71.250') > 0, 'cách tính bằng số thật'); eq(kiemPhepCong(s).loi.join(' | '), '');
+  ok(s.indexOf('3.000.000 × 5% = 150.000') > 0 && s.indexOf('3.000.000 × 30% ÷ 12 = 75.000') > 0, 'cách tính bằng số thật'); eq(kiemPhepCong(s).loi.join(' | '), '');
   theTT(); ok(ctx.theDongHtml(ctx.walletById('wt')).indexOf('Tối thiểu') < 0, 'chưa đặt thì không hiện'); ok(ctx.theTraSheetHtml({ id: 'wt' }).indexOf('Tối thiểu') < 0);
   var o = { value: '' }; voiDom({ tt_tien: o }, null, function(){ ctx.handleTheAction('theDien', elAct({ 'data-v': '150000' })); }); eq(o.value, '150000', 'nút điền nhanh');
   var wv = { id: 'wx', ten: 'Thẻ mới' };

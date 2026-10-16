@@ -957,6 +957,15 @@ function tieuMoiNgay(homNay){
            honNayCon: muc - daHomNay, het: daTruoc + daHomNay >= cap, vuot: Math.max(0, daTruoc + daHomNay - cap),
            coDinhCon: cd.tong, coDinh: cd.ds };
 }
+// tiền THẬT đang có ở các ví dùng hằng ngày tới homNay (không tính thẻ tín dụng và ví để dành); null nếu không có ví nào như vậy
+function tieuViHangNgay(homNay){
+  var co = false, tong = 0;
+  (state.data.wallets || []).forEach(function(w){
+    if (viLaThe(w) || w.deDanh) return;
+    co = true; tong += soDuTheoVi(w.id, homNay);
+  });
+  return co ? tong : null;
+}
 function tieuMoiNgayHtml(homNay){
   var t = tieuMoiNgay(homNay);
   if (!t) return '';
@@ -965,9 +974,13 @@ function tieuMoiNgayHtml(homNay){
   var so = t.het ? (t.vuot > 0 ? 'vượt ' + fmt(Math.round(t.vuot)) : fmt(0)) : fmt(Math.round(Math.abs(t.honNayCon)));
   var phu = (t.het ? '' : 'Mức '+fmt(Math.round(t.muc))+'/ngày · ') + 'còn '+t.soNgay+' ngày'
     + (t.coDinhCon > 0 ? ' · cố định còn phải ra <b>'+fmt(Math.round(t.coDinhCon))+'</b>' : '');
+  // mức này tính từ hạn mức chứ không nhìn ví: ví chỉ còn ít hơn mức được phép tiêu thì nói thẳng
+  var vi = tieuViHangNgay(homNay), canh = '';
+  if (vi != null && !t.het && t.honNayCon > Math.max(0, vi))
+    canh = '<div class="hero-bud-sub"><span class="am">' + (vi < 0 ? 'Ví dùng hằng ngày đang âm <b>' + fmt(Math.round(-vi)) + '</b>' : 'Ví dùng hằng ngày chỉ còn <b>' + fmt(Math.round(vi)) + '</b>') + ', ít hơn mức này.</span></div>';
   return '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span>'
     + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>'
-    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div></div>';
+    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div>' + canh + '</div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);

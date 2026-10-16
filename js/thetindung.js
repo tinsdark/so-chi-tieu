@@ -48,13 +48,14 @@ function theTinh(w, homNay){
   });
   var hm = num(w.hanMucThe), conPhaiTra = Math.min(duNo, Math.max(0, soSaoKe - daTra));
   var tl = numNonNeg(w.tyLeToiThieu), lai = numNonNeg(w.laiSuatThe);
-  // tối thiểu còn phải trả = % số sao kê − đã trả, không vượt số còn phải trả; lãi ước tính một tháng trên phần còn lại nếu chỉ trả tối thiểu
+  // tối thiểu còn phải trả = % số sao kê − đã trả, không vượt số còn phải trả; lãi ước tính một tháng trên TOÀN BỘ số còn phải trả nếu chỉ trả tối thiểu
   var toiThieu = tl > 0 ? Math.min(conPhaiTra, Math.max(0, soSaoKe * tl / 100 - daTra)) : null;
   var conNeuToiThieu = toiThieu == null ? null : conPhaiTra - toiThieu;
   return { nsk: nsk, han: han, soNgay: daysBetween(homNay, han), duNo: duNo, soSaoKe: soSaoKe, daTra: daTra,
            conPhaiTra: conPhaiTra, hanMuc: hm, khaDung: hm > 0 ? Math.max(0, hm - duNo) : null,
            tyLeToiThieu: tl, toiThieu: toiThieu, conNeuToiThieu: conNeuToiThieu, laiSuat: lai,
-           laiUocTinh: (conNeuToiThieu != null && lai > 0) ? conNeuToiThieu * lai / 100 / 12 : null };
+           // chỉ trả tối thiểu (chưa trả hết sao kê) thì nhiều ngân hàng tính lãi trên TOÀN BỘ số sao kê chưa trả đủ, không chỉ phần dư sau tối thiểu
+           laiUocTinh: (conNeuToiThieu != null && lai > 0) ? (conNeuToiThieu > 0 ? conPhaiTra * lai / 100 / 12 : 0) : null };
 }
 // các thẻ còn phải trả mà hạn trong vòng nNgay ngày (hoặc đã quá hạn), gần hạn nhất trước
 function theSapDenHan(homNay, nNgay){
@@ -136,8 +137,8 @@ function theTraSheetHtml(f){
     + '<div class="vn-hint">Thanh toán thẻ là CHUYỂN giữa các ví: không tính là chi (khoản quẹt thẻ đã tính vào chi lúc mua), không đổi tổng số dư.</div>'
     + giaiThichSo([t.toiThieu != null ? { ten: 'Thanh toán tối thiểu', ct: 'Số sao kê × tỉ lệ tối thiểu bạn đặt cho thẻ, trừ phần đã trả sau sao kê, không vượt số còn phải trả. Mỗi ngân hàng một khác nên đây là số ước tính.',
         pt: soGt(t.soSaoKe) + ' × ' + theSoChu(t.tyLeToiThieu) + '% = ' + soGt(t.soSaoKe * t.tyLeToiThieu / 100) + ' · ' + ptCong([t.soSaoKe * t.tyLeToiThieu / 100, -t.daTra], Math.max(0, t.soSaoKe * t.tyLeToiThieu / 100 - t.daTra)) } : null,
-      t.laiUocTinh != null ? { ten: 'Lãi ước tính nếu chỉ trả tối thiểu', ct: 'Phần còn phải trả sau khi trả tối thiểu × lãi suất năm ÷ 12, cho MỘT tháng. Ngân hàng thật tính lãi theo ngày kể từ ngày mua và có phí trả chậm, nên đây chỉ để thấy cái giá của việc trả thiếu.',
-        pt: '(' + soGt(t.conPhaiTra) + ' − ' + soGt(t.toiThieu) + ') × ' + theSoChu(t.laiSuat) + '% ÷ 12 = ' + soGt(t.laiUocTinh) } : null,
+      t.laiUocTinh != null ? { ten: 'Lãi ước tính nếu chỉ trả tối thiểu', ct: 'Toàn bộ số còn phải trả × lãi suất năm ÷ 12, cho MỘT tháng (khi không trả hết sao kê, nhiều ngân hàng tính lãi trên cả số sao kê chứ không chỉ phần dư sau tối thiểu). Ngân hàng thật tính lãi theo ngày kể từ ngày mua và có phí trả chậm, nên đây chỉ để thấy cái giá của việc trả thiếu.',
+        pt: soGt(t.conPhaiTra) + ' × ' + theSoChu(t.laiSuat) + '% ÷ 12 = ' + soGt(t.laiUocTinh) } : null,
       { ten: 'Còn phải trả', ct: 'Dư nợ chốt ngày sao kê − tiền đã chuyển vào thẻ sau ngày đó (không vượt dư nợ hiện tại).',
         pt: ptCong([t.soSaoKe, -t.daTra], Math.max(0, t.soSaoKe - t.daTra)) + (t.conPhaiTra < t.soSaoKe - t.daTra ? ' → tối đa bằng dư nợ hiện tại ' + soGt(t.duNo) : '') },
       { ten: 'Dư nợ hiện tại', ct: 'Số dư ví thẻ đang âm bao nhiêu (quẹt thẻ là chi ghi vào ví thẻ).', pt: 'số dư ví ' + soGt(soDuTheoVi(w.id, todayStr())) + (soDuTheoVi(w.id, todayStr()) < 0 ? ' → dư nợ ' + soGt(t.duNo) : ' → không còn nợ') }], 'Cách tính các số này');
