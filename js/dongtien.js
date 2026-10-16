@@ -56,48 +56,10 @@ function dtBase(kind, cid){
   var cat = state.data.categories[kind].find(function(c){ return c.id === cid; });
   return cat ? num(cat.chiTieu) : 0;
 }
-// gợi ý: riêng "Trả nợ"/"Thu hồi cho vay" lấy thẳng từ lịch Vay-Nợ; danh mục "Không dự trù" (khongDuTru) thì để trống;
-// danh mục "Cố định theo hạn mức" lấy đúng hạn mức; còn lại TB thực tế tối đa 3 tháng hoàn chỉnh gần nhất (chưa có thì hạn mức)
-function dtSuggest(kind, cid, mk){
-  if (mk > monthKey(todayStr()) && !CAT_HE_THONG[kind][cid]){
-    var duBao = dinhKyDuBaoThang(kind, cid, mk);       // kế hoạch (định kỳ bật "Dùng làm dự báo") đi trước danh mục
-    if (duBao != null) return duBao;
-  }
-  return dtSuggestGoc(kind, cid, mk);
-}
-function dtSuggestGoc(kind, cid, mk){
-  var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-  if (kind === 'chi' && cid === 'traNo') return tongTraNoThang(mk) || null;     // lấy từ lịch Vay - Nợ: cờ "Không tính dự kiến" không áp dụng
-  if (kind === 'thu' && cid === 'thuHoiChoVay') return tongThuHoiThang(mk) || null;
-  if (cat0 && cat0.khongDuTru) return null;
-  if (cat0 && cat0.coDinhChiTieu){
-    var bF = dtBase(kind, cid);
-    return bF > 0 ? bF : null;
-  }
-  var avg = recentAvgActual(kind, cid, 3);
-  if (avg != null) return avg;
-  var b = dtBase(kind, cid);
-  return b > 0 ? b : null;
-}
+// gợi ý cho 1 danh mục / 1 tháng: dùng chung nguồn với tổng dự kiến (duTruGoiY ở vayno-tinh.js), null = không có gợi ý ("—")
+function dtSuggest(kind, cid, mk){ return duTruGoiY(kind, cid, mk); }
 // ô hiển thị: tháng đã qua / đang chạy -> thực tế (tháng đang chạy cộng khoản biết trước chưa ghi), tương lai -> gợi ý
-function dtCell(kind, cid, mk){
-  var currentMk = monthKey(todayStr());
-  if (mk > currentMk) return dtSuggest(kind, cid, mk);
-  var av = actualCatInMonth(kind, cid, mk);
-  if (mk === currentMk){
-    if ((kind === 'chi' && cid === 'traNo') || (kind === 'thu' && cid === 'thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
-    var dkChua = dinhKyChuaGhiThang(mk, kind, cid);
-    if (dkChua > 0) return av + dkChua;
-    if (!av){
-      var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-      if (cat0 && cat0.coDinhChiTieu){
-        var bF = dtBase(kind, cid);
-        if (bF > 0) return bF;
-      }
-    }
-  }
-  return av;
-}
+function dtCell(kind, cid, mk){ return duKienThangCat(kind, cid, mk); }
 function dtNgay(d){ return d ? d.slice(8, 10) + '/' + d.slice(5, 7) : ''; }
 function dtNhanThang(mk){ return 'T' + parseInt(mk.slice(5, 7), 10) + '/' + mk.slice(2, 4); }
 // các kỳ trả nợ còn phải trả rơi vào tháng mk (kỳ quá hạn dồn vào tháng hiện tại, giống tongTraNoThang)

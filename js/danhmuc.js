@@ -1070,6 +1070,11 @@ function handleDanhMucAction(act, el){
       toast('Danh mục "'+catTen(kind2, cid)+'" còn tiền ở '+nNgayCoTien+' ngày trong Sổ tay, không xóa được. Đổi tên nếu muốn dùng tên khác.', { loai:'warn' });
       return true;
     }
+    var dkDung = catDangDuocDinhKyDung(kind2, cid);
+    if (dkDung.length){
+      toast('Danh mục "'+catTen(kind2, cid)+'" đang dùng cho khoản định kỳ "'+dkDung[0].ten+'"'+(dkDung.length > 1 ? ' và '+(dkDung.length - 1)+' khoản khác' : '')+', không xóa được. Xóa hoặc đổi danh mục của khoản định kỳ trước (Cài đặt → Kế hoạch).', { loai:'warn' });
+      return true;
+    }
     var banSaoCat = arrC[viTri];
     var ten2 = catTen(kind2, cid);
     arrC.splice(viTri, 1);

@@ -784,6 +784,159 @@ test('danh mục "Cố định theo Chỉ tiêu" dùng chỉ tiêu, bỏ qua TB 
 });
 
 /* ==================================================================== */
+group('7b. Dự báo đồng bộ: dtSuggest (hàng Dòng tiền) ≡ duTruDanhMucThang (tổng, tích lũy, Mô phỏng)');
+
+// Hai hàm này từng được viết thành 2 bản song song (dongtien.js và vayno-tinh.js) nên có lúc lệch nhau:
+// hàng từng danh mục báo một số, còn Tiền vào − ra và dòng tiền tích lũy tính một số khác.
+function dkFix(o){
+  var ky = o.ky || [{ tuMk: '2026-07', soTien: o.soTien }];
+  return { id: 'dk' + (o.catId || 'x') + (o.kind || 'chi'), ten: 'x', kind: 'chi', catId: 'an', soTien: o.soTien, ngay: 5, bat: true, bo: [], duBao: true, ky: ky, ...o };
+}
+function jr(thu, chi){ return { thu: thu || {}, chi: chi || {}, ghiChu: '', refs: [] }; }
+// mỗi kịch bản sửa dữ liệu nền (hôm nay 15/10/2026, sổ bắt đầu 01/07/2026)
+var DB_KB = {
+  'trống': function(d){},
+  'cho vay + nhận vay ghi ở ngày tương lai': function(d){ d.journal['2026-12-20'] = jr({}, {choVay: 5000000}); d.journal['2027-01-05'] = jr({nhanTienVay: 8000000}, {}); },
+  'TB ăn 3 tháng + lương cố định theo hạn mức': function(d){
+    d.journal['2026-08-10'] = jr({}, {an: 3000000}); d.journal['2026-09-10'] = jr({}, {an: 6000000});
+    d.categories.thu[0].chiTieu = 15000000; d.categories.thu[0].coDinhChiTieu = true; },
+  'định kỳ lương bật dự báo + kỳ dừng + tháng bỏ qua': function(d){
+    d.categories.thu[0].chiTieu = 1;
+    d.dinhKy = [dkFix({ kind: 'thu', catId: 'luong', soTien: 20000000, ky: [{ tuMk: '2026-07', soTien: 20000000 }, { tuMk: '2027-01', soTien: 0 }], bo: ['2026-12'] })]; },
+  'định kỳ chi Ăn bật dự báo + đã ghi tay tháng này': function(d){
+    d.categories.chi[0].chiTieu = 2000000; d.dinhKy = [dkFix({ kind: 'chi', catId: 'an', soTien: 2000000 })]; d.journal['2026-10-03'] = jr({}, {an: 700000}); },
+  'định kỳ chỉ để nhắc (không bật dự báo)': function(d){
+    d.dinhKy = [dkFix({ kind: 'chi', catId: 'an', soTien: 500000, duBao: false })]; d.journal['2026-09-10'] = jr({}, {an: 3000000}); },
+  'khoản vay phải trả + cho vay có hẹn thu': function(d){
+    d.vayNo = { choVay: [{ id: 'cv', ten: 'A', soTien: 3000000, daThu: 0, ngayChoVay: '2026-10-05', ngayDuKienThu: '2026-12-15', trangThai: 'dang_cho' }],
+      vayNoPhaiTra: [{ id: 'vn1', ten: 'V', loaiVay: 'ngan_hang', hinhThuc: 'khong_lai', soTienGoc: 3000000, soThangVay: 3, ngayVay: '2026-10-01', ngayTraHangThang: 5, traNo: [], trangThai: 'dang_vay' }] }; },
+  'khongDuTru thường + cố định theo hạn mức (0 và >0)': function(d){
+    d.categories.chi.push({ id: 'xe', ten: 'Xe', chiTieu: 0, khongDuTru: true }, { id: 'net', ten: 'Net', chiTieu: 0, coDinhChiTieu: true }, { id: 'nha', ten: 'Nhà', chiTieu: 4000000, coDinhChiTieu: true });
+    d.journal['2026-09-02'] = jr({}, {xe: 9000000}); },
+  'khoản ghi trước ngày tương lai ở danh mục thường + khongDuTru': function(d){
+    d.categories.chi.push({ id: 'xe', ten: 'Xe', chiTieu: 0, khongDuTru: true }); d.journal['2026-12-02'] = jr({}, {xe: 9000000, an: 1000000}); },
+  'định kỳ trỏ vào danh mục đã bị xóa (mồ côi) + danh mục còn sống': function(d){
+    d.dinhKy = [dkFix({ kind: 'chi', catId: 'daXoa', soTien: 1000000, duBao: false }), dkFix({ kind: 'thu', catId: 'daXoa2', soTien: 2000000, duBao: true }), dkFix({ kind: 'chi', catId: 'an', soTien: 300000, duBao: false })]; },
+  'giao dịch ghi trước cho cuối THÁNG NÀY (cho vay + nhận vay)': function(d){ d.journal['2026-10-25'] = jr({}, {choVay: 5000000}); d.journal['2026-10-28'] = jr({nhanTienVay: 8000000}, {}); }
+};
+function dbNap(ten){
+  setToday('2026-10-15');
+  var d = baseData(); d.settings = { soDuDauKy: 0, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' };
+  DB_KB[ten](d); loadData(d);
+  var cats = [];
+  ['thu', 'chi'].forEach(function(k){ ctx.state.data.categories[k].forEach(function(c){ cats.push([k, c.id]); }); });
+  return cats;
+}
+var DB_THANG_TUONG_LAI = ['2026-11', '2026-12', '2027-01', '2027-02'];
+
+test('BẤT BIẾN 1: từng danh mục, tháng tương lai — num(dtSuggest) = duTruDanhMucThang (mọi kịch bản)', function(){
+  var loi = [];
+  Object.keys(DB_KB).forEach(function(ten){
+    dbNap(ten).forEach(function(c){
+      DB_THANG_TUONG_LAI.forEach(function(mk){
+        var a = ctx.num(ctx.dtSuggest(c[0], c[1], mk)), b = ctx.duTruDanhMucThang(c[0], c[1], mk);
+        if (a !== b) loi.push('[' + ten + '] ' + c[0] + '/' + c[1] + ' ' + mk + ': hàng=' + a + ' tổng=' + b);
+      });
+    });
+  });
+  setToday('2026-10-01');
+  ok(!loi.length, loi.join(' | '));
+});
+
+test('BẤT BIẾN 2: tổng các hàng = thẻ Thu / Chi dự kiến (tháng tương lai dùng dtSuggest, tháng này dùng dtCell)', function(){
+  var loi = [];
+  Object.keys(DB_KB).forEach(function(ten){
+    var cats = dbNap(ten);
+    ['2026-10'].concat(DB_THANG_TUONG_LAI).forEach(function(mk){
+      var cur = mk === '2026-10', sT = 0, sC = 0;
+      cats.forEach(function(c){
+        var v = ctx.num(cur ? ctx.dtCell(c[0], c[1], mk) : ctx.dtSuggest(c[0], c[1], mk));
+        if (c[0] === 'thu') sT += v; else sC += v;
+      });
+      var cT = ctx.tongThuThangCard(mk), cC = ctx.tongChiThangCard(mk);
+      if (Math.abs(sT - cT) > 0.5) loi.push('[' + ten + '] thu ' + mk + ': hàng=' + sT + ' thẻ=' + cT);
+      if (Math.abs(sC - cC) > 0.5) loi.push('[' + ten + '] chi ' + mk + ': hàng=' + sC + ' thẻ=' + cC);
+    });
+  });
+  setToday('2026-10-01');
+  ok(!loi.length, loi.join(' | '));
+});
+
+test('Cho vay ghi ở ngày tương lai: dòng "Cho vay" của tháng đó = số đã ghi, và Tiền vào − ra đã gồm số đó', function(){
+  dbNap('cho vay + nhận vay ghi ở ngày tương lai');
+  var d = ctx.dtThangDuLieu('2026-12');
+  eq(d.choVay, 5000000, 'dòng Cho vay');
+  eq(d.cb, d.thuDK - d.chiDK, 'cân đối khớp thẻ');
+  ok(d.chiDK >= 5000000, 'chi dự kiến đã gồm 5tr cho vay');
+  setToday('2026-10-01');
+});
+
+test('Nhận vay ghi ở ngày tương lai: dòng "Vay thêm" của tháng đó = số đã ghi', function(){
+  dbNap('cho vay + nhận vay ghi ở ngày tương lai');
+  var d = ctx.dtThangDuLieu('2027-01');
+  eq(d.vayThem, 8000000, 'vay thêm');
+  ok(d.thuDK >= 8000000, 'thu dự kiến đã gồm 8tr nhận vay');
+  setToday('2026-10-01');
+});
+
+test('Cho vay / nhận vay KHÔNG ghi ở tháng đó thì vẫn không đoán (0), không lấy tháng khác', function(){
+  dbNap('cho vay + nhận vay ghi ở ngày tương lai');
+  eq(ctx.num(ctx.dtSuggest('chi', 'choVay', '2026-11')), 0, 'T11 không có ghi');
+  eq(ctx.num(ctx.dtSuggest('chi', 'choVay', '2027-02')), 0, 'T2 không có ghi');
+  eq(ctx.duTruDanhMucThang('chi', 'choVay', '2026-11'), 0, 'tổng T11');
+  setToday('2026-10-01');
+});
+
+test('dtSuggest giữ nghĩa null = "không có gợi ý" (màn hiện "—") ở các trường hợp cũ', function(){
+  dbNap('khongDuTru thường + cố định theo hạn mức (0 và >0)');
+  eq(ctx.dtSuggest('chi', 'xe', '2026-12'), null, 'khongDuTru, tháng đó không có ghi trước');
+  eq(ctx.dtSuggest('chi', 'net', '2026-12'), null, 'cố định theo hạn mức nhưng hạn mức = 0');
+  eq(ctx.dtSuggest('chi', 'nha', '2026-12'), 4000000, 'cố định theo hạn mức = hạn mức');
+  eq(ctx.dtSuggest('chi', 'traNo', '2026-12'), null, 'không có khoản vay nào');
+  setToday('2026-10-15');   // sổ mới bắt đầu T10: chưa có tháng hoàn chỉnh nào, danh mục chưa có hạn mức
+  loadData(baseData());
+  eq(ctx.dtSuggest('chi', 'an', '2026-12'), null, 'chưa có lịch sử và chưa có hạn mức');
+  setToday('2026-10-01');
+});
+
+test('dtSuggest: có lịch sử nhưng TB = 0 thì trả 0 (không phải null) — giữ nguyên hành vi hiện tại', function(){
+  setToday('2026-10-15');
+  var d = baseData(); d.settings = { soDuDauKy: 0, ngayBatDau: '2026-07-01', thangBatDauDuTru: '2026-07' };
+  loadData(d);
+  eq(ctx.dtSuggest('chi', 'an', '2026-12'), 0, 'có 3 tháng hoàn chỉnh, không chi gì -> 0');
+  setToday('2026-10-01');
+});
+
+test('Định kỳ bật dự báo: kỳ dừng (0) và tháng bỏ qua trả 0 chứ không rơi về ước lượng — cả hai hàm cùng số', function(){
+  dbNap('định kỳ lương bật dự báo + kỳ dừng + tháng bỏ qua');
+  eq(ctx.dtSuggest('thu', 'luong', '2026-11'), 20000000, 'T11 theo kỳ');
+  eq(ctx.dtSuggest('thu', 'luong', '2026-12'), 0, 'T12 bỏ qua');
+  eq(ctx.dtSuggest('thu', 'luong', '2027-01'), 0, 'T1 kỳ dừng');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2026-12'), 0, 'tổng T12');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2027-01'), 0, 'tổng T1');
+  setToday('2026-10-01');
+});
+
+test('Trả nợ / thu hồi cho vay lấy từ lịch Vay - Nợ: hàng và tổng cùng số, khongDuTru không chặn', function(){
+  dbNap('khoản vay phải trả + cho vay có hẹn thu');
+  ['2026-11', '2026-12'].forEach(function(mk){
+    eq(ctx.num(ctx.dtSuggest('chi', 'traNo', mk)), ctx.duTruDanhMucThang('chi', 'traNo', mk), 'trả nợ ' + mk);
+    eq(ctx.num(ctx.dtSuggest('thu', 'thuHoiChoVay', mk)), ctx.duTruDanhMucThang('thu', 'thuHoiChoVay', mk), 'thu hồi ' + mk);
+  });
+  ok(ctx.duTruDanhMucThang('chi', 'traNo', '2026-11') > 0, 'có số trả nợ T11');
+  ok(ctx.duTruDanhMucThang('thu', 'thuHoiChoVay', '2026-12') > 0, 'có số thu hồi T12');
+  setToday('2026-10-01');
+});
+
+test('catDangDuocDinhKyDung: liệt kê khoản định kỳ đang trỏ vào danh mục (để chặn xóa danh mục)', function(){
+  dbNap('định kỳ chi Ăn bật dự báo + đã ghi tay tháng này');
+  eq(ctx.catDangDuocDinhKyDung('chi', 'an').length, 1, 'Ăn có 1 khoản định kỳ');
+  eq(ctx.catDangDuocDinhKyDung('thu', 'luong').length, 0, 'Lương không có');
+  eq(ctx.catDangDuocDinhKyDung('thu', 'an').length, 0, 'cùng id khác loại (thu/chi) không lẫn');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 group('8. Helper nhỏ');
 
 test('numNonNeg chặn số âm', function(){
