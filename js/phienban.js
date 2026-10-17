@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.17.2', ngay: '2026-10-17', ten: 'Màn khóa: Ghi nhanh không bị Face ID che',
+    muc: ['Khi bật "Ghi nhanh ngay trên màn khóa", app không tự quét Face ID lúc mở nữa (hộp thoại Face ID của iPhone phủ kín màn hình và che mất nút Ghi nhanh). Muốn mở khóa bằng Face ID thì chạm biểu tượng ở bàn phím số. Công tắc tắt thì vẫn tự quét như cũ.',
+      'Biểu tượng mở khóa bằng Face ID / vân tay ở bàn phím số đổi từ vân tay thành con mắt.'] },
   { ban: '2026.10.17', ngay: '2026-10-17', ten: 'Ghi nhanh ngay trên màn khóa',
     muc: ['Cài đặt → Ứng dụng → Khóa app có công tắc "Ghi nhanh ngay trên màn khóa" (mặc định tắt, riêng từng máy). Bật lên thì màn khóa có nút Ghi nhanh: ghi không cần nhập mã PIN, nhưng bảng ghi không hiện số dư hay lịch sử, và khoản ghi chỉ vào hàng chờ, chưa vào sổ.',
       'Nhập mã PIN xong sẽ hiện bước "Duyệt khoản ghi lúc khóa": các khoản được tick sẵn, bỏ tick khoản không phải của bạn rồi bấm "Ghi N khoản vào sổ". Khoản không tick bị bỏ. Chưa duyệt xong thì Sổ tay nhắc còn bao nhiêu khoản chờ.'] },

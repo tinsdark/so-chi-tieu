@@ -98,9 +98,11 @@ function khoaHien(){
 }
 // mở màn khóa là QUÉT LUÔN (Face ID trên iPhone có Face ID, vân tay trên máy dùng vân tay: trình duyệt tự chọn theo máy).
 // iOS có thể từ chối quét khi chưa chạm vào trang: khi đó màn khóa báo nhẹ và nút sinh trắc ở bàn phím vẫn bấm quét lại được.
+// Ngoại lệ: bật "Ghi nhanh ngay trên màn khóa" thì KHÔNG tự quét, vì hộp thoại Face ID của iOS phủ kín màn hình và chắn mất nút Ghi nhanh
+// (phải bấm hủy mới tới được). Khi đó muốn mở khóa thì chạm biểu tượng sinh trắc ở bàn phím.
 function khoaTuQuet(){
   var c = khoaCauHinh();
-  if (!c || !c.credId || !khoaCoSinhTrac() || _khoaQuen) return;
+  if (!c || !c.credId || !khoaCoSinhTrac() || _khoaQuen || ghiKhoaBatDoc()) return;
   setTimeout(function(){ if (_khoaDangMo && !_khoaQuen && !_khoaNhap) khoaThuSinhTrac(true); }, 300);
 }
 function _khoaHero(phu){
@@ -128,7 +130,7 @@ function _khoaVe(g){
     +   '<div class="gate-msg" id="lockMsg" role="alert"></div>'
     +   '<div class="pin-pad" role="group" aria-label="Bàn phím số">'
     +     [1, 2, 3, 4, 5, 6, 7, 8, 9].map(so).join('')
-    +     (sinhTrac ? '<button type="button" class="phu" id="lockSinhTrac" aria-label="Dùng vân tay hoặc Face ID">' + icon('fingerprint') + '</button>'
+    +     (sinhTrac ? '<button type="button" class="phu" id="lockSinhTrac" aria-label="Dùng vân tay hoặc Face ID">' + icon('eye') + '</button>'
                     : '<button type="button" class="trong" tabindex="-1" aria-hidden="true"></button>')
     +     so(0)
     +     '<button type="button" class="phu" id="lockXoaSo" aria-label="Xóa số vừa nhập">' + icon('backspace') + '</button>'
