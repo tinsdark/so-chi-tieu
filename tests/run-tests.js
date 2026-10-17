@@ -7236,6 +7236,21 @@ test('giờ sống qua lưu / nạp lại và sửa khoản; entryAddItem thư�
   var lai = ctx.entryItems(n.journal['2026-10-01'])[0];
   eq(lai.gio, '08:30', 'sửa khoản và qua JSON + normalizeData vẫn còn giờ'); eq(lai.soTien, 50000, 'số tiền đã sửa');
 });
+test('itemGioHien: khoản CŨ không có it.gio vẫn có giờ nhờ iid (thời điểm tạo), chỉ khi tạo đúng ngày của khoản', function(){
+  var luc = new Date(2026, 9, 17, 7, 42, 9).getTime(), iid = 'i3_' + luc.toString(36);
+  eq(ctx.itemGioHien({ iid: iid }, '2026-10-17'), '07:42', 'khoản cũ ghi đúng hôm đó: có giờ');
+  eq(ctx.itemGioHien({ iid: iid }, '2026-10-16'), '', 'ghi bù cho hôm qua: không giờ');
+  eq(ctx.itemGioHien({ iid: iid, gio: '06:15' }, '2026-10-17'), '06:15', 'it.gio (khoản ghi trên màn khóa) được ưu tiên hơn iid');
+  eq(ctx.itemGioHien({ iid: 'abc' }, '2026-10-17'), '', 'iid lạ: không giờ'); eq(ctx.itemGioHien({ iid: 'i1_zz' }, '2026-10-17'), '', 'số ngoài 2020 – 2100: không phải dấu thời gian');
+  eq(ctx.itemGioHien({}, '2026-10-17'), '', 'không iid'); eq(ctx.itemGioHien(null, '2026-10-17'), '', 'null');
+  eq(ctx.dlGioVaChu({ iid: iid }, 'Ăn', '2026-10-17'), '07:42 · Ăn', 'hiện ở dòng phụ');
+});
+test('khoản vừa ghi bằng Ghi nhanh có giờ qua iid, không cần lưu thêm trường nào (dữ liệu / file Drive không phình)', function(){
+  loadData(baseData()); setToday('2026-10-01');
+  var it = ctx.entryAddItem('2026-10-01', 'chi', 'an', 45000, '', ''), n = new Date();
+  var homNay = n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2);
+  ok(!('gio' in it), 'không lưu it.gio'); eq(ctx.itemGioHien(it, homNay), ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2), 'giờ suy từ iid');
+});
 test('duyệt khoản ghi lúc khóa: giờ là lúc GHI (x.luc), không phải lúc duyệt', function(){
   khoaGiaLap(function(){
     loadData(baseData()); setToday('2026-10-17');
