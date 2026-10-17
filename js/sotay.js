@@ -312,6 +312,7 @@ function ghiKhoaDuyetGhi(){
     var it = entryAddItem(x.ngay, x.kind, x.catId, x.tien, x.ghiChu, state.viChon);
     if (!it){ boQua++; return; }
     itemDatNhan(it, x.nhan);
+    itemDatGio(it, x.ngay, x.luc);      // giờ lúc ghi trên màn khóa, không phải giờ lúc duyệt
     var ghi = x.ghiChu ? x.ghiChu + ' ' + fmt(Math.round(x.tien)) : '';
     if (ghi){
       var e = state.data.journal[x.ngay];
@@ -727,6 +728,11 @@ function dlSuaHtml(date, it){
     + '<div class="dl-edit-btn"><button type="button" class="btn sm" data-act="stSaveItem" data-date="'+date+'" data-iid="'+(it ? it.iid : '')+'">'+icon('check')+' Lưu</button>'
     + '<button type="button" class="btn secondary sm" data-act="stCancelItem">Hủy</button></div></div>';
 }
+// dòng phụ của một khoản: giờ ghi (nếu có) đứng đầu, rồi danh mục / ví / nhãn
+function dlGioVaChu(it, chu){
+  var gio = (it.gio && /^\d{2}:\d{2}$/.test(it.gio)) ? it.gio : '';
+  return gio ? (chu ? gio + ' · ' + chu : gio) : chu;
+}
 function dlDongHtml(date, it){
   if (state.soTayEditIid === it.iid) return '<div class="dl-row dang-sua">' + dlSuaHtml(date, it) + '</div>';
   var e = state.data.journal[date] || {};
@@ -739,7 +745,7 @@ function dlDongHtml(date, it){
   return '<div class="dl-row'+(mo ? ' mo' : '')+(it.iid === state.soTayVuaGhi ? ' anim-moi' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
     +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
-    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+((tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi) + itemNhan(it).map(function(t){ return ' · #'+esc(t); }).join('')).replace(/^ · /, '')+'</span></span>'
+    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+dlGioVaChu(it, ((tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi) + itemNhan(it).map(function(t){ return ' · #'+esc(t); }).join('')).replace(/^ · /, ''))+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
     + (mo ? '<div class="dl-act"><button type="button" class="btn secondary sm" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('pencil')+' Sửa</button>'
@@ -1458,6 +1464,7 @@ function handleSoTayAction(act, el){
     var itQ = entryAddItem(ngayQ, kQ, catQ, tienQ, noteQ, viQ || state.viChon);
     if (!itQ){ toast('Không ghi được khoản này.', { loai:'err' }); return true; }
     itemDatNhan(itQ, nhanParse((document.getElementById('qa_nhan') || {}).value));
+    itemDatGio(itQ, ngayQ, Date.now());
     state.soTayVuaGhi = itQ.iid;       // khoản này hiện dần ở lần vẽ ngay sau đây (xem cuối renderSoTay)
     // ghi chú của NGÀY: giống saveEntry — có nội dung thì gắn thêm số tiền để cột Nội dung đọc ra luôn có số
     var ghiQ = noteQ ? noteQ + ' ' + fmt(Math.round(tienQ)) : '';

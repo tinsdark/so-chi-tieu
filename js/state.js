@@ -287,6 +287,13 @@ function journalKiemTra(journal){
   return ds;
 }
 
+// giờ ghi của một dòng chi tiết ("07:42"), chỉ đặt cho khoản ghi bằng Ghi nhanh: it.gio. luc = thời điểm ghi (ms).
+// Chỉ nhận khi khoản thuộc ĐÚNG NGÀY ghi (ghi bù cho hôm qua thì giờ ghi không nói gì về lúc tiêu nên bỏ); không có giờ thì KHÔNG có trường.
+function itemDatGio(it, ngay, luc){
+  var d = new Date(luc);
+  var homNay = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  if (isFinite(d.getTime()) && ngay === homNay) it.gio = pad2(d.getHours()) + ':' + pad2(d.getMinutes()); else delete it.gio;
+}
 function entryFindItem(entry, iid){
   var arr = entryItems(entry);
   for (var i=0;i<arr.length;i++){ if (arr[i].iid === iid) return arr[i]; }

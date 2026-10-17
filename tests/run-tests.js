@@ -7213,6 +7213,39 @@ test('bảng ghi ở chế độ khóa không lộ sổ: không số dư ví, kh
   ok(!/<option value=/.test(khoa.split('qa_note_goiy')[1].split('</datalist>')[0]), 'datalist ghi chú rỗng'); ok(/chờ duyệt/.test(khoa) && /Đang khóa/.test(khoa), 'có ghi chú đang khóa');
 });
 
+group('7i. Giờ ghi của khoản ghi nhanh (it.gio)');
+
+test('itemDatGio: khoản thuộc đúng ngày ghi thì có giờ HH:MM theo giờ máy; ghi bù ngày khác thì không có', function(){
+  var luc = new Date(2026, 9, 17, 7, 5, 30).getTime(), it = { iid: 'x' };
+  ctx.itemDatGio(it, '2026-10-17', luc); eq(it.gio, '07:05', 'cùng ngày: có giờ, đệm số 0');
+  ctx.itemDatGio(it, '2026-10-16', luc); ok(!('gio' in it), 'ghi bù hôm qua: bỏ giờ, không có trường');
+  ctx.itemDatGio(it, '2026-10-17', NaN); ok(!('gio' in it), 'mốc hỏng: không có giờ');
+});
+test('giờ hiện ở dòng phụ, đứng đầu: có / không ghi chú, có nhãn; khoản cũ không có giờ thì dòng phụ y như trước', function(){
+  eq(ctx.dlGioVaChu({ gio: '07:42' }, 'Ăn'), '07:42 · Ăn', 'giờ + danh mục');
+  eq(ctx.dlGioVaChu({ gio: '07:42' }, ''), '07:42', 'chỉ có giờ');
+  eq(ctx.dlGioVaChu({}, 'Ăn'), 'Ăn', 'khoản cũ: giữ nguyên');
+  eq(ctx.dlGioVaChu({ gio: '<b>' }, 'Ăn'), 'Ăn', 'giờ sai định dạng bị bỏ, không chèn HTML');
+});
+test('giờ sống qua lưu / nạp lại và sửa khoản; entryAddItem thường (nhập file, định kỳ...) không tự thêm giờ', function(){
+  loadData(baseData()); setToday('2026-10-01');
+  var it = ctx.entryAddItem('2026-10-01', 'chi', 'an', 45000, 'Phở', ''); ok(!('gio' in it), 'entryAddItem không tự đặt giờ');
+  ctx.itemDatGio(it, '2026-10-01', new Date(2026, 9, 1, 8, 30).getTime());
+  ctx.entryUpdateItem('2026-10-01', it.iid, 50000, 'Phở bò', 'chi', 'an', '');
+  var n = ctx.normalizeData(JSON.parse(JSON.stringify(ctx.state.data)));
+  var lai = ctx.entryItems(n.journal['2026-10-01'])[0];
+  eq(lai.gio, '08:30', 'sửa khoản và qua JSON + normalizeData vẫn còn giờ'); eq(lai.soTien, 50000, 'số tiền đã sửa');
+});
+test('duyệt khoản ghi lúc khóa: giờ là lúc GHI (x.luc), không phải lúc duyệt', function(){
+  khoaGiaLap(function(){
+    loadData(baseData()); setToday('2026-10-17');
+    var luc = new Date(2026, 9, 17, 6, 15).getTime();
+    var x = { id: 'g1', luc: luc, ngay: '2026-10-17', kind: 'chi', catId: 'an', tien: 30000, ghiChu: '', nhan: [] };
+    ctx.state.khoaDuyet = { ds: [x], bo: {} }; ctx.ghiKhoaDuyetGhi();
+    eq(ctx.entryItems(ctx.state.data.journal['2026-10-17'])[0].gio, '06:15', 'giờ lúc ghi trên màn khóa');
+  });
+});
+
 test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){
   var fs = require('fs'), root = require('path').join(__dirname, '..');
   var html = fs.readFileSync(root + '/index.html', 'utf8');
