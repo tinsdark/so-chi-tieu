@@ -7193,6 +7193,16 @@ test('cảnh báo "lớn bất thường" ở bước duyệt dùng đúng luậ
     eq(ctx.ghiKhoaCanhBao({ kind: 'thu', catId: 'luong', tien: 9999000 }), '', 'khoản thu không nhắc');
   });
 });
+test('màn khóa tự quét Face ID khi mở, trừ khi bật Ghi nhanh trên màn khóa (hộp thoại iOS chắn mất nút Ghi nhanh)', function(){
+  khoaGiaLap(function(kho){
+    kho.setItem('chitieu_khoa_v1', JSON.stringify({ hash: 'h', salt: 's', credId: 'abc' }));
+    var hen = 0, undo2 = thayTam({ window: { PublicKeyCredential: function(){}, isSecureContext: true, addEventListener: function(){} }, navigator: { credentials: {} }, setTimeout: function(){ hen++; return 0; } });
+    try{
+      ctx.ghiKhoaBatDat(false); ctx.khoaTuQuet(); eq(hen, 1, 'công tắc tắt: tự quét như cũ');
+      ctx.ghiKhoaBatDat(true); ctx.khoaTuQuet(); eq(hen, 1, 'công tắc bật: không tự quét');
+    } finally { undo2(); }
+  });
+});
 test('bảng ghi ở chế độ khóa không lộ sổ: không số dư ví, không "ngày tự do", không gợi ý ghi chú / nhãn', function(){
   var d = baseData(); d.wallets = [{ id: 'w1', ten: 'Tiền mặt' }, { id: 'w2', ten: 'Ngân hàng' }];
   loadData(d); setToday('2026-10-01');

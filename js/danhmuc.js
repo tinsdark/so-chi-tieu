@@ -303,7 +303,7 @@ function khoaCardHtml(){
     h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Mở bằng vân tay / Face ID</b></span>'
       + '<button type="button" class="dm-sw'+(c.credId ? ' on' : '')+'" role="switch" aria-checked="'+(c.credId ? 'true' : 'false')+'" aria-label="Mở bằng vân tay / Face ID" data-act="'+(c.credId ? 'khoaTatSinhTrac' : 'khoaBatSinhTrac')+'"></button></div>';
   }
-  h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Ghi nhanh ngay trên màn khóa</b><span class="dm-s">Ghi được khi chưa nhập PIN, nhưng chỉ vào hàng chờ: mở khóa xong bạn tick duyệt mới vào sổ. Không xem được sổ.</span></span>'
+  h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Ghi nhanh ngay trên màn khóa</b><span class="dm-s">Ghi được khi chưa nhập PIN, nhưng chỉ vào hàng chờ: mở khóa xong bạn tick duyệt mới vào sổ. Không xem được sổ. Bật mục này thì app không tự quét Face ID khi mở nữa (hộp thoại của iPhone che mất nút Ghi nhanh): chạm biểu tượng Face ID ở bàn phím để mở khóa.</span></span>'
     + '<button type="button" class="dm-sw'+(ghiKhoaBatDoc() ? ' on' : '')+'" role="switch" aria-checked="'+(ghiKhoaBatDoc() ? 'true' : 'false')+'" aria-label="Ghi nhanh ngay trên màn khóa" data-act="ghiKhoaDat"></button></div>';
   h += '<div class="dm-btns"><button class="btn sm" data-act="khoaNgay">'+icon('lock')+' Khóa ngay</button>'
     + '<button type="button" class="btn secondary sm dm-more" data-act="dmMoKhoa" aria-label="Thêm thao tác">'+icon('dots')+'</button></div>'
