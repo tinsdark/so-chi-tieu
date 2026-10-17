@@ -219,6 +219,25 @@ function qaDongSheet(){
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   qaSheetVe();
 }
+/* "Mở app là hiện sẵn bảng Ghi nhanh": riêng từng máy (localStorage, KHÔNG vào dữ liệu đồng bộ Drive vì điện thoại và máy tính
+   cần khác nhau), mặc định tắt. Chỉ chạy ĐÚNG MỘT LẦN mỗi lần mở app (không phải mỗi lần app hiện lại từ nền) để lúc vào xem
+   không bị bảng chặn lại. Bảng chỉ là lớp phủ trên Sổ tay: xem thì chạm ra ngoài hoặc bấm nút đóng là thấy ngay, ghi xong thì bảng đóng
+   và khoản mới hiện ở Sổ tay kèm Hoàn tác. Màn khóa PIN đang hiện thì chờ mở khóa xong mới hiện bảng (khoaDong gọi lại). */
+var QA_MO_SAN_KEY = 'chitieu_qa_mo_san_v1';
+var _qaMoSanXong = false;
+function qaMoSanDoc(){
+  try{ return localStorage.getItem(QA_MO_SAN_KEY) === '1'; }catch(e){ return false; }
+}
+function qaMoSanDat(bat){
+  try{ localStorage.setItem(QA_MO_SAN_KEY, bat ? '1' : '0'); }catch(e){}
+}
+function qaMoSanKhiMoApp(){
+  if (_qaMoSanXong || !qaMoSanDoc() || !state.data) return;
+  if (typeof _khoaDangMo !== 'undefined' && _khoaDangMo) return;
+  _qaMoSanXong = true;
+  if (state.tab !== 'sotay') return;      // qaSheetVe tự đóng bảng khi không ở Sổ tay
+  qaMoSheet();
+}
 /* ====================================================================
    TỔNG QUAN — thẻ đầu Sổ tay: số dư to, thu/chi tháng, đã chi bao nhiêu so với chỉ tiêu,
    và "việc cần làm" (định kỳ đến hạn, vay/nợ đến hạn, danh mục vượt hạn mức) bấm là nhảy tới.

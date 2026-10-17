@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.17', ngay: '2026-10-17', ten: 'Mở app là hiện sẵn bảng Ghi nhanh',
+    muc: ['Cài đặt → Ứng dụng → Giao diện và làm mới có công tắc "Mở app là hiện sẵn bảng Ghi nhanh" (mặc định tắt, riêng từng máy). Bật lên thì mỗi lần mở app mới, bảng Ghi nhanh hiện sẵn trên Sổ tay: ghi xong bảng đóng và khoản vừa ghi hiện ở Sổ tay (có Hoàn tác); muốn vào xem thì chạm ra ngoài bảng hoặc bấm nút đóng. App hiện lại từ nền không tự bật bảng; có mã PIN thì mở khóa xong mới hiện bảng.'] },
   { ban: '2026.10.16.12', ngay: '2026-10-16', ten: 'Gỡ app con Ghi nhanh',
     muc: ['Gỡ app con "Ghi nhanh" trên màn hình chính: iPhone giữ bộ nhớ riêng cho từng biểu tượng nên nó không đọc được dữ liệu Sổ Tiền. Nếu đã thêm biểu tượng đó ra màn hình chính thì xóa đi. Ghi nhanh vẫn dùng trong app như thường, và ghi nhanh không cần mở app thì dùng Phím tắt (hướng dẫn trong README).'] },
   { ban: '2026.10.16.11', ngay: '2026-10-16', ten: 'Sửa Ghi nhanh trên màn hình chính bị trống',

@@ -188,6 +188,7 @@ function khoaDong(){
   var g = document.getElementById('lockGate');
   if (g && g.parentNode) g.parentNode.removeChild(g);
   document.body.classList.remove('dang-khoa');
+  if (typeof qaMoSanKhiMoApp === 'function') qaMoSanKhiMoApp();      // mở app có khóa: mở khóa xong mới hiện bảng Ghi nhanh (nếu bật)
 }
 async function khoaThuPin(){
   var msg = document.getElementById('lockMsg');

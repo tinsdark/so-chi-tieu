@@ -256,6 +256,8 @@ function giaoDienCardHtml(){
   return '<div class="card dm-card">' + dmHead('Giao diện và làm mới')
     + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Giao diện</b><span class="dm-s">Tự động theo cài đặt của điện thoại, hoặc chọn sáng / tối</span></span></div>'
     + '<div class="dt-mode gd-seg" role="group" aria-label="Giao diện">' + seg + '</div>'
+    + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">Mở app là hiện sẵn bảng Ghi nhanh</b><span class="dm-s">Chỉ khi mở app mới. Muốn xem thì chạm ra ngoài bảng hoặc bấm nút đóng. Chỉ áp dụng trên máy này</span></span>'
+    + '<button type="button" class="dm-sw'+(qaMoSanDoc() ? ' on' : '')+'" role="switch" aria-checked="'+(qaMoSanDoc() ? 'true' : 'false')+'" aria-label="Mở app là hiện sẵn bảng Ghi nhanh" data-act="qaMoSanDat"></button></div>'
     + '<div class="dm-row gd-row"><span class="dm-main"><b class="dm-n">' + (state.offline ? 'Đồng bộ Google Drive' : 'Làm mới dữ liệu') + '</b><span class="dm-s">' + (state.offline ? 'Đang dùng dữ liệu trên máy. Bấm để đồng bộ với Drive (còn phiên đăng nhập thì không phải đăng nhập lại)' : 'Tải lại từ Google Drive. Trên điện thoại cũng kéo xuống ở đầu trang được') + '</span></span>'
     + '<button type="button" class="btn secondary sm" data-act="lamMoi">' + (state.offline ? 'Đồng bộ' : 'Làm mới') + '</button></div></div>';
 }
@@ -801,6 +803,8 @@ function handleDanhMucAction(act, el){
     state.dmForm = { loai:'vi', id: el.getAttribute('data-id') }; renderDanhMuc();
   } else if (act === 'themeDat'){
     datTheme(el.getAttribute('data-v')); renderDanhMuc();
+  } else if (act === 'qaMoSanDat'){
+    qaMoSanDat(!qaMoSanDoc()); renderDanhMuc();
   } else if (act === 'lamMoi'){
     lamMoiDuLieu();
   } else if (act === 'dmTab'){

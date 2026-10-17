@@ -7123,6 +7123,48 @@ test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay m
   }
 });
 
+group('7g. Mở app là hiện sẵn bảng Ghi nhanh (cài đặt riêng từng máy, chỉ một lần mỗi lần mở app)');
+
+function moSanThu(bat, tab, khoa){
+  var kho = khoGia(), mo = 0;
+  if (bat) kho.setItem('chitieu_qa_mo_san_v1', '1');
+  var undo = thayTam({ localStorage: kho, qaMoSheet: function(){ mo++; }, _qaMoSanXong: false, _khoaDangMo: !!khoa });
+  try{
+    loadData(baseData()); ctx.state.tab = tab || 'sotay';
+    ctx.qaMoSanKhiMoApp();
+    return { mo: mo, kho: kho };
+  } finally { undo(); }
+}
+test('mặc định tắt: mở app không hiện bảng', function(){ eq(moSanThu(false).mo, 0, 'không mở'); });
+test('bật: mở app hiện bảng đúng một lần, gọi lại không mở nữa', function(){
+  var kho = khoGia(), mo = 0; kho.setItem('chitieu_qa_mo_san_v1', '1');
+  var undo = thayTam({ localStorage: kho, qaMoSheet: function(){ mo++; }, _qaMoSanXong: false, _khoaDangMo: false });
+  try{ loadData(baseData()); ctx.state.tab = 'sotay'; ctx.qaMoSanKhiMoApp(); ctx.qaMoSanKhiMoApp(); eq(mo, 1, 'chỉ một lần'); } finally { undo(); }
+});
+test('đang khóa PIN: chờ, chưa mở; mở khóa xong gọi lại thì mới mở', function(){
+  var kho = khoGia(), mo = 0; kho.setItem('chitieu_qa_mo_san_v1', '1');
+  var undo = thayTam({ localStorage: kho, qaMoSheet: function(){ mo++; }, _qaMoSanXong: false, _khoaDangMo: true });
+  try{
+    loadData(baseData()); ctx.state.tab = 'sotay';
+    ctx.qaMoSanKhiMoApp(); eq(mo, 0, 'còn khóa thì chưa mở');
+    ctx._khoaDangMo = false; ctx.qaMoSanKhiMoApp(); eq(mo, 1, 'hết khóa thì mở');
+  } finally { undo(); }
+});
+test('không ở tab Sổ tay thì không mở; chưa có dữ liệu thì không mở', function(){
+  eq(moSanThu(true, 'baocao').mo, 0, 'tab khác');
+  var kho = khoGia(), mo = 0; kho.setItem('chitieu_qa_mo_san_v1', '1');
+  var undo = thayTam({ localStorage: kho, qaMoSheet: function(){ mo++; }, _qaMoSanXong: false, _khoaDangMo: false });
+  try{ ctx.state.data = null; ctx.qaMoSanKhiMoApp(); eq(mo, 0, 'chưa có dữ liệu'); } finally { undo(); }
+});
+test('qaMoSanDat / qaMoSanDoc: bật tắt qua localStorage riêng, không đụng dữ liệu đồng bộ', function(){
+  var kho = khoGia(), undo = thayTam({ localStorage: kho });
+  try{
+    eq(ctx.qaMoSanDoc(), false, 'mặc định tắt'); ctx.qaMoSanDat(true); eq(ctx.qaMoSanDoc(), true, 'bật');
+    ctx.qaMoSanDat(false); eq(ctx.qaMoSanDoc(), false, 'tắt lại');
+    loadData(baseData()); ok(!('qaMoSan' in ctx.state.data.settings), 'không nằm trong settings (không lên Drive)');
+  } finally { undo(); }
+});
+
 test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){
   var fs = require('fs'), root = require('path').join(__dirname, '..');
   var html = fs.readFileSync(root + '/index.html', 'utf8');
