@@ -303,6 +303,8 @@ function khoaCardHtml(){
     h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Mở bằng vân tay / Face ID</b></span>'
       + '<button type="button" class="dm-sw'+(c.credId ? ' on' : '')+'" role="switch" aria-checked="'+(c.credId ? 'true' : 'false')+'" aria-label="Mở bằng vân tay / Face ID" data-act="'+(c.credId ? 'khoaTatSinhTrac' : 'khoaBatSinhTrac')+'"></button></div>';
   }
+  h += '<div class="dm-row dm-static"><span class="dm-main"><b class="dm-n">Ghi nhanh ngay trên màn khóa</b><span class="dm-s">Ghi được khi chưa nhập PIN, nhưng chỉ vào hàng chờ: mở khóa xong bạn tick duyệt mới vào sổ. Không xem được sổ.</span></span>'
+    + '<button type="button" class="dm-sw'+(ghiKhoaBatDoc() ? ' on' : '')+'" role="switch" aria-checked="'+(ghiKhoaBatDoc() ? 'true' : 'false')+'" aria-label="Ghi nhanh ngay trên màn khóa" data-act="ghiKhoaDat"></button></div>';
   h += '<div class="dm-btns"><button class="btn sm" data-act="khoaNgay">'+icon('lock')+' Khóa ngay</button>'
     + '<button type="button" class="btn secondary sm dm-more" data-act="dmMoKhoa" aria-label="Thêm thao tác">'+icon('dots')+'</button></div>'
     + ghiChuGon('Đây là khóa màn hình: dữ liệu lưu trên máy (bản mở ngoại tuyến) không bị mã hóa. Quên mã PIN thì phải xóa dữ liệu trên máy này rồi đăng nhập Google lại — dữ liệu trên Drive không mất.', 'Lưu ý');
@@ -943,6 +945,7 @@ function handleDanhMucAction(act, el){
   } else if (act === 'khoaTat'){ state.dmForm = null; renderDanhMuc(); khoaTat().then(function(){ renderDanhMuc(); });
   } else if (act === 'khoaBatSinhTrac'){ khoaBatSinhTrac().then(function(){ renderDanhMuc(); });
   } else if (act === 'khoaTatSinhTrac'){ khoaTatSinhTrac(); renderDanhMuc(); toast('Đã tắt mở khóa bằng vân tay / Face ID.');
+  } else if (act === 'ghiKhoaDat'){ ghiKhoaBatDat(!ghiKhoaBatDoc()); renderDanhMuc();
   } else if (act === 'khoaNgay'){ khoaHien();
   } else if (act === 'dkThem'){
     state.dkForm = { id: '' }; renderDanhMuc();

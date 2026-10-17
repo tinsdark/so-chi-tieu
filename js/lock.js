@@ -135,6 +135,7 @@ function _khoaVe(g){
     +   '</div>'
     // nút Mở khóa CHỈ cho cấu hình cũ chưa học được độ dài PIN (lần mở thành công đầu tiên sẽ ghi nhớ rồi nút biến mất)
     +   (c && c.len ? '' : '<button class="btn lock-mo" id="lockMo">Mở khóa</button>')
+    +   (ghiKhoaBatDoc() ? '<button type="button" class="btn secondary lock-ghi" id="lockGhi"><b>Ghi nhanh</b><small>Không cần mã PIN · chỉ ghi, không xem được sổ</small></button>' : '')
     +   '<button class="lock-quen" id="lockQuen" type="button">Quên mã PIN?</button>'
     + '</div></div>';
   g.querySelectorAll('[data-so]').forEach(function(b){
@@ -148,6 +149,8 @@ function _khoaVe(g){
   var st = g.querySelector('#lockSinhTrac');
   if (st) st.addEventListener('click', function(){ var m = document.getElementById('lockMsg'); if (m) m.textContent = ''; khoaThuSinhTrac(false); });
   g.querySelector('#lockQuen').addEventListener('click', function(){ _khoaQuen = true; _khoaVe(g); });
+  var gk = g.querySelector('#lockGhi');
+  if (gk) gk.addEventListener('click', ghiKhoaMo);
   _khoaVeChamPin();
 }
 function _khoaVeChamPin(sai){
@@ -177,7 +180,7 @@ function khoaLuiSo(){
 }
 // máy tính: gõ số / Backspace / Enter bằng bàn phím thật
 document.addEventListener('keydown', function(ev){
-  if (!_khoaDangMo || _khoaQuen || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (!_khoaDangMo || _khoaQuen || ev.ctrlKey || ev.metaKey || ev.altKey || state.qa.khoa) return;      // state.qa.khoa: đang gõ số tiền ở Ghi nhanh trên màn khóa
   if (/^[0-9]$/.test(ev.key)){ ev.preventDefault(); khoaBamSo(ev.key); }
   else if (ev.key === 'Backspace'){ ev.preventDefault(); khoaLuiSo(); }
   else if (ev.key === 'Enter'){ ev.preventDefault(); khoaThuPin(); }
@@ -188,6 +191,7 @@ function khoaDong(){
   var g = document.getElementById('lockGate');
   if (g && g.parentNode) g.parentNode.removeChild(g);
   document.body.classList.remove('dang-khoa');
+  if (typeof ghiKhoaDuyetMo === 'function' && ghiKhoaChoDoc().length) ghiKhoaDuyetMo();      // có khoản ghi lúc khóa: mở khóa xong duyệt trước
 }
 async function khoaThuPin(){
   var msg = document.getElementById('lockMsg');
@@ -299,6 +303,54 @@ async function khoaBatSinhTrac(){
 }
 function khoaTatSinhTrac(){ var c = khoaCauHinh(); if (c){ c.credId = ''; khoaGhi(c); } }
 function khoaDatPhut(phut){ var c = khoaCauHinh(); if (c){ c.phut = Math.max(0, num(phut)); khoaGhi(c); } }
+
+/* ---- Ghi nhanh ngay trên màn khóa (công tắc riêng từng máy, mặc định tắt) ----
+   Bấm "Ghi nhanh" trên màn khóa thì ghi KHÔNG cần PIN, nhưng khoản ghi chỉ vào HÀNG CHỜ (localStorage riêng, không nằm trong
+   dữ liệu sổ, không lên Drive, không đổi số dư). Nhập PIN xong mới hiện bước duyệt: tick khoản nào đúng là của mình thì ghi
+   vào sổ, khoản không tick bị bỏ. Chế độ này không đọc ra số dư / lịch sử nào (xem ghiNhanhHtml, state.qa.khoa).
+   Hàng chờ tối đa GHI_KHOA_TOI_DA khoản để người lạ cầm máy không bơm rác vô hạn. Logic duyệt ở sotay.js (ghiKhoaDuyet*). */
+var GHI_KHOA_BAT_KEY = 'chitieu_ghi_khoa_v1';
+var GHI_KHOA_CHO_KEY = 'chitieu_ghi_cho_v1';
+var GHI_KHOA_TOI_DA = 50;
+function ghiKhoaBatDoc(){
+  try{ return localStorage.getItem(GHI_KHOA_BAT_KEY) === '1'; }catch(e){ return false; }
+}
+function ghiKhoaBatDat(bat){
+  try{ localStorage.setItem(GHI_KHOA_BAT_KEY, bat ? '1' : '0'); }catch(e){}
+}
+function ghiKhoaHopLe(x){
+  return !!(x && typeof x.id === 'string' && x.id && (x.kind === 'chi' || x.kind === 'thu') && typeof x.catId === 'string' && x.catId
+    && typeof x.ngay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.ngay) && typeof x.tien === 'number' && isFinite(x.tien) && x.tien > 0);
+}
+function ghiKhoaChoDoc(){
+  var ds = [];
+  try{ ds = JSON.parse(localStorage.getItem(GHI_KHOA_CHO_KEY) || '[]'); }catch(e){ ds = []; }
+  return Array.isArray(ds) ? ds.filter(ghiKhoaHopLe).slice(0, GHI_KHOA_TOI_DA) : [];
+}
+function ghiKhoaChoGhi(ds){
+  try{ localStorage.setItem(GHI_KHOA_CHO_KEY, JSON.stringify(ds)); }catch(e){}
+}
+// thêm một khoản vào hàng chờ: trả khoản đã thêm, hoặc null nếu hàng chờ đầy / khoản không hợp lệ
+function ghiKhoaChoThem(x){
+  var ds = ghiKhoaChoDoc();
+  if (ds.length >= GHI_KHOA_TOI_DA) return null;
+  var it = { id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), luc: Date.now(),
+    ngay: x.ngay, kind: x.kind, catId: x.catId, tien: x.tien, ghiChu: String(x.ghiChu || ''), nhan: Array.isArray(x.nhan) ? x.nhan.slice() : [] };
+  if (!ghiKhoaHopLe(it)) return null;
+  ds.push(it);
+  ghiKhoaChoGhi(ds);
+  return it;
+}
+function ghiKhoaChoXoa(id){
+  ghiKhoaChoGhi(ghiKhoaChoDoc().filter(function(x){ return x.id !== id; }));
+}
+function ghiKhoaMo(){
+  var m = document.getElementById('lockMsg');
+  if (!state.data){ if (m) m.textContent = 'App đang nạp dữ liệu, thử lại sau vài giây.'; return; }
+  if (ghiKhoaChoDoc().length >= GHI_KHOA_TOI_DA){ if (m) m.textContent = 'Hàng chờ đầy. Nhập PIN để duyệt trước.'; return; }
+  state.qa.khoa = true;
+  qaMoSheet();
+}
 
 /* ---- khi nào khóa ---- */
 document.addEventListener('visibilitychange', function(){

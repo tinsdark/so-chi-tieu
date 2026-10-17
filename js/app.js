@@ -35,6 +35,8 @@ function renderSyncStatus(){
     // bản mới luôn hiện đầu tiên, độc lập với các cảnh báo khác
     var bMoi = state.coBanMoi
       ? '<div class="banner banner-moi">'+icon('refresh')+' Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
+    var nCho = (typeof ghiKhoaChoDoc === 'function' && !_khoaDangMo) ? ghiKhoaChoDoc().length : 0;
+    if (nCho) bMoi += '<div class="banner">'+icon('alert')+' Có '+nCho+' khoản ghi lúc khóa đang chờ duyệt, chưa vào sổ. <button class="btn sm" data-act="khoaDuyetMo" style="margin-left:6px">Duyệt</button></div>';
     if (state.offline){
       // nhắc nhẹ khi lâu chưa đồng bộ (mở app bình thường không bị làm phiền)
       var soNgay = soNgayChuaDongBo(Date.now(), state.lanDongBoCuoi, state.data && state.data.settings && state.data.settings.ngayBatDau);

@@ -737,6 +737,10 @@ body.dang-khoa{overflow:hidden}
 .pin-pad button.phu .ic{width:26px;height:26px}
 .pin-pad .trong{visibility:hidden}
 .lock-mo{margin-top:8px;width:100%;max-width:300px}
+.lock-ghi{margin-top:14px;width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.lock-ghi small{opacity:.75;font-weight:400}
+.qa-back.qa-khoa{z-index:75}
+.qa-khoa-note{margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--hover);color:var(--muted);font-size:13px}
 .lock-quen{margin-top:auto;padding:14px 10px 0;background:none;border:none;color:var(--muted);font-size:13px;text-decoration:underline}
 .lock-quen-ct{width:100%}
 .lock-quen-ct p{text-align:left;margin:0 0 12px;color:var(--muted);font-size:14px}

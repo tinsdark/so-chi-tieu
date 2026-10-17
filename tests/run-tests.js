@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
+['state.js', 'lock.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -7121,6 +7121,86 @@ test('KB9 Fuzz 150 hồ sơ ngẫu nhiên (seed cố định): ví, thẻ, vay m
     kbKiemVay(nhan);
     kbKiemTra(nhan, kbNgay(2026, 8 + Math.floor(r() * 5), 1 + Math.floor(r() * 28)));
   }
+});
+
+group('7h. Ghi nhanh trên màn khóa: hàng chờ, duyệt rồi mới vào sổ (lock.js, sotay.js)');
+
+function khoaGiaLap(dung){
+  var kho = khoGia(), goi = { toast: [], luu: 0 };
+  var body = { classList: { add: function(){}, remove: function(){} } };
+  var undo = thayTam({ localStorage: kho, document: { getElementById: function(){ return null; }, querySelector: function(){ return null; }, querySelectorAll: function(){ return []; }, addEventListener: function(){}, body: body, activeElement: null },
+    toast: function(m, o){ goi.toast.push({ m: m, o: o }); }, renderSyncStatus: function(){}, renderAll: function(){}, scheduleSave: function(){ goi.luu++; } });
+  try{ return dung(kho, goi); } finally { undo(); }
+}
+function ghiCho(x){ return ctx.ghiKhoaChoThem(Object.assign({ ngay: '2026-10-01', kind: 'chi', catId: 'an', tien: 45000, ghiChu: 'Phở', nhan: [] }, x || {})); }
+function soKhoan(){ var n = 0, t = 0; Object.keys(ctx.state.data.journal).forEach(function(d){ ctx.entryItems(ctx.state.data.journal[d]).forEach(function(it){ n++; t += it.soTien; }); }); return { n: n, t: t }; }
+
+test('hàng chờ: nhận khoản hợp lệ, từ chối số tiền / loại / ngày sai; không đụng dữ liệu sổ', function(){
+  khoaGiaLap(function(){
+    loadData(baseData()); var truoc = JSON.stringify(ctx.state.data.journal);
+    ok(ghiCho(), 'khoản đúng được nhận'); eq(ctx.ghiKhoaChoDoc().length, 1, 'có 1 khoản chờ');
+    eq(ghiCho({ tien: 0 }), null, 'tiền 0'); eq(ghiCho({ tien: -5 }), null, 'tiền âm'); eq(ghiCho({ kind: 'vay' }), null, 'loại sai');
+    eq(ghiCho({ ngay: '1/10' }), null, 'ngày sai'); eq(ghiCho({ catId: '' }), null, 'thiếu danh mục');
+    eq(ctx.ghiKhoaChoDoc().length, 1, 'khoản sai không lọt vào');
+    eq(JSON.stringify(ctx.state.data.journal), truoc, 'sổ không đổi khi mới ghi chờ');
+  });
+});
+test('hàng chờ: tối đa 50 khoản; phần tử rác trong localStorage bị lọc khi đọc', function(){
+  khoaGiaLap(function(kho){
+    for (var i = 0; i < 50; i++) ok(ghiCho({ tien: 1000 + i }), 'khoản ' + i);
+    eq(ghiCho(), null, 'khoản thứ 51 bị từ chối'); eq(ctx.ghiKhoaChoDoc().length, 50, 'vẫn 50');
+    kho.setItem('chitieu_ghi_cho_v1', JSON.stringify([{ id: 'a', kind: 'chi', catId: 'an', ngay: '2026-10-01', tien: 5 }, { id: 'b', kind: 'chi', catId: 'an', ngay: 'x', tien: 5 }, 7, null, { id: 'c', kind: 'chi', catId: 'an', ngay: '2026-10-01', tien: '9' }]));
+    eq(ctx.ghiKhoaChoDoc().length, 1, 'chỉ giữ khoản hợp lệ');
+    kho.setItem('chitieu_ghi_cho_v1', 'khong-phai-json'); eq(ctx.ghiKhoaChoDoc().length, 0, 'hỏng thì coi như rỗng');
+  });
+});
+test('công tắc ghi nhanh trên màn khóa: mặc định tắt, riêng từng máy, không nằm trong settings (không lên Drive)', function(){
+  khoaGiaLap(function(){
+    eq(ctx.ghiKhoaBatDoc(), false, 'mặc định tắt'); ctx.ghiKhoaBatDat(true); eq(ctx.ghiKhoaBatDoc(), true, 'bật'); ctx.ghiKhoaBatDat(false); eq(ctx.ghiKhoaBatDoc(), false, 'tắt');
+    loadData(baseData()); ok(!('ghiKhoa' in ctx.state.data.settings), 'không vào settings');
+  });
+});
+test('duyệt: chỉ khoản được tick vào sổ, hàng chờ xóa sạch, Hoàn tác trả lại sổ', function(){
+  khoaGiaLap(function(kho, goi){
+    loadData(baseData()); setToday('2026-10-01');
+    var a = ghiCho({ tien: 45000 }), b = ghiCho({ tien: 60000, ghiChu: '' }), c = ghiCho({ tien: 7000, ghiChu: 'Cafe' });
+    var bo = {}; bo[b.id] = true;
+    ctx.state.khoaDuyet = { ds: ctx.ghiKhoaChoDoc(), bo: bo };
+    ctx.ghiKhoaDuyetGhi();
+    var r = soKhoan(); eq(r.n, 2, 'ghi 2 khoản'); eq(r.t, 52000, 'đúng 45.000 + 7.000, khoản bỏ tick không vào');
+    eq(ctx.ghiKhoaChoDoc().length, 0, 'hàng chờ sạch (cả khoản bỏ tick)'); eq(ctx.state.khoaDuyet, null, 'đóng bước duyệt'); ok(goi.luu > 0, 'có lưu');
+    var t = goi.toast[goi.toast.length - 1]; ok(/Đã ghi 2 khoản/.test(t.m), 'toast: ' + t.m);
+    t.o.hoanTac(); eq(soKhoan().n, 0, 'Hoàn tác: sổ về như cũ');
+  });
+});
+test('duyệt: danh mục đã bị xóa từ lúc ghi thì bỏ qua và báo; không có khoản nào tick thì không ghi gì', function(){
+  khoaGiaLap(function(kho, goi){
+    loadData(baseData());
+    ghiCho({ catId: 'khong-con' }); ghiCho({ tien: 1000 });
+    ctx.state.khoaDuyet = { ds: ctx.ghiKhoaChoDoc(), bo: {} }; ctx.ghiKhoaDuyetGhi();
+    eq(soKhoan().n, 1, 'chỉ khoản có danh mục'); ok(/1 khoản bỏ vì danh mục đã bị xóa/.test(goi.toast[goi.toast.length - 1].m), 'báo khoản bị bỏ');
+    var ds = [ghiCho({ tien: 2000 })], bo = {}; bo[ds[0].id] = true;
+    ctx.state.khoaDuyet = { ds: ctx.ghiKhoaChoDoc(), bo: bo }; ctx.ghiKhoaDuyetGhi();
+    eq(soKhoan().n, 1, 'tick hết bỏ thì không ghi thêm'); eq(ctx.ghiKhoaChoDoc().length, 0, 'hàng chờ vẫn được dọn');
+  });
+});
+test('cảnh báo "lớn bất thường" ở bước duyệt dùng đúng luật chiBatThuong; khoản thu không bao giờ bị nhắc', function(){
+  khoaGiaLap(function(){
+    loadData(baseData()); setToday('2026-10-01');
+    for (var i = 1; i <= 6; i++) ctx.entryAddItem('2026-09-0' + i, 'chi', 'an', 30000, '', '');
+    ok(/lớn gấp \d+ lần mức thường thấy/.test(ctx.ghiKhoaCanhBao({ kind: 'chi', catId: 'an', tien: 9999000 })), 'khoản lớn bị nhắc');
+    eq(ctx.ghiKhoaCanhBao({ kind: 'chi', catId: 'an', tien: 45000 }), '', 'khoản thường không nhắc');
+    eq(ctx.ghiKhoaCanhBao({ kind: 'thu', catId: 'luong', tien: 9999000 }), '', 'khoản thu không nhắc');
+  });
+});
+test('bảng ghi ở chế độ khóa không lộ sổ: không số dư ví, không "ngày tự do", không gợi ý ghi chú / nhãn', function(){
+  var d = baseData(); d.wallets = [{ id: 'w1', ten: 'Tiền mặt' }, { id: 'w2', ten: 'Ngân hàng' }];
+  loadData(d); setToday('2026-10-01');
+  ctx.state.qa.khoa = false; var thuong = ctx.ghiNhanhHtml();
+  ctx.state.qa.khoa = true; var khoa = ctx.ghiNhanhHtml(); ctx.state.qa.khoa = false;
+  ok(/qa-vis/.test(thuong) && /id="qa_ntd"/.test(thuong), 'bảng thường có chip ví và dòng ngày tự do');
+  ok(!/qa-vis/.test(khoa) && !/qa_ntd/.test(khoa), 'bảng khóa không có hai thứ đó');
+  ok(!/<option value=/.test(khoa.split('qa_note_goiy')[1].split('</datalist>')[0]), 'datalist ghi chú rỗng'); ok(/chờ duyệt/.test(khoa) && /Đang khóa/.test(khoa), 'có ghi chú đang khóa');
 });
 
 test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){
