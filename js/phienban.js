@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.17.2', ngay: '2026-10-17', ten: 'Ghi nhanh ngay trên màn khóa',
+    muc: ['Cài đặt → Ứng dụng → Khóa app có công tắc "Ghi nhanh ngay trên màn khóa" (mặc định tắt, riêng từng máy). Bật lên thì màn khóa có nút Ghi nhanh: ghi không cần nhập mã PIN, nhưng bảng ghi không hiện số dư hay lịch sử, và khoản ghi chỉ vào hàng chờ, chưa vào sổ.',
+      'Nhập mã PIN xong sẽ hiện bước "Duyệt khoản ghi lúc khóa": các khoản được tick sẵn, bỏ tick khoản không phải của bạn rồi bấm "Ghi N khoản vào sổ". Khoản không tick bị bỏ. Chưa duyệt xong thì Sổ tay nhắc còn bao nhiêu khoản chờ.'] },
   { ban: '2026.10.17', ngay: '2026-10-17', ten: 'Mở app là hiện sẵn bảng Ghi nhanh',
     muc: ['Cài đặt → Ứng dụng → Giao diện và làm mới có công tắc "Mở app là hiện sẵn bảng Ghi nhanh" (mặc định tắt, riêng từng máy). Bật lên thì mỗi lần mở app mới, bảng Ghi nhanh hiện sẵn trên Sổ tay: ghi xong bảng đóng và khoản vừa ghi hiện ở Sổ tay (có Hoàn tác); muốn vào xem thì chạm ra ngoài bảng hoặc bấm nút đóng. App hiện lại từ nền không tự bật bảng; có mã PIN thì mở khóa xong mới hiện bảng.'] },
   { ban: '2026.10.16.12', ngay: '2026-10-16', ten: 'Gỡ app con Ghi nhanh',

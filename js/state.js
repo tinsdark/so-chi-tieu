@@ -66,9 +66,10 @@ var state = {
   fullFormOpen: false,    // form nhập đầy đủ ở Sổ tay đang mở (mặc định gấp lại, thẻ "Ghi nhanh" lo việc thường ngày)
   // thẻ "Ghi nhanh" ở đầu Sổ tay. Bản nháp (amt/note/date) giữ ở đây chứ không chỉ trong ô nhập,
   // để vẽ lại trang (poll Drive, đổi tab) không làm mất số vừa gõ.
-  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '', open: false },   // open: bảng ghi khoản đang mở
+  qa: { kind: 'chi', cat: {}, amt: '', note: '', date: '', wallet: '', open: false, khoa: false },   // open: bảng ghi khoản đang mở; khoa: mở từ màn khóa PIN (chỉ ghi vào hàng chờ, ẩn số dư / lịch sử)
   soTayEditIid: null,     // iid dòng chi tiết đang sửa (null = không sửa gì)
   soTayGioiHan: {},       // số ngày đang hiện ở "Chi tiết theo ngày", theo tháng (thiếu = mặc định, xem SO_NGAY_HIEN ở sotay.js)
+  khoaDuyet: null,        // bước duyệt khoản ghi lúc khóa: null = đóng, { ds: [khoản chờ], bo: { id: true } } (xem ghiKhoaDuyet* ở sotay.js)
   soTayVuaGhi: null,      // iid khoản vừa ghi bằng bảng ghi khoản: chỉ để hiện dần 1 lần ở lần vẽ kế tiếp
   nguoiMo: null,          // tab Vay - Nợ: khóa người đang mở ở thẻ "Sổ nợ theo đối tượng"
   nhanMo: null,           // tab Báo cáo: khóa nhãn đang mở ở thẻ "Theo nhãn" (null = gấp hết)

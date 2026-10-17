@@ -82,7 +82,7 @@ function qaNutCapNhat(){
   var b = document.querySelector('#ghiNhanh .qa-save');
   if (!b) return;
   var co = numNonNeg(docSo(state.qa.amt)) > 0, kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
-  b.textContent = co ? 'Ghi khoản ' + kind : 'Nhập số tiền để ghi';
+  b.textContent = co ? 'Ghi khoản ' + kind + (state.qa.khoa ? ' (chờ duyệt)' : '') : 'Nhập số tiền để ghi';
   b.classList.toggle('chua', !co);
 }
 /* Thanh "Ghi nhanh" nổi trên thanh tab: bấm = mở bảng ghi khoản (ghiNhanhHtml). Thanh nằm trong trang Sổ tay
@@ -103,16 +103,18 @@ function ghiNhanhHtml(){
   var homNay = todayStr(), ngay = state.qa.date || homNay;
   var coTien = numNonNeg(docSo(state.qa.amt)) > 0;
   var ws = state.data.wallets || [], viChon = walletById(state.qa.wallet) ? state.qa.wallet : viDienSan();
+  var khoa = !!state.qa.khoa;      // mở từ màn khóa PIN: không hiện số dư ví, "≈ ngày tự do", gợi ý ghi chú / nhãn (đều lộ sổ)
   var h = '<div class="qa-sheet" id="ghiNhanh" role="dialog" aria-modal="true" aria-label="Ghi khoản mới">'
     + '<div class="qa-grab" aria-hidden="true"></div>'
     + '<div class="qa-head"><h3>Ghi khoản mới</h3><button type="button" class="qa-x" data-act="qaDong" aria-label="Đóng">'+icon('x')+'</button></div>'
     + '<div class="qa-body">'
+    + (khoa ? '<div class="qa-khoa-note">Đang khóa: khoản ghi vào hàng chờ, chỉ vào sổ khi bạn nhập mã PIN và duyệt.</div>' : '')
     + '<div class="qa-seg" role="group" aria-label="Loại giao dịch">'
     +   '<button type="button" class="chi'+(kind === 'chi' ? ' on' : '')+'" data-act="qaKind" data-kind="chi" aria-pressed="'+(kind === 'chi')+'">'+icon('arrow-up')+' Khoản chi</button>'
     +   '<button type="button" class="thu'+(kind === 'thu' ? ' on' : '')+'" data-act="qaKind" data-kind="thu" aria-pressed="'+(kind === 'thu')+'">'+icon('arrow-down')+' Khoản thu</button>'
     + '</div>'
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'">'
-    + '<div class="qa-ntd" id="qa_ntd">' + ntdGoiY(kind, numNonNeg(docSo(state.qa.amt))) + '</div>'
+    + (khoa ? '' : '<div class="qa-ntd" id="qa_ntd">' + ntdGoiY(kind, numNonNeg(docSo(state.qa.amt))) + '</div>')
     // phím nhanh: điện thoại bàn phím số không có + / 000
     + '<div class="qa-keys" aria-label="Phím nhanh cho ô số tiền">'
     +   '<button type="button" data-chen="000" data-for="qa_amount">000</button>'
@@ -122,10 +124,10 @@ function ghiNhanhHtml(){
     + '</div>'
     // ghi chú ngay dưới số tiền: gõ xong số là tới ghi chú, không phải cuộn xuống khi bàn phím đang che màn hình
     + '<input type="text" id="qa_note" class="qa-note" placeholder="Ghi chú, ví dụ: Ăn trưa với Nhật" aria-label="Ghi chú" list="qa_note_goiy" autocomplete="off" value="'+esc(state.qa.note)+'">'
-    + '<datalist id="qa_note_goiy">' + (sel ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
+    + '<datalist id="qa_note_goiy">' + (sel && !khoa ? qaGoiYGhiChu(kind, sel).map(function(g){ return '<option value="'+esc(g)+'">'; }).join('') : '') + '</datalist>'
     // nhãn (tùy chọn): giữ nguyên sau mỗi lần ghi để ghi liền cả chuyến đi; xóa chữ là hết gắn
     + '<input type="text" id="qa_nhan" class="qa-note qa-nhan" placeholder="Nhãn (tùy chọn), ví dụ: Du lịch Đà Lạt" aria-label="Nhãn" list="qa_nhan_goiy" autocomplete="off" value="'+esc(state.qa.nhan || '')+'">'
-    + '<datalist id="qa_nhan_goiy">' + nhanThongKe().slice(0, 30).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>';
+    + '<datalist id="qa_nhan_goiy">' + (khoa ? [] : nhanThongKe().slice(0, 30)).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>';
   h += '<div class="qa-lbl">Danh mục</div>';
   if (!cats.length){
     h += '<div class="empty">Chưa có danh mục '+(kind === 'thu' ? 'thu' : 'chi')+' — thêm ở tab "Cài đặt".</div>';
@@ -141,7 +143,7 @@ function ghiNhanhHtml(){
           : '')
       + '</div>';
   }
-  if (ws.length > 1){
+  if (ws.length > 1 && !khoa){
     // ô ẩn qa_wallet: qaSave đọc ví từ đây (cùng cách cũ); các thẻ ví bên dưới chỉ đổi state.qa.wallet rồi vẽ lại
     h += '<div class="qa-lbl">'+(kind === 'thu' ? 'Nhận vào ví' : 'Trả từ ví')+'</div>'
       + '<input type="hidden" id="qa_wallet" value="'+esc(viChon)+'">'
@@ -163,7 +165,7 @@ function ghiNhanhHtml(){
     + '</div>';
   h += '</div>'          // đóng .qa-body
     + '<div class="qa-foot"><button type="button" class="btn qa-save '+kind+(coTien ? '' : ' chua')+'" data-act="qaSave"'+(cats.length ? '' : ' disabled')+'>'
-    + (coTien ? 'Ghi khoản '+kind : 'Nhập số tiền để ghi')+'</button></div>'
+    + (coTien ? 'Ghi khoản '+kind+(khoa ? ' (chờ duyệt)' : '') : 'Nhập số tiền để ghi')+'</button></div>'
     + '</div>';
   return h;
 }
@@ -171,7 +173,7 @@ function ghiNhanhHtml(){
 // vẽ lại cả trang (poll Drive...) không được làm mất ô đang gõ; thay đổi từng phần đi qua qaVeLai().
 function qaSheetVe(){
   if (typeof document === 'undefined' || !document.body || !document.createElement) return;
-  if (state.qa.open && state.tab !== 'sotay') state.qa.open = false;      // rời tab Sổ tay = đóng
+  if (state.qa.open && state.tab !== 'sotay' && !state.qa.khoa) state.qa.open = false;      // rời tab Sổ tay = đóng (trừ khi mở từ màn khóa)
   var root = document.getElementById('qaSheetRoot');
   if (!state.qa.open || !state.data){
     document.body.classList.remove('qa-mo');
@@ -185,7 +187,7 @@ function qaSheetVe(){
   if (root) return;
   root = document.createElement('div');
   root.id = 'qaSheetRoot';
-  root.className = 'qa-back moi';
+  root.className = 'qa-back moi' + (state.qa.khoa ? ' qa-khoa' : '');      // qa-khoa: nằm TRÊN màn khóa PIN
   root.innerHTML = '<div class="qa-scrim" data-act="qaDong"></div>' + ghiNhanhHtml();
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
@@ -218,6 +220,7 @@ function qaDongSheet(){
   state.qa.open = false;
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   qaSheetVe();
+  state.qa.khoa = false;
 }
 /* "Mở app là hiện sẵn bảng Ghi nhanh": riêng từng máy (localStorage, KHÔNG vào dữ liệu đồng bộ Drive vì điện thoại và máy tính
    cần khác nhau), mặc định tắt. Chỉ chạy ĐÚNG MỘT LẦN mỗi lần mở app (không phải mỗi lần app hiện lại từ nền) để lúc vào xem
@@ -237,6 +240,112 @@ function qaMoSanKhiMoApp(){
   _qaMoSanXong = true;
   if (state.tab !== 'sotay') return;      // qaSheetVe tự đóng bảng khi không ở Sổ tay
   qaMoSheet();
+}
+/* ---- Ghi nhanh trên màn khóa: lưu vào hàng chờ, rồi duyệt sau khi mở khóa (hàng chờ và công tắc: lock.js) ---- */
+function ghiKhoaLuu(){
+  var g = function(id){ return (document.getElementById(id) || {}).value || ''; };
+  var kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
+  var tien = numNonNeg(docSo(g('qa_amount'))), cat = qaCatChon(kind);
+  if (tien <= 0){
+    toast('Nhập số tiền.', { loai:'warn' });
+    var o = document.getElementById('qa_amount'); if (o && o.focus) o.focus();
+    return;
+  }
+  if (!cat){ toast('Chưa có danh mục ' + (kind === 'thu' ? 'thu' : 'chi') + ' để ghi. Nhập PIN rồi thêm ở tab "Cài đặt".', { loai:'warn' }); return; }
+  var it = ghiKhoaChoThem({ ngay: g('qa_date') || todayStr(), kind: kind, catId: cat, tien: tien, ghiChu: g('qa_note').trim(), nhan: nhanParse(g('qa_nhan')) });
+  if (!it){ toast('Hàng chờ đầy. Nhập PIN để duyệt trước.', { loai:'warn' }); return; }
+  state.qa.cat[kind] = cat; qaGhiNho();
+  state.qa.amt = ''; state.qa.note = ''; state.qa.date = '';
+  qaDongSheet();
+  toast('Đã ghi chờ duyệt: ' + (kind === 'thu' ? 'thu ' : 'chi ') + catTen(kind, cat) + ' ' + fmt(Math.round(tien)) + '. Chưa vào sổ.',
+    { giay: 8, hoanTac: function(){
+      if (!ghiKhoaChoDoc().some(function(x){ return x.id === it.id; })){ toast('Khoản này đã được duyệt hoặc bỏ rồi, không hoàn tác ở đây được.', { loai:'warn' }); return; }
+      ghiKhoaChoXoa(it.id); toast('Đã bỏ khoản vừa ghi.');
+    } });
+}
+// "Hôm nay 07:42" / "15/10 07:42" từ mốc ms
+function ghiKhoaGio(luc){
+  var d = new Date(luc), hom = (pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1));
+  var nay = new Date(), la = (d.getFullYear() === nay.getFullYear() && d.getMonth() === nay.getMonth() && d.getDate() === nay.getDate());
+  return (la ? 'Hôm nay' : hom) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+// khoản chờ có lớn bất thường so với lịch sử không: dùng đúng luật của cảnh báo khi ghi (chiBatThuong). Chỉ nhắc, không bỏ tick.
+function ghiKhoaCanhBao(x){
+  if (x.kind !== 'chi') return '';
+  var r = chiBatThuong(x.catId, x.tien, null, todayStr());
+  return r ? 'lớn gấp ' + Math.round(x.tien / r.m) + ' lần mức thường thấy' : '';
+}
+function ghiKhoaDuyetHtml(){
+  var d = state.khoaDuyet, ds = d.ds, nChon = ds.filter(function(x){ return !d.bo[x.id]; }).length;
+  var h = '<div class="qa-scrim" data-act="khoaDuyetDong"></div><div class="qa-sheet" id="khoaDuyet" role="dialog" aria-modal="true" aria-label="Duyệt khoản ghi lúc khóa">'
+    + '<div class="qa-grab" aria-hidden="true"></div>'
+    + '<div class="qa-head"><h3>Duyệt khoản ghi lúc khóa</h3><button type="button" class="qa-x" data-act="khoaDuyetDong" aria-label="Đóng">'+icon('x')+'</button></div>'
+    + '<div class="qa-body"><div style="margin:0 0 8px;font-size:13px">Có <b>'+ds.length+'</b> khoản ghi khi app đang khóa, <b>chưa vào sổ</b>. Tick khoản nào đúng là của bạn.</div>';
+  ds.forEach(function(x){
+    var ten = catTen(x.kind, x.catId), cb = ghiKhoaCanhBao(x);
+    var khac = (x.ngay !== todayStr()) ? ' · cho ngày ' + ngayVN(x.ngay).slice(0, 5) : '';
+    h += '<label class="gn-row"><input type="checkbox" data-act="khoaDuyetTick" data-id="'+esc(x.id)+'" aria-label="Ghi khoản này"'+(d.bo[x.id] ? '' : ' checked')+'>'
+      + '<span class="gn-main"><b>'+esc(ten)+'</b>'+(x.ghiChu ? ' · '+esc(x.ghiChu) : '')+'<small>'+esc(ghiKhoaGio(x.luc))+khac
+      + (cb ? ' · <span style="color:var(--amber)">'+esc(cb)+'</span>' : '')+'</small></span>'
+      + '<span class="gn-tien '+(x.kind === 'thu' ? 'thu' : 'chi')+'">'+(x.kind === 'thu' ? '+' : '−')+fmt(Math.round(x.tien))+'</span></label>';
+  });
+  h += '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Khoản không tick sẽ bị xóa khỏi hàng chờ, không vào sổ. Bấm nút đóng nếu muốn để đó duyệt sau.</div></div>'
+    + '<div class="qa-foot" style="display:flex;gap:8px"><button type="button" class="btn secondary" style="flex:0 0 auto" data-act="khoaDuyetBoHet">Bỏ hết</button>'
+    + '<button type="button" class="btn qa-save chi'+(nChon ? '' : ' chua')+'" style="flex:1" data-act="khoaDuyetGhi"'+(nChon ? '' : ' disabled')+'>'+(nChon ? 'Ghi '+nChon+' khoản vào sổ' : 'Chưa tick khoản nào')+'</button></div></div>';
+  return h;
+}
+function ghiKhoaDuyetVe(){
+  var root = document.getElementById('khoaDuyetRoot');
+  if (!state.khoaDuyet){
+    if (root && root.parentNode) root.parentNode.removeChild(root);
+    if (!document.getElementById('qaSheetRoot')) document.body.classList.remove('qa-mo');
+    return;
+  }
+  var cuon = 0;
+  if (root){ var b = root.querySelector('.qa-body'); cuon = b ? b.scrollTop : 0; }
+  else {
+    root = document.createElement('div');
+    root.id = 'khoaDuyetRoot'; root.className = 'qa-back moi';
+    document.body.appendChild(root);
+    document.body.classList.add('qa-mo');
+    setTimeout(function(){ root.classList.remove('moi'); }, 400);
+  }
+  root.innerHTML = ghiKhoaDuyetHtml();
+  var b2 = root.querySelector('.qa-body'); if (b2) b2.scrollTop = cuon;
+}
+function ghiKhoaDuyetMo(){
+  var ds = ghiKhoaChoDoc();
+  if (!ds.length || !state.data) return;
+  state.khoaDuyet = { ds: ds, bo: {} };        // tick sẵn tất cả
+  ghiKhoaDuyetVe();
+}
+function ghiKhoaDuyetDong(){ state.khoaDuyet = null; ghiKhoaDuyetVe(); renderSyncStatus(); }
+// ghi các khoản đã tick vào sổ (cùng đường entryAddItem như Ghi nhanh thường), rồi XÓA cả hàng chờ (khoản không tick bị bỏ)
+function ghiKhoaDuyetGhi(){
+  var d = state.khoaDuyet;
+  if (!d || !state.data) return;
+  var da = [], boQua = 0;
+  d.ds.forEach(function(x){
+    if (d.bo[x.id]) return;
+    if (!(state.data.categories[x.kind] || []).some(function(c){ return c.id === x.catId; })){ boQua++; return; }      // danh mục đã bị xóa từ lúc ghi
+    var it = entryAddItem(x.ngay, x.kind, x.catId, x.tien, x.ghiChu, state.viChon);
+    if (!it){ boQua++; return; }
+    itemDatNhan(it, x.nhan);
+    var ghi = x.ghiChu ? x.ghiChu + ' ' + fmt(Math.round(x.tien)) : '';
+    if (ghi){
+      var e = state.data.journal[x.ngay];
+      e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + ghi : ghi;
+      it.gc = ghi;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
+    }
+    da.push({ date: x.ngay, iid: it.iid, note: ghi });
+  });
+  ghiKhoaChoGhi([]);
+  var r = { da: da, moi: [], ma: [] };
+  ghiKhoaDuyetDong();
+  if (da.length) scheduleSave();
+  renderAll();
+  toast('Đã ghi ' + da.length + ' khoản vào sổ' + (boQua ? ' (' + boQua + ' khoản bỏ vì danh mục đã bị xóa)' : '') + '.', da.length
+    ? { giay: 10, hoanTac: function(){ nhapHoanTac(r); scheduleSave(); renderAll(); } } : { loai: 'warn' });
 }
 /* ====================================================================
    TỔNG QUAN — thẻ đầu Sổ tay: số dư to, thu/chi tháng, đã chi bao nhiêu so với chỉ tiêu,
@@ -1159,6 +1268,7 @@ function chiBatThuong(catId, tien, boIid, homNay){
 function handleSoTayAction(act, el){
   el = el || {};      // phím N / Enter ở ô tiền gọi handleAction(..., null): không có phần tử bấm
   if (handleBieuDoAction(act, el)) return true;
+  if (act === 'qaSave' && state.qa.khoa){ ghiKhoaLuu(); return true; }      // từ màn khóa: vào hàng chờ, không cảnh báo (cảnh báo nói ra số dư)
   if (!el._daBaoAm && (act === 'qaSave' || act === 'viChuyenLuu' || act === 'stSaveItem' || act === 'saveEntry')){
     var canhBao = canhBaoGhi(act, el);
     if (canhBao){
@@ -1314,6 +1424,17 @@ function handleSoTayAction(act, el){
       toast('Đã ghi "Trả nợ" nhưng chưa chọn khoản vay — tiến độ trả nợ của khoản vay không đổi.', { loai:'warn' });
     }
     ketThuc();
+  } else if (act === 'khoaDuyetMo'){
+    ghiKhoaDuyetMo();
+  } else if (act === 'khoaDuyetDong'){
+    ghiKhoaDuyetDong();
+  } else if (act === 'khoaDuyetTick'){
+    var idDt = el.getAttribute('data-id');
+    if (state.khoaDuyet && idDt){ if (state.khoaDuyet.bo[idDt]) delete state.khoaDuyet.bo[idDt]; else state.khoaDuyet.bo[idDt] = true; ghiKhoaDuyetVe(); }
+  } else if (act === 'khoaDuyetBoHet'){
+    ghiKhoaChoGhi([]); ghiKhoaDuyetDong(); renderSyncStatus(); toast('Đã bỏ hết khoản ghi lúc khóa.');
+  } else if (act === 'khoaDuyetGhi'){
+    ghiKhoaDuyetGhi();
   } else if (act === 'qaMo'){
     qaMoSheet();
   } else if (act === 'qaDong'){
