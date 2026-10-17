@@ -130,7 +130,7 @@ function _khoaVe(g){
     +   '<div class="gate-msg" id="lockMsg" role="alert"></div>'
     +   '<div class="pin-pad" role="group" aria-label="Bàn phím số">'
     +     [1, 2, 3, 4, 5, 6, 7, 8, 9].map(so).join('')
-    +     (sinhTrac ? '<button type="button" class="phu" id="lockSinhTrac" aria-label="Dùng vân tay hoặc Face ID">' + icon('fingerprint') + '</button>'
+    +     (sinhTrac ? '<button type="button" class="phu" id="lockSinhTrac" aria-label="Dùng vân tay hoặc Face ID">' + icon('eye') + '</button>'
                     : '<button type="button" class="trong" tabindex="-1" aria-hidden="true"></button>')
     +     so(0)
     +     '<button type="button" class="phu" id="lockXoaSo" aria-label="Xóa số vừa nhập">' + icon('backspace') + '</button>'

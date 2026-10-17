@@ -8,10 +8,12 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.17.2', ngay: '2026-10-17', ten: 'Màn khóa: Ghi nhanh không bị Face ID che',
+    muc: ['Khi bật "Ghi nhanh ngay trên màn khóa", app không tự quét Face ID lúc mở nữa (hộp thoại Face ID của iPhone phủ kín màn hình và che mất nút Ghi nhanh). Muốn mở khóa bằng Face ID thì chạm biểu tượng ở bàn phím số. Công tắc tắt thì vẫn tự quét như cũ.',
+      'Biểu tượng mở khóa bằng Face ID / vân tay ở bàn phím số đổi từ vân tay thành con mắt.'] },
   { ban: '2026.10.17', ngay: '2026-10-17', ten: 'Ghi nhanh ngay trên màn khóa',
     muc: ['Cài đặt → Ứng dụng → Khóa app có công tắc "Ghi nhanh ngay trên màn khóa" (mặc định tắt, riêng từng máy). Bật lên thì màn khóa có nút Ghi nhanh: ghi không cần nhập mã PIN, nhưng bảng ghi không hiện số dư hay lịch sử, và khoản ghi chỉ vào hàng chờ, chưa vào sổ.',
-      'Nhập mã PIN xong sẽ hiện bước "Duyệt khoản ghi lúc khóa": các khoản được tick sẵn, bỏ tick khoản không phải của bạn rồi bấm "Ghi N khoản vào sổ". Khoản không tick bị bỏ. Chưa duyệt xong thì Sổ tay nhắc còn bao nhiêu khoản chờ.',
-      'Khi bật công tắc này, app không tự quét Face ID lúc mở nữa (hộp thoại Face ID của iPhone phủ kín màn hình và che mất nút Ghi nhanh). Muốn mở khóa bằng Face ID thì chạm biểu tượng Face ID ở bàn phím số.'] },
+      'Nhập mã PIN xong sẽ hiện bước "Duyệt khoản ghi lúc khóa": các khoản được tick sẵn, bỏ tick khoản không phải của bạn rồi bấm "Ghi N khoản vào sổ". Khoản không tick bị bỏ. Chưa duyệt xong thì Sổ tay nhắc còn bao nhiêu khoản chờ.'] },
   { ban: '2026.10.16.12', ngay: '2026-10-16', ten: 'Gỡ app con Ghi nhanh',
     muc: ['Gỡ app con "Ghi nhanh" trên màn hình chính: iPhone giữ bộ nhớ riêng cho từng biểu tượng nên nó không đọc được dữ liệu Sổ Tiền. Nếu đã thêm biểu tượng đó ra màn hình chính thì xóa đi. Ghi nhanh vẫn dùng trong app như thường, và ghi nhanh không cần mở app thì dùng Phím tắt (hướng dẫn trong README).'] },
   { ban: '2026.10.16.11', ngay: '2026-10-16', ten: 'Sửa Ghi nhanh trên màn hình chính bị trống',
