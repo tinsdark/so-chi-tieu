@@ -7236,6 +7236,21 @@ test('giờ sống qua lưu / nạp lại và sửa khoản; entryAddItem thư�
   var lai = ctx.entryItems(n.journal['2026-10-01'])[0];
   eq(lai.gio, '08:30', 'sửa khoản và qua JSON + normalizeData vẫn còn giờ'); eq(lai.soTien, 50000, 'số tiền đã sửa');
 });
+test('itemGioHien: khoản CŨ không có it.gio vẫn có giờ nhờ iid (thời điểm tạo), chỉ khi tạo đúng ngày của khoản', function(){
+  var luc = new Date(2026, 9, 17, 7, 42, 9).getTime(), iid = 'i3_' + luc.toString(36);
+  eq(ctx.itemGioHien({ iid: iid }, '2026-10-17'), '07:42', 'khoản cũ ghi đúng hôm đó: có giờ');
+  eq(ctx.itemGioHien({ iid: iid }, '2026-10-16'), '', 'ghi bù cho hôm qua: không giờ');
+  eq(ctx.itemGioHien({ iid: iid, gio: '06:15' }, '2026-10-17'), '06:15', 'it.gio (khoản ghi trên màn khóa) được ưu tiên hơn iid');
+  eq(ctx.itemGioHien({ iid: 'abc' }, '2026-10-17'), '', 'iid lạ: không giờ'); eq(ctx.itemGioHien({ iid: 'i1_zz' }, '2026-10-17'), '', 'số ngoài 2020 – 2100: không phải dấu thời gian');
+  eq(ctx.itemGioHien({}, '2026-10-17'), '', 'không iid'); eq(ctx.itemGioHien(null, '2026-10-17'), '', 'null');
+  eq(ctx.dlGioVaChu({ iid: iid }, 'Ăn', '2026-10-17'), '07:42 · Ăn', 'hiện ở dòng phụ');
+});
+test('khoản vừa ghi bằng Ghi nhanh có giờ qua iid, không cần lưu thêm trường nào (dữ liệu / file Drive không phình)', function(){
+  loadData(baseData()); setToday('2026-10-01');
+  var it = ctx.entryAddItem('2026-10-01', 'chi', 'an', 45000, '', ''), n = new Date();
+  var homNay = n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2);
+  ok(!('gio' in it), 'không lưu it.gio'); eq(ctx.itemGioHien(it, homNay), ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2), 'giờ suy từ iid');
+});
 test('duyệt khoản ghi lúc khóa: giờ là lúc GHI (x.luc), không phải lúc duyệt', function(){
   khoaGiaLap(function(){
     loadData(baseData()); setToday('2026-10-17');
@@ -7244,6 +7259,43 @@ test('duyệt khoản ghi lúc khóa: giờ là lúc GHI (x.luc), không phải 
     ctx.state.khoaDuyet = { ds: [x], bo: {} }; ctx.ghiKhoaDuyetGhi();
     eq(ctx.entryItems(ctx.state.data.journal['2026-10-17'])[0].gio, '06:15', 'giờ lúc ghi trên màn khóa');
   });
+});
+
+group('7j. Vùng chạm cho ngón tay (style.css)');
+test('vùng chạm nới chỉ nằm trong @media (pointer:coarse); nút đầu trang không nới xuống (tránh đè dòng trạng thái), dòng trạng thái không nới lên quá khoảng hở', function(){
+  var css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  var i = css.indexOf('@media (pointer:coarse){'); ok(i > 0, 'có khối pointer:coarse');
+  var truoc = css.slice(0, i), khoi = css.slice(i);
+  ok(!/#btnTim::after/.test(truoc) && !/sync-status\[data-act\]::after/.test(truoc), 'desktop không bị nới');
+  ok(/#btnTim::after[^}]*top:-12px;bottom:0;/.test(khoi), 'nút đầu trang nới lên, bottom:0');
+  ok(/\.sync-status\[data-act\]::after[^}]*top:-4px;bottom:-12px/.test(khoi), 'dòng trạng thái nới xuống, hở trên đúng 4px (bằng khoảng cách tới nút đầu trang)');
+  ok(/\.hero \.month-nav button:first-child::after\{inset:-7px 0 -7px -16px\}/.test(khoi) && /\.hero \.month-nav button:last-child::after\{inset:-7px -16px -7px 0\}/.test(khoi), '‹ › trong thẻ số dư chỉ nới ra ngoài');
+});
+
+group('7k. Chip số tiền hay ghi ở Ghi nhanh (qaGoiYTien)');
+test('qaGoiYTien: số xuất hiện từ 2 lần, nhiều lần nhất trước, hòa thì số nhỏ trước, tối đa 3; số một lần không vào', function(){
+  loadData(baseData()); setToday('2026-10-17');
+  [45000, 45000, 45000, 60000, 60000, 38000, 38000, 70000, 25000].forEach(function(v, i){ ctx.entryAddItem('2026-10-' + pad(i + 1), 'chi', 'an', v, '', ''); });
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  eq(JSON.stringify(ctx.qaGoiYTien('chi', 'an', 3)), '[45000,38000,60000]', 'đúng thứ tự: 45k (3 lần), rồi 38k và 60k (2 lần, 38k nhỏ hơn)');
+  eq(ctx.qaGoiYTien('chi', 'an', 1).length, 1, 'giới hạn n');
+  eq(ctx.qaGoiYTien('chi', 'xang', 3).length, 0, 'danh mục chưa có lịch sử: không gợi ý');
+  eq(ctx.qaGoiYTien('thu', 'an', 3).length, 0, 'khác loại thu / chi: không lẫn');
+});
+test('qaGoiYTien: chỉ tính 180 ngày gần nhất và bỏ khoản "(chưa chi tiết)"', function(){
+  loadData(baseData()); setToday('2026-10-17');
+  ctx.entryAddItem('2026-03-01', 'chi', 'an', 99000, '', ''); ctx.entryAddItem('2026-03-02', 'chi', 'an', 99000, '', '');     // quá 180 ngày
+  ctx.entryAddItem('2026-10-01', 'chi', 'an', 11000, '(chưa chi tiết)', ''); ctx.entryAddItem('2026-10-02', 'chi', 'an', 11000, '(chưa chi tiết)', '');
+  eq(ctx.qaGoiYTien('chi', 'an', 3).length, 0, 'số cũ và khoản chưa chi tiết không thành gợi ý');
+});
+test('hàng chip hiện ở bảng Ghi nhanh thường, đánh dấu chip đang điền; KHÔNG hiện ở chế độ khóa (lộ lịch sử)', function(){
+  loadData(baseData()); setToday('2026-10-17');
+  ctx.entryAddItem('2026-10-01', 'chi', 'an', 45000, '', ''); ctx.entryAddItem('2026-10-02', 'chi', 'an', 45000, '', '');
+  ctx.state.qa.kind = 'chi'; ctx.state.qa.cat = { chi: 'an' }; ctx.state.qa.amt = ''; ctx.state.qa.khoa = false;
+  var h = ctx.ghiNhanhHtml(); ok(/data-act="qaTien" data-v="45000"/.test(h) && /Hay ghi cho Ăn/.test(h), 'có chip 45.000');
+  ctx.state.qa.amt = '45.000'; ok(/qa-chip on" data-act="qaTien" data-v="45000"/.test(ctx.ghiNhanhHtml()), 'chip trùng số đang điền được đánh dấu');
+  ctx.state.qa.khoa = true; ok(!/qaTien/.test(ctx.ghiNhanhHtml()), 'chế độ khóa: không chip');
+  ctx.state.qa.khoa = false; ctx.state.qa.amt = '';
 });
 
 test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; nhập file có guard thiếu thư viện', function(){

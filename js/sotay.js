@@ -65,6 +65,23 @@ function qaGoiYGhiChu(kind, catId, n){
   });
   return Object.keys(dem).sort(function(a, b){ return dem[b] - dem[a] || (a < b ? -1 : 1); }).slice(0, n || 8);
 }
+// số tiền hay ghi nhất của một danh mục trong 180 ngày gần nhất, cho hàng chip dưới ô số tiền của Ghi nhanh.
+// Chỉ nhận số đã xuất hiện từ 2 lần trở lên (một lần chưa phải thói quen); nhiều lần bằng nhau thì số nhỏ trước. Tối đa n (mặc định 3).
+function qaGoiYTien(kind, catId, n){
+  var p = todayStr().split('-'), t = new Date(+p[0], +p[1] - 1, +p[2] - 180);
+  var tu = t.getFullYear() + '-' + pad2(t.getMonth() + 1) + '-' + pad2(t.getDate());
+  var dem = {};
+  Object.keys(state.data.journal).forEach(function(d){
+    if (d < tu) return;
+    entryItems(state.data.journal[d]).forEach(function(it){
+      var v = Math.round(num(it.soTien));
+      if (it.kind !== kind || it.catId !== catId || v <= 0 || it.ghiChu === '(chưa chi tiết)') return;
+      dem[v] = (dem[v] || 0) + 1;
+    });
+  });
+  return Object.keys(dem).filter(function(k){ return dem[k] >= 2; }).map(Number)
+    .sort(function(a, b){ return dem[b] - dem[a] || a - b; }).slice(0, n || 3);
+}
 // danh mục đang chọn của 1 loại: lần chọn gần nhất (nếu còn tồn tại và dùng được), không thì cái dùng nhiều nhất
 function qaCatChon(kind){
   var ok = qaCats(kind).some(function(c){ return c.id === state.qa.cat[kind]; });
@@ -94,6 +111,14 @@ function qaBarHtml(){
     + '<span class="qa-bar-plus">'+icon('plus')+'</span>'
     + '<span class="qa-bar-txt"><b>Ghi nhanh</b><small>Khoản chi hoặc khoản thu</small></span>'+vi+'</button></div>';
 }
+function qaTienChipHtml(kind, catId){
+  var ds = qaGoiYTien(kind, catId, 3);
+  if (!ds.length) return '';
+  var cur = Math.round(numNonNeg(docSo(state.qa.amt))), ten = esc(catTen(kind, catId));
+  return '<div class="qa-chips qa-tien" role="group" aria-label="Số tiền hay ghi cho '+ten+'"><span class="qa-tien-lbl">Hay ghi cho '+ten+':</span>'
+    + ds.map(function(v){ return '<button type="button" class="qa-chip'+(cur === v ? ' on' : '')+'" data-act="qaTien" data-v="'+v+'" aria-pressed="'+(cur === v)+'">'+veSo(v)+'</button>'; }).join('')
+    + '</div>';
+}
 // Bảng ghi khoản (bottom sheet). Cùng id (qa_amount, qa_note, qa_date, qa_wallet) và cùng đường lưu qaSave như thẻ cũ.
 function ghiNhanhHtml(){
   var kind = (state.qa.kind === 'thu') ? 'thu' : 'chi';
@@ -115,6 +140,8 @@ function ghiNhanhHtml(){
     + '</div>'
     + '<input type="text" inputmode="numeric" autocomplete="off" class="money qa-amt" id="qa_amount" placeholder="0 ₫" aria-label="Số tiền (gõ được 45k, 1,5tr, 45.000+30.000)" value="'+esc(state.qa.amt)+'">'
     + (khoa ? '' : '<div class="qa-ntd" id="qa_ntd">' + ntdGoiY(kind, numNonNeg(docSo(state.qa.amt))) + '</div>')
+    // số hay ghi của danh mục đang chọn (lấy từ lịch sử nên không hiện ở chế độ khóa); chạm = điền vào ô số tiền để còn sửa
+    + ((!khoa && sel) ? qaTienChipHtml(kind, sel) : '')
     // phím nhanh: điện thoại bàn phím số không có + / 000
     + '<div class="qa-keys" aria-label="Phím nhanh cho ô số tiền">'
     +   '<button type="button" data-chen="000" data-for="qa_amount">000</button>'
@@ -729,8 +756,8 @@ function dlSuaHtml(date, it){
     + '<button type="button" class="btn secondary sm" data-act="stCancelItem">Hủy</button></div></div>';
 }
 // dòng phụ của một khoản: giờ ghi (nếu có) đứng đầu, rồi danh mục / ví / nhãn
-function dlGioVaChu(it, chu){
-  var gio = (it.gio && /^\d{2}:\d{2}$/.test(it.gio)) ? it.gio : '';
+function dlGioVaChu(it, chu, ngay){
+  var gio = itemGioHien(it, ngay);
   return gio ? (chu ? gio + ' · ' + chu : gio) : chu;
 }
 function dlDongHtml(date, it){
@@ -745,7 +772,7 @@ function dlDongHtml(date, it){
   return '<div class="dl-row'+(mo ? ' mo' : '')+(it.iid === state.soTayVuaGhi ? ' anim-moi' : '')+'">'
     + '<div class="dl-main" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="stItem" data-iid="'+it.iid+'">'
     +   '<span class="dl-dot" style="--c:'+catMau(it.kind, it.catId)+'" aria-hidden="true"></span>'
-    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+dlGioVaChu(it, ((tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi) + itemNhan(it).map(function(t){ return ' · #'+esc(t); }).join('')).replace(/^ · /, ''))+'</span></span>'
+    +   '<span class="dl-txt"><span class="dl-t1">'+esc(tieuDe)+'</span><span class="dl-t2">'+dlGioVaChu(it, ((tieuDe === ten ? vi.replace(/^ · /, '') : esc(ten)+vi) + itemNhan(it).map(function(t){ return ' · #'+esc(t); }).join('')).replace(/^ · /, ''), date)+'</span></span>'
     +   '<span class="dl-amt '+it.kind+'">'+dlSoTien(it.kind, it.soTien)+'</span>'
     + '</div>'
     + (mo ? '<div class="dl-act"><button type="button" class="btn secondary sm" data-act="stEditItem" data-date="'+date+'" data-iid="'+it.iid+'">'+icon('pencil')+' Sửa</button>'
@@ -1444,6 +1471,9 @@ function handleSoTayAction(act, el){
     state.qa.kind = (el.getAttribute('data-kind') === 'thu') ? 'thu' : 'chi';
     qaGhiNho();
     qaVeLai();
+  } else if (act === 'qaTien'){
+    var vTien = num(el.getAttribute('data-v'));
+    if (vTien > 0){ state.qa.amt = veSo(vTien); qaVeLai(); qaNutCapNhat(); }       // điền vào ô, chưa ghi: còn sửa được
   } else if (act === 'qaCat'){
     state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.getAttribute('data-cat');
     qaGhiNho();
@@ -1464,7 +1494,6 @@ function handleSoTayAction(act, el){
     var itQ = entryAddItem(ngayQ, kQ, catQ, tienQ, noteQ, viQ || state.viChon);
     if (!itQ){ toast('Không ghi được khoản này.', { loai:'err' }); return true; }
     itemDatNhan(itQ, nhanParse((document.getElementById('qa_nhan') || {}).value));
-    itemDatGio(itQ, ngayQ, Date.now());
     state.soTayVuaGhi = itQ.iid;       // khoản này hiện dần ở lần vẽ ngay sau đây (xem cuối renderSoTay)
     // ghi chú của NGÀY: giống saveEntry — có nội dung thì gắn thêm số tiền để cột Nội dung đọc ra luôn có số
     var ghiQ = noteQ ? noteQ + ' ' + fmt(Math.round(tienQ)) : '';

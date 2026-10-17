@@ -294,6 +294,20 @@ function itemDatGio(it, ngay, luc){
   var homNay = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   if (isFinite(d.getTime()) && ngay === homNay) it.gio = pad2(d.getHours()) + ':' + pad2(d.getMinutes()); else delete it.gio;
 }
+// giờ ghi để HIỆN ra của một khoản trong ngày `ngay`: it.gio nếu có (khoản ghi trên màn khóa), không thì suy từ it.iid
+// (iid = 'i' + số thứ tự + '_' + thời điểm tạo ms base36, có từ commit đầu tiên nên khoản cũ cũng có). Chỉ nhận khi khoản được tạo
+// đúng NGÀY của nó (ghi bù ngày khác thì giờ tạo không nói gì về lúc tiêu). Trả '' nếu không có.
+function itemGioHien(it, ngay){
+  if (!it) return '';
+  if (it.gio && /^\d{2}:\d{2}$/.test(it.gio)) return it.gio;
+  var m = /^i[0-9a-z]+_([0-9a-z]+)$/.exec(String(it.iid || ''));
+  if (!m) return '';
+  var t = parseInt(m[1], 36);
+  if (!(t > 1.6e12 && t < 4.1e12)) return '';      // ngoài 2020 – 2100: không phải dấu thời gian
+  var d = new Date(t);
+  var homTao = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  return homTao === ngay ? pad2(d.getHours()) + ':' + pad2(d.getMinutes()) : '';
+}
 function entryFindItem(entry, iid){
   var arr = entryItems(entry);
   for (var i=0;i<arr.length;i++){ if (arr[i].iid === iid) return arr[i]; }

@@ -869,6 +869,8 @@ body.qa-mo{overflow:hidden}
 .qa-keys button:active{background:var(--hover)}
 .qa-lbl{font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 5px}
 .qa-chips{display:flex;flex-wrap:wrap;gap:6px}
+.qa-tien{justify-content:center;align-items:center;margin:2px 0 8px}
+.qa-tien-lbl{font-size:12px;color:var(--muted)}
 .qa-chip,.qa-more{position:relative;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;
   padding:6px 12px;font-size:13.5px;line-height:1.2;display:inline-flex;align-items:center;gap:4px;font-family:inherit}
 .qa-chip.on,.qa-more.on{border-color:var(--action);background:var(--row-bal);color:var(--action);font-weight:700}
@@ -1803,3 +1805,22 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .gn-tien.thu{color:var(--green)} .gn-tien.chi{color:var(--red)}
 .gn-cfg{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
 .gn-cfg summary{cursor:pointer;color:var(--muted);font-size:13px}
+
+/* ---- Vùng chạm cho ngón tay (chỉ màn cảm ứng) ----
+   Nới vùng bấm của các nút nhỏ lên khoảng 44px bằng ::after trong suốt, giao diện nhìn vào gần như không đổi.
+   Quy tắc: KHÔNG nới sang phía có phần tử bấm được khác (chỗ hai vùng chạm chồng nhau thì ăn cho phần tử nằm trên, bấm nhầm):
+   nút đầu trang chỉ nới lên và sang hai bên; dòng trạng thái đồng bộ chỉ nới xuống; ‹ › trong thẻ số dư chỉ nới ra phía ngoài.
+   Đổi chỗ nào ở đây thì chạy lại phép đo trong README (mục Quy ước giao diện). */
+@media (pointer:coarse){
+  header{padding-bottom:12px}      /* chừa chỗ cho vùng chạm của dòng trạng thái ngay dưới (chỉ +2px) */
+  #btnTim,#btnChuong,#btnPhimTat,#btnAnSo{position:relative}
+  #btnTim::after,#btnChuong::after,#btnPhimTat::after,#btnAnSo::after{content:"";position:absolute;top:-12px;bottom:0;left:-2px;right:-2px}
+  .sync-status[data-act]{position:relative}
+  .sync-status[data-act]::after{content:"";position:absolute;top:-4px;bottom:-12px;left:0;right:0}
+  #bannerZone .btn.sm{position:relative}
+  #bannerZone .btn.sm::after{content:"";position:absolute;inset:-11px -4px}
+  .month-nav button{position:relative}
+  .month-nav button::after{content:"";position:absolute;inset:-7px}
+  .hero .month-nav button:first-child::after{inset:-7px 0 -7px -16px}
+  .hero .month-nav button:last-child::after{inset:-7px -16px -7px 0}
+}
