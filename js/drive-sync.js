@@ -675,7 +675,6 @@ async function thuXinTokenAmTham(){
 // người dùng chạm gì. Máy chưa có dữ liệu thì mới hiện màn đầu (đăng nhập lấy dữ liệu Drive, hoặc dùng ngay không đăng nhập).
 async function khoiDong(){
   if (moNgoaiTuyen()){
-    qaMoSanKhiMoApp();          // trước khi chờ token (có thể treo tới 8 giây): bảng Ghi nhanh hiện ngay khi bật cài đặt
     var tok = readSavedToken() || await thuXinTokenAmTham();
     if (tok){ accessToken = tok; taiThongTinTaiKhoan(); await dongBoDrive(false); }
     else renderSyncStatus();
