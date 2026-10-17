@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.17.3', ngay: '2026-10-17', ten: 'Giờ ghi của khoản ghi nhanh',
+    muc: ['Khoản ghi bằng Ghi nhanh có thêm giờ ghi ở dòng phụ trong Sổ tay (ví dụ "07:42 · Ăn"), để phân biệt những dòng cùng danh mục không có ghi chú. Chỉ áp dụng khi ghi cho đúng ngày hôm nay; ghi bù cho hôm qua hoặc ngày khác thì không hiện giờ. Khoản ghi trên màn khóa lấy giờ lúc ghi, không phải lúc duyệt. Khoản cũ và khoản nhập từ file, định kỳ không có giờ.'] },
   { ban: '2026.10.17.2', ngay: '2026-10-17', ten: 'Màn khóa: Ghi nhanh không bị Face ID che',
     muc: ['Khi bật "Ghi nhanh ngay trên màn khóa", app không tự quét Face ID lúc mở nữa (hộp thoại Face ID của iPhone phủ kín màn hình và che mất nút Ghi nhanh). Muốn mở khóa bằng Face ID thì chạm biểu tượng ở bàn phím số. Công tắc tắt thì vẫn tự quét như cũ.',
       'Biểu tượng mở khóa bằng Face ID / vân tay ở bàn phím số đổi từ vân tay thành con mắt.'] },
