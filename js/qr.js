@@ -6,7 +6,7 @@
    1) qrMaTran(text): bộ mã hóa QR (chế độ byte, mức sửa lỗi M, phiên bản 1 -> 10 = tối đa 213 byte, dư cho VietQR ~120 byte).
    2) vqPayload(bin, stk, soTien, noiDung): chuỗi theo chuẩn VietQR / NAPAS 247 (EMVCo): tag 38 = tài khoản nhận,
       54 = số tiền, 62.08 = nội dung, 63 = CRC16-CCITT. Có số tiền thì là mã "động" (tag 01 = 12), không thì "tĩnh" (11).
-   3) qrMoDialog: nút "Tạo QR" ở Sổ tay: chọn loại (thu nợ vay / nhận tiền khác), nhập số tiền + ghi chú là ra QR, có Lưu ảnh / Chia sẻ.
+   3) qrMoDialog: nút "Tạo QR" ở Sổ tay: chọn loại (thu nợ vay / nhận tiền khác), nhập số tiền + ghi chú rồi bấm Tạo QR mới ra mã, có Lưu ảnh / Chia sẻ.
       Tài khoản nhận do người dùng cài ở Cài đặt → Tiền → QR nhận tiền: state.data.settings.qr = { bin, stk }.
    App KHÔNG biết tiền đã vào hay chưa (không có API ngân hàng): QR chỉ đỡ phải gõ tay cho người chuyển.
    ==================================================================== */
@@ -298,9 +298,28 @@ function qrChuanBiAnh(root, tk, tien, noiDung){
     }, 'image/png');
   }, 150);
 }
+// Lưu ảnh: web không chọn được thư mục / thư viện Ảnh của máy, chỉ tải vào thư mục Tải xuống. Trên điện thoại (màn cảm ứng) thì mở ảnh
+// to cho người dùng NHẤN GIỮ -> "Lưu vào Ảnh" (iPhone) / "Tải hình ảnh xuống" (Android); nút Chia sẻ -> "Lưu hình ảnh" cũng vào Ảnh. Máy tính thì tải file.
 function qrLuuAnh(){
   if (!_qrAnh) return;
   qrGhiCho();
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) qrXemAnh(); else qrTaiFile();
+}
+function qrXemAnh(){
+  var url = URL.createObjectURL(_qrAnh.blob), o = document.createElement('div');
+  o.className = 'qr-xem';
+  o.innerHTML = '<div class="qr-xem-b"><img src="' + url + '" alt="Ảnh QR để lưu">'
+    + '<p>Nhấn giữ vào ảnh, chọn <b>Lưu vào Ảnh</b> (iPhone) hoặc <b>Tải hình ảnh xuống</b> (Android). Hoặc bấm Chia sẻ rồi chọn <b>Lưu hình ảnh</b>.</p>'
+    + '<div class="qr-act"><button type="button" class="btn secondary" data-qr-tai>Tải file về</button><button type="button" class="btn" data-qr-xong>Xong</button></div></div>';
+  var dong = function(){ if (o.parentNode) o.parentNode.removeChild(o); URL.revokeObjectURL(url); };
+  o.addEventListener('click', function(ev){
+    var t = ev.target;
+    if (t === o || (t.closest && t.closest('[data-qr-xong]'))) dong();
+    else if (t.closest && t.closest('[data-qr-tai]')) qrTaiFile();
+  });
+  document.body.appendChild(o);
+}
+function qrTaiFile(){
   var url = URL.createObjectURL(_qrAnh.blob), a = document.createElement('a');
   a.href = url; a.download = _qrAnh.ten; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
@@ -363,7 +382,7 @@ function qrDenXacNhan(x){
 function qrKhoanChoVay(){
   return ((state.data.vayNo || {}).choVay || []).filter(function(c){ return !choVayDaXong(c) && conLaiPhaiThu(c) > 0; });
 }
-// hộp thoại "Tạo QR": loại, (khoản cho vay), số tiền, ghi chú. Gõ tới đâu QR đổi tới đó. Dùng khung vnDlMo của Vay - Nợ.
+// hộp thoại "Tạo QR": loại, (khoản cho vay), số tiền, ghi chú, rồi nút Tạo QR. Dùng khung vnDlMo của Vay - Nợ.
 async function qrMoDialog(){
   var tk = vqTaiKhoan();
   if (!tk){
@@ -387,11 +406,17 @@ async function qrMoDialog(){
     body: vnF('Loại hình', chips) + (cvs.length ? chon : '')
       + vnF('Số tiền', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="qr_so" placeholder="0">')
       + vnF('Ghi chú <span class="mp-hint">(tùy chọn, hiện trong nội dung chuyển khoản)</span>', '<input type="text" id="qr_nd" maxlength="25" autocomplete="off" placeholder="VD: Tra no Minh">')
+      + '<button type="button" class="btn qr-tao" id="qr_tao" data-qr-tao disabled>Tạo QR</button>'
       + '<div id="qr_out"></div>'
-      + '<div class="qr-act"><button type="button" class="btn secondary" data-qr-luu disabled>Lưu ảnh</button><button type="button" class="btn" data-qr-chiase disabled>Chia sẻ</button></div>',
+      + '<div class="qr-act" id="qr_act" hidden><button type="button" class="btn secondary" data-qr-luu disabled>Lưu ảnh</button><button type="button" class="btn" data-qr-chiase disabled>Chia sẻ</button></div>',
     khiNhap: function(root){
       if (!root._qr){
-        root._qr = { cv: '' };
+        root._qr = { cv: '', khoaTao: '' };
+        root.addEventListener('keydown', function(ev){        // Enter ở ô số tiền / ghi chú = bấm Tạo QR
+          if (ev.key !== 'Enter' || ev.isComposing || !ev.target || (ev.target.id !== 'qr_so' && ev.target.id !== 'qr_nd')) return;
+          ev.preventDefault();
+          var b = root.querySelector('#qr_tao'); if (b && !b.disabled && !b.hidden) qrCapNhat(root, tk, true);
+        });
         root.addEventListener('click', function(ev){
           var t = ev.target && ev.target.closest ? ev.target : null; if (!t) return;
           var l = t.closest('[data-qr-loai]');
@@ -399,7 +424,8 @@ async function qrMoDialog(){
             root.querySelector('#qr_loai').value = l.getAttribute('data-qr-loai');
             [].forEach.call(root.querySelectorAll('[data-qr-loai]'), function(b){ b.classList.toggle('on', b === l); b.setAttribute('aria-pressed', b === l); });
             qrCapNhat(root, tk);
-          } else if (t.closest('[data-qr-luu]')) qrLuuAnh();
+          } else if (t.closest('[data-qr-tao]')) qrCapNhat(root, tk, true);
+          else if (t.closest('[data-qr-luu]')) qrLuuAnh();
           else if (t.closest('[data-qr-chiase]')) qrChiaSeAnh();
         });
       }
@@ -410,9 +436,11 @@ async function qrMoDialog(){
   qrGhiCho();          // đóng hộp thoại (nút Đóng / X / Esc) mà đã có số tiền: coi là đã đưa mã cho người ta, nhắc xác nhận ở chuông
   _qrDong = null;
 }
-function qrCapNhat(root, tk){
+// Chỉ VẼ QR khi người dùng bấm Tạo QR (tao = true). Sửa loại / số tiền / ghi chú sau đó thì QR cũ ẩn đi, phải bấm Tạo QR lại,
+// để không bao giờ hiện một mã không khớp số đang gõ.
+function qrCapNhat(root, tk, tao){
   var loai = root.querySelector('#qr_loai').value, f = root.querySelector('#qr_cv_f'), sel = root.querySelector('#qr_cv');
-  var so = root.querySelector('#qr_so'), nd = root.querySelector('#qr_nd');
+  var so = root.querySelector('#qr_so'), nd = root.querySelector('#qr_nd'), nut = root.querySelector('#qr_tao');
   if (f) f.hidden = loai !== 'no';
   nd.placeholder = loai === 'no' ? 'VD: Tra no Minh' : 'VD: Chia bill an toi';
   if (sel && sel.value !== root._qr.cv){            // vừa chọn khoản khác: tự điền số còn lại + ghi chú
@@ -421,7 +449,16 @@ function qrCapNhat(root, tk){
     if (c){ so.value = veSo(Math.round(conLaiPhaiThu(c))); nd.value = vqBoDau('Tra no ' + (nguoiCuaKhoan(c) || c.ten)); }
   }
   var tien = numNonNeg(docSo(so.value));
-  if (_qrDong){ _qrDong.loai = loai; _qrDong.tien = tien; _qrDong.nd = nd.value; _qrDong.cv = sel ? sel.value : ''; }
-  root.querySelector('#qr_out').innerHTML = qrNhanTienHtml(tk, tien, nd.value);
-  qrChuanBiAnh(root, tk, tien, nd.value);
+  var khoa = tien > 0 ? [loai, Math.round(tien), vqBoDau(nd.value), sel ? sel.value : ''].join('|') : '';
+  if (tao && khoa){
+    root._qr.khoaTao = khoa;
+    if (_qrDong){ _qrDong.loai = loai; _qrDong.tien = tien; _qrDong.nd = nd.value; _qrDong.cv = sel ? sel.value : ''; }
+  }
+  var daTao = !!khoa && khoa === root._qr.khoaTao;
+  nut.disabled = !(tien > 0); nut.hidden = daTao;
+  root.querySelector('#qr_act').hidden = !daTao;
+  root.querySelector('#qr_out').innerHTML = daTao ? qrNhanTienHtml(tk, tien, nd.value)
+    : '<div class="qr-hint">' + (tien > 0 ? 'Kiểm tra lại rồi bấm "Tạo QR".' : 'Nhập số tiền rồi bấm "Tạo QR".') + '</div>';
+  qrChuanBiAnh(root, tk, daTao ? tien : 0, nd.value);
+  if (tao && daTao && root.querySelector('#qr_out').scrollIntoView) root.querySelector('#qr_out').scrollIntoView({ block: 'nearest' });
 }
