@@ -1841,7 +1841,3 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .qr-act .btn{flex:1}
 .qr-tao{width:100%;margin-top:14px}
 .qr-tao[hidden],.qr-act[hidden]{display:none}
-.qr-xem{position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
-.qr-xem-b{background:var(--card);border-radius:20px;padding:16px;max-width:420px;width:100%;max-height:100%;overflow:auto;text-align:center}
-.qr-xem-b img{width:100%;height:auto;border-radius:12px;border:1px solid var(--border);-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
-.qr-xem-b p{font-size:13px;color:var(--muted);margin:10px 0 0}

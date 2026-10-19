@@ -298,26 +298,16 @@ function qrChuanBiAnh(root, tk, tien, noiDung){
     }, 'image/png');
   }, 150);
 }
-// Lưu ảnh: web không chọn được thư mục / thư viện Ảnh của máy, chỉ tải vào thư mục Tải xuống. Trên điện thoại (màn cảm ứng) thì mở ảnh
-// to cho người dùng NHẤN GIỮ -> "Lưu vào Ảnh" (iPhone) / "Tải hình ảnh xuống" (Android); nút Chia sẻ -> "Lưu hình ảnh" cũng vào Ảnh. Máy tính thì tải file.
-function qrLuuAnh(){
+// Lưu ảnh: web không chọn được thư mục / thư viện Ảnh, và tải file trên iPhone (app cài ra màn hình chính) làm văng ra khỏi app.
+// Nên máy nào chia sẻ được file thì mở bảng chia sẻ (iPhone: chọn "Lưu hình ảnh" là vào thư viện Ảnh); máy tính thì tải file về.
+async function qrLuuAnh(){
   if (!_qrAnh) return;
   qrGhiCho();
-  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) qrXemAnh(); else qrTaiFile();
-}
-function qrXemAnh(){
-  var url = URL.createObjectURL(_qrAnh.blob), o = document.createElement('div');
-  o.className = 'qr-xem';
-  o.innerHTML = '<div class="qr-xem-b"><img src="' + url + '" alt="Ảnh QR để lưu">'
-    + '<p>Nhấn giữ vào ảnh, chọn <b>Lưu vào Ảnh</b> (iPhone) hoặc <b>Tải hình ảnh xuống</b> (Android). Hoặc bấm Chia sẻ rồi chọn <b>Lưu hình ảnh</b>.</p>'
-    + '<div class="qr-act"><button type="button" class="btn secondary" data-qr-tai>Tải file về</button><button type="button" class="btn" data-qr-xong>Xong</button></div></div>';
-  var dong = function(){ if (o.parentNode) o.parentNode.removeChild(o); URL.revokeObjectURL(url); };
-  o.addEventListener('click', function(ev){
-    var t = ev.target;
-    if (t === o || (t.closest && t.closest('[data-qr-xong]'))) dong();
-    else if (t.closest && t.closest('[data-qr-tai]')) qrTaiFile();
-  });
-  document.body.appendChild(o);
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [_qrAnh.file] })){
+    toast('Chọn "Lưu hình ảnh" để lưu vào thư viện Ảnh.');
+    try{ await navigator.share({ files: [_qrAnh.file] }); }
+    catch(e){ if (!e || e.name !== 'AbortError') toast('Không lưu được ảnh.', { loai: 'err' }); }
+  } else qrTaiFile();
 }
 function qrTaiFile(){
   var url = URL.createObjectURL(_qrAnh.blob), a = document.createElement('a');
@@ -399,11 +389,12 @@ async function qrMoDialog(){
   _qrDong = { id: 'qr_' + Date.now().toString(36), loai: 'no', tien: 0, nd: '', cv: '' };
   var chips = '<input type="hidden" id="qr_loai" value="no"><div class="qa-chips" role="group" aria-label="Loại hình">'
     + Object.keys(QR_LOAI).map(function(k){ return '<button type="button" class="qa-chip'+(k === 'no' ? ' on' : '')+'" data-qr-loai="'+k+'" aria-pressed="'+(k === 'no')+'">'+QR_LOAI[k]+'</button>'; }).join('') + '</div>';
-  var chon = '<div id="qr_cv_f">' + vnF('Khoản cho vay', '<select id="qr_cv"><option value="">— Chọn khoản (hoặc tự nhập số) —</option>'
-    + cvs.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(nguoiCuaKhoan(c) || c.ten)+' · còn '+fmt(Math.round(conLaiPhaiThu(c)))+'</option>'; }).join('') + '</select>') + '</div>';
+  var chon = '<div id="qr_cv_f">' + vnF('Khoản cho vay', '<select id="qr_cv"><option value="">' + (cvs.length ? '— Chọn khoản cho vay —' : 'Chưa có khoản cho vay nào đang chờ thu') + '</option>'
+    + cvs.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(nguoiCuaKhoan(c) || c.ten)+' · còn '+fmt(Math.round(conLaiPhaiThu(c)))+'</option>'; }).join('') + '</select>',
+    '', cvs.length ? 'Chọn khoản thì tự điền số còn lại và ghi chú, vẫn sửa được.' : 'Thêm ở tab Vay - Nợ, hoặc tự nhập số tiền bên dưới.') + '</div>';
   await vnDlMo({
-    tieuDe: 'Tạo QR nhận tiền', nutOk: 'Đóng', chiDong: true,
-    body: vnF('Loại hình', chips) + (cvs.length ? chon : '')
+    tieuDe: 'Tạo QR nhận tiền', chiDong: true,
+    body: vnF('Loại hình', chips) + chon
       + vnF('Số tiền', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="qr_so" placeholder="0">')
       + vnF('Ghi chú <span class="mp-hint">(tùy chọn, hiện trong nội dung chuyển khoản)</span>', '<input type="text" id="qr_nd" maxlength="25" autocomplete="off" placeholder="VD: Tra no Minh">')
       + '<button type="button" class="btn qr-tao" id="qr_tao" data-qr-tao disabled>Tạo QR</button>'
