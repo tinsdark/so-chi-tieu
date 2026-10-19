@@ -564,9 +564,7 @@ function vnDlMo(cf){
     back.addEventListener('input', function(){ if (cf.khiNhap) cf.khiNhap(back); });
     back.addEventListener('change', function(){ if (cf.khiNhap) cf.khiNhap(back); });
     document.addEventListener('keydown', onKey, true);
-    if (cf.khiNhap) cf.khiNhap(back);
-    var inp = back.querySelector('input[type=text]');
-    if (inp){ inp.focus(); if (inp.select) inp.select(); }
+    if (cf.khiNhap) cf.khiNhap(back);      // không tự focus ô nào: chạm ô nào mới nhập ô đó
   });
 }
 function vnDlTile(nhan, giaTri){

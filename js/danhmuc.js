@@ -982,7 +982,6 @@ function handleDanhMucAction(act, el){
   } else if (act === 'khoaNgay'){ khoaHien();
   } else if (act === 'dkThem'){
     state.dkForm = { id: '' }; renderDanhMuc();
-    var dkO = document.getElementById('dk_ten'); if (dkO) dkO.focus();
   } else if (act === 'dkSua'){
     state.dkForm = { id: el.getAttribute('data-id') }; renderDanhMuc();
   } else if (act === 'dkHuy'){

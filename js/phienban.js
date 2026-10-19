@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.19.3', ngay: '2026-10-19', ten: 'Mở bảng thêm mới không tự bật bàn phím',
+    muc: ['Mở bất kỳ bảng nào (Ghi nhanh, thêm giao dịch định kỳ, Tạo QR, Tất toán, hộp thoại hỏi số, tìm kiếm...) không còn tự nhảy vào ô nhập và bật bàn phím. Bảng mở ở trạng thái bình thường, chạm vào ô nào thì nhập ô đó.'] },
   { ban: '2026.10.19.2', ngay: '2026-10-19', ten: 'Thẻ QR: gộp Lưu ảnh và Chia sẻ thành một nút',
     muc: ['Thẻ QR chỉ còn một nút "Lưu / Chia sẻ", vì trên iPhone hai nút cũ đều mở cùng một bảng chia sẻ. Bấm vào, chọn "Lưu hình ảnh" để lưu vào thư viện Ảnh, hoặc chọn Zalo, Tin nhắn... để gửi cho người chuyển tiền. Máy tính thì tải ảnh về.',
       'Nhấn giữ vào ảnh QR sẽ sao chép ảnh, rồi dán thẳng vào Zalo hoặc Tin nhắn để gửi.'] },

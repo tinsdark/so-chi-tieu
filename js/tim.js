@@ -170,8 +170,7 @@ function timVe(){
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
   timChon(0);
-  // focus NGAY trong lúc xử lý cú bấm: iOS chỉ bật bàn phím khi focus nằm trong cử chỉ của người dùng (setTimeout làm mất cử chỉ)
-  var o = document.getElementById('tim_q'); if (o && o.focus) o.focus();
+  // không tự focus ô tìm: mở ở trạng thái bình thường, chạm vào ô mới gõ
 }
 function timChon(i){
   var rs = document.querySelectorAll('#timKq .tim-r');

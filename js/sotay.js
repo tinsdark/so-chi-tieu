@@ -240,9 +240,7 @@ function qaMoSheet(){
   state.qa.open = true;
   var cu = document.getElementById('qaSheetRoot');
   if (cu && cu.parentNode) cu.parentNode.removeChild(cu);
-  qaSheetVe();
-  var o = document.getElementById('qa_amount');
-  if (o && o.focus) o.focus();      // gọi ngay trong cú bấm: iPhone chỉ bật bàn phím khi focus nằm trong thao tác của người dùng
+  qaSheetVe();      // không tự focus ô số tiền: mở bảng ở trạng thái bình thường (không bật bàn phím), chạm ô nào mới nhập ô đó
 }
 function qaDongSheet(){
   state.qa.open = false;
@@ -1629,7 +1627,6 @@ function handleSoTayAction(act, el){
   } else if (act === 'stLocMo'){
     state.soTayLocMo = !state.soTayLocMo;
     renderSoTay();
-    if (state.soTayLocMo){ var oL = document.querySelector('[data-act=soTaySearchInput]'); if (oL) oL.focus(); }
   } else if (act === 'viCardChon'){
     state.qa.wallet = el.getAttribute('data-id');
     renderSoTay();
