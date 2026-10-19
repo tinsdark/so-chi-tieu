@@ -170,21 +170,8 @@ node tools/bump.js --check  # chỉ kiểm tra
 
 ---
 
-## 5. Ghi nhanh bằng Phím tắt (iPhone)
 
-Phím tắt hỏi số tiền và danh mục rồi lưu mỗi khoản thành một file CSV nhỏ trong Tệp; mở app thì chọn nhiều file cùng lúc (Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày"), xem danh sách, tick khoản nào ghi. App nhớ mã từng khoản (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi. Đặt phím tắt ở widget màn hình chính / khóa hoặc chạm hai lần mặt lưng. Dựng một phím tắt cho khoản chi:
-
-1. **Hỏi nhập liệu**, kiểu Số, "Số tiền?".
-2. **Chọn từ danh sách**: mỗi dòng một danh mục chi, gõ đúng tên trong app.
-3. **Ngày hiện tại** → **Định dạng ngày** `yyyy-MM-dd`; thêm một cái `yyyy-MM-dd-HH-mm-ss` làm tên file.
-4. **Văn bản** hai dòng, dòng cuối kết thúc bằng dấu phẩy: `Ngày,Loại,Số tiền,Danh mục,Ghi chú` / `<ngày>,chi,<số tiền>,<danh mục>,`
-5. **Lưu tệp**: tắt "Hỏi nơi lưu", chọn thư mục iCloud Drive, tên `ghi-nhanh-<giờ>.csv` (**tên phải bắt đầu bằng `ghi-nhanh-`**).
-
-Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu`. Chưa làm được việc tự hiện danh sách khi mở app (web app không tự đọc file ngoài nó).
-
----
-
-## 6. Hướng phát triển (chưa làm)
+## 5. Hướng phát triển (chưa làm)
 
 - **Mã hóa dữ liệu bằng PIN** (WebCrypto): nặng và rủi ro (quên PIN là mất dữ liệu), cần migration và test kỹ.
 - **Báo cáo xuất ảnh / PDF** để chia sẻ.
