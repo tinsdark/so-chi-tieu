@@ -170,9 +170,7 @@ node tools/bump.js --check  # chỉ kiểm tra
 
 ---
 
-## 5. Hướng phát triển
-
-### Ghi nhanh không cần mở app (iPhone, Phím tắt)
+## 5. Ghi nhanh bằng Phím tắt (iPhone)
 
 Phím tắt hỏi số tiền và danh mục rồi lưu mỗi khoản thành một file CSV nhỏ trong Tệp; mở app thì chọn nhiều file cùng lúc (Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày"), xem danh sách, tick khoản nào ghi. App nhớ mã từng khoản (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi. Đặt phím tắt ở widget màn hình chính / khóa hoặc chạm hai lần mặt lưng. Dựng một phím tắt cho khoản chi:
 
@@ -184,20 +182,11 @@ Phím tắt hỏi số tiền và danh mục rồi lưu mỗi khoản thành m�
 
 Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu`. Chưa làm được việc tự hiện danh sách khi mở app (web app không tự đọc file ngoài nó).
 
-### Chưa làm, có thể làm khi cần
+---
 
-- **Nhắc việc ngoài app**: thông báo đẩy cần server riêng (trái nguyên tắc), Google Calendar cần xin thêm quyền Lịch. Hiện có `.ics`.
+## 6. Hướng phát triển (chưa làm)
+
 - **Mã hóa dữ liệu bằng PIN** (WebCrypto): nặng và rủi ro (quên PIN là mất dữ liệu), cần migration và test kỹ.
-- Báo cáo xuất ảnh / PDF để chia sẻ; đính kèm ảnh hóa đơn (lưu Drive, cần quản lý dung lượng); huy hiệu số trên biểu tượng app (chưa chắc iOS hỗ trợ).
-- Sổ tiết kiệm có kỳ hạn, vàng / chứng khoán vào tài sản ròng (giá nhập tay); đa tiền tệ; **Sổ Hụi** (dây hụi, lãi suất thực theo năm).
-
-### Đã cân nhắc, quyết định không làm
-
-- **AI / chatbot** trong app; **giao dịch định kỳ tự ghi** (số tiền nhiều khoản không cố định, giữ nhắc rồi ghi tay); **mẫu giao dịch / yêu thích** ở Ghi nhanh (rối giao diện).
-- **Dùng chung sổ nhiều người** và **sổ gia đình ghép từ các sổ riêng**: rủi ro xung đột ghi chồng.
-- **Quét QR VietQR để ghi khoản chi**: người dùng đã quét trong app ngân hàng rồi, quét thêm là thêm thao tác, mã cố định không có số tiền. (Ngược lại, TẠO QR nhận tiền đã làm, xem mục 1.)
-- **"Vì sao?" tách chênh lệch so với tháng trước**: "số lần" thực ra là số lần ghi, dễ hiểu nhầm, dữ liệu cũ có dòng "(chưa chi tiết)"; giá trị không đủ lớn.
-- **"Lương tự trả" cho thu nhập không đều**: phải chọn mức ổn định, chạm vào cách dự báo, cần cờ "chi phí công việc", hỏng nếu tiêu luôn phần dư.
-- **Máy tính Gross → Net và thuế TNCN**: biểu thuế đổi liên tục, không tự kiểm chứng được.
-- **App con "Ghi nhanh" ở màn hình chính** (đã làm rồi gỡ, PR 108–110): trên iPhone mỗi biểu tượng có bộ nhớ riêng nên app con không đọc được dữ liệu app chính. Dùng Phím tắt hoặc Ghi nhanh ngay trên màn khóa thay thế. Công tắc "mở app là bật sẵn bảng Ghi nhanh" cũng đã gỡ.
-- **Quy tắc tự phân loại** giao dịch: đã làm rồi gỡ hẳn.
+- **Báo cáo xuất ảnh / PDF** để chia sẻ.
+- **Đính kèm ảnh hóa đơn** vào giao dịch (lưu Drive, cần quản lý dung lượng).
+- **Sổ tiết kiệm có kỳ hạn**, vàng / chứng khoán vào tài sản ròng (giá nhập tay); **Sổ Hụi** (dây hụi, lãi suất thực theo năm).
