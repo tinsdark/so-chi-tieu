@@ -896,7 +896,7 @@ body.qa-mo{overflow:hidden}
 .qa-vi{--vc:#1f7a6b;display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);color:var(--text);
   border:1.5px solid var(--border);border-radius:14px;padding:7px 10px}
 .qa-vi.vc1{--vc:#8a5a1c} .qa-vi.vc2{--vc:#4f4a9c} .qa-vi.vc3{--vc:#9c3f63}
-.qa-vi-bar{flex:0 0 10px;height:10px;align-self:center;border-radius:50%;background:var(--vc)}
+.qa-vi-bar{flex:0 0 5px;align-self:stretch;border-radius:99px;background:var(--vc)}
 .qa-vi span{display:flex;flex-direction:column;min-width:0}
 .qa-vi b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qa-vi small{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
