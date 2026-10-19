@@ -69,7 +69,7 @@ function tongKetCardHtml(mk){
   if (r.rong != null){
     var dRong = r.rongTruoc != null ? r.rong - r.rongTruoc : null;
     h += tkDong('Tài sản ròng thực tế cuối tháng', bdTien(r.rong),
-      dRong != null && Math.abs(dRong) >= 1 ? (dRong > 0 ? '↑ ' : '↓ ') + bdTien(Math.abs(dRong)) + ' so với tháng trước' : '', r.rong < 0 ? 'chi' : '');
+      dRong != null && Math.abs(dRong) >= 1 ? (dRong > 0 ? icon('arrow-up','ic-d') : icon('arrow-down','ic-d')) + ' ' + bdTien(Math.abs(dRong)) + ' so với tháng trước' : '', r.rong < 0 ? 'chi' : '');
   }
   if (r.tang) h += tkDong('Tăng mạnh nhất', esc(r.tang.ten), '+' + bdTien(r.tang.d) + ' so với tháng ' + parseInt(r.prevMk.slice(5, 7), 10) + ' (chi hằng ngày)');
   return h + tkGiaiThichHtml(r) + '</div>';

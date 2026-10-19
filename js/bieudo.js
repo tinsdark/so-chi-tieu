@@ -254,7 +254,7 @@ function bdHBars(items, tong, opt){
     var trai = opt.phanTram ? Math.round(it.v / tong * 100) + '% ' + (opt.nhanTong || 'tổng chi') : '', chip = '';
     if (opt.soSanh && it.truoc != null && it.truoc > 0){
       var d = Math.round((it.v - it.truoc) / it.truoc * 100);
-      chip = '<span class="cm '+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? '↑ ' : (d < 0 ? '↓ ' : '= '))+Math.abs(d)+'% so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
+      chip = '<span class="cm '+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? icon('arrow-up','ic-d')+' ' : (d < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(d)+'% so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
     } else if (opt.soSanh && it.truoc === 0){
       chip = '<span class="cm up">mới so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
     }
@@ -430,7 +430,7 @@ function bdTongQuanHtml(mk){
   var dong = [];
   var pc = bdPhanTram(cur.tongChiThat, prev.tongChiThat);
   if (pc != null && prev.coDl){
-    dong.push({ ic: pc > 0 ? 'up' : 'dn', ky: pc > 0 ? '↑' : '↓',
+    dong.push({ ic: pc > 0 ? 'up' : 'dn', ky: pc > 0 ? icon('arrow-up') : icon('arrow-down'),
       t: 'Chi tiêu <b>' + (pc > 0 ? 'tăng ' : (pc < 0 ? 'giảm ' : 'không đổi ')) + (pc === 0 ? '' : Math.abs(pc) + '%') + '</b> so với ' + prev.nhan,
       s: bdTien(cur.tongChiThat) + ' so với ' + bdTien(prev.tongChiThat) });
   }
@@ -469,7 +469,7 @@ function bdTongQuanHtml(mk){
   }
   // --- 2 ô thu / chi ---
   var pt = prev.coDl ? bdPhanTram(cur.tongThuThat, prev.tongThuThat) : null;
-  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? '↑ ' : (p < 0 ? '↓ ' : '= '))+Math.abs(p)+'% so với '+prev.nhanNgan+'</em>'; };
+  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? icon('arrow-up','ic-d')+' ' : (p < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(p)+'% so với '+prev.nhanNgan+'</em>'; };
   h += '<div class="bd-kpi"><div><small>Thu nhập</small><b class="thu">'+bdTien(cur.tongThuThat)+'</b>'+so(pt, 'thu')+'</div>'
     + '<div><small>Chi tiêu</small><b class="chi">'+bdTien(cur.tongChiThat)+'</b>'+so(prev.coDl ? pc : null, 'chi')+'</div></div>'
     + bdVayNoDongHtml(cur.vayNo);
@@ -751,7 +751,7 @@ function taiSanRongCardHtml(mk){
   while (xa > 0 && startLock && mkXa < startLock){ xa--; mkXa = monthKeyAdd(mk, -xa); }
   if (xa > 0){
     var dl = cur.rong - taiSanRongThang(mkXa, th).rong;
-    if (Math.abs(dl) >= 1) h += '<div class="tsr-chip '+(dl > 0 ? 'up' : 'dn')+'">'+(dl > 0 ? '↑' : '↓')+' '+bdTien(Math.abs(dl))+' so với '+xa+' tháng trước</div>';
+    if (Math.abs(dl) >= 1) h += '<div class="tsr-chip '+(dl > 0 ? 'up' : 'dn')+'">'+(dl > 0 ? icon('arrow-up','ic-d') : icon('arrow-down','ic-d'))+' '+bdTien(Math.abs(dl))+' so với '+xa+' tháng trước</div>';
   }
   h += '<div class="tsr-tbl"><div><span>Số dư các ví</span><b>'+bdTien(cur.tien)+'</b></div>'
     + (cur.phaiThu > 0 ? '<div><span>+ Cho vay chưa thu</span><b class="thu">'+bdTien(cur.phaiThu)+'</b></div>' : '')

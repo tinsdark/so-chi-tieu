@@ -127,12 +127,12 @@ function mmKetQuaHtml(p){
   else h += mmDongKq('Ngày mua an toàn sớm nhất', 'Chưa có trong ' + MM_SO_NGAY + ' ngày tới', 'chi');
   if (p.mucNgay){
     var m = p.mucNgay;
-    h += mmDongKq('Mức tiêu mỗi ngày' + (m.thangNay ? '' : ' (tháng mua)'), fmt(Math.round(m.truoc)) + ' → ' + fmt(Math.round(m.sau)), m.sau < m.truoc * 0.5 ? 'chi' : '')
+    h += mmDongKq('Mức tiêu mỗi ngày' + (m.thangNay ? '' : ' (tháng mua)'), fmt(Math.round(m.truoc)) + ' ' + icon('arrow-right','ic-mui') + ' ' + fmt(Math.round(m.sau)), m.sau < m.truoc * 0.5 ? 'chi' : '')
       + (m.vuot > 0 ? mmDongKq('Vượt hạn mức hằng ngày của tháng', fmt(Math.round(m.vuot)), 'chi') : '');
   }
   p.mucTieu.forEach(function(g){
-    h += mmDongKq('Mục tiêu "' + esc(g.ten) + '"', 'thiếu ' + fmt(Math.round(g.thieuTruoc)) + ' → ' + fmt(Math.round(g.thieuSau)), 'chi')
-      + (g.canTruoc != null && g.canSau != null ? mmDongKq('&nbsp;&nbsp;cần để dành mỗi tháng', fmt(Math.round(g.canTruoc)) + ' → ' + fmt(Math.round(g.canSau))) : '')
+    h += mmDongKq('Mục tiêu "' + esc(g.ten) + '"', 'thiếu ' + fmt(Math.round(g.thieuTruoc)) + ' ' + icon('arrow-right','ic-mui') + ' ' + fmt(Math.round(g.thieuSau)), 'chi')
+      + (g.canTruoc != null && g.canSau != null ? mmDongKq('&nbsp;&nbsp;cần để dành mỗi tháng', fmt(Math.round(g.canTruoc)) + ' ' + icon('arrow-right','ic-mui') + ' ' + fmt(Math.round(g.canSau))) : '')
       + (g.luiNgay ? mmDongKq('&nbsp;&nbsp;lùi khoảng', g.luiNgay + ' ngày', 'chi') : '');
   });
   if (p.thieuVi > 0.5){

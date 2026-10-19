@@ -7,6 +7,12 @@
    danhmuc.js, dongtien.js) vì cần mọi hàm/biến ở các file trên đã tồn tại.
    ==================================================================== */
 
+// banner đầu trang: ô icon + tiêu đề (đậm) + dòng phụ + nút ở bên phải
+function bannerHtml(ic, tieuDe, phu, nut, lop){
+  return '<div class="banner'+(lop ? ' '+lop : '')+'"><span class="bn-ic">'+icon(ic)+'</span>'
+    + '<div class="bn-tx"><b>'+tieuDe+'</b>'+(phu ? '<span>'+phu+'</span>' : '')+'</div>'+(nut || '')+'</div>';
+}
+
 function renderSyncStatus(){
   var el = document.getElementById('syncStatus');
   if (!el) return;
@@ -34,17 +40,16 @@ function renderSyncStatus(){
   if (banner){
     // bản mới luôn hiện đầu tiên, độc lập với các cảnh báo khác
     var bMoi = state.coBanMoi
-      ? '<div class="banner banner-moi">'+icon('refresh')+' Có bản mới của app. <button class="btn sm" data-act="capNhatApp" style="margin-left:6px">Cập nhật</button></div>' : '';
+      ? bannerHtml('refresh', 'Có bản mới của app', '', '<button class="btn sm" data-act="capNhatApp">Cập nhật</button>', 'banner-moi') : '';
     var nCho = (typeof ghiKhoaChoDoc === 'function' && !_khoaDangMo) ? ghiKhoaChoDoc().length : 0;
-    if (nCho) bMoi += '<div class="banner">'+icon('alert')+' Có '+nCho+' khoản ghi lúc khóa đang chờ duyệt, chưa vào sổ. <button class="btn sm" data-act="khoaDuyetMo" style="margin-left:6px">Duyệt</button></div>';
+    if (nCho) bMoi += bannerHtml('alert', 'Có '+nCho+' khoản đang chờ duyệt', 'Ghi lúc khóa, chưa vào sổ.', '<button class="btn sm" data-act="khoaDuyetMo">Duyệt</button>');
     if (state.offline){
       // nhắc nhẹ khi lâu chưa đồng bộ (mở app bình thường không bị làm phiền)
       var soNgay = soNgayChuaDongBo(Date.now(), state.lanDongBoCuoi, state.data && state.data.settings && state.data.settings.ngayBatDau);
-      banner.innerHTML = bMoi + (soNgay >= 3 ? '<div class="banner">'+icon('alert')+' Đã '+soNgay+' ngày chưa đồng bộ Google Drive, dữ liệu mới chỉ nằm trên máy này. '
-        + '<button class="btn sm" data-act="dangNhapLai" style="margin-left:6px">Đồng bộ</button></div>' : '')
-        + (state.errorMsg ? '<div class="banner">' + icon('alert') + ' ' + state.errorMsg + '</div>' : '');
+      banner.innerHTML = bMoi + (soNgay >= 3 ? bannerHtml('alert', 'Đã '+soNgay+' ngày chưa đồng bộ Google Drive', 'Dữ liệu mới chỉ nằm trên máy này.', '<button class="btn sm" data-act="dangNhapLai">Đồng bộ</button>') : '')
+        + (state.errorMsg ? bannerHtml('alert', state.errorMsg) : '');
     } else {
-      banner.innerHTML = bMoi + (state.errorMsg ? '<div class="banner">' + icon('alert') + ' ' + state.errorMsg + '</div>' : '');
+      banner.innerHTML = bMoi + (state.errorMsg ? bannerHtml('alert', state.errorMsg) : '');
     }
   }
 }
