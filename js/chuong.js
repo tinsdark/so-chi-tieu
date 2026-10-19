@@ -22,7 +22,7 @@ var CB_HET_HAN = 15;
 var CB_XEM_GIU = 120;
 var CB_LOAI = {
   dk: 'Giao dịch định kỳ đến hạn', cat: 'Khoản thu / chi theo ngày', vn: 'Vay - Nợ đến hạn', the: 'Thanh toán thẻ tín dụng', vt: 'Ví có thể thiếu tiền',
-  ds: 'Ví lâu chưa đối soát', bh: 'Bảo hành sắp hết', mm: 'Món muốn mua đủ thời gian chờ', hm: 'Danh mục vượt hạn mức', tk: 'Tổng kết tháng', lh: 'Lời hứa bị phá'
+  ds: 'Ví lâu chưa đối soát', bh: 'Bảo hành sắp hết', mm: 'Món muốn mua đủ thời gian chờ', hm: 'Danh mục vượt hạn mức', tk: 'Tổng kết tháng', lh: 'Lời hứa bị phá', qr: 'Khoản tiền cần xác nhận'
 };
 var CB_NGAY_DOI_SOAT = 35;
 var CB_MUC = { khan: 'Cần làm ngay', sap: 'Sắp tới', de: 'Để ý' };
@@ -118,6 +118,12 @@ function cbTatCa(homNay){
     if (t.trang !== 'pha') return;
     them({ loai: 'lh', key: 'lh:' + h.id + ':' + t.pha, muc: 'de', han: t.pha, tieu: 'Đã phá lời hứa', phu: lhQuyTac(h) + ' · ngày ' + ngayNganVN(t.pha), dich: { loai: 'lh', id: h.id } });
   });
+  // 12. khoản tiền cần xác nhận: QR nhận tiền đã tạo (qr.js) nhưng chưa ghi vào sổ
+  qrDanhSachCho().forEach(function(x){
+    var cv = x.cvId ? ((d.vayNo || {}).choVay || []).filter(function(v){ return v.id === x.cvId; })[0] : null;
+    them({ loai: 'qr', key: 'qr:' + x.id, muc: 'khan', han: null, tieu: 'Có 1 khoản tiền cần xác nhận',
+           phu: QR_LOAI[x.loai] + (cv ? ' · ' + (nguoiCuaKhoan(cv) || cv.ten) : '') + (x.ghiChu ? ' · ' + x.ghiChu : ''), tien: fmt(Math.round(x.tien)), dich: { loai: 'qr', id: x.id } });
+  });
   var thuTu = { khan: 0, sap: 1, de: 2 };
   out.sort(function(a, b){ return (thuTu[a.muc] - thuTu[b.muc]) || ((a.han || '9') < (b.han || '9') ? -1 : ((a.han || '9') > (b.han || '9') ? 1 : 0)); });
   out.forEach(function(it){ it.daXem = cbDaXem(it.key); });
@@ -142,10 +148,11 @@ function cbCapNhatNut(){
   var nut = document.getElementById('btnChuong'); if (nut) nut.setAttribute('aria-label', n > 0 ? 'Thông báo: ' + n + ' chưa xem' : 'Thông báo');
 }
 function cbDongHtml(it, i){
-  return '<div class="cb-r' + (it.daXem ? ' xem' : '') + ' ' + it.muc + '"><button type="button" class="cb-main" data-act="cbDen" data-i="' + i + '">'
+  return '<div class="cb-r' + (it.daXem ? ' xem' : '') + ' ' + it.muc + (it.dich && it.dich.loai === 'qr' ? ' qr' : '') + '"><button type="button" class="cb-main" data-act="cbDen" data-i="' + i + '">'
     + '<span class="cb-cham" aria-hidden="true"></span><span class="cb-b"><b>' + esc(it.tieu) + '</b><small>' + esc(it.phu) + '</small></span>'
     + (it.tien ? '<span class="cb-t">' + esc(it.tien) + '</span>' : '') + '</button>'
-    + (it.coXong ? '<button type="button" class="btn secondary sm" data-act="cbXong" data-i="' + i + '">Hoàn thành</button>' : '') + '</div>';
+    + (it.coXong ? '<button type="button" class="btn secondary sm" data-act="cbXong" data-i="' + i + '">Hoàn thành</button>' : '')
+    + (it.dich && it.dich.loai === 'qr' ? '<button type="button" class="btn secondary sm" data-act="cbBoQr" data-i="' + i + '">Bỏ</button>' : '') + '</div>';
 }
 function cbDanhSachHtml(){
   var ds = state.cb.ds = cbTatCa();
@@ -190,6 +197,10 @@ function cbDi(it){
   else if (g.loai === 'lh'){ state.ccTrang = 'loihua'; state.ccForm = { loai: 'lh', id: g.id }; tab = 'congcu'; }
   else if (g.loai === 'hm'){ tab = 'baocao'; sau = function(){ var o = document.getElementById('cardHanMuc'); if (o && o.scrollIntoView) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; }
   else if (g.loai === 'tk'){ state.soTayMonth = g.mk || state.soTayMonth; tab = 'baocao'; sau = function(){ var o = document.getElementById('cardTongKet'); if (o && o.scrollIntoView) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; }
+  else if (g.loai === 'qr'){
+    var x = (state.data.qrCho || []).filter(function(q){ return q.id === g.id; })[0];
+    if (x){ var dd = qrDenXacNhan(x); tab = dd.tab; sau = dd.sau; }
+  }
   if (!tab) return;
   chuyenTab(tab);
   if (sau) setTimeout(sau, 350);
@@ -206,6 +217,11 @@ function handleChuongAction(act, el){
     if (!it.daXem){ cbDanhDauXem(it.key); scheduleSave(); }
     state.cb.mo = false; cbVe(); cbCapNhatNut();
     cbDi(it);
+    return true;
+  }
+  if (act === 'cbBoQr'){        // bỏ mục "cần xác nhận" (không nhận được tiền / không cần ghi nữa)
+    var q = (state.cb.ds || [])[parseInt(el.getAttribute('data-i'), 10)];
+    if (q && q.dich && q.dich.loai === 'qr'){ qrBoCho(q.dich.id); cbVe(); }
     return true;
   }
   if (act === 'cbXong'){        // "Hoàn thành" của khoản thu / chi theo ngày: chỉ tắt nhắc kỳ đó, không ghi giao dịch (xem nhachan.js)

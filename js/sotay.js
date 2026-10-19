@@ -109,7 +109,8 @@ function qaBarHtml(){
     ? '<span class="qa-bar-vi">'+esc(viTen(walletById(state.qa.wallet) ? state.qa.wallet : viDienSan()))+'</span>' : '';
   return '<div class="qa-bar-wrap"><button type="button" class="qa-bar" data-act="qaMo" aria-haspopup="dialog">'
     + '<span class="qa-bar-plus">'+icon('plus')+'</span>'
-    + '<span class="qa-bar-txt"><b>Ghi nhanh</b><small>Khoản chi hoặc khoản thu</small></span>'+vi+'</button></div>';
+    + '<span class="qa-bar-txt"><b>Ghi nhanh</b><small>Khoản chi hoặc khoản thu</small></span>'+vi+'</button>'
+    + '<button type="button" class="qa-qr" data-act="qrMo" aria-label="Tạo QR nhận tiền" title="Tạo QR nhận tiền">'+icon('qr')+'</button></div>';
 }
 function qaTienChipHtml(kind, catId){
   var ds = qaGoiYTien(kind, catId, 3);
@@ -1451,6 +1452,8 @@ function handleSoTayAction(act, el){
     ghiKhoaDuyetGhi();
   } else if (act === 'qaMo'){
     qaMoSheet();
+  } else if (act === 'qrMo'){
+    qrMoDialog();
   } else if (act === 'qaDong'){
     qaDongSheet();
   } else if (act === 'qaViChon'){
@@ -1503,6 +1506,7 @@ function handleSoTayAction(act, el){
       itQ.gc = ghiQ;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
+    qrXacNhanXong();
     state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
     // có ví mặc định đã tích chọn: lần nhập sau quay về ví đó; chưa có thì nhớ ví vừa chọn như trước
     if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viMacDinhDaChon() ? '' : viQ; }

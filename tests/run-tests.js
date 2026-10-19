@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'lock.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
+['state.js', 'lock.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'qr.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -7309,6 +7309,50 @@ test('SheetJS khóa integrity SHA-384 + crossorigin; sw bỏ bản opaque cũ; n
   ok(/'opaque' && req\.mode === 'cors'/.test(sw), 'sw bỏ opaque cũ');
   ok(!/VERSION = 'v4'/.test(sw), 'đã tăng VERSION sw');
   ok(/typeof XLSX === 'undefined'/.test(fs.readFileSync(root + '/js/nhap.js', 'utf8')), 'guard XLSX ở nhập file');
+});
+
+group('7l. QR nhận tiền (qr.js)');
+
+test('vqCrc16: vector chuẩn CRC16-CCITT-FALSE "123456789" = 29B1', function(){
+  eq(ctx.vqCrc16('123456789'), '29B1');
+});
+
+test('vqPayload: đủ tag, CRC đúng, có số tiền thì tag 01 = 12', function(){
+  var p = ctx.vqPayload('970407', '1711052003', 150000, 'Tra tien an');
+  ok(p.indexOf('000201010212') === 0, 'mã động');
+  ok(p.indexOf('A000000727') > 0 && p.indexOf('QRIBFTTA') > 0, 'tag 38');
+  ok(p.indexOf('0006970407') > 0 && p.indexOf('01101711052003') > 0, 'BIN + số tài khoản');
+  ok(p.indexOf('5406150000') > 0, 'số tiền');
+  ok(p.indexOf('62150811Tra tien an') > 0, 'nội dung');
+  eq(p.slice(-8, -4), '6304');
+  eq(p.slice(-4), ctx.vqCrc16(p.slice(0, -4)), 'CRC khớp phần trước nó');
+  eq(ctx.vqPayload('970407', '1711052003', 0, '').indexOf('000201010211'), 0, 'không tiền = mã tĩnh');
+  eq(ctx.vqPayload('abc', '1711052003', 1000, ''), '', 'BIN sai -> rỗng');
+});
+
+test('vqBoDau: bỏ dấu tiếng Việt, ký tự lạ, cắt 25 ký tự', function(){
+  eq(ctx.vqBoDau('Trả tiền ăn Đạt!'), 'Tra tien an Dat');
+  eq(ctx.vqBoDau('a'.repeat(40)).length, 25);
+});
+
+test('qrMaTran: kích thước theo phiên bản, null khi quá dài', function(){
+  var m = ctx.qrMaTran('HELLO');
+  eq(m.length, 21, 'v1');
+  eq(ctx.qrMaTran(ctx.vqPayload('970407', '1711052003', 150000, 'Tra tien an')).length >= 37, true, 'payload VietQR cần từ v5');
+  eq(ctx.qrMaTran('x'.repeat(300)), null);
+});
+
+test('QR cần xác nhận: normalize giữ mục hợp lệ, chuông hiện "Có 1 khoản tiền cần xác nhận", khoản cho vay xong thì mục tự hết', function(){
+  var d = loadData(baseData({ qrCho: [{ id: 'q1', loai: 'ngoai', tien: 185000, ghiChu: 'Chia bill' }, { id: 'q2', loai: 'sai', tien: 5 }, { id: 'q3', loai: 'no', tien: 0 }],
+    settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10', qr: { bin: '970407', stk: '1711052003' } } }));
+  eq(d.qrCho.length, 1, 'bỏ mục sai loại / số tiền 0');
+  eq(d.settings.qr.stk, '1711052003');
+  var it = ctx.cbTatCa('2026-10-05').filter(function(x){ return x.loai === 'qr'; });
+  eq(it.length, 1); eq(it[0].tieu, 'Có 1 khoản tiền cần xác nhận'); eq(it[0].dich.id, 'q1');
+  var d2 = loadData(baseData({ qrCho: [{ id: 'q9', loai: 'no', tien: 1000, cvId: 'cvX' }], vayNo: { vayNoPhaiTra: [], choVay: [{ id: 'cvX', ten: 'A', soTien: 1000, daThu: 1000, ngayChoVay: '2026-10-01' }] } }));
+  eq(ctx.qrDanhSachCho().length, 0, 'khoản cho vay đã thu đủ');
+  var d3 = loadData(baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10', qr: { bin: '12', stk: 'x' } } }));
+  ok(!d3.settings.qr, 'tài khoản QR sai thì bỏ');
 });
 
 (async function ketThuc(){

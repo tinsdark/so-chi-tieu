@@ -552,6 +552,7 @@ var ICON_PATHS = {
   'clock': "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>",
   'repeat': "<path d=\"M17 3l3.5 3.5L17 10\"/><path d=\"M3.5 11V9.5a3 3 0 0 1 3-3H20\"/><path d=\"M7 21l-3.5-3.5L7 14\"/><path d=\"M20.5 13v1.5a3 3 0 0 1-3 3H4\"/>",
   'plus': "<path d=\"M12 5v14M5 12h14\"/>",
+  'qr': "<path d=\"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z\"/><path d=\"M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z\"/>",
   'dots': "<circle cx=\"5.5\" cy=\"12\" r=\"1.4\"/><circle cx=\"12\" cy=\"12\" r=\"1.4\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.4\"/>",
   'chev': "<path d=\"M6 9.5l6 6 6-6\"/>",
   'x': "<path d=\"M6 6l12 12M18 6L6 18\"/>",
@@ -755,6 +756,14 @@ function normalizeData(d){
     h.cau = String(h.cau || '').trim().slice(0, 120) || 'Mình đã hứa với bản thân.';
     if (!reNgay.test(h.ngayTao || '')) h.ngayTao = h.tuNgay;
   });
+  // khoản tiền cần xác nhận từ QR (qr.js): giữ mục hợp lệ, tối đa 50
+  d.qrCho = (Array.isArray(d.qrCho) ? d.qrCho : []).filter(function(x){ return x && typeof x.id === 'string' && (x.loai === 'no' || x.loai === 'ngoai') && num(x.tien) > 0; }).slice(-50).map(function(x){
+    return { id: x.id, loai: x.loai, tien: Math.round(num(x.tien)), ghiChu: String(x.ghiChu || '').slice(0, 25), cvId: typeof x.cvId === 'string' ? x.cvId : '', ngay: String(x.ngay || '') };
+  });
+  // tài khoản nhận QR (qr.js): { bin: 6 số, stk } hợp lệ thì giữ, sai thì bỏ
+  var qrTk = d.settings.qr;
+  if (qrTk && typeof qrTk === 'object' && /^\d{6}$/.test(String(qrTk.bin)) && /^[0-9A-Za-z]{1,19}$/.test(String(qrTk.stk))) d.settings.qr = { bin: String(qrTk.bin), stk: String(qrTk.stk) };
+  else delete d.settings.qr;
   if (d.settings.gioCong && typeof d.settings.gioCong === 'object'){
     d.settings.gioCong = { thuNhapThang: numNonNeg(d.settings.gioCong.thuNhapThang), gioThang: Math.min(400, Math.round(numNonNeg(d.settings.gioCong.gioThang))) };
   } else delete d.settings.gioCong;

@@ -135,6 +135,7 @@ js/
   lock.js           Khóa PIN + vân tay / Face ID
   drive-sync.js     Đăng nhập Google, đọc/ghi Drive, bản nháp, sao lưu
   vayno-tinh.js     Logic thuần của Vay - Nợ (không chạm DOM): lịch trả nợ, lãi thực, trạng thái kỳ, dư nợ / phải thu, tài sản ròng, dự trù từng tháng. Nạp trước vayno.js
+  qr.js             QR nhận tiền VietQR: bộ mã hóa QR (byte, mức M, v1-10), `vqPayload` (chuẩn NAPAS: tag 38/54/62/63 + CRC16), hộp thoại "Tạo QR". Tài khoản nhận lấy từ `settings.qr`. Chạy hoàn toàn trên máy
   vayno.js          Giao diện tab Vay - Nợ: thẻ khoản vay / cho vay, lịch trả theo kỳ, bảng trượt thêm-sửa, ghi nhận trả và các hành động của tab
   sotay.js          Tab Sổ tay (ghi nhanh, danh sách ngày, xuất Excel)
   bieudo.js         Biểu đồ SVG + thẻ biểu đồ ở Báo cáo
@@ -297,6 +298,7 @@ Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu` và danh sách d
 - **Giao dịch định kỳ tự ghi:** giữ nhắc rồi ghi tay, vì số tiền nhiều khoản không cố định.
 - **Mẫu giao dịch / yêu thích** ở Ghi nhanh: giữ ghi tay cho khỏi rối giao diện.
 - **Dùng chung sổ nhiều người:** rủi ro xung đột ghi chồng, bỏ.
+- **Nút "Tạo QR" ở Sổ tay (đã làm):** ngược với dòng dưới: không quét mà TẠO QR nhận tiền. Tài khoản nhận cài ở Cài đặt → Tiền → QR nhận tiền (`settings.qr`). Hộp thoại chọn loại (Thu nợ vay / Nhận tiền khác), số tiền, ghi chú, có Lưu ảnh / Chia sẻ (`navigator.share` với file PNG). Bấm Lưu / Chia sẻ hoặc đóng hộp thoại thì thêm mục "Có 1 khoản tiền cần xác nhận" vào chuông (`state.data.qrCho`); bấm vào sẽ tới đúng loại: thu nợ vay mở Tất toán khoản cho vay điền sẵn số, nhận tiền khác mở Ghi nhanh khoản thu điền sẵn. Ghi xong thì mục tự hết, hoặc bấm Bỏ. Tạo mã dựa trên hàm `vqPayload`. App không biết tiền đã vào hay chưa (không có API ngân hàng), QR chỉ đỡ gõ tay cho người chuyển.
 - **Quét QR VietQR để ghi khoản chi:** người dùng đã quét trong app ngân hàng rồi, quét thêm lần nữa ở sổ là thêm thao tác; mã cố định không có số tiền nên gần như không đỡ gì. Hướng "bắt khoản chi tại nơi nó xảy ra" (mục 7.1 số 2) đáng hơn.
 - **"Vì sao?" (tách chênh lệch so với tháng trước thành nhiều lần hơn / mỗi lần chi nhiều hơn / khoản lớn):** "số lần" thực ra là số lần ghi (phụ thuộc thói quen gom dòng), "mỗi lần chi nhiều hơn" dễ bị hiểu thành giá tăng trong khi chỉ là đổi món, dữ liệu cũ có dòng "(chưa chi tiết)" không đếm được. Giá trị không đủ lớn so với công sức, bỏ.
 - **"Lương tự trả" cho thu nhập không đều:** phải chọn mức ổn định (trung vị / phân vị), chạm vào cách dự báo Dòng tiền, cần cờ "chi phí công việc" để tính thu ròng cho tài xế / shipper, và hỏng nếu người dùng tiêu luôn phần dư. Quá khó so với giá trị, bỏ.

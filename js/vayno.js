@@ -534,7 +534,7 @@ function vnDlMo(cf){
       + '<div class="qa-head"><div><h3>'+esc(cf.tieuDe)+'</h3>'+(cf.phu ? '<div class="vn-sub">'+cf.phu+'</div>' : '')+'</div>'
       + '<button type="button" class="qa-x" data-vn-x="1" aria-label="Đóng">'+icon('x')+'</button></div>'
       + '<div class="qa-body">'+cf.body+'<div class="modal-err" id="vn_dl_err"></div></div>'
-      + '<div class="qa-foot vn-foot"><button type="button" class="btn secondary" data-vn-x="1">Hủy</button>'
+      + '<div class="qa-foot vn-foot">'+(cf.chiDong ? '' : '<button type="button" class="btn secondary" data-vn-x="1">Hủy</button>')
       + '<button type="button" class="btn'+(cf.nguy ? ' danger' : '')+'" id="vn_dl_ok">'+esc(cf.nutOk || 'Xác nhận')+'</button></div></div>';
     document.body.appendChild(back);
     document.body.classList.add('qa-mo');
@@ -884,6 +884,8 @@ function handleVayNoAction(act, el){
     if (!cvT) return true;
     var conT = conLaiPhaiThu(cvT);
     if (conT <= 0) return true;
+    var soMd = num(el.getAttribute('data-so'));           // vào từ thông báo QR: điền sẵn số đã xin
+    if (!(soMd > 0 && soMd <= conT)) soMd = conT;
     (async function(){
       var capNhat = function(root){
         var so = numNonNeg(docSo(root.querySelector('#vn_dl_so').value));
@@ -898,7 +900,7 @@ function handleVayNoAction(act, el){
         phu: cvT.ngayDuKienThu ? 'Dự kiến thu ' + ngayVN(cvT.ngayDuKienThu) : '',
         nutOk: 'Ghi thu tiền',
         body: vnDlTile('Còn phải thu', fmt(Math.round(conT)))
-          + vnF('Số tiền thực thu', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_dl_so" value="' + veSo(Math.round(conT)) + '" placeholder="0">')
+          + vnF('Số tiền thực thu', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_dl_so" value="' + veSo(Math.round(soMd)) + '" placeholder="0">')
           + '<div id="vn_dl_kieu" hidden><div class="vn-hint" id="vn_dl_thieu"></div>'
           + '<label class="vn-opt"><input type="radio" name="vn_dl_k" value="no" checked><span><b>Thu một phần, sẽ thu tiếp</b><br><small>Khoản vẫn mở, phần thiếu vẫn là tiền phải thu.</small></span></label>'
           + '<label class="vn-opt"><input type="radio" name="vn_dl_k" value="xong"><span><b>Tất toán, phần thiếu xóa nợ</b><br><small>Khoản đóng; phần thiếu coi như không đòi được (không ghi giao dịch).</small></span></label></div>'
@@ -925,6 +927,7 @@ function handleVayNoAction(act, el){
             'Giao dịch thu được ghi vào ngày ' + ngayVN(kq.ngay) + ', nên số dư hiện tại chưa tính khoản này cho tới ngày đó, trong khi khoản cho vay đã tính là đã thu.',
             { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })) return;
       var thieuT = choVayGhiThu(cvT, kq.so, kq.ngay, kq.viId, kq.tatToan);
+      qrXacNhanXong();
       scheduleSave(); renderVayNo();
       toast('Đã ghi thu ' + fmt(Math.round(kq.so)) + ' từ khoản "' + cvT.ten + '".' + (kq.tatToan && thieuT > 0.01 ? ' Phần thiếu ' + fmt(Math.round(thieuT)) + ' đã xóa nợ.' : ''));
     })();
