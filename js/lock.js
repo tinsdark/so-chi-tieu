@@ -21,7 +21,7 @@ var KHOA_VONG = 150000;
 var _khoaDangMo = false;      // màn khóa đang hiện -> app.js chặn phím tắt
 var _khoaAnLuc = null;        // lúc app bị ẩn (rời app)
 // Sai 5 lần liên tiếp thì phải chờ; mỗi lần bị khóa chờ lâu hơn (30 giây, 1, 2, 5, 15 phút) và LƯU trên máy nên tải lại trang không xóa được.
-// Gõ đúng thì xóa hết. Chỉ là khóa màn hình (xem README mục 6), không phải mã hóa.
+// Gõ đúng thì xóa hết. Chỉ là khóa màn hình (xem README mục 4), không phải mã hóa.
 var KHOA_CHO_KEY = 'chitieu_khoa_cho_v1';
 function khoaChoGiay(lan){ var b = [30, 60, 120, 300, 900]; return b[Math.min(Math.max(Math.round(lan) || 1, 1), b.length) - 1]; }
 function khoaChoChu(giay){ return giay < 60 ? giay + ' giây' : Math.round(giay / 60) + ' phút'; }
