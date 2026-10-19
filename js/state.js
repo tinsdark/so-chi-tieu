@@ -563,6 +563,7 @@ var ICON_PATHS = {
   'download': "<path d=\"M12 4v11\"/><path d=\"M7.5 11L12 15.5 16.5 11\"/><path d=\"M5 20h14\"/>",
   'upload': "<path d=\"M12 15V4\"/><path d=\"M7.5 8L12 3.5 16.5 8\"/><path d=\"M5 20h14\"/>",
   'transfer': "<path d=\"M4 8h14\"/><path d=\"M14.5 4.5L18 8l-3.5 3.5\"/><path d=\"M20 16H6\"/><path d=\"M9.5 12.5L6 16l3.5 3.5\"/>",
+  'arrow-right': "<path d=\"M4 12h16\"/><path d=\"M14 6l6 6-6 6\"/>",
   'arrow-up': "<path d=\"M12 19V5\"/><path d=\"M6 11l6-6 6 6\"/>",
   'arrow-down': "<path d=\"M12 5v14\"/><path d=\"M18 13l-6 6-6-6\"/>",
   'eye': "<path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",

@@ -892,7 +892,7 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
       + '</div>';
   }
   if (hasRange){
-    h += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' → '+state.soTayTo+'), danh sách dưới không theo tháng đang chọn ở trên nữa.</div>';
+    h += '<div class="empty" style="padding:0 0 8px">Đang lọc theo khoảng ngày ('+state.soTayFrom+' '+icon('arrow-right','ic-mui')+' '+state.soTayTo+'), danh sách dưới không theo tháng đang chọn ở trên nữa.</div>';
   }
   h += locTongKetHtml(displayDates, hasRange, mk);
   if (!displayDates.length){
@@ -1012,7 +1012,7 @@ function viSoDuCardHtml(mk){
     h += '<div class="vi-ds">';
     ds.forEach(function(t){
       h += '<div class="vi-ct">'
-        + '<div class="vi-ct-main"><div><b>'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</b> · '+esc(viTen(t.tuVi))+' → '+esc(viTen(t.denVi))+'</div>'
+        + '<div class="vi-ct-main"><div><b>'+t.ngay.slice(8,10)+'/'+t.ngay.slice(5,7)+'</b> · '+esc(viTen(t.tuVi))+' '+icon('arrow-right','ic-mui')+' '+esc(viTen(t.denVi))+'</div>'
         + (t.ghiChu ? '<div class="vi-ct-note">'+esc(t.ghiChu)+'</div>' : '') + '</div>'
         + '<div class="vi-ct-tien">'+fmt(Math.round(num(t.soTien)))+'</div>'
         + '<button class="icon-btn" data-act="viChuyenXoa" data-id="'+esc(t.id)+'" title="Xóa lần chuyển này" aria-label="Xóa lần chuyển tiền ngày '+t.ngay+'">'+icon('trash')+'</button></div>';

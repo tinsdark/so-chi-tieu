@@ -213,7 +213,7 @@ function dkTienHienTai(k){ var ky = dinhKyKyHienTai(k, monthKey(todayStr())); re
 function dkGhiChuKy(k){
   var cur = monthKey(todayStr()), ky = k.ky || [], sau = ky.filter(function(x){ return x.tuMk > cur; })[0];
   var cu = ky.filter(function(x, i){ return i < ky.length - 1 && ky[i + 1].tuMk <= cur; }).length;
-  return (sau ? ' · <span style="white-space:nowrap">'+(num(sau.soTien) > 0 ? '→ '+fmt(Math.round(sau.soTien))+' từ '+dtNhanThang(sau.tuMk) : 'dừng từ '+dtNhanThang(sau.tuMk))+'</span>' : '')
+  return (sau ? ' · <span style="white-space:nowrap">'+(num(sau.soTien) > 0 ? icon('arrow-right','ic-mui')+' '+fmt(Math.round(sau.soTien))+' từ '+dtNhanThang(sau.tuMk) : 'dừng từ '+dtNhanThang(sau.tuMk))+'</span>' : '')
     + (cu ? ' · '+cu+' kỳ cũ' : '') + (k.duBao ? ' · <span class="dm-chip">Vào dự báo</span>' : '');
 }
 function dkCardHtml(){
