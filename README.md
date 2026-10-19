@@ -69,7 +69,6 @@ Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bả
 - **Sao lưu**: tự động hằng ngày lên Drive (giữ vài bản), thủ công, tải về / khôi phục từ file `.json`. Trước khi khôi phục app tự sao lưu bản hiện tại.
 - **Khóa app theo máy**: PIN 6 số (PBKDF2-SHA256, sai 5 lần thì chờ lâu dần), mở nhanh bằng vân tay / Face ID. **Ghi nhanh ngay trên màn khóa** (công tắc riêng từng máy, mặc định tắt): ghi không cần PIN nhưng không thấy số dư, khoản chỉ vào **hàng chờ** (`localStorage`, không lên Drive, tối đa 50). Nhập PIN xong có bước **Duyệt**: tick khoản đúng là của mình, chọn nguồn tiền từng khoản (hoặc đặt một lượt cho tất cả; chỉ hiện khi có từ 2 ví), rồi "Ghi N khoản vào sổ" (có Hoàn tác).
 - **Ẩn số tiền** (nút con mắt): mọi số tiền thành "•••••" ở tầng hiển thị, không sửa dữ liệu.
-- **Ghi nhanh không cần mở app (iPhone)**: Phím tắt lưu mỗi khoản thành một file CSV nhỏ, mở app chọn các file đó rồi tick khoản nào ghi (xem mục 5).
 
 ### Giao diện
 
@@ -100,7 +99,7 @@ js/                       Global, không module; mỗi file có comment đầu g
   lock.js, drive-sync.js  Khóa PIN + ghi nhanh màn khóa; đăng nhập Google, đồng bộ Drive, bản nháp, sao lưu
   vayno-tinh.js, vayno.js Logic thuần của Vay - Nợ (nạp trước); giao diện tab Vay - Nợ
   qr.js                   Bộ mã hóa QR, payload VietQR, hộp thoại Tạo QR, mục "cần xác nhận"
-  sotay.js, nhap.js       Tab Sổ tay (ghi nhanh, danh sách ngày, duyệt hàng chờ); nhập CSV / Excel, Phím tắt iPhone
+  sotay.js, nhap.js       Tab Sổ tay (ghi nhanh, danh sách ngày, duyệt hàng chờ); nhập CSV / Excel
   dongtien.js, theongay.js, mophong.js   Tab Dòng tiền: Theo tháng, Theo ngày, Mô phỏng
   bieudo.js, diemnhan.js, tongket.js, nhan.js, ngaytudo.js, tet.js, amlich.js   Báo cáo và các thẻ của nó
   congcu.js, giocong.js, loihua.js, somung.js, dodac.js   Tab Công cụ và các trang con
@@ -165,26 +164,12 @@ node tools/bump.js --check  # chỉ kiểm tra
 - **Dữ liệu chính nằm trên máy**: mất máy hoặc xóa dữ liệu trình duyệt trước khi đồng bộ thì mất phần chưa đồng bộ (app nhắc khi quá 3 ngày chưa đồng bộ). "Đăng xuất" xóa cả dữ liệu trên máy.
 - Cần mạng ở lần mở đầu để tải thư viện đăng nhập Google và SheetJS (`cdn.sheetjs.com`, khóa bằng `integrity` SHA-384; đổi phiên bản thì tính lại mã băm). Trang chưa có Content-Security-Policy.
 - Kiểm xung đột Drive có khe hở nhỏ (đọc `modifiedTime` rồi mới ghi, hai yêu cầu riêng); hai máy ghi đúng lúc có thể đè nhau, phía sau còn nháp trên máy và 10 bản sao lưu. Mỗi lần lưu gửi cả file (~136 KB tăng mỗi năm), xem lại khi vượt ~1 MB.
-- **Chưa kiểm trên iPhone thật**: xuất `.ics` (iOS có giữ báo thức, PWA có giao file được không), Ghi nhanh bằng Phím tắt, Ghi nhanh trên màn khóa, Lưu ảnh / Chia sẻ QR.
+- **Chưa kiểm trên iPhone thật**: xuất `.ics` (iOS có giữ báo thức, PWA có giao file được không), Ghi nhanh trên màn khóa, Lưu ảnh / Chia sẻ QR.
 - Ghi nhanh trên màn khóa bật thì màn khóa không tự quét Face ID (hộp thoại Face ID của iOS che nút Ghi nhanh); mở bằng Face ID thì chạm biểu tượng ở bàn phím.
 
 ---
 
-## 5. Ghi nhanh bằng Phím tắt (iPhone)
-
-Phím tắt hỏi số tiền và danh mục rồi lưu mỗi khoản thành một file CSV nhỏ trong Tệp; mở app thì chọn nhiều file cùng lúc (Sổ tay → biểu tượng mũi tên lên ở "Chi tiết theo ngày"), xem danh sách, tick khoản nào ghi. App nhớ mã từng khoản (`settings.maDaNhap`) nên chọn lại file cũ không nhân đôi. Đặt phím tắt ở widget màn hình chính / khóa hoặc chạm hai lần mặt lưng. Dựng một phím tắt cho khoản chi:
-
-1. **Hỏi nhập liệu**, kiểu Số, "Số tiền?".
-2. **Chọn từ danh sách**: mỗi dòng một danh mục chi, gõ đúng tên trong app.
-3. **Ngày hiện tại** → **Định dạng ngày** `yyyy-MM-dd`; thêm một cái `yyyy-MM-dd-HH-mm-ss` làm tên file.
-4. **Văn bản** hai dòng, dòng cuối kết thúc bằng dấu phẩy: `Ngày,Loại,Số tiền,Danh mục,Ghi chú` / `<ngày>,chi,<số tiền>,<danh mục>,`
-5. **Lưu tệp**: tắt "Hỏi nơi lưu", chọn thư mục iCloud Drive, tên `ghi-nhanh-<giờ>.csv` (**tên phải bắt đầu bằng `ghi-nhanh-`**).
-
-Khoản thu: nhân đôi phím tắt, đổi `chi` thành `thu`. Chưa làm được việc tự hiện danh sách khi mở app (web app không tự đọc file ngoài nó).
-
----
-
-## 6. Hướng phát triển (chưa làm)
+## 5. Hướng phát triển (chưa làm)
 
 - **Mã hóa dữ liệu bằng PIN** (WebCrypto): nặng và rủi ro (quên PIN là mất dữ liệu), cần migration và test kỹ.
 - **Báo cáo xuất ảnh / PDF** để chia sẻ.
