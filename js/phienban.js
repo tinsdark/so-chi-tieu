@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.19.4', ngay: '2026-10-19', ten: 'Đổi logo và biểu tượng ứng dụng',
+    muc: ['Ứng dụng có logo mới: ba chữ cái chung một thân dọc, nâu đậm trên nền be. Biểu tượng cài lên màn hình điện thoại, tab trình duyệt, thanh tiêu đề và màn hình khóa đều đổi theo.',
+      'Máy đã cài ứng dụng có thể mất một lúc mới thấy biểu tượng mới trên màn hình chính; gỡ rồi thêm lại là thấy ngay.'] },
   { ban: '2026.10.19.3', ngay: '2026-10-19', ten: 'Mở bảng thêm mới không tự bật bàn phím',
     muc: ['Mở bất kỳ bảng nào (Ghi nhanh, thêm giao dịch định kỳ, Tạo QR, Tất toán, hộp thoại hỏi số, tìm kiếm...) không còn tự nhảy vào ô nhập và bật bàn phím. Bảng mở ở trạng thái bình thường, chạm vào ô nào thì nhập ô đó.'] },
   { ban: '2026.10.19.2', ngay: '2026-10-19', ten: 'Thẻ QR: gộp Lưu ảnh và Chia sẻ thành một nút',
