@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.19.5', ngay: '2026-10-19', ten: 'Logo to hơn và canh giữa',
+    muc: ['Logo trong biểu tượng ứng dụng, tab trình duyệt, thanh tiêu đề và màn hình khóa được phóng to hơn và canh giữa theo cột D và C, để thanh T dài thò sang trái không làm logo lệch về một bên.'] },
   { ban: '2026.10.19.4', ngay: '2026-10-19', ten: 'Đổi logo và biểu tượng ứng dụng',
     muc: ['Ứng dụng có logo mới: ba chữ cái chung một thân dọc, nâu đậm trên nền be. Biểu tượng cài lên màn hình điện thoại, tab trình duyệt, thanh tiêu đề và màn hình khóa đều đổi theo.',
       'Máy đã cài ứng dụng có thể mất một lúc mới thấy biểu tượng mới trên màn hình chính; gỡ rồi thêm lại là thấy ngay.'] },
