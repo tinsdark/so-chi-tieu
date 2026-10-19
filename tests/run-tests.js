@@ -7184,6 +7184,27 @@ test('duyệt: danh mục đã bị xóa từ lúc ghi thì bỏ qua và báo; k
     eq(soKhoan().n, 1, 'tick hết bỏ thì không ghi thêm'); eq(ctx.ghiKhoaChoDoc().length, 0, 'hàng chờ vẫn được dọn');
   });
 });
+test('duyệt: chọn nguồn tiền từng khoản; chưa chọn thì ví điền sẵn; ví đã xóa thì về ví điền sẵn', function(){
+  khoaGiaLap(function(){
+    loadData(baseData({ wallets: [{ id: 'w1', ten: 'Tiền mặt', soDuDauKy: 0 }, { id: 'w2', ten: 'Techcombank', soDuDauKy: 0 }, { id: 'w3', ten: 'Momo', soDuDauKy: 0 }] })); setToday('2026-10-01');
+    var a = ghiCho({ tien: 45000 }), b = ghiCho({ tien: 60000 }), c = ghiCho({ tien: 7000 }), vi = {};
+    vi[a.id] = 'w2'; vi[c.id] = 'w-da-xoa';
+    ctx.state.khoaDuyet = { ds: ctx.ghiKhoaChoDoc(), bo: {}, vi: vi };
+    ok(ctx.ghiKhoaDuyetHtml().indexOf('data-act="khoaDuyetVi"') >= 0, 'nhiều ví: có ô chọn ví');
+    ok(ctx.ghiKhoaDuyetHtml().indexOf('khoaDuyetViChung') >= 0, 'nhiều khoản: có ô đặt cho tất cả');
+    ctx.ghiKhoaDuyetGhi();
+    var it = ctx.state.data.journal['2026-10-01'].items, tienVi = function(t){ return it.filter(function(x){ return x.soTien === t; })[0].walletId; };
+    eq(tienVi(45000), 'w2', 'khoản đã chọn ví'); eq(tienVi(60000), ctx.viDienSan(), 'chưa chọn -> ví điền sẵn'); eq(tienVi(7000), ctx.viDienSan(), 'ví đã xóa -> ví điền sẵn');
+  });
+});
+test('duyệt: chỉ 1 ví thì không hiện ô chọn ví', function(){
+  khoaGiaLap(function(){
+    loadData(baseData()); setToday('2026-10-01');
+    ghiCho({ tien: 1000 });
+    ctx.state.khoaDuyet = { ds: ctx.ghiKhoaChoDoc(), bo: {}, vi: {} };
+    ok(ctx.ghiKhoaDuyetHtml().indexOf('khoaDuyetVi') < 0, 'không có ô chọn ví');
+  });
+});
 test('cảnh báo "lớn bất thường" ở bước duyệt dùng đúng luật chiBatThuong; khoản thu không bao giờ bị nhắc', function(){
   khoaGiaLap(function(){
     loadData(baseData()); setToday('2026-10-01');

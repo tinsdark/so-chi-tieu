@@ -284,19 +284,27 @@ function ghiKhoaCanhBao(x){
   var r = chiBatThuong(x.catId, x.tien, null, todayStr());
   return r ? 'lớn gấp ' + Math.round(x.tien / r.m) + ' lần mức thường thấy' : '';
 }
+// ví của một khoản chờ duyệt: ví người dùng đã chọn ở bước duyệt, chưa chọn (hoặc ví đã bị xóa) thì ví điền sẵn như Ghi nhanh thường
+function ghiKhoaViChon(d, x){
+  var v = (d.vi || {})[x.id];
+  return walletById(v) ? v : viDienSan();
+}
 function ghiKhoaDuyetHtml(){
-  var d = state.khoaDuyet, ds = d.ds, nChon = ds.filter(function(x){ return !d.bo[x.id]; }).length;
+  var d = state.khoaDuyet, ds = d.ds, nChon = ds.filter(function(x){ return !d.bo[x.id]; }).length, coVi = (state.data.wallets || []).length > 1;
   var h = '<div class="qa-scrim" data-act="khoaDuyetDong"></div><div class="qa-sheet" id="khoaDuyet" role="dialog" aria-modal="true" aria-label="Duyệt khoản ghi lúc khóa">'
     + '<div class="qa-grab" aria-hidden="true"></div>'
     + '<div class="qa-head"><h3>Duyệt khoản ghi lúc khóa</h3><button type="button" class="qa-x" data-act="khoaDuyetDong" aria-label="Đóng">'+icon('x')+'</button></div>'
-    + '<div class="qa-body"><div style="margin:0 0 8px;font-size:13px">Có <b>'+ds.length+'</b> khoản ghi khi app đang khóa, <b>chưa vào sổ</b>. Tick khoản nào đúng là của bạn.</div>';
+    + '<div class="qa-body"><div style="margin:0 0 8px;font-size:13px">Có <b>'+ds.length+'</b> khoản ghi khi app đang khóa, <b>chưa vào sổ</b>. Tick khoản nào đúng là của bạn'+(coVi ? ' và chọn nguồn tiền' : '')+'.</div>'
+    // nhiều ví: lúc khóa không chọn được ví (không lộ tên ví / số dư), nên chọn ở bước này. Ô trên cùng đặt một lượt cho tất cả
+    + (coVi && ds.length > 1 ? '<div class="gn-vi gn-vi-chung"><span>Đặt nguồn tiền cho tất cả</span><select data-act="khoaDuyetViChung" aria-label="Đặt nguồn tiền cho tất cả khoản"><option value="">Chọn ví…</option>'+viOptionsHtml('')+'</select></div>' : '');
   ds.forEach(function(x){
     var ten = catTen(x.kind, x.catId), cb = ghiKhoaCanhBao(x);
     var khac = (x.ngay !== todayStr()) ? ' · cho ngày ' + ngayVN(x.ngay).slice(0, 5) : '';
     h += '<label class="gn-row"><input type="checkbox" data-act="khoaDuyetTick" data-id="'+esc(x.id)+'" aria-label="Ghi khoản này"'+(d.bo[x.id] ? '' : ' checked')+'>'
       + '<span class="gn-main"><b>'+esc(ten)+'</b>'+(x.ghiChu ? ' · '+esc(x.ghiChu) : '')+'<small>'+esc(ghiKhoaGio(x.luc))+khac
       + (cb ? ' · <span style="color:var(--amber)">'+esc(cb)+'</span>' : '')+'</small></span>'
-      + '<span class="gn-tien '+(x.kind === 'thu' ? 'thu' : 'chi')+'">'+(x.kind === 'thu' ? '+' : '−')+fmt(Math.round(x.tien))+'</span></label>';
+      + '<span class="gn-tien '+(x.kind === 'thu' ? 'thu' : 'chi')+'">'+(x.kind === 'thu' ? '+' : '−')+fmt(Math.round(x.tien))+'</span></label>'
+      + (coVi ? '<div class="gn-vi"><span>'+(x.kind === 'thu' ? 'Nhận vào ví' : 'Trả từ ví')+'</span><select data-act="khoaDuyetVi" data-id="'+esc(x.id)+'" aria-label="Nguồn tiền của khoản này">'+viOptionsHtml(ghiKhoaViChon(d, x))+'</select></div>' : '');
   });
   h += '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Khoản không tick sẽ bị xóa khỏi hàng chờ, không vào sổ. Bấm nút đóng nếu muốn để đó duyệt sau.</div></div>'
     + '<div class="qa-foot" style="display:flex;gap:8px"><button type="button" class="btn secondary" style="flex:0 0 auto" data-act="khoaDuyetBoHet">Bỏ hết</button>'
@@ -325,7 +333,7 @@ function ghiKhoaDuyetVe(){
 function ghiKhoaDuyetMo(){
   var ds = ghiKhoaChoDoc();
   if (!ds.length || !state.data) return;
-  state.khoaDuyet = { ds: ds, bo: {} };        // tick sẵn tất cả
+  state.khoaDuyet = { ds: ds, bo: {}, vi: {} };        // tick sẵn tất cả; vi = ví chọn riêng từng khoản
   ghiKhoaDuyetVe();
 }
 function ghiKhoaDuyetDong(){ state.khoaDuyet = null; ghiKhoaDuyetVe(); renderSyncStatus(); }
@@ -337,7 +345,7 @@ function ghiKhoaDuyetGhi(){
   d.ds.forEach(function(x){
     if (d.bo[x.id]) return;
     if (!(state.data.categories[x.kind] || []).some(function(c){ return c.id === x.catId; })){ boQua++; return; }      // danh mục đã bị xóa từ lúc ghi
-    var it = entryAddItem(x.ngay, x.kind, x.catId, x.tien, x.ghiChu, state.viChon);
+    var it = entryAddItem(x.ngay, x.kind, x.catId, x.tien, x.ghiChu, ghiKhoaViChon(d, x));
     if (!it){ boQua++; return; }
     itemDatNhan(it, x.nhan);
     itemDatGio(it, x.ngay, x.luc);      // giờ lúc ghi trên màn khóa, không phải giờ lúc duyệt
@@ -1818,6 +1826,16 @@ function handleSoTayChange(el){
   } else if (el.matches('[data-act=qaCatSel]')){
     if (el.value){ state.qa.cat[state.qa.kind === 'thu' ? 'thu' : 'chi'] = el.value; qaGhiNho(); }
     qaVeLai();
+    return true;
+  } else if (el.matches('[data-act=khoaDuyetVi]')){
+    if (state.khoaDuyet && walletById(el.value)){ state.khoaDuyet.vi = state.khoaDuyet.vi || {}; state.khoaDuyet.vi[el.getAttribute('data-id')] = el.value; ghiKhoaDuyetVe(); }
+    return true;
+  } else if (el.matches('[data-act=khoaDuyetViChung]')){
+    if (state.khoaDuyet && walletById(el.value)){
+      state.khoaDuyet.vi = state.khoaDuyet.vi || {};
+      state.khoaDuyet.ds.forEach(function(x){ state.khoaDuyet.vi[x.id] = el.value; });
+      ghiKhoaDuyetVe();
+    }
     return true;
   } else if (el.matches('[data-act=qaDate]')){
     state.qa.date = (el.value && el.value !== todayStr()) ? el.value : '';
