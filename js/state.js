@@ -552,6 +552,7 @@ var ICON_PATHS = {
   'clock': "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>",
   'repeat': "<path d=\"M17 3l3.5 3.5L17 10\"/><path d=\"M3.5 11V9.5a3 3 0 0 1 3-3H20\"/><path d=\"M7 21l-3.5-3.5L7 14\"/><path d=\"M20.5 13v1.5a3 3 0 0 1-3 3H4\"/>",
   'plus': "<path d=\"M12 5v14M5 12h14\"/>",
+  'qr': "<path d=\"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z\"/><path d=\"M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z\"/>",
   'dots': "<circle cx=\"5.5\" cy=\"12\" r=\"1.4\"/><circle cx=\"12\" cy=\"12\" r=\"1.4\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.4\"/>",
   'chev': "<path d=\"M6 9.5l6 6 6-6\"/>",
   'x': "<path d=\"M6 6l12 12M18 6L6 18\"/>",
