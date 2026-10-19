@@ -534,8 +534,8 @@ function vnDlMo(cf){
       + '<div class="qa-head"><div><h3>'+esc(cf.tieuDe)+'</h3>'+(cf.phu ? '<div class="vn-sub">'+cf.phu+'</div>' : '')+'</div>'
       + '<button type="button" class="qa-x" data-vn-x="1" aria-label="Đóng">'+icon('x')+'</button></div>'
       + '<div class="qa-body">'+cf.body+'<div class="modal-err" id="vn_dl_err"></div></div>'
-      + '<div class="qa-foot vn-foot">'+(cf.chiDong ? '' : '<button type="button" class="btn secondary" data-vn-x="1">Hủy</button>')
-      + '<button type="button" class="btn'+(cf.nguy ? ' danger' : '')+'" id="vn_dl_ok">'+esc(cf.nutOk || 'Xác nhận')+'</button></div></div>';
+      + (cf.chiDong ? '' : '<div class="qa-foot vn-foot"><button type="button" class="btn secondary" data-vn-x="1">Hủy</button>'
+      + '<button type="button" class="btn'+(cf.nguy ? ' danger' : '')+'" id="vn_dl_ok">'+esc(cf.nutOk || 'Xác nhận')+'</button></div>') + '</div>';
     document.body.appendChild(back);
     document.body.classList.add('qa-mo');
     vnKhopKhungNhin();
