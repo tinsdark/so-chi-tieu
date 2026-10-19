@@ -1,13 +1,18 @@
 "use strict";
 /* ====================================================================
    phienban.js — NHẬT KÝ CẬP NHẬT hiển thị ở Cài đặt → Ứng dụng → "Phiên bản và cập nhật".
-   Mới nhất ở ĐẦU danh sách. Mỗi pull request làm thay đổi người dùng thấy thì thêm MỘT mục lên đầu (xem README mục 5).
+   Mới nhất ở ĐẦU danh sách. Mỗi pull request làm thay đổi người dùng thấy thì thêm MỘT mục lên đầu (xem README mục 3).
    - ban: số phiên bản dạng năm.tháng.ngày (thêm .2, .3 nếu cùng ngày có nhiều bản); PHIEN_BAN lấy từ mục đầu.
    - muc: vài câu ngắn, viết cho người dùng (không nhắc tên hàm / file).
    Khác "mã bản" (APP_VER ở app.js, băm nội dung file, dùng để báo có bản mới): ban là số để người đọc biết mình đang ở đâu.
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.19', ngay: '2026-10-19', ten: 'Tạo QR nhận tiền; chọn nguồn tiền khi duyệt khoản ghi lúc khóa',
+    muc: ['Sổ tay có nút QR: chọn loại (Thu nợ vay hoặc Nhận tiền khác như chia bill), nhập số tiền và ghi chú rồi bấm Tạo QR để ra mã VietQR đúng số tiền đó. Thu nợ vay có ô chọn khoản cho vay, chọn xong tự điền số còn lại. Có nút Lưu ảnh và Chia sẻ (iPhone chọn "Lưu hình ảnh" để vào thư viện Ảnh).',
+      'Cài tài khoản nhận tiền một lần ở Cài đặt → Tiền → QR nhận tiền: chọn ngân hàng và nhập số tài khoản. Mã tạo ngay trên máy, số tài khoản không gửi cho ai.',
+      'Mỗi mã vừa tạo thành một thông báo "Có 1 khoản tiền cần xác nhận" ở chuông. Bấm vào thì tới đúng nơi ghi: thu nợ vay mở Tất toán khoản cho vay đã điền sẵn số, nhận tiền khác mở Ghi nhanh khoản thu đã điền sẵn. Ghi xong thông báo tự hết, hoặc bấm Bỏ.',
+      'Bước "Duyệt khoản ghi lúc khóa" có thêm ô chọn nguồn tiền cho từng khoản (khi có từ 2 ví), và ô đặt một lượt cho tất cả. Trước đây mọi khoản đều vào ví mặc định.'] },
   { ban: '2026.10.17.3', ngay: '2026-10-17', ten: 'Giờ ghi cho mọi khoản, gợi ý số tiền; nút dễ bấm hơn',
     muc: ['Mỗi khoản trong Sổ tay có thêm giờ ghi ở dòng phụ (ví dụ "07:42 · Ăn"), để phân biệt những dòng cùng danh mục không có ghi chú. Khoản ĐÃ GHI TRƯỚC ĐÂY cũng có giờ, không cần làm gì, và máy khác đồng bộ về cũng thấy. Chỉ hiện khi khoản được ghi đúng ngày của nó: ghi bù cho hôm qua hoặc ngày khác thì không hiện giờ. Khoản ghi trên màn khóa lấy giờ lúc ghi, không phải lúc duyệt. Giờ là lúc khoản được tạo trong app, nên khoản nhập từ file hay giao dịch định kỳ ghi trong ngày cũng hiện giờ lúc bấm.',
       'Trên điện thoại, các nút nhỏ dễ bấm hơn: ba nút đầu trang, dòng "Đã lưu trên máy · chưa đồng bộ Drive", nút Đồng bộ ở dòng nhắc và nút ‹ › chọn tháng. Nhìn vào gần như không đổi, chỉ vùng bấm rộng ra, và không chồng lên nút bên cạnh nên không còn bấm nhầm sang đồng bộ.',
