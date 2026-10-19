@@ -1627,7 +1627,6 @@ function handleSoTayAction(act, el){
   } else if (act === 'stLocMo'){
     state.soTayLocMo = !state.soTayLocMo;
     renderSoTay();
-    if (state.soTayLocMo){ var oL = document.querySelector('[data-act=soTaySearchInput]'); if (oL) oL.focus(); }
   } else if (act === 'viCardChon'){
     state.qa.wallet = el.getAttribute('data-id');
     renderSoTay();

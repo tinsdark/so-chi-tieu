@@ -157,8 +157,8 @@ function moHoiThoai(cf){
     back.addEventListener('click', function(ev){ if (ev.target === back) dong(null); });
     document.addEventListener('keydown', onKey, true);
 
-    if (inp){ inp.focus(); inp.select(); }
-    else {
+    // không tự focus ô nhập (không bật bàn phím): chạm ô nào mới nhập ô đó. Hộp thoại không có ô nhập thì focus nút đầu cho người dùng bàn phím.
+    if (!inp){
       var b0 = box.querySelector('.modal-btn');
       if (b0) b0.focus();
     }
