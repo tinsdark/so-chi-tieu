@@ -6,7 +6,7 @@
    1) qrMaTran(text): bộ mã hóa QR (chế độ byte, mức sửa lỗi M, phiên bản 1 -> 10 = tối đa 213 byte, dư cho VietQR ~120 byte).
    2) vqPayload(bin, stk, soTien, noiDung): chuỗi theo chuẩn VietQR / NAPAS 247 (EMVCo): tag 38 = tài khoản nhận,
       54 = số tiền, 62.08 = nội dung, 63 = CRC16-CCITT. Có số tiền thì là mã "động" (tag 01 = 12), không thì "tĩnh" (11).
-   3) qrMoDialog: nút "Tạo QR" ở Sổ tay: chọn loại (thu nợ vay / nhận tiền khác), nhập số tiền + ghi chú rồi bấm Tạo QR thì hiện thẻ QR với 2 nút Lưu ảnh / Chia sẻ.
+   3) qrMoDialog: nút "Tạo QR" ở Sổ tay: chọn loại (thu nợ vay / nhận tiền khác), nhập số tiền + ghi chú rồi bấm Tạo QR thì hiện thẻ QR với nút Lưu / Chia sẻ.
       Tài khoản nhận do người dùng cài ở Cài đặt → Tiền → QR nhận tiền: state.data.settings.qr = { bin, stk }.
    App KHÔNG biết tiền đã vào hay chưa (không có API ngân hàng): QR chỉ đỡ phải gõ tay cho người chuyển.
    ==================================================================== */
@@ -277,8 +277,8 @@ function qrVeAnh(tk, tien, noiDung){
   dong.forEach(function(d, i){ g.font = d[1]; g.fillStyle = d[2]; g.fillText(d[0], W / 2, 40 + q + 30 + 27 + i * 54, W - 40); });
   return cv;
 }
-var _qrAnh = null;     // ảnh vừa tạo { file, blob, ten, tien, tk } cho nút Lưu ảnh / Chia sẻ
-// bấm Tạo QR: dựng ảnh PNG rồi mở thẻ QR (ảnh + 2 nút Lưu ảnh / Chia sẻ). Ảnh dựng xong mới mở thẻ nên bấm chia sẻ chạy ngay trong cú bấm (iPhone đòi vậy).
+var _qrAnh = null;     // ảnh vừa tạo { file, blob, ten, tien, tk } cho nút Lưu / Chia sẻ
+// bấm Tạo QR: dựng ảnh PNG rồi mở thẻ QR (ảnh + nút Lưu / Chia sẻ). Ảnh dựng xong mới mở thẻ nên bấm chia sẻ chạy ngay trong cú bấm (iPhone đòi vậy).
 function qrHienThe(tk, tien, noiDung){
   var cv = qrVeAnh(tk, tien, noiDung);
   if (!cv || !cv.toBlob){ toast('Không tạo được mã QR.', { loai: 'err' }); return; }
@@ -295,29 +295,20 @@ function qrMoThe(blob){
   o.id = 'qrThe'; o.className = 'qr-xem';
   o.innerHTML = '<div class="qr-xem-b"><button type="button" class="qa-x qr-the-x" data-qr-dong aria-label="Đóng">' + icon('x') + '</button>'
     + '<img src="' + url + '" alt="Mã QR nhận tiền">'
-    + '<div class="qr-act"><button type="button" class="btn secondary" data-qr-luu>Lưu ảnh</button><button type="button" class="btn" data-qr-chiase>Chia sẻ</button></div></div>';
+    + '<div class="qr-act"><button type="button" class="btn" data-qr-chiase>Lưu / Chia sẻ</button></div></div>';
   var dong = function(){ window.removeEventListener('keydown', onKey, true); if (o.parentNode) o.parentNode.removeChild(o); URL.revokeObjectURL(url); };
   var onKey = function(ev){ if (ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); dong(); } };   // Esc chỉ đóng thẻ, hộp thoại bên dưới giữ nguyên
   o.addEventListener('click', function(ev){
     var t = ev.target; if (!t || !t.closest) return;
     if (t === o || t.closest('[data-qr-dong]')) dong();
-    else if (t.closest('[data-qr-luu]')) qrLuuAnh();
     else if (t.closest('[data-qr-chiase]')) qrChiaSeAnh();
   });
   window.addEventListener('keydown', onKey, true);       // ở window (capture) để chạy trước Esc của hộp thoại bên dưới
   document.body.appendChild(o);
 }
-// Lưu ảnh: web không chọn được thư mục / thư viện Ảnh, và tải file trên iPhone (app cài ra màn hình chính) làm văng ra khỏi app.
-// Nên máy nào chia sẻ được file thì mở bảng chia sẻ (iPhone: chọn "Lưu hình ảnh" là vào thư viện Ảnh); máy tính thì tải file về.
-async function qrLuuAnh(){
-  if (!_qrAnh) return;
-  qrGhiCho();
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: [_qrAnh.file] })){
-    toast('Chọn "Lưu hình ảnh" để lưu vào thư viện Ảnh.');
-    try{ await navigator.share({ files: [_qrAnh.file] }); }
-    catch(e){ if (!e || e.name !== 'AbortError') toast('Không lưu được ảnh.', { loai: 'err' }); }
-  } else qrTaiFile();
-}
+// Một nút "Lưu / Chia sẻ": web không ghi thẳng vào thư viện Ảnh và tải file trên iPhone (app cài ra màn hình chính) làm văng khỏi app,
+// nên hai nút Lưu / Chia sẻ riêng chỉ cùng mở một bảng chia sẻ. Máy chia sẻ được file thì mở bảng chia sẻ (iPhone: "Lưu hình ảnh" là vào Ảnh,
+// còn Zalo / Tin nhắn... để gửi người chuyển); máy tính không chia sẻ được thì tải file về.
 function qrTaiFile(){
   var url = URL.createObjectURL(_qrAnh.blob), a = document.createElement('a');
   a.href = url; a.download = _qrAnh.ten; document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -328,10 +319,7 @@ async function qrChiaSeAnh(){
   if (!_qrAnh) return;
   qrGhiCho();
   var f = _qrAnh.file;
-  if (!(navigator.share && navigator.canShare && navigator.canShare({ files: [f] }))){
-    toast('Thiết bị này không chia sẻ ảnh trực tiếp được. Bấm "Lưu ảnh" rồi gửi ảnh đó.', { loai: 'warn' });
-    return;
-  }
+  if (!(navigator.share && navigator.canShare && navigator.canShare({ files: [f] }))){ qrTaiFile(); return; }
   try{ await navigator.share({ files: [f], title: 'QR nhận tiền', text: 'Chuyển ' + fmt(_qrAnh.tien) + ' tới ' + vqTenNganHang(_qrAnh.tk.bin) + ' ' + _qrAnh.tk.stk }); }
   catch(e){ if (!e || e.name !== 'AbortError') toast('Không chia sẻ được ảnh.', { loai: 'err' }); }
 }

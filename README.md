@@ -58,9 +58,9 @@ Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bả
 
 ### QR nhận tiền (VietQR)
 
-- Cài tài khoản ở **Cài đặt → Tiền → QR nhận tiền** (ngân hàng + số tài khoản, lưu ở `settings.qr`). Nút **QR** ở Sổ tay mở hộp thoại: chọn loại (**Thu nợ vay** hoặc **Nhận tiền khác**, ví dụ chia bill), số tiền, ghi chú; loại thu nợ vay có ô chọn khoản cho vay để tự điền số còn lại. Bấm **Tạo QR** thì hiện thẻ QR (ảnh PNG gồm QR, ngân hàng, STK, số tiền, nội dung) kèm hai nút **Lưu ảnh** và **Chia sẻ**.
+- Cài tài khoản ở **Cài đặt → Tiền → QR nhận tiền** (ngân hàng + số tài khoản, lưu ở `settings.qr`). Nút **QR** ở Sổ tay mở hộp thoại: chọn loại (**Thu nợ vay** hoặc **Nhận tiền khác**, ví dụ chia bill), số tiền, ghi chú; loại thu nợ vay có ô chọn khoản cho vay để tự điền số còn lại. Bấm **Tạo QR** thì hiện thẻ QR (ảnh PNG gồm QR, ngân hàng, STK, số tiền, nội dung) kèm một nút **Lưu / Chia sẻ**.
 - Mã VietQR / NAPAS tự tạo ngay trên máy (`js/qr.js`: bộ mã hóa QR + `vqPayload` + CRC16), không gọi dịch vụ ngoài nên số tài khoản không rời máy.
-- Web không ghi thẳng vào thư viện Ảnh và tải file trên iPhone làm văng khỏi app, nên Lưu ảnh và Chia sẻ mở bảng chia sẻ của máy (iPhone chọn "Lưu hình ảnh" là vào Ảnh); máy tính thì Lưu ảnh tải file về.
+- Web không ghi thẳng vào thư viện Ảnh và tải file trên iPhone làm văng khỏi app, nên nút Lưu / Chia sẻ mở bảng chia sẻ của máy (iPhone chọn "Lưu hình ảnh" là vào Ảnh, hoặc gửi thẳng qua Zalo / Tin nhắn); máy tính không có bảng chia sẻ thì tải file về.
 - Mỗi mã vừa tạo thành một mục **"Có 1 khoản tiền cần xác nhận"** ở chuông (`state.data.qrCho`). Bấm vào: thu nợ vay mở hộp Tất toán của khoản đó điền sẵn số; nhận tiền khác mở Ghi nhanh khoản thu điền sẵn. Ghi xong mục tự hết, hoặc bấm Bỏ. **App không biết tiền đã vào hay chưa** (không có API ngân hàng), khoản thu vẫn do người dùng ghi.
 
 ### Dữ liệu và bảo mật
@@ -165,7 +165,7 @@ node tools/bump.js --check  # chỉ kiểm tra
 - **Dữ liệu chính nằm trên máy**: mất máy hoặc xóa dữ liệu trình duyệt trước khi đồng bộ thì mất phần chưa đồng bộ (app nhắc khi quá 3 ngày chưa đồng bộ). "Đăng xuất" xóa cả dữ liệu trên máy.
 - Cần mạng ở lần mở đầu để tải thư viện đăng nhập Google và SheetJS (`cdn.sheetjs.com`, khóa bằng `integrity` SHA-384; đổi phiên bản thì tính lại mã băm). Trang chưa có Content-Security-Policy.
 - Kiểm xung đột Drive có khe hở nhỏ (đọc `modifiedTime` rồi mới ghi, hai yêu cầu riêng); hai máy ghi đúng lúc có thể đè nhau, phía sau còn nháp trên máy và 10 bản sao lưu. Mỗi lần lưu gửi cả file (~136 KB tăng mỗi năm), xem lại khi vượt ~1 MB.
-- **Chưa kiểm trên iPhone thật**: xuất `.ics` (iOS có giữ báo thức, PWA có giao file được không), Ghi nhanh bằng Phím tắt, Ghi nhanh trên màn khóa, Lưu ảnh / Chia sẻ QR.
+- **Chưa kiểm trên iPhone thật**: xuất `.ics` (iOS có giữ báo thức, PWA có giao file được không), Ghi nhanh bằng Phím tắt, Ghi nhanh trên màn khóa, Lưu / Chia sẻ QR.
 - Ghi nhanh trên màn khóa bật thì màn khóa không tự quét Face ID (hộp thoại Face ID của iOS che nút Ghi nhanh); mở bằng Face ID thì chạm biểu tượng ở bàn phím.
 
 ---

@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.19.2', ngay: '2026-10-19', ten: 'Thẻ QR: gộp Lưu ảnh và Chia sẻ thành một nút',
+    muc: ['Thẻ QR chỉ còn một nút "Lưu / Chia sẻ", vì trên iPhone hai nút cũ đều mở cùng một bảng chia sẻ. Bấm vào, chọn "Lưu hình ảnh" để lưu vào thư viện Ảnh, hoặc chọn Zalo, Tin nhắn... để gửi cho người chuyển tiền. Máy tính thì tải ảnh về.'] },
   { ban: '2026.10.19', ngay: '2026-10-19', ten: 'Tạo QR nhận tiền; chọn nguồn tiền khi duyệt khoản ghi lúc khóa',
     muc: ['Sổ tay có nút QR: chọn loại (Thu nợ vay hoặc Nhận tiền khác như chia bill), nhập số tiền và ghi chú rồi bấm Tạo QR để ra mã VietQR đúng số tiền đó. Thu nợ vay có ô chọn khoản cho vay, chọn xong tự điền số còn lại. Có nút Lưu ảnh và Chia sẻ (iPhone chọn "Lưu hình ảnh" để vào thư viện Ảnh).',
       'Cài tài khoản nhận tiền một lần ở Cài đặt → Tiền → QR nhận tiền: chọn ngân hàng và nhập số tài khoản. Mã tạo ngay trên máy, số tài khoản không gửi cho ai.',
