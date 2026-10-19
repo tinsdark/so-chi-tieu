@@ -110,7 +110,7 @@ function qaBarHtml(){
   return '<div class="qa-bar-wrap"><button type="button" class="qa-bar" data-act="qaMo" aria-haspopup="dialog">'
     + '<span class="qa-bar-plus">'+icon('plus')+'</span>'
     + '<span class="qa-bar-txt"><b>Ghi nhanh</b><small>Khoản chi hoặc khoản thu</small></span>'+vi+'</button>'
-    + '<button type="button" class="qa-qr" data-act="qrMo" aria-label="Tạo QR nhận tiền" title="Tạo QR nhận tiền">'+icon('qr')+'<small>QR</small></button></div>';
+    + '<button type="button" class="qa-qr" data-act="qrMo" aria-label="Tạo QR nhận tiền" title="Tạo QR nhận tiền">'+icon('qr')+'</button></div>';
 }
 function qaTienChipHtml(kind, catId){
   var ds = qaGoiYTien(kind, catId, 3);
