@@ -1506,6 +1506,7 @@ function handleSoTayAction(act, el){
       itQ.gc = ghiQ;       // xóa dòng này thì mẩu ghi chú ngày cũng đi theo
     }
     state.qa.cat[kQ] = catQ; qaGhiNho();
+    qrXacNhanXong();
     state.qa.amt = ''; state.qa.note = ''; state.qa.date = (ngayQ !== todayStr()) ? ngayQ : '';
     // có ví mặc định đã tích chọn: lần nhập sau quay về ví đó; chưa có thì nhớ ví vừa chọn như trước
     if (viQ && walletById(viQ)){ state.viChon = viQ; state.qa.wallet = viMacDinhDaChon() ? '' : viQ; }

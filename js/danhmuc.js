@@ -479,7 +479,7 @@ function backupCardHtml(){
    state.dmTab nhớ phần đang xem; các nơi nhảy tới một bảng sửa (tìm kiếm, chuông) phải đặt đúng dmTab (xem dmTabCua). */
 var DM_TAB = [['danhmuc', 'Danh mục'], ['tien', 'Tiền'], ['kehoach', 'Kế hoạch'], ['hienthi', 'Hiển thị'], ['ungdung', 'Ứng dụng']];
 // phần chứa từng loại bảng sửa: 'cat' -> danhmuc, 'vi' / 'cfg' / 'doisoat' / 'thanhtoanthe' -> tien, 'dk' / 'mt' -> kehoach
-function dmTabCua(loai){ return { cat: 'danhmuc', nstl: 'danhmuc', vi: 'tien', cfg: 'tien', doisoat: 'tien', thanhtoanthe: 'tien', dk: 'kehoach', mt: 'kehoach', khoa: 'ungdung' }[loai] || 'danhmuc'; }
+function dmTabCua(loai){ return { cat: 'danhmuc', nstl: 'danhmuc', vi: 'tien', qr: 'tien', cfg: 'tien', doisoat: 'tien', thanhtoanthe: 'tien', dk: 'kehoach', mt: 'kehoach', khoa: 'ungdung' }[loai] || 'danhmuc'; }
 function dmThanhTabHtml(){
   return '<div class="dt-mode dm-seg" role="tablist" aria-label="Phần cài đặt">' + DM_TAB.map(function(t){
     var on = (state.dmTab || 'danhmuc') === t[0];
@@ -487,7 +487,7 @@ function dmThanhTabHtml(){
   }).join('') + '</div>';
 }
 function dmPhanHtml(tab){
-  if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + chotCardHtml() + '</div>';
+  if (tab === 'tien') return '<div class="dm-grid">' + cfgCardHtml() + viCardHtml() + qrCardHtml() + chotCardHtml() + '</div>';
   if (tab === 'kehoach') return '<div class="dm-grid">' + dkCardHtml() + mtCardHtml() + '</div>';
   if (tab === 'hienthi') return hienThiHtml();
   if (tab === 'ungdung') return '<div class="dm-grid">' + giaoDienCardHtml() + caiAppCardHtml() + lichCardHtml() + backupCardHtml() + khoaCardHtml() + taiKhoanCardHtml() + thuatNguCardHtml() + phienBanCardHtml() + '</div>';
@@ -565,6 +565,26 @@ function cfgSheetHtml(){
   var h = vnF('Ngày bắt đầu', '<input type="date" id="cfg_ngay" value="'+(s.ngayBatDau || '')+'">', '', 'Mốc tính số dư. Chốt số dư sẽ tự đẩy mốc này lên.')
     + vnF('Tháng bắt đầu tính dự kiến', '<input type="month" id="cfg_duTru" value="'+(s.thangBatDauDuTru || '')+'">', '', 'Tháng ĐẦY ĐỦ đầu tiên dùng để tính trung bình gợi ý ở Dòng tiền.');
   return vnSheetKhung('Số dư đầu kỳ', h, 'Lưu', 'saveSettings', 'dmHuy');
+}
+
+// thẻ "QR nhận tiền" (tab Tiền): tài khoản ngân hàng dùng cho nút Tạo QR ở Sổ tay (qr.js)
+function qrCardHtml(){
+  var q = vqTaiKhoan();
+  return '<div class="card dm-card">' + dmHead('QR nhận tiền')
+    + '<div class="dm-row dm-tall" role="button" tabindex="0" data-act="dmSuaQr"><span class="dm-main"><b class="dm-n">' + (q ? esc(vqTenNganHang(q.bin)) : 'Chưa cài tài khoản') + '</b>'
+    + '<span class="dm-s">' + (q ? esc(q.stk) : 'Cài một lần để tạo mã QR nhận tiền ở Sổ tay') + '</span></span>' + dmGo() + '</div>'
+    + ghiChuGon('Ở tab Sổ tay có nút QR: nhập số tiền là ra mã VietQR đúng số đó để người khác quét và chuyển vào tài khoản này. Mã tạo ngay trên máy, số tài khoản không gửi cho ai. App không biết tiền đã vào hay chưa, khoản thu vẫn do bạn ghi.', 'QR nhận tiền dùng thế nào?')
+    + '</div>';
+}
+function qrSheetHtml(){
+  var q = vqTaiKhoan() || {}, biet = VQ_NGAN_HANG.some(function(b){ return b[0] === q.bin; });
+  var chon = q.bin ? (biet ? q.bin : 'khac') : '';
+  var h = vnF('Ngân hàng', '<select id="qr_bank"><option value="">Chọn ngân hàng…</option>'
+      + VQ_NGAN_HANG.map(function(b){ return '<option value="'+b[0]+'"'+(chon === b[0] ? ' selected' : '')+'>'+esc(b[1])+'</option>'; }).join('')
+      + '<option value="khac"'+(chon === 'khac' ? ' selected' : '')+'>Ngân hàng khác…</option></select>')
+    + '<div id="qr_bin_f"'+(chon === 'khac' ? '' : ' hidden')+'>' + vnF('Mã ngân hàng (BIN, 6 số)', '<input type="text" id="qr_bin" inputmode="numeric" maxlength="6" autocomplete="off" value="'+esc(biet ? '' : (q.bin || ''))+'" placeholder="VD: 970407">', '', 'Tra mã BIN của ngân hàng trên vietqr.io hoặc hỏi ngân hàng.') + '</div>'
+    + vnF('Số tài khoản', '<input type="text" id="qr_stk" inputmode="numeric" maxlength="19" autocomplete="off" value="'+esc(q.stk || '')+'" placeholder="VD: 1711052003">', '', 'Để trống cả hai ô rồi lưu nếu muốn xóa tài khoản này.');
+  return vnSheetKhung('QR nhận tiền', h, 'Lưu', 'dmLuuQr', 'dmHuy');
 }
 
 function viSheetHtml(f){
@@ -715,7 +735,7 @@ function dmSheetVe(){
   root.id = 'dmSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = (state.dmForm && state.dmForm.loai === 'nstl') ? nsSheetHtml() : (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : (state.dmForm && state.dmForm.loai === 'thanhtoanthe') ? theTraSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
+  root.innerHTML = (state.dmForm && state.dmForm.loai === 'nstl') ? nsSheetHtml() : (state.dmForm && state.dmForm.loai === 'doisoat') ? doiSoatSheetHtml(state.dmForm) : (state.dmForm && state.dmForm.loai === 'thanhtoanthe') ? theTraSheetHtml(state.dmForm) : state.dkForm ? dkSheetHtml() : (state.mtForm ? mtSheetHtml() : (state.dmForm.loai === 'qr' ? qrSheetHtml() : state.dmForm.loai === 'cat' ? catSheetHtml(state.dmForm) : (state.dmForm.loai === 'cfg' ? cfgSheetHtml() : (state.dmForm.loai === 'khoa' ? khoaMenuSheetHtml() : viSheetHtml(state.dmForm)))));
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -797,6 +817,19 @@ function handleDanhMucAction(act, el){
     state.dmForm = { loai:'cat', kind: el.getAttribute('data-kind') || 'chi', id: el.getAttribute('data-id') }; renderDanhMuc();
   } else if (act === 'dmSuaCfg'){
     state.dmForm = { loai:'cfg' }; renderDanhMuc();
+  } else if (act === 'dmSuaQr'){
+    state.dmForm = { loai:'qr' }; renderDanhMuc();
+  } else if (act === 'dmLuuQr'){
+    var qBank = (document.getElementById('qr_bank') || {}).value || '';
+    var qBin = qBank === 'khac' ? ((document.getElementById('qr_bin') || {}).value || '').replace(/\D/g, '') : qBank;
+    var qStk = ((document.getElementById('qr_stk') || {}).value || '').replace(/\s/g, '');
+    if (!qBank && !qStk) delete state.data.settings.qr;
+    else {
+      if (!/^\d{6}$/.test(qBin)){ toast(qBank === 'khac' ? 'Mã ngân hàng (BIN) phải đủ 6 số.' : 'Chọn ngân hàng.', { loai:'warn' }); return true; }
+      if (!/^[0-9A-Za-z]{1,19}$/.test(qStk)){ toast('Nhập số tài khoản (chữ số, tối đa 19 ký tự).', { loai:'warn' }); return true; }
+      state.data.settings.qr = { bin: qBin, stk: qStk };
+    }
+    state.dmForm = null; scheduleSave(); renderDanhMuc(); toast('Đã lưu tài khoản QR.');
   } else if (act === 'dmThemVi'){
     state.dmForm = { loai:'vi', id:'' }; renderDanhMuc();
   } else if (act === 'dmSuaVi'){
@@ -1135,6 +1168,7 @@ function handleDanhMucChange(el){
   if (handleDoiSoatInput(el)) return true;
   if (handleTheChange(el)) return true;
   if (handleHienThiChange(el)) return true;
+  if (el.id === 'qr_bank'){ var qF = document.getElementById('qr_bin_f'); if (qF) qF.hidden = el.value !== 'khac'; return true; }
   if (el.matches('[data-act=khoaPhut]')){ khoaDatPhut(el.value); toast('Đã lưu.'); return true; }
   if (el.matches('[data-act=bkFile]')){ khoiPhucTuFile(el); return true; }
   if (el.matches('[data-act=dkDuBao]')){ el.setAttribute('data-cham', '1'); return true; }     // người dùng đã tự chọn: thôi tự đổi mặc định

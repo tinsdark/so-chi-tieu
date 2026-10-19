@@ -756,6 +756,14 @@ function normalizeData(d){
     h.cau = String(h.cau || '').trim().slice(0, 120) || 'Mình đã hứa với bản thân.';
     if (!reNgay.test(h.ngayTao || '')) h.ngayTao = h.tuNgay;
   });
+  // khoản tiền cần xác nhận từ QR (qr.js): giữ mục hợp lệ, tối đa 50
+  d.qrCho = (Array.isArray(d.qrCho) ? d.qrCho : []).filter(function(x){ return x && typeof x.id === 'string' && (x.loai === 'no' || x.loai === 'ngoai') && num(x.tien) > 0; }).slice(-50).map(function(x){
+    return { id: x.id, loai: x.loai, tien: Math.round(num(x.tien)), ghiChu: String(x.ghiChu || '').slice(0, 25), cvId: typeof x.cvId === 'string' ? x.cvId : '', ngay: String(x.ngay || '') };
+  });
+  // tài khoản nhận QR (qr.js): { bin: 6 số, stk } hợp lệ thì giữ, sai thì bỏ
+  var qrTk = d.settings.qr;
+  if (qrTk && typeof qrTk === 'object' && /^\d{6}$/.test(String(qrTk.bin)) && /^[0-9A-Za-z]{1,19}$/.test(String(qrTk.stk))) d.settings.qr = { bin: String(qrTk.bin), stk: String(qrTk.stk) };
+  else delete d.settings.qr;
   if (d.settings.gioCong && typeof d.settings.gioCong === 'object'){
     d.settings.gioCong = { thuNhapThang: numNonNeg(d.settings.gioCong.thuNhapThang), gioThang: Math.min(400, Math.round(numNonNeg(d.settings.gioCong.gioThang))) };
   } else delete d.settings.gioCong;

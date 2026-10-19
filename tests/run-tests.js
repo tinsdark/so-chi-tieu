@@ -7342,6 +7342,19 @@ test('qrMaTran: kích thước theo phiên bản, null khi quá dài', function(
   eq(ctx.qrMaTran('x'.repeat(300)), null);
 });
 
+test('QR cần xác nhận: normalize giữ mục hợp lệ, chuông hiện "Có 1 khoản tiền cần xác nhận", khoản cho vay xong thì mục tự hết', function(){
+  var d = loadData(baseData({ qrCho: [{ id: 'q1', loai: 'ngoai', tien: 185000, ghiChu: 'Chia bill' }, { id: 'q2', loai: 'sai', tien: 5 }, { id: 'q3', loai: 'no', tien: 0 }],
+    settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10', qr: { bin: '970407', stk: '1711052003' } } }));
+  eq(d.qrCho.length, 1, 'bỏ mục sai loại / số tiền 0');
+  eq(d.settings.qr.stk, '1711052003');
+  var it = ctx.cbTatCa('2026-10-05').filter(function(x){ return x.loai === 'qr'; });
+  eq(it.length, 1); eq(it[0].tieu, 'Có 1 khoản tiền cần xác nhận'); eq(it[0].dich.id, 'q1');
+  var d2 = loadData(baseData({ qrCho: [{ id: 'q9', loai: 'no', tien: 1000, cvId: 'cvX' }], vayNo: { vayNoPhaiTra: [], choVay: [{ id: 'cvX', ten: 'A', soTien: 1000, daThu: 1000, ngayChoVay: '2026-10-01' }] } }));
+  eq(ctx.qrDanhSachCho().length, 0, 'khoản cho vay đã thu đủ');
+  var d3 = loadData(baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10', qr: { bin: '12', stk: 'x' } } }));
+  ok(!d3.settings.qr, 'tài khoản QR sai thì bỏ');
+});
+
 (async function ketThuc(){
   if (hangDoiAsync.length) console.log('\nTest bất đồng bộ');
   for (var i = 0; i < hangDoiAsync.length; i++){
