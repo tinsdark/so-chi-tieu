@@ -58,7 +58,7 @@ Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bả
 
 ### QR nhận tiền (VietQR)
 
-- Cài tài khoản ở **Cài đặt → Tiền → QR nhận tiền** (ngân hàng + số tài khoản, lưu ở `settings.qr`). Nút **QR** ở Sổ tay mở hộp thoại: chọn loại (**Thu nợ vay** hoặc **Nhận tiền khác**, ví dụ chia bill), số tiền, ghi chú; loại thu nợ vay có ô chọn khoản cho vay để tự điền số còn lại. Bấm **Tạo QR** thì hiện thẻ QR (ảnh PNG gồm QR, ngân hàng, STK, số tiền, nội dung) kèm một nút **Lưu / Chia sẻ**.
+- Cài tài khoản ở **Cài đặt → Tiền → QR nhận tiền** (ngân hàng + số tài khoản, lưu ở `settings.qr`). Nút **QR** ở Sổ tay mở hộp thoại: chọn loại (**Thu nợ vay** hoặc **Nhận tiền khác**, ví dụ chia bill), số tiền, ghi chú; loại thu nợ vay có ô chọn khoản cho vay để tự điền số còn lại. Bấm **Tạo QR** thì hiện thẻ QR (ảnh PNG gồm QR, ngân hàng, STK, số tiền, nội dung) kèm một nút **Lưu / Chia sẻ**; nhấn giữ vào ảnh thì sao chép ảnh vào clipboard.
 - Mã VietQR / NAPAS tự tạo ngay trên máy (`js/qr.js`: bộ mã hóa QR + `vqPayload` + CRC16), không gọi dịch vụ ngoài nên số tài khoản không rời máy.
 - Web không ghi thẳng vào thư viện Ảnh và tải file trên iPhone làm văng khỏi app, nên nút Lưu / Chia sẻ mở bảng chia sẻ của máy (iPhone chọn "Lưu hình ảnh" là vào Ảnh, hoặc gửi thẳng qua Zalo / Tin nhắn); máy tính không có bảng chia sẻ thì tải file về.
 - Mỗi mã vừa tạo thành một mục **"Có 1 khoản tiền cần xác nhận"** ở chuông (`state.data.qrCho`). Bấm vào: thu nợ vay mở hộp Tất toán của khoản đó điền sẵn số; nhận tiền khác mở Ghi nhanh khoản thu điền sẵn. Ghi xong mục tự hết, hoặc bấm Bỏ. **App không biết tiền đã vào hay chưa** (không có API ngân hàng), khoản thu vẫn do người dùng ghi.

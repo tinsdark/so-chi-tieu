@@ -304,7 +304,20 @@ function qrMoThe(blob){
     else if (t.closest('[data-qr-chiase]')) qrChiaSeAnh();
   });
   window.addEventListener('keydown', onKey, true);       // ở window (capture) để chạy trước Esc của hộp thoại bên dưới
+  // giữ lâu vào ảnh = sao chép ảnh (menu hệ thống của ảnh bị tắt bằng CSS để khỏi chồng lên nhau)
+  var anh = o.querySelector('img'), hen = 0, cham = false, thoi = function(){ clearTimeout(hen); };
+  anh.addEventListener('touchstart', function(){ cham = true; thoi(); hen = setTimeout(qrSaoChepAnh, 450); }, { passive: true });
+  ['touchend', 'touchmove', 'touchcancel'].forEach(function(e){ anh.addEventListener(e, thoi, { passive: true }); });
+  anh.addEventListener('contextmenu', function(ev){ if (cham) ev.preventDefault(); });      // chuột phải trên máy tính vẫn có menu "Sao chép hình ảnh" của trình duyệt
   document.body.appendChild(o);
+}
+async function qrSaoChepAnh(){
+  if (!_qrAnh) return;
+  if (!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined')){ toast('Máy này không sao chép ảnh được, dùng nút Lưu / Chia sẻ.', { loai: 'warn' }); return; }
+  try{
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': _qrAnh.blob })]);
+    toast('Đã sao chép ảnh QR. Mở Zalo hoặc Tin nhắn rồi dán để gửi.');
+  }catch(e){ toast('Không sao chép được ảnh, dùng nút Lưu / Chia sẻ.', { loai: 'warn' }); }
 }
 // Một nút "Lưu / Chia sẻ": web không ghi thẳng vào thư viện Ảnh và tải file trên iPhone (app cài ra màn hình chính) làm văng khỏi app,
 // nên hai nút Lưu / Chia sẻ riêng chỉ cùng mở một bảng chia sẻ. Máy chia sẻ được file thì mở bảng chia sẻ (iPhone: "Lưu hình ảnh" là vào Ảnh,
