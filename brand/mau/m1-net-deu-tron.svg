@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="TDLC">
+<rect width="1024" height="1024" fill="#F4EFE6"/>
+<g transform="translate(512 512) scale(0.66) translate(-447 -681)" fill="none" stroke="#16130F" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+<path d="M160 208H680"/>
+<path d="M400 208V685"/>
+<path d="M655 215C735 290 735 400 690 470C640 560 520 630 400 685"/>
+<path d="M400 685H690"/>
+<path d="M620 685C450 705 365 820 400 960C430 1070 560 1150 700 1155"/>
+</g>
+</svg>
