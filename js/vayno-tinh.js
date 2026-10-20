@@ -578,8 +578,8 @@ function bietTruocChuaGhi(kind, cid, mk){
 }
 // 1 danh mục / 1 tháng, số HIỂN THỊ ở Dòng tiền (hàng từng danh mục) và là phần tử cộng của thẻ tổng. MỘT nguồn duy nhất:
 // - tháng tương lai: gợi ý (duTruGoiY, null = không có gợi ý)
-// - tháng hiện tại: Trả nợ / Thu hồi cho vay = thực tế + phần còn lại theo lịch vay; danh mục "Không tính dự kiến" và danh mục
-//   hệ thống giữ đúng thực tế; mọi danh mục còn lại = max(thực tế + khoản định kỳ chưa ghi, số cơ sở) (duKienChuoiSo: Hạn mức
+// - tháng hiện tại: Trả nợ / Thu hồi cho vay = thực tế + phần còn lại theo lịch vay; danh mục hệ thống giữ đúng thực tế; danh mục
+//   "Không tính dự kiến" = thực tế + khoản định kỳ BẬT DỰ BÁO chưa ghi (không hạn mức, không trung bình); mọi danh mục còn lại = max(thực tế + khoản định kỳ chưa ghi, số cơ sở) (duKienChuoiSo: Hạn mức
 //   hoặc TB các tháng liền trước). Lấy MAX chứ không cộng: hạn mức của danh mục dùng làm dự báo đã được đồng bộ theo kỳ định kỳ
 //   (dinhKyDongBoHanMuc) nên cộng cả hai là tính 2 lần; khoản định kỳ chỉ thắng khi danh mục chưa có hạn mức đủ lớn
 // - tháng đã qua: thực tế
@@ -590,7 +590,10 @@ function duKienThangCat(kind, cid, mk){
   if (mk === currentMk){
     if ((kind === 'chi' && cid === 'traNo') || (kind === 'thu' && cid === 'thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
     var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-    if (!cat0 || cat0.khongDuTru || CAT_HE_THONG[kind][cid]) return av;
+    if (!cat0 || CAT_HE_THONG[kind][cid]) return av;
+    // "Không tính dự kiến": không đoán theo hạn mức hay trung bình, nhưng khoản định kỳ đã khai và bật dự báo vẫn là tiền chắc chắn
+    // (giống các tháng tương lai, nơi định kỳ được lấy trước cờ này)
+    if (cat0.khongDuTru) return av + dinhKyChuaGhiThang(mk, kind, cid, true);
     return Math.max(av + dinhKyChuaGhiThang(mk, kind, cid), duKienChuoiSo(kind, cid, mk));
   }
   return av;

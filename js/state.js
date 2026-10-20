@@ -1123,7 +1123,7 @@ function dinhKyDaGhi(dk, mk){
 // tổng các khoản định kỳ ĐANG BẬT của tháng mk mà chưa ghi Sổ tay và chưa bấm "Bỏ qua" — kể cả khoản CHƯA tới ngày
 // (dùng cho dự báo cuối tháng). kind/catId bỏ trống = tính tất cả.
 // Đã ghi TAY (không qua nút định kỳ) vào cùng danh mục thì trừ bớt: lương ghi tay 10tr thì không cộng thêm 10tr định kỳ nữa.
-function dinhKyChuaGhiThang(mk, kind, catId){
+function dinhKyChuaGhiThang(mk, kind, catId, chiDuBao){
   var nhom = {}, le = 0;
   (state.data.dinhKy || []).forEach(function(dk){
     var tien = dinhKySoTien(dk, mk);
@@ -1133,7 +1133,7 @@ function dinhKyChuaGhiThang(mk, kind, catId){
     if ((dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
     // khoản "Dùng làm dự báo" là toàn bộ khoản của danh mục (lương...): ghi tay rồi thì trừ bớt. Khoản chỉ để nhắc (tiền net trong Ăn)
     // nằm lẫn trong chi tiêu khác của danh mục nên không trừ.
-    if (!dk.duBao){ le += tien; return; }
+    if (!dk.duBao){ if (!chiDuBao) le += tien; return; }
     var key = dk.kind + '|' + dk.catId;
     nhom[key] = (nhom[key] || 0) + tien;
   });

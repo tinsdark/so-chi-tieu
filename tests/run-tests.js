@@ -907,6 +907,58 @@ test('đang ở T12: T10, T11 thực tế, T12 dự kiến; T1 = (T10 + T11 + T1
   setToday('2026-10-01');
 });
 
+function khongDuTruFixture(){
+  var d = baseData();
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' };
+  d.categories = {
+    thu: [{ id:'thuong', ten:'Thưởng', chiTieu: 0, khongDuTru: true }, { id:'ngoai', ten:'Thu ngoài', chiTieu: 0, khongDuTru: true },
+          { id:'luong', ten:'Lương', chiTieu: 0 }],
+    chi: [{ id:'xe', ten:'Xe', chiTieu: 0, khongDuTru: true }, { id:'net', ten:'Net', chiTieu: 0, khongDuTru: true }]
+  };
+  d.dinhKy = [
+    { id:'cl', ten:'Claim', kind:'thu', catId:'ngoai', soTien:2000000, ngay:20, bat:true, duBao:true, bo:[],
+      ky: [{ tuMk:'2026-11', soTien: 2000000 }, { tuMk:'2027-02', soTien: 0 }] },
+    { id:'lg', ten:'Lương', kind:'thu', catId:'luong', soTien:5000000, ngay:5, bat:true, duBao:true, bo:[] },
+    { id:'nh', ten:'Nhắc phí', kind:'chi', catId:'net', soTien:300000, ngay:25, bat:true, duBao:false, bo:[] }
+  ];
+  d.journal = { '2026-10-05': { thu:{ thuong: 1000000, luong: 1000000 }, chi:{ xe: 500000 }, ghiChu:'', refs:[] } };
+  return d;
+}
+
+test('Không tính dự kiến: khoản phát sinh ở T10 (thưởng, chi xe) KHÔNG đi sang các tháng sau, tháng đang chạy chỉ lấy thực tế', function(){
+  setToday('2026-10-20');
+  loadData(khongDuTruFixture());
+  eq(ctx.duKienThangCat('thu', 'thuong', '2026-10'), 1000000, 'T10 đang chạy: đúng số đã nhận');
+  eq(ctx.duKienThangCat('chi', 'xe', '2026-10'), 500000, 'chi cũng vậy');
+  ['2026-11', '2026-12', '2027-01'].forEach(function(mk){
+    eq(ctx.duTruDanhMucThang('thu', 'thuong', mk), 0, 'thưởng ' + mk);
+    eq(ctx.duTruDanhMucThang('chi', 'xe', mk), 0, 'chi xe ' + mk);
+  });
+  setToday('2026-10-01');
+});
+
+test('định kỳ có kỳ: lấy ĐÚNG số của kỳ kể cả danh mục Không tính dự kiến; hết kỳ (Dừng) thì không tính nữa', function(){
+  setToday('2026-10-20');
+  loadData(khongDuTruFixture());
+  eq(ctx.duKienThangCat('thu', 'ngoai', '2026-10'), 0, 'T10 chưa có kỳ nào phủ -> không tính');
+  ['2026-11', '2026-12', '2027-01'].forEach(function(mk){ eq(ctx.duTruDanhMucThang('thu', 'ngoai', mk), 2000000, 'Claim ' + mk); });
+  eq(ctx.duTruDanhMucThang('thu', 'ngoai', '2027-02'), 0, 'T2/2027 kỳ Dừng: không tính');
+  eq(ctx.duTruDanhMucThang('thu', 'ngoai', '2027-05'), 0, 'các tháng sau cũng không');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2026-11'), 5000000, 'lương định kỳ 5tr, không lấy TB hay thực tế T10 (1tr)');
+  setToday('2026-10-01');
+});
+
+test('tháng đang chạy: danh mục Không tính dự kiến vẫn tính khoản định kỳ BẬT dự báo chưa ghi; khoản chỉ nhắc thì không', function(){
+  setToday('2026-11-10');
+  loadData(khongDuTruFixture());
+  eq(ctx.duKienThangCat('thu', 'ngoai', '2026-11'), 2000000, 'Claim T11 chưa ghi: tính đủ 2tr, không biến mất khi sang tháng');
+  eq(ctx.duKienThangCat('chi', 'net', '2026-11'), 0, 'định kỳ chỉ để nhắc: không đoán');
+  ctx.state.data.journal['2026-11-03'] = { thu:{ ngoai: 500000 }, chi:{}, ghiChu:'', refs:[] };
+  ctx.invalidateBalanceCache();
+  eq(ctx.duKienThangCat('thu', 'ngoai', '2026-11'), 2000000, 'đã ghi tay 500k vào danh mục: tính vào khoản dự báo, tổng vẫn 2tr');
+  setToday('2026-10-01');
+});
+
 /* ==================================================================== */
 group('7b. Dự báo đồng bộ: dtSuggest (hàng Dòng tiền) ≡ duTruDanhMucThang (tổng, tích lũy, Mô phỏng)');
 
