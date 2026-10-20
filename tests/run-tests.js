@@ -970,6 +970,48 @@ test('tháng đang chạy: danh mục có định kỳ bật dự báo lấy Đ�
   setToday('2026-10-01');
 });
 
+function doiMucFixture(){
+  var d = baseData();
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' };
+  d.categories = { thu: [{ id:'luong', ten:'Lương', chiTieu: 9400000 }], chi: [{ id:'me', ten:'Gửi mẹ', chiTieu: 1000000, khoanCoDinh: true }] };
+  d.dinhKy = [
+    { id:'lg', ten:'Lương', kind:'thu', catId:'luong', soTien:9400000, ngay:20, bat:true, duBao:true, bo:[],
+      ky:[{ tuMk:'2026-07', soTien: 9400000 }, { tuMk:'2027-01', soTien: 12000000 }] },
+    { id:'me', ten:'Gửi mẹ', kind:'chi', catId:'me', soTien:1000000, ngay:20, bat:true, duBao:true, bo:[],
+      ky:[{ tuMk:'2026-07', soTien: 1000000 }, { tuMk:'2026-12', soTien: 1500000 }] }
+  ];
+  d.journal = { '2026-10-20': { thu:{ luong: 10000000 }, chi:{ me: 1000000 }, ghiChu:'', refs:[] } };   // T10 thực nhận lương 10tr
+  return d;
+}
+
+test('tăng lương / đổi mức tiền cho mẹ giữa chừng: các tháng sau lấy ĐÚNG số của kỳ mới, không lấy trung bình hay thực tế tháng trước', function(){
+  setToday('2026-10-25');
+  loadData(doiMucFixture());
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2026-11'), 9400000, 'T11 lương theo kỳ cũ, dù T10 thực nhận 10tr');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2026-12'), 9400000, 'T12 vẫn kỳ cũ');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2027-01'), 12000000, 'T1/2027 tăng lương: đúng 12tr');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2027-06'), 12000000, 'các tháng sau giữ 12tr');
+  eq(ctx.duTruDanhMucThang('chi', 'me', '2026-11'), 1000000, 'T11 gửi mẹ 1tr');
+  eq(ctx.duTruDanhMucThang('chi', 'me', '2026-12'), 1500000, 'T12 đổi mức: đúng 1,5tr');
+  setToday('2026-10-01');
+});
+
+test('tháng đang chạy: định kỳ lấy đúng số kỳ, chỉ lấy số khác khi chính tháng đó chi / thu vượt', function(){
+  setToday('2026-12-10');
+  var d = doiMucFixture();
+  d.journal['2026-11-20'] = { thu:{ luong: 9400000 }, chi:{ me: 1000000 }, ghiChu:'', refs:[] };
+  loadData(d);
+  eq(ctx.duKienThangCat('chi', 'me', '2026-12'), 1500000, 'T12 chưa ghi: đúng 1,5tr của kỳ mới');
+  eq(ctx.duKienThangCat('thu', 'luong', '2026-12'), 9400000, 'T12 lương kỳ cũ, không lấy 10tr của T10');
+  ctx.state.data.journal['2026-12-05'] = { thu:{}, chi:{ me: 1800000 }, ghiChu:'', refs:[] };      // tháng này chi vượt
+  ctx.invalidateBalanceCache();
+  eq(ctx.duKienThangCat('chi', 'me', '2026-12'), 1800000, 'chi vượt kỳ trong chính tháng đó: lấy số vượt');
+  ctx.state.data.journal['2026-12-05'] = { thu:{}, chi:{ me: 1200000 }, ghiChu:'', refs:[] };      // ghi thấp hơn kỳ
+  ctx.invalidateBalanceCache();
+  eq(ctx.duKienThangCat('chi', 'me', '2026-12'), 1500000, 'ghi thấp hơn kỳ: vẫn đúng 1,5tr của kỳ (phần chưa ghi tính tiếp)');
+  setToday('2026-10-01');
+});
+
 /* ==================================================================== */
 group('7b. Dự báo đồng bộ: dtSuggest (hàng Dòng tiền) ≡ duTruDanhMucThang (tổng, tích lũy, Mô phỏng)');
 
