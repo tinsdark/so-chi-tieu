@@ -845,28 +845,65 @@ test('khoản định kỳ chưa ghi không bị tính 2 lần với hạn mức
   setToday('2026-10-01');
 });
 
-test('hôm nay còn ở T10: T11 = số dự kiến T10, T12 = TB(T10, T11), T1 = TB 3 tháng', function(){
+test('hôm nay còn ở T10: T11 = (T10 + 2 hạn mức)/3, T12 = (T10 + T11 + hạn mức)/3, T1 = TB(T10, T11, T12)', function(){
   setToday('2026-10-20');
   loadData(duKienFixture());
-  eq(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-11'), 260000, 'T11 = T10 (vượt hạn mức)');
-  eq(ctx.duTruDanhMucThang('chi', 'diennuoc', '2026-11'), 600000, 'T11 = T10 (lấy hạn mức)');
-  eq(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-12'), 260000, 'T12 = TB(260k, 260k)');
-  eq(ctx.duTruDanhMucThang('thu', 'trocap', '2027-01'), 750000, 'T1 = TB 3 tháng đều 750k');
-  eq(ctx.dtSuggest('chi', 'tranuoc', '2026-12'), 260000, 'hàng Dòng tiền cùng số');
+  // Trà nước: hạn mức 200k, T10 vượt (260k) -> T10 = 260k
+  near(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-11'), (260000 + 200000 + 200000) / 3, 0.01, 'T11 = (T10 + 2 hạn mức)/3');
+  near(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-12'), (260000 + 220000 + 200000) / 3, 0.01, 'T12 = (T10 + T11 + hạn mức)/3');
+  near(ctx.duTruDanhMucThang('chi', 'tranuoc', '2027-01'), (260000 + 220000 + (260000 + 220000 + 200000) / 3) / 3, 0.01, 'T1 = TB(T10, T11, T12)');
+  eq(ctx.duTruDanhMucThang('chi', 'diennuoc', '2026-11'), 600000, 'T10 = hạn mức 600k nên T11 cũng 600k');
+  eq(ctx.duTruDanhMucThang('thu', 'trocap', '2027-01'), 750000, 'thu: T10 lấy hạn mức 750k');
+  near(ctx.dtSuggest('chi', 'tranuoc', '2026-12'), (260000 + 220000 + 200000) / 3, 0.01, 'hàng Dòng tiền cùng số');
   setToday('2026-10-01');
 });
 
-test('sang T11: T10 đã kết thúc nên dùng đúng SỐ THỰC TẾ T10, không lấy hạn mức nữa; T12 = TB(thực tế T10, T11)', function(){
-  setToday('2026-11-10');
-  var d = duKienFixture();
-  d.journal['2026-11-03'] = { thu:{}, chi:{ diennuoc: 900000 }, ghiChu:'', refs:[] };
+test('đầu kỳ T10 = hạn mức (3 hạn mức / 3) khi chưa vượt', function(){
+  setToday('2026-10-20');
+  loadData(duKienFixture());
+  eq(ctx.duKienThangCat('chi', 'diennuoc', '2026-10'), 600000, 'T10 = hạn mức, thực tế 554k chưa tới');
+  setToday('2026-10-01');
+});
+
+function duKienChuoiFixture(){
+  var d = baseData();
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' };
+  d.categories = { thu: [], chi: [{ id:'an', ten:'Ăn', chiTieu: 1000000 }] };
+  d.journal = {
+    '2026-10-10': { thu:{}, chi:{ an: 1500000 }, ghiChu:'', refs:[] },
+    '2026-11-10': { thu:{}, chi:{ an: 900000 }, ghiChu:'', refs:[] }
+  };
+  return d;
+}
+
+test('đang ở T10: T11 = (T10 + 2H)/3 với T10 là dự kiến (max thực tế, hạn mức)', function(){
+  setToday('2026-10-20');
+  var d = duKienChuoiFixture(); delete d.journal['2026-11-10'];
   loadData(d);
-  // cơ sở T11 = thực tế T10 (554k, không phải hạn mức 600k); T11 đang chạy: max(900k thực tế, 554k)
-  eq(ctx.duKienThangCat('chi', 'diennuoc', '2026-11'), 900000, 'T11 đang chạy, thực tế 900k vượt cơ sở 554k');
-  eq(ctx.duKienThangCat('chi', 'tranuoc', '2026-11'), 260000, 'T11 chưa chi: lấy thực tế T10 = 260k');
-  eq(ctx.duKienThangCat('thu', 'trocap', '2026-11'), 520000, 'T11 chưa thu: lấy thực tế T10 = 520k, không phải hạn mức 750k');
-  // T12 = TB(T10 thực tế 554k, T11 dự kiến 900k)
-  near(ctx.duTruDanhMucThang('chi', 'diennuoc', '2026-12'), (554000 + 900000) / 2, 0.01, 'T12 = TB(T10, T11)');
+  near(ctx.duKienThangCat('chi', 'an', '2026-10'), 1500000, 0.01, 'T10 vượt hạn mức -> 1,5tr');
+  near(ctx.duTruDanhMucThang('chi', 'an', '2026-11'), (1500000 + 1000000 + 1000000) / 3, 0.01, 'T11');
+  near(ctx.duTruDanhMucThang('chi', 'an', '2026-12'), (1500000 + (1500000 + 2000000) / 3 + 1000000) / 3, 0.01, 'T12 = (T10 + T11 + H)/3');
+  setToday('2026-10-01');
+});
+
+test('đang ở T11: T10 đã hoàn thành nên lấy thực tế; T11 = max(thực tế, (T10 + 2H)/3)', function(){
+  setToday('2026-11-20');
+  loadData(duKienChuoiFixture());
+  var b11 = (1500000 + 1000000 + 1000000) / 3;
+  near(ctx.duKienThangCat('chi', 'an', '2026-11'), Math.max(900000, b11), 0.01, 'T11 chưa tới cơ sở -> lấy cơ sở');
+  near(ctx.duTruDanhMucThang('chi', 'an', '2026-12'), (1500000 + b11 + 1000000) / 3, 0.01, 'T12 = (T10 thực tế + T11 dự kiến + H)/3');
+  setToday('2026-10-01');
+});
+
+test('đang ở T12: T10, T11 thực tế, T12 dự kiến; T1 = (T10 + T11 + T12)/3; T2 = (T11 + T12 + T1)/3', function(){
+  setToday('2026-12-10');
+  loadData(duKienChuoiFixture());
+  var t12 = (900000 + 1500000 + 1000000) / 3;                 // T12: 3 tháng trước = T11, T10 (thực tế), T9 (trước đầu kỳ -> hạn mức)
+  var t1 = (t12 + 900000 + 1500000) / 3;
+  var t2 = (t1 + t12 + 900000) / 3;
+  near(ctx.duKienThangCat('chi', 'an', '2026-12'), t12, 0.01, 'T12 dự kiến');
+  near(ctx.duTruDanhMucThang('chi', 'an', '2027-01'), t1, 0.01, 'T1/2027');
+  near(ctx.duTruDanhMucThang('chi', 'an', '2027-02'), t2, 0.01, 'T2/2027 = (T11 + T12 + T1)/3');
   setToday('2026-10-01');
 });
 
@@ -5271,6 +5308,7 @@ group('Dòng tiền Theo tháng: tách vay nợ khỏi Thu nhập / Chi');
 
 test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, cho vay, điều chỉnh; vay nợ ở d.vayThem...; Tiền vào − ra vẫn là dòng tiền thật', function(){
   tcData(); setToday('2026-10-11');
+  ctx.state.data.categories.chi[0].khongDuTru = true;   // ý của test là tách vay nợ: không để hạn mức Ăn kéo chi dự kiến lên
   var d = ctx.dtThangDuLieu('2026-10');
   eq(d.thuAct, 1000000, 'thu nhập = lương, không có vay 50tr'); eq(d.thuPlan, 0, 'chưa đặt kế hoạch thu');
   ok(d.thu.every(function(r){ return !ctx.CAT_HE_THONG.thu[r.id]; }) && d.chi.every(function(r){ return !ctx.CAT_HE_THONG.chi[r.id]; }), 'không có danh mục hệ thống trong thẻ');
@@ -5281,6 +5319,7 @@ test('dtThangDuLieu: Thu nhập / Chi không còn gồm nhận vay, thu hồi, c
 });
 test('dtDauHtml: Thu không còn "vượt kế hoạch 457%"; có dòng Vay nợ riêng; Tiền vào − ra ghi "gồm vay thêm" và nhãn "Dư nhờ vay"', function(){
   tcData(); setToday('2026-10-11');
+  ctx.state.data.categories.chi[0].khongDuTru = true;                       // ý của test là tách vay nợ: không để hạn mức Ăn kéo chi dự kiến lên
   ctx.state.data.categories.thu[0].chiTieu = 1000000;                       // kế hoạch thu = lương 1tr
   var d = ctx.dtThangDuLieu('2026-10'), h = ctx.dtDauHtml(d, 18460000, '2026-09', '2026-12');
   var ngoai = h.replace(/<details class="giai-thich">[\s\S]*?<\/details>/g, '');         // vùng hiển thị, bỏ mục gập giải thích

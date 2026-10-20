@@ -14,9 +14,9 @@
    để nơi gọi fallback về Chỉ tiêu/tháng ở tab Cài đặt.
    Ví dụ (bắt đầu dự trù T10/2026): dự trù T11 = thực tế T10; T12 = TB(T10,T11);
    T1/2027 = TB(T10,T11,T12); T2/2027 = TB(T11,T12,T1).
-   Tháng ĐANG CHẠY không đoán theo nhịp chi: mỗi danh mục = max(thực tế, số cơ sở), số cơ sở = Hạn mức ở tháng đầu kỳ,
-   từ tháng sau là TB thực tế các tháng liền trước (duKienChuoiSo ở vayno-tinh.js). Khi chưa qua hết tháng đầu kỳ,
-   các tháng sau lấy số dự kiến của tháng đầu kỳ làm cơ sở.
+   Số dự kiến thật sự dùng (duKienChuoiSo ở vayno-tinh.js): số cơ sở của tháng m = TB 3 tháng liền trước m, trong đó
+   tháng trước tháng đầu kỳ lấy Hạn mức, tháng đã hoàn thành lấy THỰC TẾ, tháng chưa hết (đang chạy / tương lai) lấy DỰ KIẾN.
+   Tháng đang chạy: dự kiến = max(thực tế, số cơ sở). Ví dụ đầu kỳ T10: T11 = (T10+2H)/3, T12 = (T10+T11+H)/3.
    Tháng không phát sinh TÍNH LÀ 0 vào TB — mua 1 lần rồi thôi thì gợi ý phải
    giảm dần, không được giữ mãi mức của tháng duy nhất có mua.
    ==================================================================== */
@@ -166,7 +166,7 @@ function dtThanhHtml(o){
 function dtGiaiThichHtml(d){
   var cau = [], am = d.cb < 0;
   if (d.tuong){
-    cau.push('Tháng chưa tới: số liệu là gợi ý theo hạn mức (tháng đầu kỳ), lịch trả nợ và trung bình các tháng liền trước (tháng đã qua tính theo thực tế).');
+    cau.push('Tháng chưa tới: số liệu là gợi ý theo trung bình 3 tháng liền trước (tháng đã hết lấy thực tế, tháng chưa hết lấy dự kiến, tháng trước đầu kỳ lấy hạn mức) và lịch trả nợ.');
   } else if (d.qua){
     cau.push('Tháng đã qua: thu nhập '+fmt(d.thuAct)+', chi '+fmt(d.chiAct + (d.traNo ? d.traNo.act : 0))+' (gồm trả nợ)'+(d.vayThem > 0.5 ? ', vay thêm '+fmt(d.vayThem) : '')+'.');
   } else if (d.chiPlanHN > 0){

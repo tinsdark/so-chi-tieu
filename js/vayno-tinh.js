@@ -494,10 +494,13 @@ function actualCatInMonth(kind, cid, mk){
   });
   return s;
 }
-// SỐ DỰ KIẾN của 1 danh mục (thu hoặc chi) cho tháng mk, theo hạn mức rồi theo thực tế:
-// - tháng ĐẦU KỲ (thangBatDauDuTru) và mọi tháng chưa có tháng hoàn chỉnh nào phía trước: số cơ sở = Hạn mức/Kế hoạch của danh mục
-// - các tháng sau: số cơ sở = TB tối đa 3 tháng liền trước (tháng đã qua dùng THỰC TẾ, tháng đang chạy / tương lai dùng số dự kiến của nó)
-//   -> T11 = số T10, T12 = TB(T10, T11), T1 = TB(T10, T11, T12), T2 = TB(T11, T12, T1)...
+// SỐ DỰ KIẾN của 1 danh mục (thu hoặc chi) cho tháng mk, theo hạn mức rồi theo thực tế.
+// Số cơ sở của tháng m = TRUNG BÌNH 3 THÁNG LIỀN TRƯỚC m; mỗi tháng trong 3 tháng đó lấy:
+// - tháng TRƯỚC tháng đầu kỳ (thangBatDauDuTru): Hạn mức/Kế hoạch của danh mục
+// - tháng ĐÃ HOÀN THÀNH: số THỰC TẾ (chỉ lấy đúng tiền khi tháng đó đã hết)
+// - tháng ĐANG CHẠY hoặc tương lai: số dự kiến của chính tháng đó
+// Ví dụ (đầu kỳ T10, hạn mức H): T10 = (H+H+H)/3, T11 = (T10+H+H)/3, T12 = (T10+T11+H)/3, T1 = (T10+T11+T12)/3;
+// ở tháng 12 thì T10, T11 là thực tế, T12 là dự kiến, T1 = (T10+T11+T12)/3.
 // - tháng ĐANG CHẠY: dự kiến = max(thực tế, số cơ sở): chưa tới mức thì lấy đúng mức, vượt rồi thì lấy số đã vượt
 // - tháng tương lai: dự kiến = số cơ sở. Danh mục bật "Cố định theo Hạn mức": số cơ sở luôn là Hạn mức.
 // Chỉ cần tối đa 3 tháng đã qua + tháng đang chạy + các tháng tới mk: duyệt tuần tự, không đệ quy.
@@ -505,6 +508,7 @@ function duKienChuoiSo(kind, cid, mk){
   var cur = monthKey(todayStr());
   var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
   var hm = cat0 ? num(cat0.chiTieu) : 0;
+  var coDinh = !!(cat0 && cat0.coDinhChiTieu && hm > 0);
   var s = state.data.settings.thangBatDauDuTru || monthKey(state.data.settings.ngayBatDau || todayStr());
   if (s > cur) s = cur;
   var lo = monthKeyAdd(cur, -3);
@@ -514,17 +518,14 @@ function duKienChuoiSo(kind, cid, mk){
     if (m < cur){
       v[m] = actualCatInMonth(kind, cid, m);
     } else {
-      var win = [], p = m;
-      for (var i = 0; i < 3; i++){
-        p = monthKeyAdd(p, -1);
-        if (p < s || v[p] == null) break;
-        win.push(v[p]);
-      }
       var co = hm;
-      if (!(cat0 && cat0.coDinhChiTieu && hm > 0) && win.length){
+      if (!coDinh){
         co = 0;
-        win.forEach(function(x){ co += x; });
-        co /= win.length;
+        for (var i = 1; i <= 3; i++){
+          var p = monthKeyAdd(m, -i);
+          co += (p < s || v[p] == null) ? hm : v[p];
+        }
+        co /= 3;
       }
       v[m] = (m === cur) ? Math.max(actualCatInMonth(kind, cid, m), co) : co;
     }
