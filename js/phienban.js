@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.20', ngay: '2026-10-20', ten: 'Dự kiến cuối tháng tính theo hạn mức',
+    muc: ['Số dư và "Tiền vào − ra" dự kiến cuối tháng không còn bỏ sót khoản chưa phát sinh. Tháng đang chạy, mỗi danh mục thu hoặc chi lấy số lớn hơn giữa thực tế và hạn mức: chưa tới hạn mức thì lấy đúng hạn mức, vượt rồi thì lấy số đã vượt. Danh mục "Không tính dự kiến" chỉ lấy số đã ghi.',
+      'Các tháng sau: tháng đầu kỳ lấy theo hạn mức, từ khi có tháng đã qua thì lấy trung bình thực tế (tối đa 3 tháng liền trước). Ví dụ sang tháng 11 thì dự kiến theo đúng số thực tế đã phát sinh của tháng 10, tháng 12 theo trung bình tháng 10 và 11.',
+      'Khoản định kỳ chưa ghi không bị cộng thêm lần nữa vào hạn mức đã có. Trả nợ vẫn lấy theo lịch Vay - Nợ như trước.'] },
   { ban: '2026.10.19.5', ngay: '2026-10-19', ten: 'Logo to hơn và canh giữa',
     muc: ['Logo trong biểu tượng ứng dụng, tab trình duyệt, thanh tiêu đề và màn hình khóa được phóng to hơn và canh giữa theo cột D và C, để thanh T dài thò sang trái không làm logo lệch về một bên.'] },
   { ban: '2026.10.19.4', ngay: '2026-10-19', ten: 'Đổi logo và biểu tượng ứng dụng',

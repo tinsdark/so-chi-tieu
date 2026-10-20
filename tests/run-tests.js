@@ -787,6 +787,90 @@ test('danh mục "Cố định theo Chỉ tiêu" dùng chỉ tiêu, bỏ qua TB 
 });
 
 /* ==================================================================== */
+group('7a. Dự kiến: tháng đầu kỳ lấy hạn mức (thực tế vượt thì lấy số vượt), các tháng sau lấy TB thực tế');
+
+// số liệu theo ảnh của user: sổ bắt đầu T10/2026, hôm nay 20/10
+function duKienFixture(){
+  var d = baseData();
+  d.settings = { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' };
+  d.categories = {
+    thu: [{ id:'luong', ten:'Lương', chiTieu: 9400000 }, { id:'trocap', ten:'Trợ cấp', chiTieu: 750000 },
+          { id:'thuong', ten:'Thưởng', chiTieu: 0 }, { id:'khac', ten:'Thu ngoài', chiTieu: 0, khongDuTru: true }],
+    chi: [{ id:'tranuoc', ten:'Trà nước', chiTieu: 200000 }, { id:'diennuoc', ten:'Điện nước', chiTieu: 600000 },
+          { id:'tieu', ten:'Tiêu', chiTieu: 0 }, { id:'xe', ten:'Xe', chiTieu: 500000, khongDuTru: true }]
+  };
+  d.journal = {
+    '2026-10-05': { thu:{ luong: 9401000, trocap: 520000, thuong: 700000, khac: 291983 }, chi:{ tranuoc: 260000, diennuoc: 554000, tieu: 100000, xe: 80000 }, ghiChu:'', refs:[] }
+  };
+  return d;
+}
+
+test('tháng đang chạy: mỗi danh mục = max(thực tế, hạn mức) — thiếu thì lấy hạn mức, vượt thì lấy số vượt', function(){
+  setToday('2026-10-20');
+  loadData(duKienFixture());
+  eq(ctx.duKienThangCat('thu', 'luong', '2026-10'), 9401000, 'vượt hạn mức 1.000 -> lấy số vượt');
+  eq(ctx.duKienThangCat('thu', 'trocap', '2026-10'), 750000, 'mới 520k < hạn mức 750k -> lấy 750k');
+  eq(ctx.duKienThangCat('thu', 'thuong', '2026-10'), 700000, 'không có hạn mức -> thực tế');
+  eq(ctx.duKienThangCat('chi', 'tranuoc', '2026-10'), 260000, 'vượt hạn mức 60k -> lấy 260k');
+  eq(ctx.duKienThangCat('chi', 'diennuoc', '2026-10'), 600000, '554k < 600k -> lấy 600k');
+  eq(ctx.duKienThangCat('chi', 'tieu', '2026-10'), 100000, 'không có hạn mức -> thực tế');
+  setToday('2026-10-01');
+});
+
+test('tháng đang chạy: danh mục "Không tính dự kiến" chỉ lấy thực tế (thu và chi)', function(){
+  setToday('2026-10-20');
+  loadData(duKienFixture());
+  eq(ctx.duKienThangCat('thu', 'khac', '2026-10'), 291983, 'thu khongDuTru: thực tế');
+  eq(ctx.duKienThangCat('chi', 'xe', '2026-10'), 80000, 'chi khongDuTru dù có hạn mức 500k: vẫn thực tế');
+  setToday('2026-10-01');
+});
+
+test('tổng thu / chi dự kiến tháng này = tổng của từng danh mục (thực tế + phần còn thiếu tới hạn mức)', function(){
+  setToday('2026-10-20');
+  loadData(duKienFixture());
+  eq(ctx.tongThuThangCard('2026-10'), 9401000 + 750000 + 700000 + 291983, 'thu');
+  eq(ctx.tongChiThangCard('2026-10'), 260000 + 600000 + 100000 + 80000, 'chi');
+  setToday('2026-10-01');
+});
+
+test('khoản định kỳ chưa ghi không bị tính 2 lần với hạn mức, nhưng không bị mất khi danh mục chưa có hạn mức', function(){
+  setToday('2026-10-20');
+  var d = duKienFixture();
+  d.journal = {};
+  d.dinhKy = [{ id:'k1', ten:'Lương', kind:'thu', catId:'luong', soTien:9400000, ngay:5, bat:true, duBao:true, bo:[] },
+              { id:'k2', ten:'Tiền net', kind:'chi', catId:'tieu', soTien:200000, ngay:25, bat:true, bo:[] }];
+  loadData(d);
+  eq(ctx.duKienThangCat('thu', 'luong', '2026-10'), 9400000, 'định kỳ 9,4tr và hạn mức 9,4tr: không thành 18,8tr');
+  eq(ctx.duKienThangCat('chi', 'tieu', '2026-10'), 200000, 'danh mục chưa có hạn mức: giữ khoản định kỳ chưa ghi');
+  setToday('2026-10-01');
+});
+
+test('hôm nay còn ở T10: T11 = số dự kiến T10, T12 = TB(T10, T11), T1 = TB 3 tháng', function(){
+  setToday('2026-10-20');
+  loadData(duKienFixture());
+  eq(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-11'), 260000, 'T11 = T10 (vượt hạn mức)');
+  eq(ctx.duTruDanhMucThang('chi', 'diennuoc', '2026-11'), 600000, 'T11 = T10 (lấy hạn mức)');
+  eq(ctx.duTruDanhMucThang('chi', 'tranuoc', '2026-12'), 260000, 'T12 = TB(260k, 260k)');
+  eq(ctx.duTruDanhMucThang('thu', 'trocap', '2027-01'), 750000, 'T1 = TB 3 tháng đều 750k');
+  eq(ctx.dtSuggest('chi', 'tranuoc', '2026-12'), 260000, 'hàng Dòng tiền cùng số');
+  setToday('2026-10-01');
+});
+
+test('sang T11: T10 đã kết thúc nên dùng đúng SỐ THỰC TẾ T10, không lấy hạn mức nữa; T12 = TB(thực tế T10, T11)', function(){
+  setToday('2026-11-10');
+  var d = duKienFixture();
+  d.journal['2026-11-03'] = { thu:{}, chi:{ diennuoc: 900000 }, ghiChu:'', refs:[] };
+  loadData(d);
+  // cơ sở T11 = thực tế T10 (554k, không phải hạn mức 600k); T11 đang chạy: max(900k thực tế, 554k)
+  eq(ctx.duKienThangCat('chi', 'diennuoc', '2026-11'), 900000, 'T11 đang chạy, thực tế 900k vượt cơ sở 554k');
+  eq(ctx.duKienThangCat('chi', 'tranuoc', '2026-11'), 260000, 'T11 chưa chi: lấy thực tế T10 = 260k');
+  eq(ctx.duKienThangCat('thu', 'trocap', '2026-11'), 520000, 'T11 chưa thu: lấy thực tế T10 = 520k, không phải hạn mức 750k');
+  // T12 = TB(T10 thực tế 554k, T11 dự kiến 900k)
+  near(ctx.duTruDanhMucThang('chi', 'diennuoc', '2026-12'), (554000 + 900000) / 2, 0.01, 'T12 = TB(T10, T11)');
+  setToday('2026-10-01');
+});
+
+/* ==================================================================== */
 group('7b. Dự báo đồng bộ: dtSuggest (hàng Dòng tiền) ≡ duTruDanhMucThang (tổng, tích lũy, Mô phỏng)');
 
 // Hai hàm này từng được viết thành 2 bản song song (dongtien.js và vayno-tinh.js) nên có lúc lệch nhau:
