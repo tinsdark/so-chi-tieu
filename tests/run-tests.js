@@ -959,6 +959,17 @@ test('tháng đang chạy: danh mục Không tính dự kiến vẫn tính kho�
   setToday('2026-10-01');
 });
 
+test('tháng đang chạy: danh mục có định kỳ bật dự báo lấy ĐÚNG số định kỳ, không bị trung bình các tháng trước kéo lệch', function(){
+  setToday('2026-11-10');
+  var d = khongDuTruFixture();
+  d.categories.thu[2].chiTieu = 5000000;                                           // Lương: hạn mức đồng bộ = định kỳ 5tr
+  d.journal['2026-10-05'] = { thu:{ luong: 12000000 }, chi:{}, ghiChu:'tăng ca', refs:[] };   // T10 thực tế 12tr, lệch xa định kỳ
+  loadData(d);
+  eq(ctx.duKienThangCat('thu', 'luong', '2026-11'), 5000000, 'T11 đang chạy: đúng 5tr, không phải TB (12tr + 2 × 5tr)/3 = 7,33tr');
+  eq(ctx.duTruDanhMucThang('thu', 'luong', '2026-12'), 5000000, 'T12 cũng đúng 5tr');
+  setToday('2026-10-01');
+});
+
 /* ==================================================================== */
 group('7b. Dự báo đồng bộ: dtSuggest (hàng Dòng tiền) ≡ duTruDanhMucThang (tổng, tích lũy, Mô phỏng)');
 

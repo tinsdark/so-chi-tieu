@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.20.3', ngay: '2026-10-20', ten: 'Dự kiến tháng đang chạy: khoản định kỳ lấy đúng số tiền',
+    muc: ['Ở tháng đang chạy, danh mục có khoản định kỳ bật "Dùng làm dự báo" (lương, tiền nhà...) lấy đúng số tiền của kỳ, không bị trung bình các tháng trước kéo lệch. Ví dụ lương định kỳ 9.400.000 mà tháng trước thực nhận 12.000.000 thì tháng này vẫn dự kiến 9.400.000.'] },
   { ban: '2026.10.20.2', ngay: '2026-10-20', ten: 'Dự kiến các tháng sau: trung bình 3 tháng liền trước',
     muc: ['Dự kiến của từng danh mục là trung bình 3 tháng liền trước. Tháng trước tháng bắt đầu tính dự kiến lấy Hạn mức, tháng đã hết lấy số thực tế, tháng chưa hết (đang chạy hoặc ở tương lai) lấy số dự kiến của chính nó. Ví dụ bắt đầu từ tháng 10: tháng 11 = (tháng 10 + 2 × hạn mức) / 3, tháng 12 = (tháng 10 + tháng 11 + hạn mức) / 3.',
       'Nhờ vậy dự kiến chỉ dùng số thật của tháng sau khi tháng đó chạy xong, không lấy số dở dang của tháng đang chạy làm căn cứ cho tháng sau.',
