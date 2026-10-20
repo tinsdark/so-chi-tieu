@@ -494,9 +494,47 @@ function actualCatInMonth(kind, cid, mk){
   });
   return s;
 }
+// SỐ DỰ KIẾN của 1 danh mục (thu hoặc chi) cho tháng mk, theo hạn mức rồi theo thực tế:
+// - tháng ĐẦU KỲ (thangBatDauDuTru) và mọi tháng chưa có tháng hoàn chỉnh nào phía trước: số cơ sở = Hạn mức/Kế hoạch của danh mục
+// - các tháng sau: số cơ sở = TB tối đa 3 tháng liền trước (tháng đã qua dùng THỰC TẾ, tháng đang chạy / tương lai dùng số dự kiến của nó)
+//   -> T11 = số T10, T12 = TB(T10, T11), T1 = TB(T10, T11, T12), T2 = TB(T11, T12, T1)...
+// - tháng ĐANG CHẠY: dự kiến = max(thực tế, số cơ sở): chưa tới mức thì lấy đúng mức, vượt rồi thì lấy số đã vượt
+// - tháng tương lai: dự kiến = số cơ sở. Danh mục bật "Cố định theo Hạn mức": số cơ sở luôn là Hạn mức.
+// Chỉ cần tối đa 3 tháng đã qua + tháng đang chạy + các tháng tới mk: duyệt tuần tự, không đệ quy.
+function duKienChuoiSo(kind, cid, mk){
+  var cur = monthKey(todayStr());
+  var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
+  var hm = cat0 ? num(cat0.chiTieu) : 0;
+  var s = state.data.settings.thangBatDauDuTru || monthKey(state.data.settings.ngayBatDau || todayStr());
+  if (s > cur) s = cur;
+  var lo = monthKeyAdd(cur, -3);
+  if (lo < s) lo = s;
+  var last = mk > cur ? mk : cur, v = {}, m = lo, guard = 0;
+  while (m <= last && guard++ < 1200){
+    if (m < cur){
+      v[m] = actualCatInMonth(kind, cid, m);
+    } else {
+      var win = [], p = m;
+      for (var i = 0; i < 3; i++){
+        p = monthKeyAdd(p, -1);
+        if (p < s || v[p] == null) break;
+        win.push(v[p]);
+      }
+      var co = hm;
+      if (!(cat0 && cat0.coDinhChiTieu && hm > 0) && win.length){
+        co = 0;
+        win.forEach(function(x){ co += x; });
+        co /= win.length;
+      }
+      v[m] = (m === cur) ? Math.max(actualCatInMonth(kind, cid, m), co) : co;
+    }
+    m = monthKeyAdd(m, 1);
+  }
+  return v[mk] == null ? actualCatInMonth(kind, cid, mk) : v[mk];
+}
 // dự trù 1 danh mục cho tháng mk (tháng tương lai). Thứ tự ưu tiên:
 // 1. kế hoạch: khoản định kỳ đang bật + bật "Dùng làm dự báo" + có kỳ phủ tháng mk -> lấy đúng số của kỳ (thay hẳn ước lượng)
-// 2. danh mục: lịch Vay - Nợ, hạn mức cố định, trung bình 3 tháng, hạn mức
+// 2. danh mục: lịch Vay - Nợ, rồi duKienChuoiSo (hạn mức / TB các tháng liền trước, xem trên)
 // MỘT nguồn duy nhất cho mọi nơi (hàng từng danh mục ở Dòng tiền, tổng dự kiến, tích lũy, Mô phỏng):
 // duTruGoiY trả null = "không có gợi ý" (màn hiện "—"), duTruDanhMucThang là bản số (null -> 0).
 function duTruGoiY(kind, cid, mk){
@@ -513,10 +551,9 @@ function duTruGoiY(kind, cid, mk){
     var ghi = (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
     return ghi > 0 ? ghi : null;
   }
-  if (cat0 && cat0.coDinhChiTieu) return num(cat0.chiTieu) > 0 ? num(cat0.chiTieu) : null;
-  var avg = recentAvgActual(kind, cid, 3);
-  if (avg != null) return avg;
-  return (cat0 && num(cat0.chiTieu) > 0) ? num(cat0.chiTieu) : null;
+  if (!cat0 || (cat0.coDinhChiTieu && num(cat0.chiTieu) <= 0)) return null;
+  var so = duKienChuoiSo(kind, cid, mk);
+  return so > 0 ? so : (recentAvgActual(kind, cid, 3) != null || num(cat0.chiTieu) > 0 ? 0 : null);
 }
 function duTruDanhMucThang(kind, cid, mk){ return num(duTruGoiY(kind, cid, mk)); }
 function duTruThuThang(mk){
@@ -540,9 +577,10 @@ function bietTruocChuaGhi(kind, cid, mk){
 }
 // 1 danh mục / 1 tháng, số HIỂN THỊ ở Dòng tiền (hàng từng danh mục) và là phần tử cộng của thẻ tổng. MỘT nguồn duy nhất:
 // - tháng tương lai: gợi ý (duTruGoiY, null = không có gợi ý)
-// - tháng hiện tại: thực tế + các khoản BIẾT TRƯỚC mà chưa ghi Sổ tay (Trả nợ / Thu hồi cho vay theo lịch vay; khoản định kỳ
-//   chưa ghi; danh mục "Cố định theo Hạn mức" chưa có ghi). Danh mục đã có khoản định kỳ chưa ghi thì dùng số định kỳ,
-//   không cộng thêm hạn mức cố định (tránh tính 2 lần). Các danh mục còn lại (ước lượng) giữ nguyên thực tế (có thể 0)
+// - tháng hiện tại: Trả nợ / Thu hồi cho vay = thực tế + phần còn lại theo lịch vay; danh mục "Không tính dự kiến" và danh mục
+//   hệ thống giữ đúng thực tế; mọi danh mục còn lại = max(thực tế + khoản định kỳ chưa ghi, số cơ sở) (duKienChuoiSo: Hạn mức
+//   hoặc TB các tháng liền trước). Lấy MAX chứ không cộng: hạn mức của danh mục dùng làm dự báo đã được đồng bộ theo kỳ định kỳ
+//   (dinhKyDongBoHanMuc) nên cộng cả hai là tính 2 lần; khoản định kỳ chỉ thắng khi danh mục chưa có hạn mức đủ lớn
 // - tháng đã qua: thực tế
 function duKienThangCat(kind, cid, mk){
   var currentMk = monthKey(todayStr());
@@ -550,12 +588,9 @@ function duKienThangCat(kind, cid, mk){
   var av = actualCatInMonth(kind, cid, mk);
   if (mk === currentMk){
     if ((kind === 'chi' && cid === 'traNo') || (kind === 'thu' && cid === 'thuHoiChoVay')) return av + bietTruocChuaGhi(kind, cid, mk);
-    var dkChua = dinhKyChuaGhiThang(mk, kind, cid);
-    if (dkChua > 0) return av + dkChua;
-    if (!av){
-      var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
-      if (cat0 && cat0.coDinhChiTieu && num(cat0.chiTieu) > 0) return num(cat0.chiTieu);
-    }
+    var cat0 = state.data.categories[kind].find(function(c){ return c.id === cid; });
+    if (!cat0 || cat0.khongDuTru || CAT_HE_THONG[kind][cid]) return av;
+    return Math.max(av + dinhKyChuaGhiThang(mk, kind, cid), duKienChuoiSo(kind, cid, mk));
   }
   return av;
 }
