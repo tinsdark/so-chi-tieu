@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.20.2', ngay: '2026-10-20', ten: 'Dự kiến các tháng sau: trung bình 3 tháng liền trước',
+    muc: ['Dự kiến của từng danh mục là trung bình 3 tháng liền trước. Tháng trước tháng bắt đầu tính dự kiến lấy Hạn mức, tháng đã hết lấy số thực tế, tháng chưa hết (đang chạy hoặc ở tương lai) lấy số dự kiến của chính nó. Ví dụ bắt đầu từ tháng 10: tháng 11 = (tháng 10 + 2 × hạn mức) / 3, tháng 12 = (tháng 10 + tháng 11 + hạn mức) / 3.',
+      'Nhờ vậy dự kiến chỉ dùng số thật của tháng sau khi tháng đó chạy xong, không lấy số dở dang của tháng đang chạy làm căn cứ cho tháng sau.',
+      'Danh mục "Không tính dự kiến" (thưởng, thu nhập ngoài...) không mang số của tháng này sang tháng sau. Riêng khoản định kỳ có bật "Dùng làm dự báo" vẫn lấy đúng số tiền theo từng kỳ, kể cả tháng đang chạy, và hết kỳ (Dừng) thì không tính nữa.'] },
   { ban: '2026.10.20', ngay: '2026-10-20', ten: 'Dự kiến cuối tháng tính theo hạn mức',
     muc: ['Số dư và "Tiền vào − ra" dự kiến cuối tháng không còn bỏ sót khoản chưa phát sinh. Tháng đang chạy, mỗi danh mục thu hoặc chi lấy số lớn hơn giữa thực tế và hạn mức: chưa tới hạn mức thì lấy đúng hạn mức, vượt rồi thì lấy số đã vượt. Danh mục "Không tính dự kiến" chỉ lấy số đã ghi.',
       'Các tháng sau: tháng đầu kỳ lấy theo hạn mức, từ khi có tháng đã qua thì lấy trung bình thực tế (tối đa 3 tháng liền trước). Ví dụ sang tháng 11 thì dự kiến theo đúng số thực tế đã phát sinh của tháng 10, tháng 12 theo trung bình tháng 10 và 11.',
