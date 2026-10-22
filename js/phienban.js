@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.10.22', ngay: '2026-10-22', ten: 'Khoá phóng to màn hình',
+    muc: ['Không còn véo hai ngón hay chạm đúp để phóng to trang nữa, tránh lỡ tay làm lệch giao diện. Cuộn vẫn bình thường.'] },
   { ban: '2026.10.20.3', ngay: '2026-10-20', ten: 'Dự kiến tháng đang chạy: khoản định kỳ lấy đúng số tiền',
     muc: ['Ở tháng đang chạy, danh mục có khoản định kỳ bật "Dùng làm dự báo" (lương, tiền nhà...) lấy đúng số tiền của kỳ, không bị trung bình các tháng trước kéo lệch. Ví dụ lương định kỳ 9.400.000 mà tháng trước thực nhận 12.000.000 thì tháng này vẫn dự kiến 9.400.000.'] },
   { ban: '2026.10.20.2', ngay: '2026-10-20', ten: 'Dự kiến các tháng sau: trung bình 3 tháng liền trước',

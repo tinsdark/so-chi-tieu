@@ -343,6 +343,10 @@ input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-w
   input[type=number],input[type=date],input[type=month],input[type=text],input[type=password],select,textarea{font-size:16px}
 }
 
+/* Khoá phóng to: chỉ cuộn, không véo hay chạm đúp để zoom (app một người dùng, chỉ dùng trên điện thoại).
+   touch-action ở html áp cho mọi phần tử con; quy tắc cục bộ như .bd-lc{touch-action:pan-y} chỉ hẹp thêm, không phá. */
+html{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
+
 /* ====================================================================
    Thẻ tổng quan đầu Sổ tay
    ==================================================================== */
