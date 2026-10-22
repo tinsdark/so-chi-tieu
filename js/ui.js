@@ -453,3 +453,7 @@ if (typeof window !== 'undefined' && window.document && window.visualViewport){
     lich();
   })();
 }
+/* iOS Safari bỏ qua user-scalable=no: véo hai ngón vẫn phóng được, chỉ chặn được qua gesturestart */
+if (typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+}
