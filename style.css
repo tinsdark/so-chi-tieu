@@ -25,6 +25,8 @@
   /* MÀU HÀNH ĐỘNG (nút, tab đang chọn, liên kết, ô đang chọn): nâu cà phê đậm, TÁCH khỏi đỏ vì đỏ chỉ có nghĩa "chi / vượt mức".
      --primary (đỏ gạch) giữ cho tên app, dòng số dư, tiêu đề nhóm. Nền đặc --action thì chữ trên đó là --action-tx. */
   --action:#43301f; --action-d:#2b1d11; --action-tx:#fff3d6;
+  --on-hero:#fff;          /* chữ trên nền đậm cố định (thẻ hero, thẻ ví, vuốt xóa) */
+  --vc-mac:#1f7a6b;        /* màu ví mặc định (xanh ngọc) */
 }
 [data-theme="light"]{color-scheme: light}   /* thiếu dòng này thì ô nhập chưa tô màu bị iPhone chế độ tối vẽ đen dù app đang giao diện sáng */
 [data-theme="dark"]{
@@ -496,7 +498,7 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
    Tắt hết khi máy bật "Giảm chuyển động" (khối prefers-reduced-motion ở cuối).
    JS bật các lớp .anim-* ở js/motion.js.
    ==================================================================== */
-:root{--ease:cubic-bezier(.22,.8,.3,1);--spring:cubic-bezier(.34,1.45,.5,1)}
+:root{--ease:cubic-bezier(.22,.8,.3,1);--spring:cubic-bezier(.25,1,.5,1)}   /* ease-out-quart: dừng mượt, không nảy quá đà */
 @keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes mo-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @keyframes hang-moi{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
@@ -513,14 +515,17 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .tab:active{transform:scale(.94)}
 /* mục giải thích (details): nội dung trượt ra */
 details[open]>div,details[open]>.giai-thich-nd{animation:mo-in .22s var(--ease)}
-/* toast, hộp thoại: nảy nhẹ */
+/* toast, hộp thoại: vào nhanh rồi dừng mượt */
 @keyframes toast-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes modal-pop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 .toast{animation:toast-in .3s var(--spring)}
 .modal-box{animation:modal-pop .26s var(--spring)}
 .modal-back{animation:modal-fade .2s ease-out}
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important}
+  /* Bỏ chuyển động (trượt, nảy, phóng, chạy thanh), GIỮ đổi màu / viền / bóng ngắn để nút bấm và tab vẫn báo trạng thái. */
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;
+    transition-property:color,background-color,border-color,box-shadow,opacity!important}
+  .btn:active,.icon-btn:active,.hero-chip:active,.chip:active,.tab:active{transform:none}
 }
 
 /* ====================================================================
@@ -659,7 +664,7 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 /* nền hiện phía sau nhóm ngày khi vuốt: trái = Xóa (đỏ), phải = Sửa (xanh) */
 .dl-day.dang-vuot-dong{position:relative;z-index:1;background:var(--bg)}
 .vuot-nen{position:absolute;left:0;right:0;z-index:0;border-radius:10px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;color:#fff;pointer-events:none;background:transparent}
+  padding:0 20px;color:var(--on-hero);pointer-events:none;background:transparent}
 .vuot-nen.xoa{background:var(--chi-solid)} .vuot-nen.sua{background:var(--thu-solid)}
 .vuot-nen span{display:none;align-items:center;gap:8px;font-size:14px;font-weight:700;opacity:calc(.35 + .65 * var(--tien,0))}
 .vuot-nen.xoa .vn-xoa,.vuot-nen.sua .vn-sua{display:flex}
@@ -688,7 +693,7 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 .lock-gate{z-index:70}
 body.dang-khoa{overflow:hidden}
 .gate-wrap{width:100%;max-width:440px;margin:auto;min-height:100%;display:flex;flex-direction:column;background:var(--bg)}
-.gate-hero{position:relative;overflow:hidden;color:#fff;text-align:center;
+.gate-hero{position:relative;overflow:hidden;color:var(--on-hero);text-align:center;
   padding:calc(env(safe-area-inset-top,0px) + 40px) 24px 52px;
   background:linear-gradient(160deg,var(--hero-a) 0%,var(--hero-b) 55%,var(--hero-c) 100%);border-radius:0 0 40px 40px;
   box-shadow:0 2px 0 #e0b13a}
@@ -702,7 +707,7 @@ body.dang-khoa{overflow:hidden}
 .gate-hero.nho .gate-logo{margin-bottom:10px}
 .gate-ten{position:relative;margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px}
 .gate-hero.nho .gate-ten{font-size:20px}
-.gate-sub{position:relative;margin:6px 0 0;font-size:13.5px;opacity:.9}
+.gate-sub{position:relative;margin:6px 0 0;font-size:13.5px}   /* không dùng opacity: chữ trắng mờ còn 4,0:1 trên đầu gradient */
 .gate-body{flex:1;display:flex;flex-direction:column;padding:26px 24px calc(env(safe-area-inset-bottom,0px) + 22px)}
 .gate-body h2{margin:0 0 4px;font-size:20px}
 .gate-body>p{margin:0 0 18px;color:var(--muted);font-size:14px}
@@ -779,7 +784,7 @@ body::before{content:'';position:fixed;inset:0;top:var(--vv-top,0px);bottom:auto
 .vi-chuyen .ic{width:1.05em;height:1.05em;margin-right:3px;vertical-align:-2px}
 .vi-scroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:3px 3px 8px;margin:0 -3px;scrollbar-width:none}
 .vi-scroll::-webkit-scrollbar{display:none}
-.vi-the{--vc:#1f7a6b;position:relative;flex:0 0 min(62%,230px);scroll-snap-align:start;text-align:left;color:#fff;border:2px solid transparent;
+.vi-the{--vc:var(--vc-mac);position:relative;flex:0 0 min(62%,230px);scroll-snap-align:start;text-align:left;color:var(--on-hero);border:2px solid transparent;
   border-radius:18px;padding:12px 14px;background:var(--vc);overflow:hidden;display:flex;flex-direction:column;gap:2px;min-height:96px}
 .vi-the::after{content:'';position:absolute;right:-26px;bottom:-34px;width:110px;height:110px;border-radius:50%;border:14px solid rgba(255,255,255,.12);pointer-events:none}
 .vi-the.vc1{--vc:#8a5a1c} .vi-the.vc2{--vc:#4f4a9c} .vi-the.vc3{--vc:#9c3f63}
@@ -897,7 +902,7 @@ body.qa-mo{overflow:hidden}
 .qa-chip .ic{width:1.1em;height:1.1em}
 .qa-chon .qa-date-in{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:none}
 .qa-vis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
-.qa-vi{--vc:#1f7a6b;display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);color:var(--text);
+.qa-vi{--vc:var(--vc-mac);display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);color:var(--text);
   border:1.5px solid var(--border);border-radius:14px;padding:7px 10px}
 .qa-vi.vc1{--vc:#8a5a1c} .qa-vi.vc2{--vc:#4f4a9c} .qa-vi.vc3{--vc:#9c3f63}
 .qa-vi-bar{flex:0 0 5px;align-self:stretch;border-radius:99px;background:var(--vc)}
@@ -1844,6 +1849,13 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
   .month-nav button::after{content:"";position:absolute;inset:-7px}
   .hero .month-nav button:first-child::after{inset:-7px 0 -7px -16px}
   .hero .month-nav button:last-child::after{inset:-7px -16px -7px 0}
+  /* nút cao 23-36px: nới vùng chạm theo chiều dọc (nút thường ~44px, nút .sm ~37px, trên mức tối thiểu 24px của WCAG), hình dáng không đổi.
+     Không nới chiều ngang để các nút đứng cạnh nhau không chồng vùng chạm. */
+  .btn,.icon-btn,.hd-bo{position:relative}
+  .btn::after{content:"";position:absolute;inset:-6px 0}
+  .btn.sm::after{inset:-7px 0}
+  .icon-btn::after{content:"";position:absolute;inset:-4px 0}
+  .hd-bo::after{content:"";position:absolute;inset:-2px 0}
 }
 .qr-act{display:flex;gap:10px;margin-top:14px}
 .qr-act .btn{flex:1}

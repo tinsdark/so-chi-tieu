@@ -119,7 +119,7 @@ function chuyenTab(tab){
   var cu = state.tab;
   var lam = function(){
     state.tab = tab;
-    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    document.querySelectorAll('.tab').forEach(function(b){ var on = b.getAttribute('data-tab') === tab; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     renderAll();
   };
   if (cu !== tab && typeof motionChuyenTab === 'function') motionChuyenTab(THU_TU_TAB.indexOf(tab) > THU_TU_TAB.indexOf(cu) ? 1 : -1, lam);

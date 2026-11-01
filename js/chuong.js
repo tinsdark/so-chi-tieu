@@ -181,6 +181,7 @@ function cbVe(){
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
+  if (typeof giuTieuDiem === 'function') giuTieuDiem(root, root.querySelector('.tim-panel'));
 }
 
 /* ---- điều hướng tới nơi xử lý ---- */

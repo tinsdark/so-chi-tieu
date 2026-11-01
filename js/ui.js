@@ -156,6 +156,7 @@ function moHoiThoai(cf){
     // bấm ra ngoài = hủy (không bao giờ là đồng ý, tránh xóa nhầm)
     back.addEventListener('click', function(ev){ if (ev.target === back) dong(null); });
     document.addEventListener('keydown', onKey, true);
+    giuTieuDiem(back);
 
     // không tự focus ô nhập (không bật bàn phím): chạm ô nào mới nhập ô đó. Hộp thoại không có ô nhập thì focus nút đầu cho người dùng bàn phím.
     if (!inp){
@@ -163,6 +164,42 @@ function moHoiThoai(cf){
       if (b0) b0.focus();
     }
   });
+}
+
+/* ---- Giữ tiêu điểm bàn phím trong bảng đang mở (hộp thoại, Ghi nhanh, Tìm kiếm, Thông báo) ----
+   - Tab / Shift+Tab xoay vòng trong bảng, không lọt ra trang nền phía sau.
+   - Lúc mở: nếu tiêu điểm chưa nằm trong bảng thì đưa vào `dauVao` (KHÔNG phải ô nhập, để điện thoại không tự bật bàn phím).
+   - Lúc bảng bị gỡ khỏi DOM: trả tiêu điểm về nút đã mở bảng (trừ ô nhập, tránh bật bàn phím). */
+function giuTieuDiem(root, dauVao){
+  if (typeof document === 'undefined' || !root || !root.querySelectorAll) return;
+  var truoc = document.activeElement;
+  var dsNut = function(){
+    return [].filter.call(root.querySelectorAll('button,a[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'), function(e){
+      return !e.disabled && e.getClientRects().length > 0;
+    });
+  };
+  function onKey(ev){
+    if (ev.key !== 'Tab') return;
+    var ds = dsNut(); if (!ds.length) return;
+    var dau = ds[0], cuoi = ds[ds.length - 1], a = document.activeElement;
+    if (!root.contains(a)){ ev.preventDefault(); dau.focus(); }
+    else if (ev.shiftKey && a === dau){ ev.preventDefault(); cuoi.focus(); }
+    else if (!ev.shiftKey && a === cuoi){ ev.preventDefault(); dau.focus(); }
+  }
+  document.addEventListener('keydown', onKey, true);
+  if (dauVao && !root.contains(document.activeElement)){
+    if (!dauVao.hasAttribute('tabindex')) dauVao.setAttribute('tabindex', '-1');
+    try { dauVao.focus({ preventScroll: true }); } catch(e){}
+  }
+  if (typeof MutationObserver === 'undefined' || !document.body) return;
+  var mo = new MutationObserver(function(){
+    if (root.isConnected) return;
+    mo.disconnect();
+    document.removeEventListener('keydown', onKey, true);
+    var tag = truoc && truoc.tagName;
+    if (truoc && truoc.isConnected && truoc.focus && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){ try { truoc.focus({ preventScroll: true }); } catch(e){} }
+  });
+  mo.observe(document.body, { childList: true });
 }
 
 // xacNhan('Xóa khoản vay?', 'Chi tiết...') -> Promise<bool>
