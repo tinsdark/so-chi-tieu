@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T17:54:58Z",
+  "title": "Design System: Sổ Tiền",
+  "extensions": {
+    "colorMeta": {
+      "cream-paper": {
+        "role": "neutral",
+        "displayName": "Giấy kem",
+        "canonical": "#f8eccb",
+        "tonalRamp": [
+          "#3e310f",
+          "#775b10",
+          "#aa8317",
+          "#deaa1e",
+          "#e7be4e",
+          "#eed182",
+          "#f0e1bb",
+          "#f8f5ec"
+        ]
+      },
+      "ivory-card": {
+        "role": "neutral",
+        "displayName": "Thẻ ngà",
+        "canonical": "#fff9e6",
+        "tonalRamp": [
+          "#453608",
+          "#876600",
+          "#c19300",
+          "#fbbf00",
+          "#ffcf37",
+          "#ffdd71",
+          "#f8e7b2",
+          "#faf6eb"
+        ]
+      },
+      "gold-rule": {
+        "role": "neutral",
+        "displayName": "Đường kẻ vàng",
+        "canonical": "#e6d3a0",
+        "tonalRamp": [
+          "#382e14",
+          "#6b551c",
+          "#997a28",
+          "#c79f34",
+          "#d5b660",
+          "#e1cb8f",
+          "#e9dec1",
+          "#f7f4ee"
+        ]
+      },
+      "ink-brown": {
+        "role": "neutral",
+        "displayName": "Mực nâu",
+        "canonical": "#2b2012",
+        "tonalRamp": [
+          "#33281a",
+          "#5f4728",
+          "#886539",
+          "#b1844a",
+          "#c4a072",
+          "#d5bb9b",
+          "#e3d7c7",
+          "#f5f3ef"
+        ]
+      },
+      "faded-ink": {
+        "role": "neutral",
+        "displayName": "Mực phai",
+        "canonical": "#6b5a3e",
+        "tonalRamp": [
+          "#2e281e",
+          "#554831",
+          "#7a6747",
+          "#9f865c",
+          "#b5a180",
+          "#cbbda5",
+          "#ded7cc",
+          "#f4f3f0"
+        ]
+      },
+      "brick-red": {
+        "role": "primary",
+        "displayName": "Đỏ gạch",
+        "canonical": "#b5473a",
+        "tonalRamp": [
+          "#361a17",
+          "#662821",
+          "#92392f",
+          "#be4b3d",
+          "#ce7267",
+          "#dd9b93",
+          "#e7c7c3",
+          "#f6efee"
+        ]
+      },
+      "coffee-action": {
+        "role": "primary",
+        "displayName": "Nâu cà phê",
+        "canonical": "#43301f",
+        "tonalRamp": [
+          "#31261b",
+          "#5c422b",
+          "#845f3d",
+          "#ac7b50",
+          "#c09976",
+          "#d2b79e",
+          "#e2d4c8",
+          "#f5f2ef"
+        ]
+      },
+      "ledger-green": {
+        "role": "secondary",
+        "displayName": "Xanh sổ cái",
+        "canonical": "#14753a",
+        "tonalRamp": [
+          "#113c22",
+          "#147339",
+          "#1ca552",
+          "#25d76a",
+          "#54e28b",
+          "#86eaad",
+          "#bdeed0",
+          "#edf8f1"
+        ]
+      },
+      "signal-red": {
+        "role": "secondary",
+        "displayName": "Đỏ tín hiệu",
+        "canonical": "#c62828",
+        "tonalRamp": [
+          "#3b1212",
+          "#701717",
+          "#a12020",
+          "#d12a2a",
+          "#dd5858",
+          "#e78989",
+          "#ecbebe",
+          "#f7eded"
+        ]
+      },
+      "amber-warn": {
+        "role": "tertiary",
+        "displayName": "Hổ phách",
+        "canonical": "#a85208",
+        "tonalRamp": [
+          "#42240a",
+          "#813f06",
+          "#b85a09",
+          "#f0750b",
+          "#f69440",
+          "#f9b377",
+          "#f5d3b6",
+          "#f9f2eb"
+        ]
+      },
+      "old-gold": {
+        "role": "tertiary",
+        "displayName": "Vàng cũ",
+        "canonical": "#7d5a06",
+        "tonalRamp": [
+          "#42320a",
+          "#815d06",
+          "#b88509",
+          "#f0ad0c",
+          "#f6c040",
+          "#f8d377",
+          "#f5e2b6",
+          "#f9f5eb"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "hero-value": {
+        "displayName": "Số dư lớn",
+        "purpose": "Số dư ở đầu Sổ tay."
+      },
+      "brand": {
+        "displayName": "Tên app",
+        "purpose": "Header."
+      },
+      "title": {
+        "displayName": "Tiêu đề thẻ",
+        "purpose": "h3 trong thẻ."
+      },
+      "body": {
+        "displayName": "Nội dung",
+        "purpose": "Chữ thường và ô nhập."
+      },
+      "label": {
+        "displayName": "Nhãn",
+        "purpose": "Nhãn trường và chữ phụ."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px rgba(110,80,20,.08), 0 2px 8px rgba(110,80,20,.08)",
+        "purpose": "Thẻ nằm trên giấy; sáng. Tối: 0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25)."
+      },
+      {
+        "name": "float",
+        "value": "0 4px 8px rgba(110,80,20,.10), 0 12px 30px rgba(110,80,20,.20)",
+        "purpose": "Lớp nổi: thanh Ghi nhanh, bảng trượt."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px var(--action)",
+        "purpose": "Nhấn nháy kết quả tìm."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.22,.8,.3,1)",
+        "purpose": "Đường cong chung cho vào ra, thanh tiến độ."
+      },
+      {
+        "name": "spring",
+        "value": "cubic-bezier(.25,1,.5,1)",
+        "purpose": "Ease-out-quart cho toast và hộp thoại, không nảy."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "339px"
+      },
+      {
+        "name": "phone",
+        "value": "700px"
+      },
+      {
+        "name": "desktop",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Nút hành động chính: nâu cà phê, chữ kem.",
+      "html": "<button class=\"ds-btn\">Ghi khoản</button>",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-btn{border:none;border-radius:8px;padding:8px 16px;font:600 13px inherit;font-family:inherit;color:var(--action-tx);background:var(--action);cursor:pointer}.ds-btn:hover{background:var(--action-d)}.ds-btn:focus-visible{outline:2px solid var(--action);outline-offset:1px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Nút phụ: nền ngà, viền vàng.",
+      "html": "<button class=\"ds-btn-2\">Hủy</button>",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-btn-2{border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-weight:600;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);cursor:pointer}.ds-btn-2:hover{background:var(--hover)}.ds-btn-2:focus-visible{outline:2px solid var(--action);outline-offset:1px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Thẻ ngà bo 20px, viền vàng, bóng nhẹ.",
+      "html": "<div class=\"ds-card\"><h3>Số dư hiện tại</h3><p class=\"ds-val\">4.385.000 đ</p></div>",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-card{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:20px;padding:16px;box-shadow:var(--shadow)}.ds-card h3{margin:0 0 6px;font-size:15px}.ds-val{margin:0;font-size:38px;font-weight:800;line-height:1.15;letter-spacing:-.6px;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Ô nhập: viền vàng, bo 7px, focus viền màu hành động.",
+      "html": "<input class=\"ds-in\" type=\"text\" placeholder=\"Số tiền, vd 45k\">",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-in{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border);border-radius:7px;font:14px inherit;font-family:inherit;background:#fffdf3;color:var(--text)}.ds-in:focus-visible{outline:2px solid var(--action);outline-offset:1px}"
+    },
+    {
+      "name": "Chi / Thu amount",
+      "kind": "custom",
+      "description": "Số tiền báo nghĩa bằng màu: đỏ chi, xanh thu.",
+      "html": "<span class=\"ds-chi\">−115.000</span> <span class=\"ds-thu\">+15.000.000</span>",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-chi{color:var(--red);font-weight:700;font-variant-numeric:tabular-nums}.ds-thu{color:var(--green);font-weight:700;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Tab",
+      "kind": "nav",
+      "description": "Tab chính: icon + chữ, đang chọn tô màu hành động.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab on\" aria-current=\"page\">Sổ tay</button><button class=\"ds-tab\">Dòng tiền</button></nav>",
+      "css": ":host{--bg:#f8eccb;--card:#fff9e6;--border:#e6d3a0;--text:#2b2012;--muted:#6b5a3e;--action:#43301f;--action-d:#2b1d11;--action-tx:#fff3d6;--hover:#f2e1b0;--red:#c62828;--green:#14753a;--shadow:0 1px 2px rgba(110,80,20,.08),0 2px 8px rgba(110,80,20,.08);font-family:'Be Vietnam Pro',-apple-system,sans-serif;}.ds-tabs{display:flex;gap:6px;border-bottom:1px solid var(--border)}.ds-tab{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 16px;font:600 14px inherit;font-family:inherit;color:var(--muted);cursor:pointer}.ds-tab.on{color:var(--action);border-bottom-color:var(--action)}.ds-tab:focus-visible{outline:2px solid var(--action);outline-offset:1px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Sổ kế toán giấy kem",
+    "overview": "Giao diện như một cuốn sổ chi tiêu giấy: nền kem vàng như giấy cũ, mực nâu đậm, đường kẻ vàng nâu nhạt. Các thẻ bo tròn nằm phẳng trên trang giấy, bóng rất nhẹ. Con số là nhân vật chính, màu chỉ dùng để báo nghĩa: xanh là thu, đỏ là chi hoặc vượt mức.",
+    "keyCharacteristics": [
+      "Nền kem vàng và mực nâu, không trắng hay đen thuần.",
+      "Thẻ bo 20px, viền vàng mảnh, bóng nhẹ.",
+      "Một màu hành động (nâu cà phê) tách khỏi đỏ.",
+      "Số tiền chữ đậm, tabular-nums.",
+      "Chuyển động ngắn, một đường cong dừng mượt."
+    ],
+    "rules": [
+      {
+        "name": "The Red-Means-Spend Rule",
+        "body": "Đỏ chỉ có nghĩa chi, vượt mức hoặc lỗi. Màu hành động là nâu cà phê.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cream-Not-White Rule",
+        "body": "Không nền trắng thuần hay đen thuần; mọi nền lấy từ token kem / ngà hoặc nâu gỗ.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token-Only Rule",
+        "body": "Mọi màu trong rule CSS lấy từ biến ở :root.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers-First Rule",
+        "body": "Con số lớn và đậm hơn mọi nhãn quanh nó.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper-Not-Glass Rule",
+        "body": "Không blur, kính mờ, bóng cứng lệch; độ sâu đến từ viền và chênh tone.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do lấy mọi màu từ biến ở :root và có bản cho chế độ tối.",
+      "Do để con số lớn hơn nhãn, dùng tabular-nums cho mọi cột số.",
+      "Do dùng đỏ chỉ cho chi / vượt mức / lỗi, nâu cà phê cho hành động.",
+      "Do kiểm tương phản chữ ≥ 4,5:1.",
+      "Do giữ một đường cong chuyển động chung, chỉ animate transform và opacity.",
+      "Do nới vùng chạm bằng ::after thay vì phóng to nút."
+    ],
+    "donts": [
+      "Don't dùng nền trắng thuần hoặc đen thuần.",
+      "Don't viền cạnh màu dày (>1px) trên thẻ, dòng, cảnh báo.",
+      "Don't dùng blur, kính mờ, bóng cứng lệch, gradient chữ.",
+      "Don't để nảy / đàn hồi quá đà.",
+      "Don't viết màu thẳng trong rule CSS.",
+      "Don't dùng emoji hay ký tự Unicode thay icon."
+    ]
+  }
+}
