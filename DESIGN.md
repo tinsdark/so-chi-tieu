@@ -32,6 +32,8 @@ colors:
   wallet-indigo: "#4f4a9c"
   wallet-plum: "#9c3f63"
   wallet-blue: "#3f6fc4"
+  dark-primary-soft: "#f2a493"
+  dark-muted-ink: "#d3bea6"
   hero-gold-edge: "#e0b13a"
   google-border: "#dadce0"
   google-text: "#3c4043"
@@ -64,6 +66,15 @@ typography:
     fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
     fontSize: "12px"
     fontWeight: 600
+  text-9-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "9.5px"
+  text-10:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "10px"
+  text-24:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "24px"
   text-11:
     fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
     fontSize: "11px"
@@ -235,7 +246,7 @@ Biểu đồ dùng `{colors.chart-red}`, `{colors.chart-green}`, `{colors.chart-
 - **Label** (600, 12px): nhãn trường, ghi chú, chữ phụ.
 
 ### Thang cỡ chữ đang dùng
-Code dùng 24 cỡ từ 9,5px đến 44px (phổ biến: 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15). Các cỡ nhỏ nằm trong `text-11` đến `text-15-5` trong frontmatter; cỡ lớn hơn (`text-16` đến `text-44`) dành cho ô nhập, số tổng và tiêu đề màn. Cỡ 9,5px chỉ có một chỗ (`!important` ở bảng hẹp), chưa đưa vào thang.
+Code dùng 24 cỡ từ 9,5px đến 44px (phổ biến: 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15). Các cỡ nhỏ nằm trong `text-11` đến `text-15-5` trong frontmatter; cỡ lớn hơn (`text-16` đến `text-44`) dành cho ô nhập, số tổng và tiêu đề màn. Cỡ 9,5px (chú thích nhỏ trong chú giải biểu đồ) và 10px (nhãn nhỏ trong lịch) mỗi cỡ chỉ có một chỗ; 24px dùng cho tiêu đề trang quyền riêng tư.
 
 ### Named Rules
 **The Snap-To-Scale Rule.** Việc mới chọn một trong năm vai chính (`label` 12, `body` 14, `title` 15, `text-16` ô nhập, `hero-value` 38) trừ khi có lý do đo được; đừng thêm cỡ thập phân mới.
