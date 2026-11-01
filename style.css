@@ -496,7 +496,7 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
    Tắt hết khi máy bật "Giảm chuyển động" (khối prefers-reduced-motion ở cuối).
    JS bật các lớp .anim-* ở js/motion.js.
    ==================================================================== */
-:root{--ease:cubic-bezier(.22,.8,.3,1);--spring:cubic-bezier(.34,1.45,.5,1)}
+:root{--ease:cubic-bezier(.22,.8,.3,1);--spring:cubic-bezier(.25,1,.5,1)}   /* ease-out-quart: dừng mượt, không nảy quá đà */
 @keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes mo-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @keyframes hang-moi{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
@@ -513,14 +513,17 @@ table,.money,.hero-val,.val{font-variant-numeric:tabular-nums}
 .tab:active{transform:scale(.94)}
 /* mục giải thích (details): nội dung trượt ra */
 details[open]>div,details[open]>.giai-thich-nd{animation:mo-in .22s var(--ease)}
-/* toast, hộp thoại: nảy nhẹ */
+/* toast, hộp thoại: vào nhanh rồi dừng mượt */
 @keyframes toast-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes modal-pop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 .toast{animation:toast-in .3s var(--spring)}
 .modal-box{animation:modal-pop .26s var(--spring)}
 .modal-back{animation:modal-fade .2s ease-out}
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.001ms!important}
+  /* Bỏ chuyển động (trượt, nảy, phóng, chạy thanh), GIỮ đổi màu / viền / bóng ngắn để nút bấm và tab vẫn báo trạng thái. */
+  *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;
+    transition-property:color,background-color,border-color,box-shadow,opacity!important}
+  .btn:active,.icon-btn:active,.hero-chip:active,.chip:active,.tab:active{transform:none}
 }
 
 /* ====================================================================

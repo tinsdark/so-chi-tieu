@@ -220,6 +220,7 @@ function qaSheetVe(){
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   qaKhopKhungNhin();
+  if (typeof giuTieuDiem === 'function') giuTieuDiem(root, root.querySelector('.qa-sheet'));
   setTimeout(function(){ root.classList.remove('moi'); }, 400);
 }
 // iPhone: bàn phím chỉ thu nhỏ "khung nhìn thấy" (visualViewport), không thu nhỏ khung layout -> bảng neo đáy bị bàn phím đè,
@@ -1789,7 +1790,7 @@ function handleSoTayAction(act, el){
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';
     document.querySelectorAll('.tab').forEach(function(t){
-      t.classList.toggle('active', t.getAttribute('data-tab') === 'vayno');
+      var on = t.getAttribute('data-tab') === 'vayno'; t.classList.toggle('active', on); if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
     renderAll();
     window.scrollTo({top:0, behavior:'smooth'});
@@ -1799,7 +1800,7 @@ function handleSoTayAction(act, el){
     if (state.tab !== 'sotay'){
       state.tab = 'sotay';
       document.querySelectorAll('.tab').forEach(function(t){
-        t.classList.toggle('active', t.getAttribute('data-tab') === 'sotay');
+        var on = t.getAttribute('data-tab') === 'sotay'; t.classList.toggle('active', on); if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
       });
       renderAll();
     }

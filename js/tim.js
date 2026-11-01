@@ -169,6 +169,7 @@ function timVe(){
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
+  if (typeof giuTieuDiem === 'function') giuTieuDiem(root, root.querySelector('.tim-panel'));
   timChon(0);
   // không tự focus ô tìm: mở ở trạng thái bình thường, chạm vào ô mới gõ
 }
