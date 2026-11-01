@@ -20,6 +20,26 @@ colors:
   dark-wood-border: "#6d543a"
   dark-parchment-text: "#f6ead9"
   dark-cream-action: "#f2d9a0"
+  paper-white: "#ffffff"
+  ivory-field: "#fffdf3"
+  chart-red: "#bf4f3c"
+  chart-green: "#3f8f4f"
+  chart-blue: "#3d7ea6"
+  chart-amber: "#d98a00"
+  chart-gray: "#9b8a76"
+  wallet-teal: "#1f7a6b"
+  wallet-bronze: "#8a5a1c"
+  wallet-indigo: "#4f4a9c"
+  wallet-plum: "#9c3f63"
+  wallet-blue: "#3f6fc4"
+  hero-gold-edge: "#e0b13a"
+  google-border: "#dadce0"
+  google-text: "#3c4043"
+  shadow-warm: "rgba(110,80,20,.08)"
+  shadow-warm-strong: "rgba(110,80,20,.20)"
+  shadow-ink: "rgba(0,0,0,.25)"
+  scrim-dark: "rgba(10,5,0,.65)"
+  overlay-light: "rgba(255,255,255,.16)"
 typography:
   hero-value:
     fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
@@ -44,6 +64,57 @@ typography:
     fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
     fontSize: "12px"
     fontWeight: 600
+  text-11:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "11px"
+  text-11-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "11.5px"
+  text-12-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "12.5px"
+  text-13:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "13px"
+  text-13-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "13.5px"
+  text-14-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "14.5px"
+  text-15-5:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "15.5px"
+  text-16:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "16px"
+  text-17:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "17px"
+  text-20:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "20px"
+  text-21:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "21px"
+  text-22:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "22px"
+  text-26:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "26px"
+  text-28:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "28px"
+  text-34:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "34px"
+  text-40:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "40px"
+  text-44:
+    fontFamily: "Be Vietnam Pro, -apple-system, Segoe UI, Roboto, sans-serif"
+    fontSize: "44px"
 rounded:
   input: "7px"
   button: "8px"
@@ -53,6 +124,19 @@ rounded:
   hero: "22px"
   sheet: "26px"
   pill: "99px"
+  hair: "2px"
+  tick: "3px"
+  xs: "4px"
+  sm: "6px"
+  ctl-9: "9px"
+  ctl-10: "10px"
+  ctl-11: "11px"
+  lg: "16px"
+  lg-18: "18px"
+  xl: "24px"
+  gate-32: "32px"
+  gate-40: "40px"
+  round: "999px"
 spacing:
   gap-tight: "6px"
   gap: "10px"
@@ -126,6 +210,9 @@ Bảng màu ấm lấy từ logo: kem vàng, nâu mực, đỏ gạch, đều đ
 - **Rơm nhạt** (`{colors.straw-hover}`): nền hover, chip, khung con.
 - Chế độ tối: `{colors.dark-wood-bg}` nền, `{colors.dark-wood-card}` thẻ, `{colors.dark-wood-border}` viền, `{colors.dark-parchment-text}` chữ. Thẻ sáng hơn nền khoảng 1,3 lần, viền sáng hơn thẻ khoảng 1,9 lần.
 
+### Màu biểu đồ, ví và lớp phủ
+Biểu đồ dùng `{colors.chart-red}`, `{colors.chart-green}`, `{colors.chart-blue}`, `{colors.chart-amber}`, `{colors.chart-gray}`; mỗi ví nhận một màu trong `wallet-*`; nút đăng nhập Google giữ `google-border` / `google-text` theo quy định thương hiệu của Google. Bóng và lớp phủ dùng `shadow-*`, `scrim-dark`, `overlay-light`; chữ trắng trên nền đậm cố định dùng `paper-white` (token `--on-hero`).
+
 ### Named Rules
 **The Red-Means-Spend Rule.** Đỏ (`{colors.signal-red}`) chỉ có nghĩa chi, vượt mức hoặc lỗi. Không dùng làm trang trí hay màu hành động. Màu hành động là nâu cà phê.
 
@@ -147,7 +234,12 @@ Bảng màu ấm lấy từ logo: kem vàng, nâu mực, đỏ gạch, đều đ
 - **Body** (400, 14px, 1.45): nội dung, ô nhập.
 - **Label** (600, 12px): nhãn trường, ghi chú, chữ phụ.
 
+### Thang cỡ chữ đang dùng
+Code dùng 24 cỡ từ 9,5px đến 44px (phổ biến: 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15). Các cỡ nhỏ nằm trong `text-11` đến `text-15-5` trong frontmatter; cỡ lớn hơn (`text-16` đến `text-44`) dành cho ô nhập, số tổng và tiêu đề màn. Cỡ 9,5px chỉ có một chỗ (`!important` ở bảng hẹp), chưa đưa vào thang.
+
 ### Named Rules
+**The Snap-To-Scale Rule.** Việc mới chọn một trong năm vai chính (`label` 12, `body` 14, `title` 15, `text-16` ô nhập, `hero-value` 38) trừ khi có lý do đo được; đừng thêm cỡ thập phân mới.
+
 **The Numbers-First Rule.** Con số lớn và đậm hơn mọi nhãn quanh nó; nhãn dùng mực phai.
 
 ## Layout
@@ -163,7 +255,9 @@ Hệ lai: phẳng khi nghỉ, tách lớp bằng viền vàng mảnh và chênh 
 
 ## Shapes
 
-Góc bo lớn, mềm: thẻ 20px, thẻ tổng quan 22px, bảng trượt 26px ở đỉnh, hộp thoại 14px, ô số liệu 12px, nút 8px, ô nhập 7px, chip và nhãn dạng viên thuốc (99px). Viền 1px vàng nâu cho mọi thẻ và ô. Icon vẽ bằng SVG nét 1,8px, một họ duy nhất, không dùng emoji hay ký tự thay icon.
+Góc bo lớn, mềm: thẻ 20px, thẻ tổng quan 22px, bảng trượt 26px ở đỉnh, hộp thoại 14px, ô số liệu 12px, nút 8px, ô nhập 7px, chip và nhãn dạng viên thuốc (99px). Viền 1px vàng nâu cho mọi thẻ và ô.
+
+Thang bán kính đang dùng khá rộng (2 đến 40px, thêm `99px` / `999px` cho viên thuốc và `50%` cho hình tròn). Mọi giá trị đã có tên trong `rounded`. Việc mới nên bám các mốc `button` 8, `tile` 12, `modal` 14, `card` 20, `sheet` 26, `pill` 99. Icon vẽ bằng SVG nét 1,8px, một họ duy nhất, không dùng emoji hay ký tự thay icon.
 
 ## Components
 
