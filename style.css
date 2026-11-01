@@ -1005,6 +1005,7 @@ body.qa-mo{overflow:hidden}
 .hm-leg .tk{display:inline-block;width:2px;height:11px;background:var(--text)}
 .hm-leg .en{display:inline-block;width:6px;height:11px;border-radius:2px;background:var(--border);margin-left:6px}
 .hm-cg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hm-cg.mot{grid-template-columns:1fr}
 @media (max-width:339px){ .hm-cg{grid-template-columns:1fr} }
 .hm-c{border:1px solid var(--border);border-radius:16px;padding:11px 12px;background:var(--card);min-width:0}
 .hm-c.over{background:var(--chi-bg);border-color:var(--danger-br)} .hm-c.warn{background:var(--warn-bg);border-color:var(--warn-br)}
@@ -1780,7 +1781,8 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .gd-row .dm-s{display:block}
 
 /* ---- Báo cáo: hàng chip nhảy nhanh + phần thẻ gập ---- */
-.bc-jump{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 6px;margin:0 -2px;scrollbar-width:none}
+.bc-jump{display:flex;gap:8px;overflow-x:auto;padding:12px 30px 6px 2px;margin:0 -2px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent)}   /* mờ ở mép phải: còn chip phía sau; đệm 30px để chip cuối cuộn ra khỏi vùng mờ */
 .bc-jump::-webkit-scrollbar{display:none}
 .bc-jump button{flex:0 0 auto;min-height:40px;padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:600}
 .bc-extra.dong,.bd-extra.dong{display:none}

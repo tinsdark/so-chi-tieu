@@ -274,7 +274,9 @@ function bdHeat(mk, chi, thu, soNgay, denNgay, dau, sel){
   var mx = Math.max.apply(null, chi.concat([0]));
   var h = '<div class="bd-cal">' + ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(function(d){ return '<div class="dw">'+d+'</div>'; }).join('');
   for (var i = 0; i < dau; i++) h += '<div></div>';
-  for (var d = 1; d <= soNgay; d++){
+  // đầu tháng thì cả tháng toàn ô nét đứt: chỉ vẽ tới hết tuần có ngày cuối đã tới, các tuần sau chưa cần
+  var cuoiVe = denNgay >= soNgay ? soNgay : Math.min(soNgay, denNgay + (6 - (dau + denNgay - 1) % 7));
+  for (var d = 1; d <= cuoiVe; d++){
     var v = chi[d - 1] || 0, date = mk + '-' + pad2(d);
     if (d > denNgay){ h += '<div class="c fut">'+d+'</div>'; continue; }
     var t = mx > 0 ? v / mx : 0, pct = v > 0 ? Math.round((.16 + .84 * Math.pow(t, .8)) * 100) : 0;
@@ -821,9 +823,10 @@ function renderBaoCao(){
   var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk) + bcChipsHtml(ids, coBd);
   giu.forEach(function(id, i){ html += the[id]; if (i === chen) html += bieuDoCardHtml(mk); });
   if (chen >= 0 && !giu.length) html += bieuDoCardHtml(mk);
-  if (chuaCo.length) html += '<div class="bc-trong">Sẽ hiện khi đủ dữ liệu: ' + chuaCo.join('; ') + '.</div>';
+  var trong = chuaCo.length ? '<div class="bc-trong">Sẽ hiện khi đủ dữ liệu: ' + chuaCo.join('; ') + '.</div>' : '';
+  if (!them.length) html += trong;      // có phần gập thì dòng này nằm sau thẻ cuối của phần gập (bên dưới)
   if (them.length){
-    html += '<div class="bc-extra' + (state.bcMo ? '' : ' dong') + '" id="bcExtra">' + them.map(function(id){ return the[id]; }).join('') + '</div>'
+    html += '<div class="bc-extra' + (state.bcMo ? '' : ' dong') + '" id="bcExtra">' + them.map(function(id){ return the[id]; }).join('') + '</div>' + trong
       + '<button type="button" class="btn secondary bc-more" id="bcMore" data-act="bcMo" data-them="' + them.map(function(id){ return BC_NHAN[id]; }).join(', ') + '" aria-expanded="' + !!state.bcMo + '" aria-controls="bcExtra">'
       + bcNutChu(them.map(function(id){ return BC_NHAN[id]; }), !!state.bcMo) + '</button>';
   }

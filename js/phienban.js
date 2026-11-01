@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.01.4', ngay: '2026-11-01', ten: 'Báo cáo: lịch chi tiêu gọn, chip có tín hiệu cuộn',
+    muc: ['Lịch chi tiêu chỉ vẽ tới hết tuần có ngày hôm nay, không còn cả tháng ô nét đứt trống ở đầu tháng.',
+          'Hạn mức: chỉ có một danh mục cần chú ý thì thẻ chiếm hết chiều ngang.',
+          'Dòng "Sẽ hiện khi đủ dữ liệu" nằm cuối danh sách thẻ. Hàng chip nhảy nhanh mờ dần ở mép phải để biết còn chip.']},
   { ban: '2026.11.01.3', ngay: '2026-11-01', ten: 'Báo cáo: biểu đồ lên trên, bớt thẻ trống',
     muc: ['Trên điện thoại, "Biểu đồ chi tiêu" nằm ngay sau thẻ Hạn mức thay vì cuối trang.',
           'Thẻ Hạn mức bỏ vòng % đã dùng (số này đã có ở thẻ đầu); còn thanh chia theo danh mục.',
