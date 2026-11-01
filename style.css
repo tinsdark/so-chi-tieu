@@ -57,6 +57,7 @@ header{display:flex;align-items:center;gap:10px;padding:10px 2px 14px;flex-wrap:
 .sync-status{font-size:12px;color:var(--muted);white-space:nowrap}
 .sync-status.err{color:var(--red)}
 .sync-status.ok{color:var(--green)}
+.sync-status.cho{color:var(--amber)}
 .sync-status[data-act]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 button{cursor:pointer;font-family:inherit}
 #btnRefresh,#btnTheme,#btnAnSo,#btnPhimTat,#btnTim{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text)}
@@ -802,7 +803,8 @@ body::before{content:'';position:fixed;inset:0;top:var(--vv-top,0px);bottom:auto
 .dl-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 2px 6px}
 .dl-bar h3{margin:0;font-size:16px;border:none;padding:0}
 .dl-tools{display:flex;gap:2px}
-.dl-tools .icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;padding:0}
+.dl-tools .icon-btn{min-width:36px;height:36px;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:10px;padding:0 8px}
+.dl-tools .icon-btn .ib-t{margin-left:0}
 .dl-tools .icon-btn .ic{width:19px;height:19px}
 .dl-tools .icon-btn.on{background:var(--hover);color:var(--action)}
 .dl>.search-row{margin:0 0 10px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:14px}
@@ -1681,6 +1683,12 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .ht-ud{display:flex;gap:4px;flex:0 0 auto;min-width:64px;justify-content:flex-end}
 .ht-mt{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ht-mt .ic{width:15px;height:15px}
+.ht-gr>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ht-gr>summary::-webkit-details-marker{display:none}
+.ht-gr>summary::after{content:'▾';color:var(--muted);font-size:12px}
+.ht-gr[open]>summary::after{content:'▴'}
+.ht-cnt{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600}
+.ib-t{font-size:12px;font-weight:600;margin-left:4px;vertical-align:middle}
 .ht-mt:disabled{opacity:.35;cursor:default}
 
 /* ---- Điều đáng chú ý (Báo cáo) ---- */
@@ -1861,6 +1869,8 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
   .btn.sm::after{inset:-10px 0}
   .dm-card .btn.sm::after{inset:-3px 0}   /* Cài đặt: nút nhỏ xếp dọc cách nhau ~6px, nới ít để không chồng vùng chạm */
   .icon-btn::after{content:"";position:absolute;inset:-4px 0}
+  .ht-mt{position:relative}
+  .ht-mt::after{content:"";position:absolute;inset:-7px -2px}
   .hd-bo::after{content:"";position:absolute;inset:-2px 0}
 }
 .qr-act{display:flex;gap:10px;margin-top:14px}

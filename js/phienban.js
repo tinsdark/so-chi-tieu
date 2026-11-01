@@ -8,6 +8,11 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.01.2', ngay: '2026-11-01', ten: 'Gọn hơn ở Vay - Nợ, Hiển thị; chấm danh mục hết lẫn với thu chi',
+    muc: ['Vay - Nợ: mỗi thẻ chỉ còn một nút "Thêm" (thẻ trống hiện nút lớn ở giữa, có khoản rồi hiện nút nhỏ ở tiêu đề).',
+          'Cài đặt, Hiển thị: mỗi nhóm thẻ là một mục gập, có "đang bật n/m"; chỉ nhóm Sổ tay mở sẵn.',
+          'Chấm màu danh mục không còn xanh lá và hồng (hai màu này chỉ để báo thu / chi). Danh mục nào bạn đã chọn màu riêng thì giữ nguyên.',
+          'Dòng trạng thái: chưa đồng bộ Drive hiện màu cam kèm chữ "chạm để đồng bộ Drive". Nút Xuất và Nhập ở Sổ tay có chữ.']},
   { ban: '2026.11.01', ngay: '2026-11-01', ten: 'Sổ tay: số dư lên đầu, nút dễ bấm hơn',
     muc: ['Thẻ "Bắt đầu với Sổ Tiền" gọn thành một dòng "Tiếp theo" nằm dưới thẻ số dư, nên mở app là thấy số dư ngay. Bấm "Xem cả 3 bước" để xem đủ.',
           'Nút nhỏ (Thêm, Ghi ngay, tải lên / tải xuống...) dễ bấm hơn trên điện thoại, hình dáng không đổi.',

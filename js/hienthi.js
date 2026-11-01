@@ -15,14 +15,16 @@ function htDongHtml(nhom, id, vitri, dau, cuoi){
       : '<span class="ht-ud"><button type="button" class="ht-mt" data-act="htLen" data-nhom="' + nhom + '" data-id="' + id + '" aria-label="Đưa ' + esc(t.ten) + ' lên"' + (dau ? ' disabled' : '') + '>' + icon('arrow-up') + '</button>'
       + '<button type="button" class="ht-mt" data-act="htXuong" data-nhom="' + nhom + '" data-id="' + id + '" aria-label="Đưa ' + esc(t.ten) + ' xuống"' + (cuoi ? ' disabled' : '') + '>' + icon('arrow-down') + '</button></span>') + '</div>';
 }
+var _htMo = { sotay: true };       // nhóm nào đang mở (chỉ nhóm đầu mở sẵn); vẽ lại sau khi đổi thứ tự không làm đóng nhóm
 function htNhomCardHtml(nhom){
   var ds = htThuTu(nhom), doi = ds.filter(function(id){ return !htThe(nhom, id).khongThuTu; });
-  var h = '<div class="card dm-card">' + dmHead(HT_NHOM_TEN[nhom]) + '<div class="dm-sub">' + (nhom === 'congcu' ? 'Mũi tên đổi thứ tự trong cùng nhóm (Quyết định / Sổ).' : (nhom === 'baocao' ? 'Mũi tên đổi thứ tự thẻ ở cột chính.' : 'Chọn phần nào hiện ở thẻ đầu Sổ tay.')) + '</div>';
+  var bat = ds.filter(function(id){ return !htAn(nhom, id); }).length;
+  var h = '<details class="card dm-card ht-gr" data-nhom="' + nhom + '"' + (_htMo[nhom] ? ' open' : '') + '><summary class="dm-h"><h3>' + HT_NHOM_TEN[nhom] + '</h3><span class="ht-cnt">' + bat + '/' + ds.length + ' đang bật</span></summary><div class="dm-sub">' + (nhom === 'congcu' ? 'Mũi tên đổi thứ tự trong cùng nhóm (Quyết định / Sổ).' : (nhom === 'baocao' ? 'Mũi tên đổi thứ tự thẻ ở cột chính.' : 'Chọn phần nào hiện ở thẻ đầu Sổ tay.')) + '</div>';
   ds.forEach(function(id, i){
     var t = htThe(nhom, id), nc = doi.filter(function(x){ return nhom !== 'congcu' || htThe(nhom, x).nhomCon === t.nhomCon; }), j = nc.indexOf(id);
     h += htDongHtml(nhom, id, i, j === 0, j === nc.length - 1);
   });
-  return h + '</div>';
+  return h + '</details>';
 }
 function htThongBaoCardHtml(){
   var h = '<div class="card dm-card">' + dmHead('Thông báo ở chuông') + '<div class="dm-sub">Loại nào tắt thì không hiện và không tính vào số đỏ trên máy này.</div>';
@@ -64,4 +66,12 @@ function handleHienThiAction(act, el){
     return true;
   }
   return false;
+}
+
+// nhớ nhóm nào đang mở (sự kiện toggle không nổi bọt nên bắt ở pha capture)
+if (typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('toggle', function(ev){
+    var d = ev.target;
+    if (d && d.classList && d.classList.contains('ht-gr')) _htMo[d.getAttribute('data-nhom')] = d.open;
+  }, true);
 }
