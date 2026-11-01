@@ -8,6 +8,11 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.01', ngay: '2026-11-01', ten: 'Sổ tay: số dư lên đầu, nút dễ bấm hơn',
+    muc: ['Thẻ "Bắt đầu với Sổ Tiền" gọn thành một dòng "Tiếp theo" nằm dưới thẻ số dư, nên mở app là thấy số dư ngay. Bấm "Xem cả 3 bước" để xem đủ.',
+          'Nút nhỏ (Thêm, Ghi ngay, tải lên / tải xuống...) dễ bấm hơn trên điện thoại, hình dáng không đổi.',
+          'Bàn phím: bấm Tab trong hộp thoại và bảng Ghi nhanh / Tìm kiếm / Thông báo không còn nhảy ra trang phía sau; đóng xong quay về nút đã mở.',
+          'Máy bật "Giảm chuyển động": bỏ hiệu ứng trượt, nảy nhưng nút vẫn đổi màu khi bấm. Hộp thoại xóa có viền và tiêu đề đỏ.']},
   { ban: '2026.10.22', ngay: '2026-10-22', ten: 'Khoá phóng to màn hình',
     muc: ['Không còn véo hai ngón hay chạm đúp để phóng to trang nữa, tránh lỡ tay làm lệch giao diện. Cuộn vẫn bình thường.'] },
   { ban: '2026.10.20.3', ngay: '2026-10-20', ten: 'Dự kiến tháng đang chạy: khoản định kỳ lấy đúng số tiền',

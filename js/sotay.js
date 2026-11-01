@@ -580,8 +580,8 @@ function renderSoTay(){
   var html = '';
   // màn rộng (>=1024px, CSS .cot2): cột trái = tổng quan + ghi nhanh + việc cần làm, cột phải = form + danh sách
   html += '<div class="cot2"><div class="cot-trai">';
-  html += huongDanHtml();
   html += tongQuanHtml(mk, tongThu, tongChi, duDauThang, duCuoiThang, beforeLock, duHetThang);
+  html += huongDanHtml();      // dưới thẻ số dư: số dư là thứ đầu tiên người dùng thấy
   if (beforeLock){
     html += '<div class="empty" style="margin-top:-6px">Tháng này trước mốc chốt số dư ('+state.data.settings.ngayBatDau+') nên không còn tính vào số dư — dữ liệu vẫn xem được bên dưới.</div>';
   }
@@ -900,8 +900,7 @@ function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
     h += filterActive
       ? '<div class="empty-box">Không có giao dịch khớp với bộ lọc.'
         + '<div><button class="btn secondary sm" data-act="soTayClearFilter">Xóa lọc</button></div></div>'
-      : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'.'
-        + '<div><button class="btn" data-act="fabAdd">+ Ghi khoản đầu tiên</button></div></div>';
+      : '<div class="empty-box">Chưa có giao dịch trong '+monthLabel(mk)+'. Bấm "Ghi nhanh" bên dưới để ghi khoản đầu tiên.</div>';
   } else {
     // mặc định chỉ hiện SO_NGAY_HIEN ngày gần nhất của tháng cho trang đỡ dài; đang tìm / lọc thì hiện hết
     var ds = displayDates.slice().sort().reverse();
@@ -1152,14 +1151,17 @@ function huongDanHtml(){
   var bs = huongDanBuoc(), xong = bs.filter(function(b){ return b.xong; }).length;
   if (xong === bs.length) return '';
   var tiep = bs.filter(function(b){ return !b.xong; })[0];
-  return '<div class="card hd-card" id="cardHuongDan"><div class="hd-h"><h3>Bắt đầu với Sổ Tiền</h3><span class="hd-n">'+xong+'/'+bs.length+'</span></div>'
+  // Gọn: một dòng "việc tiếp theo" + nút làm ngay; đủ 3 bước nằm trong "Xem cả 3 bước" (details, đóng sẵn)
+  return '<div class="card hd-card" id="cardHuongDan"><div class="hd-gon"><span class="hd-t"><b>Bắt đầu với Sổ Tiền · '+xong+'/'+bs.length+'</b><small>Tiếp theo: '+tiep.ten+'</small></span>'
+    + '<button type="button" class="btn sm" data-act="huongDan" data-v="'+tiep.id+'">'+tiep.nut+'</button></div>'
+    + '<details class="hd-ds"><summary>Xem cả '+bs.length+' bước</summary>'
     + bs.map(function(b){
         var la = b === tiep;
         return '<div class="hd-b'+(b.xong ? ' xong' : '')+'"><span class="hd-ic" aria-hidden="true">'+(b.xong ? icon('check') : '')+'</span>'
           + '<span class="hd-t"><b>'+b.ten+'</b>'+(b.xong ? '' : '<small>'+b.phu+'</small>')+'</span>'
           + (b.xong ? '' : '<button type="button" class="btn sm'+(la ? '' : ' secondary')+'" data-act="huongDan" data-v="'+b.id+'">'+b.nut+'</button>')+'</div>';
       }).join('')
-    + '<button type="button" class="hd-bo" data-act="huongDan" data-v="bo">Bỏ qua, tôi tự làm</button></div>';
+    + '<button type="button" class="hd-bo" data-act="huongDan" data-v="bo">Bỏ qua, tôi tự làm</button></details></div>';
 }
 function hanMucThangHtml(mk){
   var tat = hanMucThangRows(mk);
