@@ -199,7 +199,7 @@ function vnVayCardHtml(v){
 function vnVayHtml(){
   var ds = state.data.vayNo.vayNoPhaiTra;
   var dang = ds.filter(loanIsActive), xong = ds.filter(function(v){ return !loanIsActive(v); });
-  var h = '<div class="card k-debt"><h3 class="vn-h3">Vay - Nợ phải trả <button class="btn sm" data-act="vnAddVayNo">+ Thêm khoản vay</button></h3>';
+  var h = '<div class="card k-debt"><h3 class="vn-h3">Vay - Nợ phải trả'+(ds.length ? ' <button class="btn sm" data-act="vnAddVayNo">+ Thêm khoản vay</button>' : '')+'</h3>';
   if (!ds.length){
     h += '<div class="empty-box">Chưa có khoản vay nào.<div><button class="btn" data-act="vnAddVayNo">+ Thêm khoản vay</button></div></div>';
   } else {
@@ -243,7 +243,7 @@ function vnChoVayCardHtml(c){
 
 function vnChoVayHtml(){
   var ds = state.data.vayNo.choVay;
-  var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button></h3>';
+  var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay'+(ds.length ? ' <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button>' : '')+'</h3>';
   h += '<div class="vn-chia"><button type="button" class="btn sm secondary" data-act="vnChiaMo">Chia hóa đơn nhóm</button><span class="vn-sub">Mình trả hộ cả nhóm → tạo khoản cho vay từng người</span></div>';
   var c0 = ds.filter(function(x){ return !choVayDaXong(x); })[0];
   h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.'

@@ -880,8 +880,8 @@ function locTongKetHtml(displayDates, hasRange, mk){
 function ngayListHtml(displayDates, hasRange, filterActive, catSel, mk){
   var h = '<div class="dl"><div class="dl-bar"><h3>Chi tiết theo ngày</h3><div class="dl-tools">'
     + '<button type="button" class="icon-btn'+((state.soTayLocMo || filterActive) ? ' on' : '')+'" data-act="stLocMo" title="Tìm kiếm và lọc" aria-label="Tìm kiếm và lọc" aria-expanded="'+!!(state.soTayLocMo || filterActive)+'">'+icon('search')+'</button>'
-    + '<button type="button" class="icon-btn" data-act="exportExcel" title="Xuất Excel" aria-label="Xuất Excel">'+icon('upload')+'</button>'
-    + '<button type="button" class="icon-btn" data-act="impMo" title="Nhập từ file" aria-label="Nhập từ file">'+icon('download')+'</button>'
+    + '<button type="button" class="icon-btn" data-act="exportExcel" title="Xuất Excel" aria-label="Xuất Excel">'+icon('upload')+'<span class="ib-t">Xuất</span></button>'
+    + '<button type="button" class="icon-btn" data-act="impMo" title="Nhập từ file" aria-label="Nhập từ file">'+icon('download')+'<span class="ib-t">Nhập</span></button>'
     + '</div></div>';
   if (state.soTayLocMo || filterActive){
     h += '<div class="search-row">'

@@ -442,7 +442,7 @@ function repairEntryItems(e){
 // -> trả về chính id trong ngoặc để không biến mất khỏi bảng chi tiết.
 // màu danh mục: màu người dùng chọn (c.mau) hoặc màu mặc định theo vị trí trong danh sách,
 // để biểu đồ và chấm màu luôn nhất quán giữa các lần vẽ (trước đây màu theo thứ tự lọc, đổi mỗi lần)
-var CAT_PALETTE = ['#2563eb','#16a34a','#d97706','#9333ea','#0891b2','#db2777','#ca8a04','#64748b'];
+var CAT_PALETTE = ['#3d7ea6','#d98a00','#7b5ea7','#8a5a1c','#4f4a9c','#9c3f63','#2b8a9e','#9b8a76'];   // không có xanh lá / đỏ: hai màu này chỉ báo thu / chi
 function catMau(kind, catId){
   var arr = (state.data.categories[kind] || []);
   for (var i = 0; i < arr.length; i++){

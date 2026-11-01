@@ -280,6 +280,12 @@ Thang bán kính đang dùng khá rộng (2 đến 40px, thêm `99px` / `999px` 
 - **Focus:** viền ngoài 2px màu hành động, lệch 1px.
 - **Error:** nhãn lỗi chữ đỏ dưới ô.
 
+### Thẻ nền theo chức năng
+Một số thẻ tô nền nhạt riêng theo vai trò (biến `--k-*` / `--k-*-bg` trong CSS): Vay - Nợ phải trả (đỏ nhạt), Cho vay (xanh lá nhạt), Danh mục thu / chi (xanh lá / đỏ nhạt), Mục tiêu tiết kiệm (xanh dương nhạt), Ví (vàng nhạt). Đây là hệ có chủ ý: nền nhạt báo vai trò của khối, viền lấy 40% màu đó. Không thêm tông nền mới cho một thẻ nếu chưa có vai trò rõ.
+
+### Chấm màu danh mục
+Bảng mặc định `CAT_PALETTE` (`js/state.js`) chỉ dùng xanh dương, hổ phách, tím, đồng, chàm, mận, ngọc lam và xám ấm, cố ý không có xanh lá và đỏ vì hai màu này dành cho thu / chi. Người dùng chọn màu riêng thì giữ nguyên.
+
 ### Navigation
 - **Tab chính:** 6 mục có icon nét + chữ, đáy màn trên điện thoại; mục đang chọn tô màu hành động và có `aria-current="page"`.
 - **Tab con:** dải nút `role="tab"`, đang chọn nền đặc.

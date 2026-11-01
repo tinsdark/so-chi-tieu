@@ -16,14 +16,14 @@ function bannerHtml(ic, tieuDe, phu, nut, lop){
 function renderSyncStatus(){
   var el = document.getElementById('syncStatus');
   if (!el) return;
-  el.classList.remove('err','ok');
+  el.classList.remove('err','ok','cho');
   if (state.saving){ el.textContent = 'Đang lưu…'; }
   else if (state.offline){
     // dùng dữ liệu trên máy: dữ liệu đã nằm an toàn trong máy, chỉ còn chuyện đã lên Drive chưa
     var lc = state.lanDongBoCuoi ? new Date(state.lanDongBoCuoi) : null;
-    el.textContent = state.dirty ? 'Đã lưu trên máy · chưa đồng bộ Drive'
+    el.textContent = state.dirty ? 'Đã lưu trên máy · chạm để đồng bộ Drive'
       : (lc ? 'Đã lưu trên máy · đồng bộ Drive lần cuối ' + pad2(lc.getDate()) + '/' + pad2(lc.getMonth() + 1) : 'Đã lưu trên máy');
-    el.classList.add('ok');
+    el.classList.add(state.dirty ? 'cho' : 'ok');      // chưa lên Drive = hổ phách (cần làm), đã đồng bộ = xanh
   }
   else if (state.dirty){ el.textContent = 'Có thay đổi chưa lưu…'; }
   else if (state.errorMsg){ el.textContent = state.errorMsg; el.classList.add('err'); }
