@@ -1195,7 +1195,7 @@ function hanMucThangHtml(mk){
   }
   if (chuY.length){
     h += '<div class="hm-sec"><b>Cần chú ý · '+chuY.length+'</b>'
-      + (nhip.dangChay ? '<span class="hm-leg"><i class="tk"></i> nhịp hôm nay <i class="en"></i> hạn mức</span>' : '') + '</div><div class="hm-cg">';
+      + (nhip.dangChay ? '<span class="hm-leg"><i class="tk"></i> nhịp hôm nay <i class="en"></i> hạn mức</span>' : '') + '</div><div class="hm-cg' + (chuY.length === 1 ? ' mot' : '') + '">';
     chuY.forEach(function(r){
       var muc = hanMucMuc(r.pct), rong = Math.min(100, Math.round(r.pct * 100));
       h += '<div class="hm-c '+muc+'">'

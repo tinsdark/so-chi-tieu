@@ -6806,6 +6806,15 @@ test('Báo cáo: giữ 3 thẻ đầu, gập phần còn lại sau nút "Xem th�
   ctx.state.bcMo = true; var h2 = baoCaoVe(); ok(h2.indexOf('class="bc-extra"') > 0 && h2.indexOf('Thu gọn') > 0 && h2.indexOf('aria-expanded="true"') > 0, 'đã mở thì hiện hết, nút là Thu gọn');
   ctx.state.bcMo = false; htSach(); ctx.BC_GIU = 3;
 });
+test('Lịch nhiệt chi tiêu: chỉ vẽ tới hết tuần có ngày cuối đã tới, tháng đã qua vẽ đủ', function(){
+  var dem = function(h){ return (h.match(/<div class="c[ "]/g) || []).length; };
+  // 11/2026: ngày 1 là Chủ nhật (dau = 6) -> ngày 1 nằm cuối tuần, không vẽ thêm gì
+  var a = ctx.bdHeat('2026-11', [], [], 30, 1, 6, null); eq(dem(a), 1, 'ngày 1 (CN): chỉ 1 ô');
+  // ngày 3 (T3) -> vẽ tới hết tuần đó: ngày 2..8 -> tới ngày 8
+  var b = ctx.bdHeat('2026-11', [], [], 30, 3, 6, null); eq(dem(b), 8, 'ngày 3 thì vẽ tới ngày 8');
+  ok(b.indexOf('c fut">8<') > 0 && b.indexOf('>9<') < 0, 'ngày chưa tới trong tuần hiện tại là ô nét đứt; tuần sau không vẽ');
+  var c = ctx.bdHeat('2026-10', [], [], 31, 31, 3, null); eq(dem(c), 31, 'tháng đã qua: đủ 31 ô');
+});
 test('Báo cáo: ít thẻ thì không gập; thẻ bị ẩn ở Hiển thị không có chip', function(){
   htSach(); tcData(); setToday('2026-10-11'); ctx.state.bcMo = false; ctx.state.soTayMonth = '2026-10';
   ['tet', 'nhan', 'taisan', 'hanmuc', 'diemnhan', 'tongket', 'muctieu'].forEach(function(id){ ctx.htDatAn('baocao', id, true); });
