@@ -27,10 +27,21 @@
   --action:#43301f; --action-d:#2b1d11; --action-tx:#fff3d6;
   --on-hero:#fff;          /* chữ trên nền đậm cố định (thẻ hero, thẻ ví, vuốt xóa) */
   --vc-mac:#1f7a6b;        /* màu ví mặc định (xanh ngọc) */
+  --vc-mac-sang:#1f7a6b;   /* cùng màu, bản dùng làm nét vẽ trên nền tối (tối ghi đè) */
+  --on-hero-warn:#ffd0c4;  /* chữ cảnh báo (số âm) trên thẻ ví nền đậm */
+  --primary-soft:rgba(217,138,0,.28);   /* nền đánh dấu từ khóa tìm và nháy kết quả */
+  --glow-gold:rgba(255,214,102,.28);    /* quầng vàng trên thẻ hero */
+  --ring-light:rgba(255,255,255,.55);   /* viền sáng quanh logo trên nền đậm */
+  --shade-deep:rgba(40,10,4,.35);       /* bóng đậm dưới logo */
+  --shade-deep-sm:rgba(40,10,4,.3);
+  --ink-shadow-1:rgba(60,20,10,.14);    /* bóng nâu mực nhẹ: nút, đoạn chọn */
+  --ink-shadow-2:rgba(60,20,10,.18);
+  --ink-shadow-3:rgba(60,20,10,.22);    /* bóng khung đăng nhập trên màn rộng */
 }
 [data-theme="light"]{color-scheme: light}   /* thiếu dòng này thì ô nhập chưa tô màu bị iPhone chế độ tối vẽ đen dù app đang giao diện sáng */
 [data-theme="dark"]{
   color-scheme: dark;
+  --vc-mac-sang:#4fc1a6;
   /* tối NÂU ẤM rõ (cà phê / gỗ), không còn đen: cùng hệ với nền kem vàng ở theme sáng */
   /* nền / thẻ / khung con tách nhau rõ: thẻ sáng hơn nền ~1,3 lần, viền ~1,9 lần so với thẻ, khung con (--hover) sáng hơn thẻ ~1,3 lần */
   --bg:#221610; --card:#3e2b1e; --border:#6d543a; --text:#f6ead9; --muted:#d3bea6;
@@ -574,7 +585,7 @@ svg text.bd-c2{fill:var(--text);font-weight:700}
 /* tab con + tiêu đề từng biểu đồ */
 .bd-sub{display:flex;gap:4px;background:var(--hover);padding:4px;border-radius:99px;margin:2px 0 14px}
 .bd-sub button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:13px;padding:8px 6px;border-radius:99px}
-.bd-sub button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(80,30,10,.18)}
+.bd-sub button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px var(--ink-shadow-2)}
 .bd-h{font-size:13px;font-weight:700;margin:2px 0 4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .bd-h>span{font-weight:500;font-size:11px;color:var(--muted)}
 .bd-key{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted)}
@@ -700,12 +711,12 @@ body.dang-khoa{overflow:hidden}
   background:linear-gradient(160deg,var(--hero-a) 0%,var(--hero-b) 55%,var(--hero-c) 100%);border-radius:0 0 40px 40px;
   box-shadow:0 2px 0 #e0b13a}
 .gate-hero::before,.gate-hero::after{content:'';position:absolute;border-radius:50%;pointer-events:none}
-.gate-hero::before{width:260px;height:260px;right:-90px;top:-110px;background:radial-gradient(circle,rgba(255,214,102,.28),transparent 68%)}
+.gate-hero::before{width:260px;height:260px;right:-90px;top:-110px;background:radial-gradient(circle,var(--glow-gold),transparent 68%)}
 .gate-hero::after{width:200px;height:200px;left:-80px;bottom:-110px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%)}
 .gate-hero.nho{padding-top:calc(env(safe-area-inset-top,0px) + 28px);padding-bottom:34px}
 .gate-logo{position:relative;display:inline-block;margin-bottom:14px}
-.gate-logo img{display:block;width:92px;height:92px;border-radius:24px;box-shadow:0 0 0 3px rgba(255,255,255,.55),0 10px 24px rgba(40,10,4,.35)}
-.gate-hero.nho .gate-logo img{width:64px;height:64px;border-radius:18px;box-shadow:0 0 0 2px rgba(255,255,255,.55),0 6px 16px rgba(40,10,4,.3)}
+.gate-logo img{display:block;width:92px;height:92px;border-radius:24px;box-shadow:0 0 0 3px var(--ring-light),0 10px 24px var(--shade-deep)}
+.gate-hero.nho .gate-logo img{width:64px;height:64px;border-radius:18px;box-shadow:0 0 0 2px var(--ring-light),0 6px 16px var(--shade-deep-sm)}
 .gate-hero.nho .gate-logo{margin-bottom:10px}
 .gate-ten{position:relative;margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px}
 .gate-hero.nho .gate-ten{font-size:20px}
@@ -714,8 +725,8 @@ body.dang-khoa{overflow:hidden}
 .gate-body h2{margin:0 0 4px;font-size:20px}
 .gate-body>p{margin:0 0 18px;color:var(--muted);font-size:14px}
 .btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 16px;border-radius:14px;border:1px solid #dadce0;
-  background:#fff;color:#3c4043;font-size:15px;font-weight:600;box-shadow:0 1px 3px rgba(60,20,10,.14);transition:transform .12s var(--ease),box-shadow .18s}
-.btn-google:hover{box-shadow:0 3px 10px rgba(60,20,10,.18)}
+  background:#fff;color:#3c4043;font-size:15px;font-weight:600;box-shadow:0 1px 3px var(--ink-shadow-1);transition:transform .12s var(--ease),box-shadow .18s}
+.btn-google:hover{box-shadow:0 3px 10px var(--ink-shadow-2)}
 .btn-google:active{transform:scale(.98)}
 .btn-google svg{width:20px;height:20px;flex:0 0 auto}
 .btn-offline{display:block;width:100%;margin-top:10px;padding:11px 16px;border-radius:14px;border:1px dashed var(--border);background:none;color:var(--text);text-align:center}
@@ -731,7 +742,7 @@ body.dang-khoa{overflow:hidden}
 .ios-hint-x{position:absolute;top:6px;right:6px;border:none;background:none;color:inherit;padding:4px}
 @media (min-width:600px) and (min-height:680px){
   .gate{padding:28px;background:linear-gradient(160deg,var(--bg),var(--hover))}
-  .gate-wrap{min-height:0;border-radius:32px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px rgba(60,20,10,.22)}
+  .gate-wrap{min-height:0;border-radius:32px;overflow:hidden;border:1px solid var(--border);box-shadow:0 24px 60px var(--ink-shadow-3)}
 }
 /* màn khóa: chấm PIN + bàn phím số tự vẽ (không dùng ô nhập) */
 .lock-body{align-items:center;padding-top:22px}
@@ -796,7 +807,7 @@ body::before{content:'';position:fixed;inset:0;top:var(--vv-top,0px);bottom:auto
 .vi-the-tag{flex:0 0 auto;white-space:nowrap;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.22)}
 .vi-the-sub{font-size:11.5px;opacity:.85;margin-top:8px}
 .vi-the-so{font-size:20px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
-.vi-the-so.am{color:#ffd0c4}
+.vi-the-so.am{color:var(--on-hero-warn)}
 @media (min-width:1024px){ .vi-the{flex-basis:230px} }
 
 .dl{margin:4px 0 14px;position:relative}   /* khung định vị cho nền vuốt (offsetTop của nhóm ngày tính theo khung này) */
@@ -975,8 +986,7 @@ body.qa-mo{overflow:hidden}
 .bc-vong svg{display:block;width:100%;height:100%}
 .bc-vong .n{fill:none;stroke:var(--hover);stroke-width:7}
 .bc-vong .t{fill:none;stroke-width:7;stroke-linecap:round;stroke:var(--green);transition:stroke-dasharray .6s var(--ease)}
-.bc-vong .t.warn{stroke:var(--amber)} .bc-vong .t.over{stroke:var(--red)} .bc-vong .t.mt{stroke:#1f7a6b}
-[data-theme="dark"] .bc-vong .t.mt{stroke:#4fc1a6}
+.bc-vong .t.warn{stroke:var(--amber)} .bc-vong .t.over{stroke:var(--red)} .bc-vong .t.mt{stroke:var(--vc-mac-sang)}
 .bc-vong .g{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
 .bc-vong .g b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
 .bc-vong .g small{font-size:11px;color:var(--muted)}
@@ -1697,9 +1707,9 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 .dn-ds li i{flex:0 0 9px;height:9px;border-radius:99px;margin-top:7px;background:var(--muted)}
 .dn-ds li.dn-tot i{background:var(--green)}.dn-ds li.dn-xau i{background:var(--red)}
 .dn-ds li b{font-weight:700}
-.tim-r mark{background:var(--primary-soft,rgba(37,99,235,.18));color:inherit;border-radius:3px;padding:0 1px}
+.tim-r mark{background:var(--primary-soft);color:inherit;border-radius:3px;padding:0 1px}
 .tim-nhay{animation:tim-nhay 2.4s ease-out}
-@keyframes tim-nhay{0%,35%{box-shadow:0 0 0 3px var(--action);background:var(--primary-soft,rgba(37,99,235,.18))}100%{box-shadow:0 0 0 3px transparent}}
+@keyframes tim-nhay{0%,35%{box-shadow:0 0 0 3px var(--action);background:var(--primary-soft)}100%{box-shadow:0 0 0 3px transparent}}
 @media (prefers-reduced-motion:reduce){.tim-nhay{animation:none;box-shadow:0 0 0 3px var(--action)}}
 .dl-bar{scroll-margin-top:72px}
 .dk-in{width:112px;text-align:right;font-weight:600;padding:6px 8px}
