@@ -708,7 +708,7 @@ function baoCaoDauHtml(mk){
     if (dang && nhip.ngayQua >= 3 && cur.tongChiHN > 0){
       var du = bdUocTinhChiHangNgay(mk, nhip.ngayQua).tong;
       h += '<div class="bc-ut">Giữ nhịp này, cuối tháng chi hằng ngày khoảng <b>'+bdTien(du)+'</b> '
-        + (du <= cap ? 'và còn dư ~<b>'+bdTien(cap - du)+'</b> hạn mức.' : 'và vượt ~<b>'+bdTien(du - cap)+'</b> hạn mức.') + '</div>';
+        + (du <= cap ? 'và còn dư khoảng <b>'+bdTien(cap - du)+'</b> hạn mức.' : 'và vượt khoảng <b>'+bdTien(du - cap)+'</b> hạn mức.') + '</div>';
     }
   } else {
     h += '<div class="bc-pace-n">Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div>';
@@ -807,18 +807,27 @@ function renderBaoCao(){
       + '<button type="button" class="btn" data-act="qaMo">Ghi khoản đầu tiên</button></div></div></div>';
     return;
   }
+  // thẻ chỉ có chữ "chưa đủ dữ liệu" không đáng một thẻ: gộp thành một dòng ở cuối phần đầu trang
+  var chuaCo = [];
+  if (!ntdTinh()){ the.ngaytudo = ''; chuaCo.push('Ngày tự do (cần một tháng trọn hoặc 7 ngày ghi chi tiêu)'); }
+  if (!nhanThongKe().length){ the.nhan = ''; chuaCo.push('Theo nhãn (gõ nhãn ở ô Nhãn khi ghi khoản)'); }
   var ids = htHien('baocao').filter(function(id){ return the[id] != null && the[id] !== ''; });
   var giu = ids.slice(0, BC_GIU), them = ids.slice(BC_GIU);
   if (them.length < 2){ giu = ids; them = []; }       // chỉ dư 1 thẻ thì không đáng gập
   var coBd = !htAn('baocao', 'bieudo');
+  // điện thoại / máy hẹp (< 1024px): biểu đồ nằm ngay sau thẻ Hạn mức thay vì cuối trang; màn rộng giữ cột phải
+  var hep = !(window.matchMedia && window.matchMedia('(min-width:1024px)').matches);
+  var chen = hep && coBd ? Math.max(0, giu.indexOf('hanmuc')) : -1;
   var html = '<div class="cot2"><div class="cot-trai">' + baoCaoDauHtml(mk) + bcChipsHtml(ids, coBd);
-  giu.forEach(function(id){ html += the[id]; });
+  giu.forEach(function(id, i){ html += the[id]; if (i === chen) html += bieuDoCardHtml(mk); });
+  if (chen >= 0 && !giu.length) html += bieuDoCardHtml(mk);
+  if (chuaCo.length) html += '<div class="bc-trong">Sẽ hiện khi đủ dữ liệu: ' + chuaCo.join('; ') + '.</div>';
   if (them.length){
     html += '<div class="bc-extra' + (state.bcMo ? '' : ' dong') + '" id="bcExtra">' + them.map(function(id){ return the[id]; }).join('') + '</div>'
       + '<button type="button" class="btn secondary bc-more" id="bcMore" data-act="bcMo" data-them="' + them.map(function(id){ return BC_NHAN[id]; }).join(', ') + '" aria-expanded="' + !!state.bcMo + '" aria-controls="bcExtra">'
       + bcNutChu(them.map(function(id){ return BC_NHAN[id]; }), !!state.bcMo) + '</button>';
   }
-  html += '</div><div class="cot-phai">' + (coBd ? bieuDoCardHtml(mk) : '') + '</div></div>';
+  html += '</div><div class="cot-phai">' + (coBd && chen < 0 ? bieuDoCardHtml(mk) : '') + '</div></div>';
   root.innerHTML = html;
 }
 var BC_GIU = 3;
@@ -843,4 +852,11 @@ function bcDatMo(mo){
     nut.setAttribute('aria-expanded', String(!!mo));
     nut.textContent = bcNutChu((nut.getAttribute('data-them') || '').split(', '), !!mo);
   }
+}
+
+// qua lại ngưỡng 1024px (xoay máy, đổi cỡ cửa sổ): vẽ lại Báo cáo để biểu đồ về đúng chỗ
+if (typeof window !== 'undefined' && window.matchMedia){
+  var _mqBc = window.matchMedia('(min-width:1024px)');
+  var _bcDoi = function(){ if (typeof state !== 'undefined' && state.tab === 'baocao' && document.getElementById('tabContent')) renderBaoCao(); };
+  if (_mqBc.addEventListener) _mqBc.addEventListener('change', _bcDoi);
 }

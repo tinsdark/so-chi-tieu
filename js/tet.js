@@ -71,7 +71,7 @@ function tetCardHtml(homNay){
   var h = '<div class="card bc-card tet-card" id="cardTet"><h3 class="bc-h"><span>Tết ' + m.tenNam + '</span></h3>';
   if (m.conNgay === 0) h += '<div class="tet-big"><b>Hôm nay</b><span>là mùng 1 Tết</span></div>';
   else if (m.conNgay < 0) h += '<div class="tet-big"><b>Mùng ' + (1 - m.conNgay) + '</b><span>mùa Tết đang diễn ra</span></div>';
-  else h += '<div class="tet-big"><b>' + m.conNgay + '</b><span>ngày nữa tới mùng 1 Tết</span></div>';
+  else h += '<div class="tet-big' + (m.conNgay > 45 ? ' xa' : '') + '"><b>' + m.conNgay + '</b><span>ngày nữa tới mùng 1 Tết</span></div>';   // còn xa thì số nhỏ, không tranh chỗ với hạn mức
   h += '<div class="tet-sub">Mùng 1: <b>' + ngayTet + '</b>.'
     + (m.conToiBatDau > 0 ? ' Mùa Tết bắt đầu <b>' + ngayVN(m.batDau) + '</b> (20 Chạp), còn <b>' + m.conToiBatDau + ' ngày</b>.' : '') + '</div>';
   h += '<div class="qa-lbl tet-lbl">Tết năm ngoái (20 Chạp – mùng 10)</div>';

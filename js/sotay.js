@@ -932,7 +932,7 @@ function mucTieuCardHtml(){
     else {
       tr = g.hanChot ? '<span class="mt-st">Hạn ' + hanTxt(g) + '</span>' : '';
       note = t.canMoiThang != null
-        ? 'Gom thêm ~' + fmt(Math.round(t.canMoiThang)) + ' mỗi tháng là kịp hạn ' + hanTxt(g) + '.'
+        ? 'Gom thêm khoảng ' + fmt(Math.round(t.canMoiThang)) + ' mỗi tháng là kịp hạn ' + hanTxt(g) + '.'
         : 'Còn thiếu ' + fmt(Math.round(t.conThieu)) + '.';
     }
     h += '<div class="mt-c"><div class="mt-r">' + bcVong(t.pct, mau, Math.round(t.pct * 100) + '%', '')
@@ -1182,7 +1182,8 @@ function hanMucThangHtml(mk){
     Object.keys(cur.theoCat).forEach(function(k){ if (catChiHangNgay(k)) theoHN[k] = cur.theoCat[k]; });
     var chia = bdXepCat('chi', theoHN, null, 0), tong = 0;
     chia.forEach(function(c){ tong += c.v; });
-    h += '<div class="hm-sum">' + bcVong(pctAll, hanMucMuc(pctAll), Math.round(pctAll * 100) + '%', 'đã dùng') + '<div class="hm-sum-r">';
+    // % đã dùng đã có ở thẻ đầu (thanh có vạch "Hôm nay"), nên ở đây chỉ còn thanh chia theo danh mục
+    h += '<div class="hm-sum"><div class="hm-sum-r">';
     if (tong > 0){
       h += '<div class="hm-sum-t">Chi hằng ngày theo danh mục</div><div class="hm-stack" aria-hidden="true">'
         + chia.map(function(c){ return '<i style="flex:'+c.v+';background:'+c.mau+'"></i>'; }).join('') + '</div><div class="hm-stack-l">'

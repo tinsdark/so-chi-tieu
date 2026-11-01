@@ -8,6 +8,11 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.01.3', ngay: '2026-11-01', ten: 'Báo cáo: biểu đồ lên trên, bớt thẻ trống',
+    muc: ['Trên điện thoại, "Biểu đồ chi tiêu" nằm ngay sau thẻ Hạn mức thay vì cuối trang.',
+          'Thẻ Hạn mức bỏ vòng % đã dùng (số này đã có ở thẻ đầu); còn thanh chia theo danh mục.',
+          '"Ngày tự do" và "Theo nhãn" khi chưa có dữ liệu không còn chiếm một thẻ riêng, gộp thành một dòng ghi khi nào sẽ hiện.',
+          'Thẻ Tết thu nhỏ số ngày khi còn xa Tết. Chữ "~2.714.286" đổi thành "khoảng 2.714.286" cho khỏi đọc nhầm là số âm.']},
   { ban: '2026.11.01.2', ngay: '2026-11-01', ten: 'Gọn hơn ở Vay - Nợ, Hiển thị; chấm danh mục hết lẫn với thu chi',
     muc: ['Vay - Nợ: mỗi thẻ chỉ còn một nút "Thêm" (thẻ trống hiện nút lớn ở giữa, có khoản rồi hiện nút nhỏ ở tiêu đề).',
           'Cài đặt, Hiển thị: mỗi nhóm thẻ là một mục gập, có "đang bật n/m"; chỉ nhóm Sổ tay mở sẵn.',
