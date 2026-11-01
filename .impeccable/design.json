@@ -190,6 +190,74 @@
       "label": {
         "displayName": "Nhãn",
         "purpose": "Nhãn trường và chữ phụ."
+      },
+      "text-11": {
+        "displayName": "11px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-11-5": {
+        "displayName": "11.5px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-12-5": {
+        "displayName": "12.5px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-13": {
+        "displayName": "13px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-13-5": {
+        "displayName": "13.5px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-14-5": {
+        "displayName": "14.5px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-15-5": {
+        "displayName": "15.5px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-16": {
+        "displayName": "16px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-17": {
+        "displayName": "17px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-20": {
+        "displayName": "20px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-21": {
+        "displayName": "21px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-22": {
+        "displayName": "22px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-26": {
+        "displayName": "26px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-28": {
+        "displayName": "28px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-34": {
+        "displayName": "34px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-40": {
+        "displayName": "40px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
+      },
+      "text-44": {
+        "displayName": "44px",
+        "purpose": "Cỡ chữ đang dùng trong CSS (xem DESIGN.md, Thang cỡ chữ đang dùng)."
       }
     },
     "shadows": [
@@ -319,6 +387,11 @@
         "name": "The Paper-Not-Glass Rule",
         "body": "Không blur, kính mờ, bóng cứng lệch; độ sâu đến từ viền và chênh tone.",
         "section": "elevation"
+      },
+      {
+        "name": "The Snap-To-Scale Rule",
+        "body": "Việc mới chọn một trong năm vai chính (label 12, body 14, title 15, text-16 ô nhập, hero-value 38) trừ khi có lý do đo được.",
+        "section": "typography"
       }
     ],
     "dos": [
