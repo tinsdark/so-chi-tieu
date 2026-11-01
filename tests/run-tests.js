@@ -5002,7 +5002,8 @@ test('A2 thẻ Hạn mức (Báo cáo): Tiền nhà trả đủ nằm ở nhóm 
   var h = ctx.hanMucThangHtml('2026-10');
   ok(h.indexOf('Cần chú ý') < 0, 'không có gì cần chú ý');
   ok(h.indexOf('Cố định · 1') > 0 && h.indexOf('đã chi đủ') > h.indexOf('Cố định · 1'), 'Tiền nhà ở nhóm cố định, đã chi đủ');
-  ok(h.indexOf('13%') > 0, 'vòng % = 380k / 3tr = 13%');
+  ok(h.indexOf('hm-ring') < 0 && h.indexOf('bc-vong') < 0, 'thẻ Hạn mức không còn vòng % (đã có ở thẻ đầu)');
+  ok(ctx.baoCaoDauHtml('2026-10').indexOf('13%') > 0, '% đã dùng ở thẻ đầu = 380k / 3tr = 13%');
   var stack = h.slice(h.indexOf('hm-stack-l'), h.indexOf('hm-stack-l') + 400);
   ok(stack.indexOf('Tiền nhà') < 0 && stack.indexOf('Ăn') >= 0, 'thanh chia danh mục chỉ có chi hằng ngày');
 });
@@ -6355,7 +6356,7 @@ test('normalizeData: tyLeToiThieu / laiSuatThe ép về 0..100, bỏ khi trống
 test('thẻ hiện dòng tối thiểu + lãi ước tính; bảng Thanh toán có nút điền nhanh và cách tính bằng số thật; form lưu 2 trường mới', function(){
   theTT(5, 30);
   var w = ctx.walletById('wt'), h = ctx.theDongHtml(w);
-  ok(h.indexOf('Tối thiểu 150.000') > 0 && h.indexOf('5% sao kê') > 0 && h.indexOf('còn nợ 2.850.000') > 0 && h.indexOf('lãi ước tính ~75.000 ₫/tháng') > 0, h);
+  ok(h.indexOf('Tối thiểu 150.000') > 0 && h.indexOf('5% sao kê') > 0 && h.indexOf('còn nợ 2.850.000') > 0 && h.indexOf('lãi ước tính khoảng 75.000 ₫/tháng') > 0, h);
   var s = ctx.theTraSheetHtml({ id: 'wt' });
   ok(s.indexOf('data-act="theDien" data-v="150000"') > 0 && s.indexOf('data-act="theDien" data-v="3000000"') > 0 && s.indexOf('data-act="theDien" data-v="5000000"') > 0, 'ba nút: tối thiểu / còn phải trả / hết dư nợ');
   ok(s.indexOf('3.000.000 × 5% = 150.000') > 0 && s.indexOf('3.000.000 × 30% ÷ 12 = 75.000') > 0, 'cách tính bằng số thật'); eq(kiemPhepCong(s).loi.join(' | '), '');
@@ -6788,15 +6789,22 @@ function baoCaoVe(){
 }
 test('Báo cáo: giữ 3 thẻ đầu, gập phần còn lại sau nút "Xem thêm", có hàng chip nhảy nhanh', function(){
   htSach(); tcData(); setToday('2026-10-11'); ctx.state.bcMo = false; ctx.state.soTayMonth = '2026-10';
-  var h = baoCaoVe();
-  ok(h.indexOf('class="bc-jump"') > 0 && h.indexOf('data-act="tqCuon" data-to="cardNgayTuDo"') > 0 && h.indexOf('data-to="bieuDoCard"') > 0, 'hàng chip có Ngày tự do và Biểu đồ');
+  var mm0 = ctx.window.matchMedia;
+  ctx.BC_GIU = 2;      // dữ liệu mẫu có 4 thẻ (Hạn mức, Tài sản ròng, Điều đáng chú ý, Tết): giữ 2 thẻ đầu để còn phần gập
+  ctx.window.matchMedia = function(){ return { matches:false }; };        // máy hẹp (< 1024px)
+  var h; try { h = baoCaoVe(); } finally { ctx.window.matchMedia = mm0; }
+  ok(h.indexOf('class="bc-jump"') > 0 && h.indexOf('data-to="bieuDoCard"') > 0, 'hàng chip có Biểu đồ');
+  ok(h.indexOf('data-to="cardNgayTuDo"') < 0 && h.indexOf('id="cardNgayTuDo"') < 0 && h.indexOf('id="cardNhan"') < 0, 'thẻ chưa đủ dữ liệu (Ngày tự do, Theo nhãn) không vẽ');
+  ok(h.indexOf('class="bc-trong"') > 0 && h.indexOf('Ngày tự do') > h.indexOf('class="bc-trong"') && h.indexOf('Theo nhãn') > h.indexOf('class="bc-trong"'), 'một dòng nói khi nào hai thẻ đó sẽ hiện');
+  ok(h.indexOf('id="bieuDoCard"') > h.indexOf('id="cardHanMuc"') && h.indexOf('id="bieuDoCard"') < h.indexOf('id="bcExtra"'), 'máy hẹp: biểu đồ nằm ngay sau thẻ Hạn mức, trước phần gập');
   var iEx = h.indexOf('id="bcExtra"'); ok(iEx > 0 && h.indexOf('class="bc-extra dong"') > 0, 'phần gập có sẵn và đang gập');
   ok(h.indexOf('id="cardHanMuc"') > 0 && h.indexOf('id="cardHanMuc"') < iEx, 'Hạn mức (thẻ đầu) nằm ngoài phần gập');
-  ok(h.indexOf('id="cardNgayTuDo"') > iEx, 'Ngày tự do nằm trong phần gập');
-  ok(h.indexOf('id="cardNhan"') > iEx, 'thẻ cuối (Nhãn) nằm trong phần gập');
   ok(h.indexOf('data-act="bcMo"') > iEx && h.indexOf('Xem thêm ') > 0 && h.indexOf('aria-expanded="false"') > 0, 'nút Xem thêm sau phần gập');
+  ctx.window.matchMedia = function(){ return { matches:true }; };         // màn rộng: biểu đồ ở cột phải, không chen giữa
+  try { var hr = baoCaoVe(); } finally { ctx.window.matchMedia = mm0; }
+  ok(hr.indexOf('id="bieuDoCard"') > hr.indexOf('class="cot-phai"') && hr.indexOf('id="bieuDoCard"') > hr.indexOf('id="bcExtra"'), 'màn rộng: biểu đồ nằm ở cột phải');
   ctx.state.bcMo = true; var h2 = baoCaoVe(); ok(h2.indexOf('class="bc-extra"') > 0 && h2.indexOf('Thu gọn') > 0 && h2.indexOf('aria-expanded="true"') > 0, 'đã mở thì hiện hết, nút là Thu gọn');
-  ctx.state.bcMo = false; htSach();
+  ctx.state.bcMo = false; htSach(); ctx.BC_GIU = 3;
 });
 test('Báo cáo: ít thẻ thì không gập; thẻ bị ẩn ở Hiển thị không có chip', function(){
   htSach(); tcData(); setToday('2026-10-11'); ctx.state.bcMo = false; ctx.state.soTayMonth = '2026-10';

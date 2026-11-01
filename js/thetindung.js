@@ -82,7 +82,7 @@ function theDongHtml(w){
                         : ' · đã trả đủ')+'</span>';
   if (t.toiThieu != null && t.conPhaiTra > 0){
     h += '<span class="dm-s">Tối thiểu '+fmt(Math.round(t.toiThieu))+' ('+theSoChu(t.tyLeToiThieu)+'% sao kê)'
-      + (t.laiUocTinh != null && t.conNeuToiThieu > 0 ? ' · chỉ trả tối thiểu thì còn nợ '+fmt(Math.round(t.conNeuToiThieu))+', lãi ước tính ~'+fmt(Math.round(t.laiUocTinh))+'/tháng' : '')+'</span>';
+      + (t.laiUocTinh != null && t.conNeuToiThieu > 0 ? ' · chỉ trả tối thiểu thì còn nợ '+fmt(Math.round(t.conNeuToiThieu))+', lãi ước tính khoảng '+fmt(Math.round(t.laiUocTinh))+'/tháng' : '')+'</span>';
   }
   return h + '<span class="dm-s"><button type="button" class="btn secondary sm" data-act="theTra" data-id="'+esc(w.id)+'">Thanh toán thẻ</button></span>';
 }
