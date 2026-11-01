@@ -174,7 +174,8 @@ tr.mp-am td{background:var(--chi-bg)}
 .modal-box{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;
   padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.25);
   max-width:430px;width:100%;max-height:calc(100vh - 36px);overflow:auto;animation:modal-pop .16s ease-out}
-.modal-box.nguy-hiem{border-top:3px solid var(--red)}
+.modal-box.nguy-hiem{border-color:var(--red)}   /* viền đủ 4 cạnh, không dùng viền dày một cạnh */
+.modal-box.nguy-hiem .modal-title{color:var(--red)}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:8px}
 .modal-body{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px;word-break:break-word}
 .modal-box label{margin-top:2px}
@@ -191,7 +192,7 @@ tr.mp-am td{background:var(--chi-bg)}
 .modal-back.sheet{align-items:flex-end;padding:0}
 .modal-back.sheet .modal-box{max-width:520px;max-height:100%;border-bottom:none;border-radius:26px 26px 0 0;
   padding:0 20px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:modal-len .32s var(--ease) both}
-.modal-back.sheet .modal-box.nguy-hiem{border-top:1px solid var(--border)}
+.modal-back.sheet .modal-box.nguy-hiem{border-color:var(--border)}
 .modal-back.sheet .modal-grab{display:block;width:42px;height:5px;border-radius:99px;background:var(--border);margin:7px auto 14px}
 .modal-back.sheet .modal-title{font-size:17px}
 .modal-back.sheet .modal-btns{flex-direction:column-reverse;gap:8px;margin-top:16px}
@@ -1849,11 +1850,12 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
   .month-nav button::after{content:"";position:absolute;inset:-7px}
   .hero .month-nav button:first-child::after{inset:-7px 0 -7px -16px}
   .hero .month-nav button:last-child::after{inset:-7px -16px -7px 0}
-  /* nút cao 23-36px: nới vùng chạm theo chiều dọc (nút thường ~44px, nút .sm ~37px, trên mức tối thiểu 24px của WCAG), hình dáng không đổi.
+  /* nút cao 23-36px: nới vùng chạm theo chiều dọc (~44px; hai nút .sm xếp dọc sát nhau có thể chồng vài px, bên dưới trội hơn), hình dáng không đổi.
      Không nới chiều ngang để các nút đứng cạnh nhau không chồng vùng chạm. */
   .btn,.icon-btn,.hd-bo{position:relative}
   .btn::after{content:"";position:absolute;inset:-6px 0}
-  .btn.sm::after{inset:-7px 0}
+  .btn.sm::after{inset:-10px 0}
+  .dm-card .btn.sm::after{inset:-3px 0}   /* Cài đặt: nút nhỏ xếp dọc cách nhau ~6px, nới ít để không chồng vùng chạm */
   .icon-btn::after{content:"";position:absolute;inset:-4px 0}
   .hd-bo::after{content:"";position:absolute;inset:-2px 0}
 }
