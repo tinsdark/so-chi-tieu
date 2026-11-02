@@ -218,6 +218,7 @@ function vnChoVayCardHtml(c){
   var conLai = conLaiPhaiThu(c), qh = soNgayQuaHan(c);
   var xong = choVayDaXong(c);
   var daBo = tongDaBo(c);
+  var thuCuoi = xong ? choVayThuCuoi(c.id) : null;
   var chip = c.tatToan
     ? vnChip('', 'Đã đóng' + (num(c.tatToan.soTien) > 0 ? ' (xóa nợ '+fmt(Math.round(c.tatToan.soTien))+')' : ''))
     : (xong ? (daBo > 0 ? vnChip('', 'Đã đóng (xóa nợ '+fmt(Math.round(daBo))+')') : vnChip('ok', 'Đã thu đủ')) : (qh > 0 ? vnChip('red', 'Quá hạn '+qh+' ngày') : vnChip('amber', 'Đang chờ')));
@@ -231,7 +232,9 @@ function vnChoVayCardHtml(c){
     + '<div class="dt-track sm" style="margin:10px 0 0"><i style="width:'+pct+'%"></i></div>'
     + (daBo > 0 && !c.tatToan ? '<div class="vn-sub" style="margin-top:10px">Đã xóa nợ <b>'+fmt(Math.round(daBo))+'</b> (không đòi được)</div>' : '')
     + (c.ngayDuKienThu ? '<div class="vn-sub" style="margin-top:10px">Dự kiến thu <b>'+ngayVN(c.ngayDuKienThu)+'</b></div>' : '')
+    + (xong && thuCuoi ? '<div class="vn-sub" style="margin-top:10px">'+((c.tatToan || daBo > 0) ? 'Thu lần cuối ngày ' : 'Thu đủ ngày ')+'<b>'+ngayVN(thuCuoi.ngay)+'</b></div>' : '')
     + '<div class="vn-act"><span class="sp"></span>'
+    + (xong && thuCuoi ? '<button class="btn sm secondary" data-act="vnDoiNgayThu" data-id="'+c.id+'" title="Đổi ngày của lần thu cuối: giao dịch thu ở Sổ tay chuyển theo">Đổi ngày thu</button>' : '')
     + (c.tatToan
         ? '<button class="btn sm secondary" data-act="vnHuyTatToanChoVay" data-id="'+c.id+'" title="Hủy xóa nợ, mở lại phần đã xóa">Hủy xóa nợ</button>'
         : ((c.daBo || []).length ? '<button class="btn sm secondary" data-act="vnHoanBoChoVay" data-id="'+c.id+'" title="Hoàn lại lần xóa nợ gần nhất">Hoàn lại lần xóa nợ</button>' : '')
@@ -930,6 +933,35 @@ function handleVayNoAction(act, el){
       qrXacNhanXong();
       scheduleSave(); renderVayNo();
       toast('Đã ghi thu ' + fmt(Math.round(kq.so)) + ' từ khoản "' + cvT.ten + '".' + (kq.tatToan && thieuT > 0.01 ? ' Phần thiếu ' + fmt(Math.round(thieuT)) + ' đã xóa nợ.' : ''));
+    })();
+  } else if (act === 'vnDoiNgayThu'){
+    // ĐỔI NGÀY THU của khoản cho vay đã xong: dời dòng "Thu hồi cho vay" (lần thu cuối) sang ngày khác ở Sổ tay.
+    var idDN = el.getAttribute('data-id');
+    var cvDN = state.data.vayNo.choVay.find(function(x){ return x.id===idDN; });
+    var tDN = cvDN ? choVayThuCuoi(cvDN.id) : null;
+    if (!cvDN || !tDN) return true;
+    (async function(){
+      var kq = await vnDlMo({
+        tieuDe: 'Đổi ngày thu · ' + cvDN.ten,
+        phu: 'Lần thu cuối ' + fmt(Math.round(num(tDN.ref.soTien))) + ' đang ghi ngày ' + ngayVN(tDN.ngay),
+        nutOk: 'Lưu ngày',
+        body: vnF('Ngày thu', '<input type="date" id="vn_dl_ngay" value="' + tDN.ngay + '">')
+          + '<div class="vn-tom">Giao dịch "Thu hồi cho vay" ở Sổ tay chuyển sang ngày này; số tiền và ví giữ nguyên. Bảng theo dõi tự xếp lại đúng tháng.</div>',
+        lay: function(root){
+          var ngay = root.querySelector('#vn_dl_ngay').value;
+          if (!ngay) return { loi: 'Chọn ngày thu.' };
+          if (cvDN.ngayChoVay && ngay < cvDN.ngayChoVay) return { loi: 'Ngày thu không được trước ngày cho vay (' + ngayVN(cvDN.ngayChoVay) + ').' };
+          return { ngay: ngay };
+        }
+      });
+      if (!kq || kq.ngay === tDN.ngay) return;
+      if (kq.ngay > todayStr() && !await xacNhan('Ngày thu ở tương lai',
+            'Giao dịch thu được ghi vào ngày ' + ngayVN(kq.ngay) + ', nên số dư hiện tại chưa tính khoản này cho tới ngày đó.',
+            { chuOk: 'Vẫn đổi', chuHuy: 'Quay lại' })) return;
+      if (choVayDoiNgayThu(cvDN, kq.ngay)){
+        scheduleSave(); renderVayNo();
+        toast('Đã đổi ngày thu của "' + cvDN.ten + '" sang ' + ngayVN(kq.ngay) + '.');
+      }
     })();
   } else if (act === 'vnXoaNoChoVay'){
     // XÓA NỢ cho vay = bỏ phần không đòi được. Xóa HẾT phần còn lại -> đóng khoản (tatToan);

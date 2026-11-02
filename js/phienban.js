@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.02.2', ngay: '2026-11-02', ten: 'Vay - Nợ: xem và đổi ngày thu đủ của khoản cho vay',
+    muc: ['Khoản cho vay đã thu đủ giờ ghi rõ "Thu đủ ngày ..." (khoản đóng bằng xóa nợ thì "Thu lần cuối ngày ...") và có nút "Đổi ngày thu".',
+          'Đổi ngày thì dòng "Thu hồi cho vay" ở Sổ tay chuyển sang ngày mới (số tiền và ví giữ nguyên), Bảng theo dõi tự xếp lại đúng tháng. Dùng khi thu tiền từ tháng trước nhưng đến tháng sau mới bấm Tất toán.']},
   { ban: '2026.11.02', ngay: '2026-11-02', ten: 'Vay - Nợ: khoản đã thu đủ không hiện lại ở tháng sau',
     muc: ['Bảng theo dõi: khoản cho vay không có ngày dự kiến thu (ví dụ khoản sinh từ "Chia hóa đơn nhóm") đã thu đủ ở tháng trước không còn tự hiện ở tháng này mỗi tháng nữa. Khoản thu đủ ngay trong tháng này vẫn hiện (Done) ở tháng này.']},
   { ban: '2026.11.01.4', ngay: '2026-11-01', ten: 'Báo cáo: lịch chi tiêu gọn, chip có tín hiệu cuộn',

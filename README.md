@@ -33,7 +33,7 @@ Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bả
 
 - Hình thức trả: 1 lần, không lãi, có lãi, trả cố định / tháng (chia gốc đều + phí cố định kiểu SPayLater, hoặc lãi trên dư nợ giảm dần kiểu FE Credit; app suy ra "Lãi thực ≈ X%/năm"), gốc đều lãi giảm dần. Lịch trả làm tròn về đồng, kỳ cuối trả hết gốc.
 - Mỗi kỳ có trạng thái (đã trả đủ / thiếu / trả dở / chưa trả), trả một phần, tất toán sớm, báo quá hạn nhiều kỳ. Mọi thao tác ghi tự sinh giao dịch ở Sổ tay (dòng có ổ khóa), nên tiền vay và trả nợ không nhập tay.
-- **Cho vay**: **Tất toán** ghi số tiền thực thu (thu thiếu thì chọn thu một phần hoặc đóng khoản), **Xóa nợ** bỏ phần không đòi được và không ghi giao dịch. Khoản xong nằm trong mục "Đã xong".
+- **Cho vay**: **Tất toán** ghi số tiền thực thu (thu thiếu thì chọn thu một phần hoặc đóng khoản), **Xóa nợ** bỏ phần không đòi được và không ghi giao dịch. Khoản xong nằm trong mục "Đã xong". Khoản đã thu đủ ghi rõ **"Thu đủ ngày ..."** và có nút **Đổi ngày thu**: dời dòng "Thu hồi cho vay" (lần thu cuối) ở Sổ tay sang ngày khác, dùng khi thu từ tháng trước nhưng tới tháng sau mới bấm Tất toán.
 - **Sổ nợ theo đối tượng** (gom khoản cùng một người), **Chia hóa đơn nhóm** (mình trả hộ, mỗi người thành một khoản cho vay).
 
 ### Dự báo và báo cáo

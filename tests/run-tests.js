@@ -4300,6 +4300,34 @@ test('Bảng theo dõi — thu tiền: khoản KHÔNG có ngày dự kiến, đ�
   eq(r[0].thu.items.filter(function(x){ return x.ten === 'Còn nợ'; })[0].done, true, 'thu đủ trong tháng này: hiện Done ở tháng này');
 });
 
+test('Đổi ngày thu của khoản cho vay đã xong: dòng Thu hồi ở Sổ tay chuyển ngày, số đã thu giữ nguyên, Bảng theo dõi xếp lại tháng', function(){
+  setToday('2026-11-02');
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cvX', ten:'Ăn trưa (Thuấn)', soTien:35000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05', ngayDuKienThu:'' }];
+  loadData(d);
+  var c = ctx.state.data.vayNo.choVay[0], j = ctx.state.data.journal;
+  ctx.choVayGhiThu(c, 35000, '2026-11-02', '', false);                        // bấm Tất toán ở tháng 11 cho khoản thu từ tháng 10
+  eq(ctx.choVayThuCuoi('cvX').ngay, '2026-11-02');
+  ok(ctx.vnBangTheoDoi(3)[0].thu.items.some(function(x){ return x.ten === 'Ăn trưa (Thuấn)'; }), 'đang ghi ngày 2/11: hiện ở T11');
+  ok(ctx.vnChoVayCardHtml(c).indexOf('Thu đủ ngày') > 0 && ctx.vnChoVayCardHtml(c).indexOf('vnDoiNgayThu') > 0, 'thẻ có dòng ngày và nút Đổi ngày');
+  var ref0 = j['2026-11-02'].refs[0], viTruoc = ref0.walletId, ridTruoc = ref0.rid;
+  eq(ctx.choVayDoiNgayThu(c, '2026-10-20'), true);
+  ok(!j['2026-11-02'], 'ngày cũ trống thì bỏ hẳn');
+  eq(j['2026-10-20'].refs.length, 1); eq(j['2026-10-20'].refs[0].soTien, 35000); eq(j['2026-10-20'].refs[0].rid, ridTruoc); eq(j['2026-10-20'].refs[0].walletId, viTruoc);
+  ok(String(j['2026-10-20'].ghiChu).indexOf('Thu hồi cho vay: Ăn trưa (Thuấn)') >= 0, 'ghi chú đi theo');
+  eq(c.daThu, 35000, 'số đã thu không đổi'); eq(ctx.choVayDaXong(c), true);
+  eq(ctx.vnBangTheoDoi(3)[0].thu.items.filter(function(x){ return x.ten === 'Ăn trưa (Thuấn)'; }).length, 0, 'thu từ T10: không hiện ở T11');
+  eq(ctx.choVayDoiNgayThu(c, '2026-10-20'), false, 'cùng ngày: không làm gì');
+  // đóng bằng xóa nợ cùng ngày: ngày đóng đi theo
+  var d2 = baseData();
+  d2.vayNo.choVay = [{ id:'cvY', ten:'Y', soTien:100000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05', ngayDuKienThu:'' }];
+  loadData(d2);
+  var c2 = ctx.state.data.vayNo.choVay[0];
+  ctx.choVayGhiThu(c2, 60000, '2026-11-02', '', true);
+  eq(c2.tatToan.ngay, '2026-11-02'); ctx.choVayDoiNgayThu(c2, '2026-10-25');
+  eq(c2.tatToan.ngay, '2026-10-25', 'ngày đóng đi theo'); eq(c2.daThu, 60000);
+});
+
 test('Bảng theo dõi: ô hiển thị — tháng trống là "–", mở rộng một tháng thấy từng khoản, không có khoản nào thì ẩn thẻ', function(){
   setToday('2026-12-10');
   var d = baseData(); loadData(d);

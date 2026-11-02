@@ -186,6 +186,31 @@ function choVayGhiThu(c, so, ngay, viId, dongKhoan){
   invalidateBalanceCache();
   return thieu;
 }
+// lần thu CUỐI của khoản cho vay (lần làm khoản đủ / đóng): { ngay, ref } hoặc null nếu chưa thu lần nào
+function choVayThuCuoi(loanId){
+  var best = null;
+  Object.keys(state.data.journal).sort().forEach(function(d){
+    ((state.data.journal[d].refs) || []).forEach(function(r){ if (r.loanId === loanId && r.loai === 'thuHoiChoVay') best = { ngay: d, ref: r }; });
+  });
+  return best;
+}
+// đổi NGÀY của lần thu cuối: chuyển đúng dòng "Thu hồi cho vay" ở Sổ tay sang ngày mới (cùng số tiền, ví, mã), số đã thu của khoản
+// không đổi. Khoản đóng bằng xóa nợ cùng ngày đó thì ngày đóng đi theo. Trả về false nếu không có lần thu nào hoặc ngày không đổi.
+function choVayDoiNgayThu(c, ngayMoi){
+  var t = choVayThuCuoi(c.id);
+  if (!t || !ngayMoi || t.ngay === ngayMoi) return false;
+  var e = state.data.journal[t.ngay];
+  e.refs = e.refs.filter(function(r){ return r !== t.ref; });
+  journalRemoveNote(e, t.ref.note);
+  entryTinhLai(e);
+  if (entryIsEmpty(e)) delete state.data.journal[t.ngay];
+  var extra = {};
+  Object.keys(t.ref).forEach(function(k){ if (['loanId', 'loai', 'soTien', 'note'].indexOf(k) < 0) extra[k] = t.ref[k]; });
+  journalAddRef(ngayMoi, c.id, 'thuHoiChoVay', t.ref.soTien, t.ref.note, extra);
+  if (c.tatToan && c.tatToan.ngay === t.ngay) c.tatToan.ngay = ngayMoi;
+  invalidateBalanceCache();
+  return true;
+}
 // trạng thái khoản cho vay luôn suy ra từ số liệu: đóng khi đã xóa nợ phần còn lại hoặc thu + xóa nợ đủ số cho vay
 function choVayCapNhatTrangThai(c){
   c.trangThai = (c.tatToan || conLaiPhaiThu(c) <= 0.01) ? 'da_thu_du' : 'dang_cho';
