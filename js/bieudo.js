@@ -88,8 +88,10 @@ function bdLineInner(o, ve){
     s += '<text x="'+x(i).toFixed(1)+'" y="'+(H - 5)+'" text-anchor="'+(i === 0 && n > 1 ? 'start' : (i === n - 1 && n > 1 ? 'end' : 'middle'))+'">'+o.labels[i]+'</text>';
   });
   if (o.base != null){
+    // nhãn nằm phía đối diện điểm đang chọn: tooltip của điểm đó không đè lên nhãn
+    var selTruoc = o.sel == null ? n - 1 : Math.max(0, Math.min(n - 1, o.sel)), nhanTrai = x(selTruoc) > (P.l + W - P.r) / 2;
     s += '<line x1="'+P.l+'" x2="'+(W - P.r)+'" y1="'+y(o.base).toFixed(1)+'" y2="'+y(o.base).toFixed(1)+'" class="bd-base"/>'
-      + '<text x="'+(W - P.r)+'" y="'+(y(o.base) - 4).toFixed(1)+'" text-anchor="end" class="bd-base-t">'+(o.baseLabel || '')+'</text>';
+      + '<text x="'+(nhanTrai ? P.l + 4 : W - P.r)+'" y="'+(y(o.base) - 4).toFixed(1)+'" text-anchor="'+(nhanTrai ? 'start' : 'end')+'" class="bd-base-t">'+(o.baseLabel || '')+'</text>';
   }
   var sel = o.sel == null ? n - 1 : Math.max(0, Math.min(n - 1, o.sel));
   o.series.forEach(function(se, si){
@@ -254,9 +256,9 @@ function bdHBars(items, tong, opt){
     var trai = opt.phanTram ? Math.round(it.v / tong * 100) + '% ' + (opt.nhanTong || 'tổng chi') : '', chip = '';
     if (opt.soSanh && it.truoc != null && it.truoc > 0){
       var d = Math.round((it.v - it.truoc) / it.truoc * 100);
-      chip = '<span class="cm '+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? icon('arrow-up','ic-d')+' ' : (d < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(d)+'% so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
+      chip = '<span class="cm '+(d > 0 ? 'up' : 'dn')+'">'+(d > 0 ? icon('arrow-up','ic-d')+' ' : (d < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(d)+'% so với '+bdKySoSanh(opt.nhanTruoc || 'tháng trước')+'</span>';
     } else if (opt.soSanh && it.truoc === 0){
-      chip = '<span class="cm up">mới so với '+(opt.nhanTruoc || 'tháng trước')+'</span>';
+      chip = '<span class="cm up">mới so với '+bdKySoSanh(opt.nhanTruoc || 'tháng trước')+'</span>';
     }
     var mau = opt.mauChung || it.mau;
     h += '<div class="bd-hb-r'+(opt.pick && opt.sel === i ? ' sel' : '')+'"'+(opt.pick ? ' data-act="bdPick" data-i="'+i+'"' : '')+'>'
@@ -369,6 +371,8 @@ function bdTien(v){ return fmt(Math.round(v)); }
 // tháng trước để so sánh. Tháng đang chạy dở: chỉ lấy CÙNG KỲ (ngày 1 -> cùng ngày của hôm nay),
 // so với cả tháng trước thì đầu tháng nào cũng ra "chi giảm 75%" dù nhịp chi không đổi.
 // Trả thêm nhan ("tháng 9" / "1–7/9") và nhanNgan ("T9" / "1–7/9") để ghi đúng đang so với cái gì.
+// nhãn kỳ so sánh: "1–2/10" (cùng kỳ tháng trước) nói rõ là cùng kỳ; "tháng 9" / "T9" giữ nguyên
+function bdKySoSanh(nhan){ return /^\d/.test(nhan) ? 'cùng kỳ ' + nhan : nhan; }
 function bdThangSoSanh(mk){
   var prevMk = bdThangTruoc(mk), hom = todayStr();
   var den = mk === monthKey(hom) ? parseInt(hom.slice(8, 10), 10) : 0;
@@ -433,7 +437,7 @@ function bdTongQuanHtml(mk){
   var pc = bdPhanTram(cur.tongChiThat, prev.tongChiThat);
   if (pc != null && prev.coDl){
     dong.push({ ic: pc > 0 ? 'up' : 'dn', ky: pc > 0 ? icon('arrow-up') : icon('arrow-down'),
-      t: 'Chi tiêu <b>' + (pc > 0 ? 'tăng ' : (pc < 0 ? 'giảm ' : 'không đổi ')) + (pc === 0 ? '' : Math.abs(pc) + '%') + '</b> so với ' + prev.nhan,
+      t: 'Chi tiêu <b>' + (pc > 0 ? 'tăng ' : (pc < 0 ? 'giảm ' : 'không đổi ')) + (pc === 0 ? '' : Math.abs(pc) + '%') + '</b> so với ' + bdKySoSanh(prev.nhan),
       s: bdTien(cur.tongChiThat) + ' so với ' + bdTien(prev.tongChiThat) });
   }
   var cats = bdXepCat('chi', cur.theoCatThat, prev.theoCatThat, 0);
@@ -471,7 +475,7 @@ function bdTongQuanHtml(mk){
   }
   // --- 2 ô thu / chi ---
   var pt = prev.coDl ? bdPhanTram(cur.tongThuThat, prev.tongThuThat) : null;
-  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? icon('arrow-up','ic-d')+' ' : (p < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(p)+'% so với '+prev.nhanNgan+'</em>'; };
+  var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? icon('arrow-up','ic-d')+' ' : (p < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(p)+'% so với '+bdKySoSanh(prev.nhanNgan)+'</em>'; };
   h += '<div class="bd-kpi"><div><small>Thu nhập</small><b class="thu">'+bdTien(cur.tongThuThat)+'</b>'+so(pt, 'thu')+'</div>'
     + '<div><small>Chi tiêu</small><b class="chi">'+bdTien(cur.tongChiThat)+'</b>'+so(prev.coDl ? pc : null, 'chi')+'</div></div>'
     + bdVayNoDongHtml(cur.vayNo);

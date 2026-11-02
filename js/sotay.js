@@ -1130,7 +1130,7 @@ function tieuMoiNgayHtml(homNay){
     canh = '<div class="hero-bud-sub"><span class="am">' + (vi < 0 ? 'Ví dùng hằng ngày đang âm <b>' + fmt(Math.round(-vi)) + '</b>' : 'Ví dùng hằng ngày chỉ còn <b>' + fmt(Math.round(vi)) + '</b>') + ', ít hơn mức này.</span></div>';
   return '<div class="hero-bud hero-day"><div class="hero-bud-top"><span>'+nhan+'</span>'
     + '<button type="button" class="hero-link" data-act="goTheoNgay">Xem theo ngày '+icon('chev', 'r')+'</button></div>'
-    + '<div class="hero-day-so">'+so+'</div><div class="hero-bud-sub">'+phu+'</div>' + canh + '</div>';
+    + '<div class="hero-day-so'+((vuotNgay || (t.het && t.vuot > 0)) ? ' vuot' : '')+'">'+so+'</div><div class="hero-bud-sub">'+phu+'</div>' + canh + '</div>';
 }
 /* ---- Thẻ "Bắt đầu" cho tài khoản mới (đầu Sổ tay): 3 bước, tự ẩn khi xong hoặc khi bấm Bỏ qua ----
    Bước 1: số dư đầu kỳ (đã đặt, hoặc đã có giao dịch thì coi như xong). Bước 2: ghi khoản đầu tiên. Bước 3: đặt hạn mức cho một danh mục chi.

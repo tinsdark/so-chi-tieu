@@ -3811,7 +3811,7 @@ test('Phân tích tháng: tháng đang chạy so CÙNG KỲ, tháng đã qua so 
   eq(p.tongChi, 700000, 'chỉ cộng 1–7/9'); eq(p.nhan, '1–7/9');
   ctx.state.bdTab = 'tq';
   var h = ctx.bieuDoCardHtml('2026-10');
-  ok(h.indexOf('không đổi') > 0 && h.indexOf('so với 1–7/9') > 0, 'nhịp như nhau -> "không đổi so với 1–7/9"');
+  ok(h.indexOf('không đổi') > 0 && h.indexOf('so với cùng kỳ 1–7/9') > 0, 'nhịp như nhau -> "không đổi so với cùng kỳ 1–7/9"');
   ok(h.indexOf('giảm') < 0, 'không còn báo giảm sai');
   // xem lại tháng đã qua: so với cả tháng trước
   setToday('2026-11-15');
@@ -6805,6 +6805,9 @@ test('Báo cáo: giữ 3 thẻ đầu, gập phần còn lại sau nút "Xem th�
   ok(hr.indexOf('id="bieuDoCard"') > hr.indexOf('class="cot-phai"') && hr.indexOf('id="bieuDoCard"') > hr.indexOf('id="bcExtra"'), 'màn rộng: biểu đồ nằm ở cột phải');
   ctx.state.bcMo = true; var h2 = baoCaoVe(); ok(h2.indexOf('class="bc-extra"') > 0 && h2.indexOf('Thu gọn') > 0 && h2.indexOf('aria-expanded="true"') > 0, 'đã mở thì hiện hết, nút là Thu gọn');
   ctx.state.bcMo = false; htSach(); ctx.BC_GIU = 3;
+});
+test('Nhãn kỳ so sánh: kỳ ngày ghi rõ "cùng kỳ", tháng nguyên giữ nguyên', function(){
+  eq(ctx.bdKySoSanh('1–2/10'), 'cùng kỳ 1–2/10'); eq(ctx.bdKySoSanh('tháng 9'), 'tháng 9'); eq(ctx.bdKySoSanh('T9'), 'T9');
 });
 test('Lịch nhiệt chi tiêu: chỉ vẽ tới hết tuần có ngày cuối đã tới, tháng đã qua vẽ đủ', function(){
   var dem = function(h){ return (h.match(/<div class="c[ "]/g) || []).length; };

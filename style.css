@@ -390,6 +390,7 @@ html{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .hero-bud-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .hero-bud-sub b{color:var(--text)}
 .hero-day-so{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.hero-day-so.vuot{color:var(--red)}   /* đã vượt hạn mức hằng ngày: đỏ = chi vượt mức */
 .hero-day .hero-link{margin-top:0}
 .hero-day+.hero-bud{margin-top:8px;padding-top:0;border-top:0}
 .hero .vi-sec{margin:12px 0 0}
