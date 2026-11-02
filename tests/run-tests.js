@@ -4281,6 +4281,25 @@ test('Bảng theo dõi — thu tiền: theo ngày dự kiến thu (quá hạn d�
   eq(r[0].thu.done, true, 'cả tháng này xong'); eq(r[1].thu.done, false, 'A tháng sau chưa');
 });
 
+test('Bảng theo dõi — thu tiền: khoản KHÔNG có ngày dự kiến, đã thu đủ ở tháng trước thì không hiện lại ở tháng này (chia hóa đơn nhóm sinh khoản như vậy)', function(){
+  setToday('2026-11-02');
+  var d = baseData();
+  d.vayNo.choVay = [
+    { id:'cvT', ten:'Ăn trưa (Thuấn)', soTien:35000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05', ngayDuKienThu:'' },
+    { id:'cvU', ten:'Còn nợ', soTien:100000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05', ngayDuKienThu:'' }
+  ];
+  loadData(d);
+  var cv = ctx.state.data.vayNo.choVay;
+  ctx.choVayGhiThu(cv[0], 35000, '2026-10-20', '', false);                   // thu đủ ngay trong tháng 10
+  var r = ctx.vnBangTheoDoi(3);
+  eq(r[0].thu.items.filter(function(x){ return x.ten === 'Ăn trưa (Thuấn)'; }).length, 0, 'đã thu đủ ở T10, không có ngày dự kiến: không hiện ở T11');
+  eq(r[0].thu.items.filter(function(x){ return x.ten === 'Còn nợ'; }).length, 1, 'khoản chưa thu vẫn hiện ở tháng này');
+  eq(r[0].thu.need, 100000); eq(r[0].thu.da, 0);
+  ctx.choVayGhiThu(cv[1], 100000, '2026-11-02', '', false);                  // thu đủ ngay tháng này -> vẫn hiện (Done) ở tháng thu
+  r = ctx.vnBangTheoDoi(3);
+  eq(r[0].thu.items.filter(function(x){ return x.ten === 'Còn nợ'; })[0].done, true, 'thu đủ trong tháng này: hiện Done ở tháng này');
+});
+
 test('Bảng theo dõi: ô hiển thị — tháng trống là "–", mở rộng một tháng thấy từng khoản, không có khoản nào thì ẩn thẻ', function(){
   setToday('2026-12-10');
   var d = baseData(); loadData(d);

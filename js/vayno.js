@@ -303,9 +303,11 @@ function vnBangTheoDoi(n){
     }
   });
   (state.data.vayNo.choVay || []).forEach(function(c){
-    var xong = choVayDaXong(c), due = monthKey(c.ngayDuKienThu || todayStr()), mk;
+    var xong = choVayDaXong(c), coHan = !!c.ngayDuKienThu, due = monthKey(c.ngayDuKienThu || todayStr()), mk;
+    // khoản không có ngày dự kiến (vd chia hóa đơn nhóm): "dự kiến" mặc định là tháng này; đã xong thì chỉ hiện ở tháng thu cuối
+    // (nếu từ tháng này trở đi), không được tự nhảy sang tháng hiện tại mỗi tháng
     if (!xong) mk = due < cur ? cur : due;
-    else if (due >= cur) mk = due;
+    else if (coHan && due >= cur) mk = due;
     else { var t = vnThangThuCuoi(c.id); mk = t >= cur ? t : ''; }
     if (!mk) return;
     // dự kiến thu = số cho vay trừ phần đã xóa nợ (không đòi nữa); số thật = đã thu
