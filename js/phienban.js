@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.02', ngay: '2026-11-02', ten: 'Vay - Nợ: khoản đã thu đủ không hiện lại ở tháng sau',
+    muc: ['Bảng theo dõi: khoản cho vay không có ngày dự kiến thu (ví dụ khoản sinh từ "Chia hóa đơn nhóm") đã thu đủ ở tháng trước không còn tự hiện ở tháng này mỗi tháng nữa. Khoản thu đủ ngay trong tháng này vẫn hiện (Done) ở tháng này.']},
   { ban: '2026.11.01.4', ngay: '2026-11-01', ten: 'Báo cáo: lịch chi tiêu gọn, chip có tín hiệu cuộn',
     muc: ['Lịch chi tiêu chỉ vẽ tới hết tuần có ngày hôm nay, không còn cả tháng ô nét đứt trống ở đầu tháng.',
           'Hạn mức: chỉ có một danh mục cần chú ý thì thẻ chiếm hết chiều ngang.',
