@@ -91,7 +91,11 @@ function nguoiCardHtml(){
           + '<span><b>'+esc(x.loan.ten)+'</b><small>'+(x.loai === 'vay' ? 'Mình vay' : 'Cho vay')+'</small></span>'
           + '<b class="'+(x.loai === 'vay' ? 'chi' : 'thu')+'">'+(x.loai === 'vay' ? '−' : '+')+fmt(Math.round(x.conLai))+'</b></div>';
       });
-      h += '<div class="nh-btn"><button type="button" class="btn secondary sm" data-act="nguoiDoiTen" data-k="'+esc(r.khoa)+'">Đổi tên / gộp</button></div></div>';
+      var coThu = r.khoan.some(function(x){ return x.loai === 'choVay' && x.conLai > 0.01; });
+      h += '<div class="nh-btn">'
+        + (coThu ? '<button type="button" class="btn sm" data-act="nguoiThuHet" data-k="'+esc(r.khoa)+'" title="Ghi thu tất cả khoản cho vay còn mở của người này trong một lượt">Thanh toán hết</button>'
+          + '<button type="button" class="btn secondary sm" data-act="nguoiThuChon" data-k="'+esc(r.khoa)+'" title="Tích chọn khoản nào được thanh toán">Chọn khoản thanh toán</button>' : '')
+        + '<button type="button" class="btn secondary sm" data-act="nguoiDoiTen" data-k="'+esc(r.khoa)+'">Đổi tên / gộp</button></div></div>';
     }
     h += '</div>';
   });
@@ -194,12 +198,123 @@ function chiaHoanTac(ket){
   invalidateBalanceCache();
 }
 
+/* ---- THU NHIỀU KHOẢN CHO VAY CỦA MỘT NGƯỜI TRONG MỘT LƯỢT ("Thanh toán hết" / "Chọn khoản thanh toán") ----
+   Mỗi khoản vẫn có dòng "Thu hồi cho vay" riêng ở Sổ tay (choVayGhiThu): chỉ gom thao tác, không đổi cách lưu. */
+// khoản cho vay còn mở của người, cũ trước (ngày cho vay, rồi theo thứ tự tạo)
+function nguoiKhoanConThu(khoa){
+  var r = nguoiTongHop().filter(function(x){ return x.khoa === khoa; })[0];
+  if (!r) return [];
+  return r.khoan.filter(function(x){ return x.loai === 'choVay' && x.conLai > 0.01; }).map(function(x){ return x.loan; })
+    .sort(function(a, b){ return (a.ngayChoVay || '') < (b.ngayChoVay || '') ? -1 : ((a.ngayChoVay || '') > (b.ngayChoVay || '') ? 1 : 0); });
+}
+// ghi thu "so" cho các khoản theo thứ tự đã cho: khoản nào nhận tối đa phần còn lại của nó, hết tiền thì dừng.
+// dongKhoan: khoản nào còn thiếu thì xóa nợ phần thiếu (đóng khoản). Trả ket để hoàn tác.
+function nguoiThuGhi(loans, so, ngay, viId, dongKhoan){
+  var e0 = state.data.journal[ngay], truoc = e0 && e0.refs ? e0.refs.slice() : [];
+  var ket = { ngay: ngay, snap: loans.map(function(c){ return { c: c, daThu: c.daThu, tatToan: c.tatToan, trangThai: c.trangThai }; }), tong: 0, refs: [] };
+  var con = so;
+  loans.forEach(function(c){
+    var tra = Math.min(con, conLaiPhaiThu(c));
+    if (tra > 0.01){ choVayGhiThu(c, tra, ngay, viId, false); con -= tra; ket.tong += tra; }
+  });
+  if (dongKhoan) loans.forEach(function(c){
+    var thieu = conLaiPhaiThu(c);
+    if (thieu > 0.01){ c.tatToan = { soTien: thieu, ngay: ngay }; choVayCapNhatTrangThai(c); }
+  });
+  var e = state.data.journal[ngay];
+  ket.refs = e && e.refs ? e.refs.filter(function(r){ return truoc.indexOf(r) < 0; }) : [];
+  invalidateBalanceCache();
+  return ket;
+}
+function nguoiThuHoanTac(ket){
+  var e = state.data.journal[ket.ngay];
+  if (e){
+    e.refs = (e.refs || []).filter(function(r){ return ket.refs.indexOf(r) < 0; });
+    ket.refs.forEach(function(r){ journalRemoveNote(e, r.note); });
+    entryTinhLai(e);
+    if (entryIsEmpty(e)) delete state.data.journal[ket.ngay];
+  }
+  ket.snap.forEach(function(x){ x.c.daThu = x.daThu; x.c.tatToan = x.tatToan; x.c.trangThai = x.trangThai; });
+  invalidateBalanceCache();
+}
+// hộp thoại: chon = true thì có bảng tích chọn khoản; false = thu hết mọi khoản còn mở
+async function nguoiThuMo(khoa, chon){
+  var all = nguoiKhoanConThu(khoa);
+  if (!all.length) return;
+  var ten = nguoiCuaKhoan(all[0]);
+  var tongCua = function(ds){ var t = 0; ds.forEach(function(c){ t += conLaiPhaiThu(c); }); return t; };
+  var chonDuoc = function(root){
+    if (!chon) return all;
+    var ids = {};
+    [].slice.call(root.querySelectorAll('.vn_thu_ck')).forEach(function(i){ if (i.checked) ids[i.value] = 1; });
+    return all.filter(function(c){ return ids[c.id]; });
+  };
+  var lastTong = null;
+  var dsHtml = chon ? '<div class="vn-f"><div class="qa-lbl">Chọn khoản thanh toán</div>'
+    + all.map(function(c){
+        return '<label class="vn-opt"><input type="checkbox" class="vn_thu_ck" value="'+esc(c.id)+'" checked><span><b>'+esc(c.ten)+'</b><br><small>'
+          + (c.ngayChoVay ? ngayVN(c.ngayChoVay) + ' · ' : '') + 'còn ' + fmt(Math.round(conLaiPhaiThu(c))) + '</small></span></label>';
+      }).join('') + '</div>' : '';
+  var kq = await vnDlMo({
+    tieuDe: (chon ? 'Chọn khoản thanh toán · ' : 'Thanh toán hết · ') + ten,
+    phu: all.length + ' khoản cho vay còn mở',
+    nutOk: 'Ghi thu tiền',
+    body: vnDlTile('Còn phải thu', '<span id="vn_thu_tong">' + fmt(Math.round(tongCua(all))) + '</span>')
+      + dsHtml
+      + vnF('Số tiền thực thu', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_dl_so" value="' + veSo(Math.round(tongCua(all))) + '" placeholder="0">')
+      + '<div id="vn_dl_kieu" hidden><div class="vn-hint" id="vn_dl_thieu"></div>'
+      + '<label class="vn-opt"><input type="radio" name="vn_dl_k" value="no" checked><span><b>Thu một phần, sẽ thu tiếp</b><br><small>Tiền chia vào khoản cũ nhất trước; khoản chưa đủ vẫn mở.</small></span></label>'
+      + '<label class="vn-opt"><input type="radio" name="vn_dl_k" value="xong"><span><b>Tất toán, phần thiếu xóa nợ</b><br><small>Các khoản còn thiếu đóng lại; phần thiếu coi như không đòi được (không ghi giao dịch).</small></span></label></div>'
+      + vnDlNgayVi(all[0])
+      + '<div class="vn-tom">Mỗi khoản ghi một giao dịch thu "Thu hồi cho vay" riêng vào Sổ tay, cùng ngày và ví đã chọn.</div>',
+    khiNhap: function(root){
+      var ds = chonDuoc(root), tong = tongCua(ds), o = root.querySelector('#vn_dl_so');
+      var t = root.querySelector('#vn_thu_tong'); if (t) t.textContent = fmt(Math.round(tong));
+      if (lastTong !== tong){ lastTong = tong; if (o) o.value = veSo(Math.round(tong)); }   // đổi tích chọn thì số thu tự theo
+      var so = numNonNeg(docSo(o ? o.value : ''));
+      var thieu = ds.length > 0 && so > 0 && so < tong - 1;
+      var kn = root.querySelector('#vn_dl_kieu'); if (kn) kn.hidden = !thieu;
+      var tx = root.querySelector('#vn_dl_thieu');
+      if (tx) tx.textContent = 'Ít hơn số còn phải thu ' + fmt(Math.round(tong)) + '. Phần thiếu ' + fmt(Math.round(Math.max(0, tong - so))) + ' sẽ:';
+    },
+    lay: function(root){
+      var ds = chonDuoc(root), tong = tongCua(ds);
+      if (!ds.length) return { loi: 'Chọn ít nhất một khoản.' };
+      var so = numNonNeg(docSo(root.querySelector('#vn_dl_so').value));
+      if (!(so > 0)) return { loi: 'Nhập số lớn hơn 0.' };
+      if (so > tong + 0.01) return { loi: 'Không được lớn hơn số còn phải thu (' + fmt(Math.round(tong)) + ').' };
+      var ngay = root.querySelector('#vn_dl_ngay').value;
+      if (!ngay) return { loi: 'Chọn ngày thu.' };
+      var som = ds.filter(function(c){ return c.ngayChoVay && ngay < c.ngayChoVay; })[0];
+      if (som) return { loi: 'Ngày thu không được trước ngày cho vay của "' + som.ten + '" (' + ngayVN(som.ngayChoVay) + ').' };
+      var xong = root.querySelector('input[name=vn_dl_k]:checked');
+      return { ds: ds, tong: tong, so: so, ngay: ngay, viId: vnDlViDoc(all[0]), tatToan: so < tong - 1 && !!xong && xong.value === 'xong' };
+    }
+  });
+  if (!kq) return;
+  if (kq.tatToan && !await xacNhan('Tất toán, bỏ phần thiếu ' + fmt(Math.round(kq.tong - kq.so)) + '?',
+        'Ghi thu ' + fmt(Math.round(kq.so)) + ' vào Sổ tay. Phần thiếu ' + fmt(Math.round(kq.tong - kq.so)) + ' coi như KHÔNG ĐÒI ĐƯỢC: các khoản còn thiếu đóng lại, không ghi giao dịch cho phần thiếu.\n\nNếu còn muốn thu tiếp thì bấm Hủy rồi chọn "Thu một phần".',
+        { nguyHiem: true, chuOk: 'Tất toán' })) return;
+  if (kq.ngay > todayStr() && !await xacNhan('Ngày thu ở tương lai',
+        'Giao dịch thu được ghi vào ngày ' + ngayVN(kq.ngay) + ', nên số dư hiện tại chưa tính tiền này cho tới ngày đó, trong khi các khoản cho vay đã tính là đã thu.',
+        { chuOk: 'Vẫn ghi', chuHuy: 'Quay lại' })) return;
+  var ket = nguoiThuGhi(kq.ds, kq.so, kq.ngay, kq.viId, kq.tatToan);
+  scheduleSave(); renderVayNo();
+  toast('Đã ghi thu ' + fmt(Math.round(ket.tong)) + ' của "' + ten + '" (' + ket.refs.length + ' khoản).', { giay: 7, hoanTac: function(){
+    nguoiThuHoanTac(ket); scheduleSave(); renderVayNo(); toast('Đã hoàn tác lượt thu.');
+  } });
+}
+
 function handleNguoiAction(act, el){
   el = el || {};
   var k = el.getAttribute ? el.getAttribute('data-k') : '';
   if (act === 'nguoiMo'){
     state.nguoiMo = (state.nguoiMo === k) ? null : k;
     renderVayNo();
+    return true;
+  }
+  if (act === 'nguoiThuHet' || act === 'nguoiThuChon'){
+    nguoiThuMo(k, act === 'nguoiThuChon');
     return true;
   }
   if (act === 'nguoiDoiTen'){
