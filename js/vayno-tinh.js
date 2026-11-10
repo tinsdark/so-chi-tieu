@@ -653,7 +653,9 @@ function tongChiThangCard(mk){ return tongThangCard('chi', mk); }
 function soDuHienTaiDieuChinh(homNay){
   var items = [];
   dinhKyDenHan(homNay).forEach(function(x){
-    items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: x.tien });
+    // đã ghi tay vào danh mục tháng này thì chỉ còn phần chênh so với mẫu (phần đã ghi nằm sẵn trong số dư)
+    var con = Math.max(0, x.tien - (x.daGhi || 0));
+    if (con > 0) items.push({ ten: x.dk.ten, kind: x.dk.kind, soTien: con });
   });
   var curMk = monthKey(homNay), tongVay = 0;
   (state.data.vayNo.vayNoPhaiTra || []).forEach(function(loan){

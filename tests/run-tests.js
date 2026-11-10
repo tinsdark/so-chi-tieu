@@ -1887,12 +1887,15 @@ test('dinhKyDenHan: chưa tới ngày thì không nhắc; tới ngày thì nhắ
   eq(ctx.dinhKyDenHan('2026-10-20').some(function(x){ return x.dk.id === 'k3'; }), false, 'k3 đang tắt');
 });
 
-test('dinhKyDenHan: ghi TAY vào danh mục của khoản duBao trong tháng thì hết nhắc (không ghi gấp đôi); tháng sau vẫn nhắc', function(){
+test('dinhKyDenHan: ghi TAY vào danh mục của khoản duBao thì VẪN nhắc kèm số đã ghi (để hỏi ghi thêm / chốt); chốt thì hết', function(){
   loadData(dataDinhKy());
-  eq(ctx.dinhKyDenHan('2026-10-07').length, 1, 'chưa ghi: nhắc');
+  var r0 = ctx.dinhKyDenHan('2026-10-07');
+  eq(r0.length, 1); eq(r0[0].daGhi, 0, 'chưa ghi tay');
   ctx.state.data.journal['2026-10-03'] = { thu: { luong: 9500000 }, chi: {} };
-  eq(ctx.dinhKyDenHan('2026-10-07').length, 0, 'ghi tay (lệch số mẫu) rồi thì không nhắc');
-  eq(ctx.dinhKyDenHan('2026-11-06').filter(function(x){ return x.dk.id === 'k1'; }).length, 1, 'tháng sau nhắc lại');
+  var r = ctx.dinhKyDenHan('2026-10-07');
+  eq(r.length, 1, 'ghi tay rồi vẫn nhắc, không ẩn'); eq(r[0].daGhi, 9500000); eq(r[0].ngayGhi, '2026-10-03');
+  ctx.state.data.dinhKy[0].bo = ['2026-10'];
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 0, 'bấm chốt (bo) thì hết nhắc');
 });
 
 test('dinhKyDenHan: ngày 31 co về cuối tháng ngắn', function(){
