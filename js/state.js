@@ -1153,6 +1153,9 @@ function dinhKyDenHan(homNay){
     if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
     out.push({ dk: dk, mk: mk, han: han, tien: dinhKySoTien(dk, mk) });
   });
+  // khoản "Dùng làm dự báo" = toàn bộ khoản của danh mục (điện nước, tiền nhà, lương...): tháng này đã ghi TAY vào danh mục đó
+  // (không qua nút định kỳ, số tiền thực tế thường lệch số mẫu) thì coi như đã ghi, không nhắc nữa -> khỏi ghi 2 lần.
+  out = out.filter(function(x){ return !(x.dk.duBao && ghiTayTrongThang(x.dk.kind, x.dk.catId, mk) > 0); });
   out.sort(function(a, b){ return a.han < b.han ? -1 : (a.han > b.han ? 1 : 0); });
   return out;
 }
