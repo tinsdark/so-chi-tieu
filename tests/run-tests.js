@@ -4604,6 +4604,37 @@ test('chiaGhi: phần mình thành khoản chi, mỗi người một khoản cho
   eq(d.vayNo.choVay.length, 0); ok(!d.journal['2026-10-10'], 'ngày rỗng bị xóa'); eq(ctx.balanceAt('2026-10-10'), truoc);
 });
 
+test('nguoiThuGhi: một lượt thu nhiều khoản của một người (cũ trước), thu đủ -> đóng hết, hoàn tác về đúng như cũ', function(){
+  loadData(baseData());
+  ctx.chiaGhi({ ten:'Lẩu', ngay:'2026-10-10', cat:'an', walletId:'', minh:0, phan:[{ ten:'A', tien:100000 }] });
+  ctx.chiaGhi({ ten:'Cafe', ngay:'2026-10-12', cat:'an', walletId:'', minh:0, phan:[{ ten:'A', tien:50000 }, { ten:'B', tien:70000 }] });
+  var d = ctx.state.data, truoc = ctx.balanceAt('2026-10-20');
+  var ds = ctx.nguoiKhoanConThu('a');
+  eq(ds.length, 2); eq(ds[0].ten, 'Lẩu (A)', 'khoản cũ trước');
+  var ket = ctx.nguoiThuGhi(ds, 150000, '2026-10-20', '', false);
+  eq(ket.tong, 150000); eq(ket.refs.length, 2, 'mỗi khoản một dòng thu hồi');
+  ok(ds.every(function(c){ return ctx.conLaiPhaiThu(c) === 0 && c.trangThai === 'da_thu_du'; }), 'cả hai đã đóng');
+  eq(ctx.balanceAt('2026-10-20'), truoc + 150000);
+  eq(ctx.nguoiKhoanConThu('b').length, 1, 'khoản của người khác không bị đụng');
+  ctx.nguoiThuHoanTac(ket);
+  eq(ctx.nguoiKhoanConThu('a').length, 2); eq(ctx.balanceAt('2026-10-20'), truoc);
+  ok(!d.journal['2026-10-20'], 'ngày thu rỗng bị xóa');
+});
+
+test('nguoiThuGhi: thu thiếu chia vào khoản cũ nhất trước; chọn tất toán thì khoản thiếu bị xóa nợ', function(){
+  loadData(baseData());
+  ctx.chiaGhi({ ten:'Lẩu', ngay:'2026-10-10', cat:'an', walletId:'', minh:0, phan:[{ ten:'A', tien:100000 }] });
+  ctx.chiaGhi({ ten:'Cafe', ngay:'2026-10-12', cat:'an', walletId:'', minh:0, phan:[{ ten:'A', tien:50000 }] });
+  var ds = ctx.nguoiKhoanConThu('a');
+  var ket = ctx.nguoiThuGhi(ds, 120000, '2026-10-20', '', false);
+  eq(ctx.conLaiPhaiThu(ds[0]), 0, 'khoản cũ đủ'); eq(ctx.conLaiPhaiThu(ds[1]), 30000, 'khoản mới còn thiếu, vẫn mở');
+  ctx.nguoiThuHoanTac(ket);
+  var ket2 = ctx.nguoiThuGhi(ctx.nguoiKhoanConThu('a'), 120000, '2026-10-20', '', true);
+  eq(ctx.nguoiKhoanConThu('a').length, 0, 'tất toán: không còn khoản mở'); eq(ds[1].tatToan.soTien, 30000);
+  ctx.nguoiThuHoanTac(ket2);
+  eq(ctx.nguoiKhoanConThu('a').length, 2); ok(!ds[1].tatToan, 'hoàn tác mở lại khoản');
+});
+
 /* ==================================================================== */
 group('Nhắc thu/chi theo ngày của danh mục');
 
