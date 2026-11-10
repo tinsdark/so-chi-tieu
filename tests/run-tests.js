@@ -1887,6 +1887,17 @@ test('dinhKyDenHan: chưa tới ngày thì không nhắc; tới ngày thì nhắ
   eq(ctx.dinhKyDenHan('2026-10-20').some(function(x){ return x.dk.id === 'k3'; }), false, 'k3 đang tắt');
 });
 
+test('dinhKyDenHan: ghi TAY vào danh mục của khoản duBao thì VẪN nhắc kèm số đã ghi (để hỏi ghi thêm / chốt); chốt thì hết', function(){
+  loadData(dataDinhKy());
+  var r0 = ctx.dinhKyDenHan('2026-10-07');
+  eq(r0.length, 1); eq(r0[0].daGhi, 0, 'chưa ghi tay');
+  ctx.state.data.journal['2026-10-03'] = { thu: { luong: 9500000 }, chi: {} };
+  var r = ctx.dinhKyDenHan('2026-10-07');
+  eq(r.length, 1, 'ghi tay rồi vẫn nhắc, không ẩn'); eq(r[0].daGhi, 9500000); eq(r[0].ngayGhi, '2026-10-03');
+  ctx.state.data.dinhKy[0].bo = ['2026-10'];
+  eq(ctx.dinhKyDenHan('2026-10-07').length, 0, 'bấm chốt (bo) thì hết nhắc');
+});
+
 test('dinhKyDenHan: ngày 31 co về cuối tháng ngắn', function(){
   loadData(dataDinhKy());
   eq(ctx.dinhKyDenHan('2026-11-29').some(function(x){ return x.dk.id === 'k2'; }), false, 'T11 có 30 ngày, chưa tới');

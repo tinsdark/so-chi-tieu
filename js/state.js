@@ -1145,13 +1145,28 @@ function dinhKyChuaGhiThang(mk, kind, catId, chiDuBao){
   return s;
 }
 // các khoản đã tới ngày trong tháng của homNay mà chưa ghi / chưa bỏ qua
+// phần ghi TAY của danh mục trong tháng + ngày ghi tay gần nhất: { tong, ngay }
+function ghiTayChiTiet(kind, catId, mk){
+  var ngay = '';
+  Object.keys(state.data.journal).forEach(function(date){
+    if (monthKey(date) !== mk || date < ngay) return;
+    var e = state.data.journal[date], qua = 0;
+    entryItems(e).forEach(function(it){ if (it.dkId && it.kind === kind && it.catId === catId) qua += num(it.soTien); });
+    if (num((e[kind] || {})[catId]) - qua > 0) ngay = date;
+  });
+  return { tong: ghiTayTrongThang(kind, catId, mk), ngay: ngay };
+}
+// Khoản "Dùng làm dự báo" = toàn bộ khoản của danh mục (điện nước, tiền nhà, lương...): nếu tháng này đã ghi TAY vào danh mục đó
+// (không qua nút định kỳ) thì vẫn nhắc nhưng kèm daGhi / ngayGhi để thẻ HỎI "ghi thêm hay chốt", không tự ghi và không tự ẩn.
 function dinhKyDenHan(homNay){
   var mk = monthKey(homNay), out = [];
   (state.data.dinhKy || []).forEach(function(dk){
     if (!dk.bat || !dinhKyTrongHan(dk, mk)) return;
     var han = ngayTraCuaKy(mk, dk.ngay);
     if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
-    out.push({ dk: dk, mk: mk, han: han, tien: dinhKySoTien(dk, mk) });
+    var it = { dk: dk, mk: mk, han: han, tien: dinhKySoTien(dk, mk), daGhi: 0, ngayGhi: '' };
+    if (dk.duBao){ var g = ghiTayChiTiet(dk.kind, dk.catId, mk); it.daGhi = g.tong; it.ngayGhi = g.ngay; }
+    out.push(it);
   });
   out.sort(function(a, b){ return a.han < b.han ? -1 : (a.han > b.han ? 1 : 0); });
   return out;

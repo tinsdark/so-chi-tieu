@@ -45,7 +45,9 @@ function cbTatCa(homNay){
   var giaiDoan = function(han){ return han <= homNay ? 'q' : 's'; };
   // 1. định kỳ đến hạn
   dinhKyDenHan(homNay).forEach(function(x){
-    them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':q', muc: 'khan', han: x.han, tieu: x.dk.ten, phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · hạn ' + ngayNganVN(x.han),
+    var daGhi = x.daGhi > 0;   // tháng này đã ghi tay: chỉ hỏi "ghi thêm hay chốt", không còn gấp
+    them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':q' + (daGhi ? 'g' : ''), muc: daGhi ? 'sap' : 'khan', han: x.han, tieu: x.dk.ten,
+           phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · hạn ' + ngayNganVN(x.han) + (daGhi ? ' · đã ghi ' + fmt(Math.round(x.daGhi)) + ', ghi thêm hay chốt?' : ''),
            tien: fmt(Math.round(x.tien)), dich: { loai: 'dk' } });
   });
   // 2. khoản thu / chi theo ngày của danh mục

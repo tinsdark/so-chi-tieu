@@ -961,14 +961,18 @@ function dinhKyDenHanHtml(){
   if (!ds.length) return '';
   var h = '<div class="card dk-card k-act" id="cardDinhKy"><h3 style="display:flex;align-items:center;gap:8px">Khoản định kỳ đến hạn <span class="hm-badge over">'+ds.length+'</span></h3>';
   ds.forEach(function(x){
-    var k = x.dk;
+    var k = x.dk, daGhi = x.daGhi > 0;
+    // tháng này đã ghi TAY vào danh mục: hỏi "ghi thêm hay chốt", ô tiền điền sẵn phần còn thiếu (không thì để trống)
+    var dienSan = daGhi ? Math.max(0, x.tien - x.daGhi) : x.tien;
     h += '<div class="dk-row">'
       + '<div class="dk-main"><div class="dk-ten">'+esc(k.ten)
         + ((state.data.wallets || []).length > 1 ? ' <span class="vi-chip">'+esc(viTen(viCuaItem(k)))+'</span>' : '') + '</div>'
-        + '<div class="dk-sub">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · hạn '+ngayVN(x.han).slice(0, 5)+'</div></div>'
-      + '<input type="text" inputmode="numeric" autocomplete="off" class="money dk-in '+k.kind+'" id="dk_tien_'+esc(k.id)+'" value="'+fmt(Math.round(x.tien)).replace(/[^\d.]/g, '')+'" aria-label="Số tiền thật của kỳ này (đang điền sẵn số mẫu)">'
-      + '<div class="dk-btn"><button class="btn sm" data-act="dkGhi" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'">Ghi vào Sổ tay</button>'
-      + '<button class="btn secondary sm" data-act="dkBo" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'" title="Không ghi khoản này trong tháng này">Bỏ qua</button></div>'
+        + '<div class="dk-sub">'+(k.kind === 'thu' ? 'Thu' : 'Chi')+' · '+esc(catTen(k.kind, k.catId))+' · hạn '+ngayVN(x.han).slice(0, 5)+'</div>'
+        + (daGhi ? '<div class="dk-sub">Tháng này đã ghi '+fmt(Math.round(x.daGhi))+(x.ngayGhi ? ' (ngày '+ngayVN(x.ngayGhi).slice(0, 5)+')' : '')+' · mẫu '+fmt(Math.round(x.tien))+'. Ghi thêm hay chốt?</div>' : '')
+        + '</div>'
+      + '<input type="text" inputmode="numeric" autocomplete="off" class="money dk-in '+k.kind+'" id="dk_tien_'+esc(k.id)+'" value="'+(dienSan > 0 ? fmt(Math.round(dienSan)).replace(/[^\d.]/g, '') : '')+'" aria-label="'+(daGhi ? 'Số tiền ghi thêm cho kỳ này' : 'Số tiền thật của kỳ này (đang điền sẵn số mẫu)')+'">'
+      + '<div class="dk-btn"><button class="btn sm" data-act="dkGhi" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'"'+(daGhi ? ' data-daghi="1"' : '')+'>'+(daGhi ? 'Ghi thêm' : 'Ghi vào Sổ tay')+'</button>'
+      + '<button class="btn secondary sm" data-act="dkBo" data-id="'+esc(k.id)+'" data-mk="'+x.mk+'"'+(daGhi ? ' data-chot="1"' : '')+' title="'+(daGhi ? 'Số đã ghi là đủ, không ghi thêm gì (không ghi giao dịch)' : 'Không ghi khoản này trong tháng này')+'">'+(daGhi ? 'Đủ rồi, chốt' : 'Bỏ qua')+'</button></div>'
       + '</div>';
   });
   return h + '</div>';
@@ -1661,7 +1665,7 @@ function handleSoTayAction(act, el){
       if (dkS.bo.indexOf(dkMk) < 0) dkS.bo.push(dkMk);
       scheduleSave();
       renderSoTay();
-      toast('Đã bỏ qua "'+dkS.ten+'" tháng này.', { hoanTac: function(){
+      toast((el.getAttribute('data-chot') ? 'Đã chốt "' : 'Đã bỏ qua "')+dkS.ten+'" tháng này.', { hoanTac: function(){
         dkS.bo = dkS.bo.filter(function(m){ return m !== dkMk; });
         scheduleSave(); renderSoTay();
       } });
@@ -1669,6 +1673,8 @@ function handleSoTayAction(act, el){
     }
     // số tiền mẫu chỉ là gợi ý: ghi theo số trong ô (người dùng sửa được), không đổi mẫu
     var dkTien = numNonNeg(docSo((document.getElementById('dk_tien_' + dkS.id) || {}).value));
+    // đã ghi tay rồi mà ô trống: KHÔNG lấy số mẫu thay (sẽ ghi gấp đôi), bắt nhập số cần ghi thêm
+    if (!(dkTien > 0) && el.getAttribute('data-daghi')){ toast('Nhập số tiền cần ghi thêm, hoặc bấm "Đủ rồi, chốt".', { loai:'warn' }); return true; }
     if (!(dkTien > 0)) dkTien = dinhKySoTien(dkS, dkMk);
     if (dkTien <= 0){ toast('Nhập số tiền lớn hơn 0.', { loai:'warn' }); return true; }
     // ví sắp âm / vượt lời hứa thì hỏi như Ghi nhanh (người dùng tự gõ số tiền nên giữ luật "bất thường" tắt như cũ: số mẫu to là bình thường)
