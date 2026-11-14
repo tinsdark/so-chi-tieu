@@ -8,6 +8,8 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.14.2', ngay: '2026-11-14', ten: 'Báo cáo: thẻ Đầu tư',
+    muc: ['Báo cáo có thẻ "Đầu tư" (chỉ hiện khi đã có khoản đầu tư): tổng còn lỗ / lãi tới cuối tháng đang xem, từng khoản, bỏ vốn và thu về trong tháng, đường lãi / lỗ lũy kế các tháng, kèm cách tính. Bật / tắt và đổi vị trí ở Cài đặt → Hiển thị.']},
   { ban: '2026.11.14', ngay: '2026-11-14', ten: 'Công cụ: thêm trang Đầu tư',
     muc: ['Công cụ có thêm trang "Đầu tư": mỗi khoản chỉ cần tên, rồi bấm "Bỏ thêm vốn" khi bỏ tiền vào và "Thu về" mỗi lần nhận tiền lại. App tự cho biết còn lỗ bao nhiêu hay đã lãi.',
           'Bỏ vốn làm số dư ví và Tài sản ròng giảm thật nhưng không tính là chi tiêu: Chi tiêu, hạn mức và "Hôm nay còn tiêu được" không đổi. Tiền thu về cũng không tính là thu nhập. Hai khoản này hiện ở dòng "Đầu tư (tính riêng)" cạnh dòng "Vay nợ".',

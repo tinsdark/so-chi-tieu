@@ -789,6 +789,46 @@ function taiSanRongCardHtml(mk){
   return h + '</div>';
 }
 
+// thẻ Đầu tư (dautu.js): chỉ hiện khi đã có khoản. Tổng lãi / lỗ, bỏ vốn - thu về của tháng đang xem, từng khoản đang chạy,
+// đường lãi / lỗ lũy kế cuối mỗi tháng (tối đa 12 tháng, không vẽ tháng trước mốc chốt số dư)
+function dauTuCardHtml(mk){
+  var ds = state.data.dauTu || [];
+  if (!ds.length) return '';
+  var cuoi = mk + '-31', tong = dauTuTongTat(cuoi), tt = Math.abs(tong.lai) < 0.5 ? 'hoa' : (tong.lai < 0 ? 'lo' : 'lai');
+  var nhanTong = dauTuNhanLaiLo({ tt: tt, lo: -tong.lai, lai: tong.lai });
+  var thang = bdThang(mk).dauTu;
+  var h = '<div class="card bc-card" id="cardDauTu"><h3 class="bc-h"><span>Đầu tư</span><span class="bc-h-s">' + nhanTong + '</span></h3>'
+    + '<div class="tsr-tbl"><div><span>Đã bỏ vốn (tới cuối ' + monthLabel(mk).toLowerCase() + ')</span><b class="chi">' + bdTien(tong.von) + '</b></div>'
+    + '<div><span>Đã thu về</span><b class="thu">' + bdTien(tong.thu) + '</b></div></div>';
+  if (thang.von + thang.thu > 0.5) h += '<div class="vn-sub" style="margin-top:6px">Trong ' + monthLabel(mk).toLowerCase() + ': bỏ vốn ' + bdTien(thang.von) + ' · thu về ' + bdTien(thang.thu) + '. Không tính vào Thu nhập / Chi tiêu.</div>';
+  var dang = ds.filter(function(x){ return !x.dong && x.ngayMo <= cuoi; }).map(function(x){ return { x: x, t: dauTuTong(x.id, cuoi) }; })
+    .filter(function(r){ return r.t.tt !== 'chua'; }).sort(function(a, b){ return a.t.lai - b.t.lai; });
+  if (dang.length){
+    h += '<div class="bc-rows" style="margin-top:10px">' + dang.slice(0, 5).map(function(r){
+      return '<div class="cc-r"><span>' + esc(r.x.ten) + '</span><b class="' + (r.t.tt === 'lo' ? 'chi' : (r.t.tt === 'lai' ? 'thu' : '')) + '">' + esc(dauTuNhanLaiLo(r.t)) + '</b></div>';
+    }).join('') + (dang.length > 5 ? '<div class="vn-sub">và ' + (dang.length - 5) + ' khoản khác ở Công cụ → Đầu tư</div>' : '') + '</div>';
+  }
+  var startLock = (state.data.settings.ngayBatDau || '').slice(0, 7), ml = [], mv = [], m = mk;
+  for (var i = 0; i < 12; i++){
+    if (startLock && m < startLock) break;
+    ml.unshift('T' + parseInt(m.slice(5), 10) + (m.slice(0, 4) !== mk.slice(0, 4) ? '/' + m.slice(2, 4) : ''));
+    mv.unshift(dauTuTongTat(m + '-31').lai);
+    m = bdThangTruoc(m);
+  }
+  if (mv.length >= 2 && mv.some(function(v){ return Math.abs(v) > 0.5; })){
+    h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 150, labels: ml, series: [{ ten: 'Lãi / lỗ lũy kế', vals: mv, cls: tong.lai < 0 ? 'chi' : 'thu', fill: true }],
+      tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Lãi / lỗ đầu tư lũy kế cuối tháng' }) + '</div>';
+  }
+  h += '<button type="button" class="btn secondary sm" style="margin-top:10px" data-act="goDauTu">Ghi bỏ vốn / thu về ở Công cụ → Đầu tư</button>';
+  h += giaiThichSo([
+    { ten: 'Lãi / lỗ lũy kế', ct: 'Tổng tiền thu về − tổng vốn đã bỏ, của mọi khoản tới cuối tháng đang xem. Vốn coi như đã mất, chỉ tiền thu về mới cộng lại. Không có "giá trị hiện tại" của khoản đang giữ.',
+      pt: ptCong([tong.thu, -tong.von], tong.lai) },
+    { ten: 'Ảnh hưởng tới các số khác', ct: 'Bỏ vốn làm số dư ví và Tài sản ròng giảm ngay, thu về làm tăng lại. Cả hai nằm ngoài Thu nhập, Chi tiêu, hạn mức và "Hôm nay còn tiêu được".',
+      pt: 'Tài sản ròng đổi ' + ptCong([-tong.von, tong.thu], tong.lai) + ' so với trước khi đầu tư' }
+  ], 'Tính thế nào?');
+  return h + '</div>';
+}
+
 /* ====================================================================
    TAB BÁO CÁO — gom các thẻ "xem lại" ra khỏi Sổ tay (Sổ tay chỉ còn việc hằng ngày):
    hạn mức tháng, mục tiêu tiết kiệm, biểu đồ. Dùng chung tháng đang xem với Sổ tay (state.soTayMonth).
@@ -809,6 +849,7 @@ function renderBaoCao(){
       + 'Chưa đặt hạn mức cho danh mục chi nào. Đặt "Hạn mức/tháng" ở tab Cài đặt để theo dõi ở đây.</div></div>',
     taisan: taiSanRongCardHtml(mk),
     muctieu: mucTieuCardHtml(),
+    dautu: dauTuCardHtml(mk),                  // chỉ có khi đã có khoản đầu tư (dautu.js)
     tet: tetCardHtml(),                        // chỉ có khi sắp Tết (tet.js)
     nhan: nhanCardHtml()
   };
@@ -845,8 +886,8 @@ function renderBaoCao(){
   root.innerHTML = html;
 }
 var BC_GIU = 3;
-var BC_NHAN = { ngaytudo: 'Ngày tự do', diemnhan: 'Điều đáng chú ý', tongket: 'Tổng kết', hanmuc: 'Hạn mức', taisan: 'Tài sản ròng', muctieu: 'Mục tiêu', tet: 'Tết', nhan: 'Nhãn' };
-var BC_DICH = { ngaytudo: 'cardNgayTuDo', diemnhan: 'cardDiemNhan', tongket: 'cardTongKet', hanmuc: 'cardHanMuc', taisan: 'cardTaiSanRong', muctieu: 'cardMucTieu', tet: 'cardTet', nhan: 'cardNhan' };
+var BC_NHAN = { ngaytudo: 'Ngày tự do', diemnhan: 'Điều đáng chú ý', tongket: 'Tổng kết', hanmuc: 'Hạn mức', taisan: 'Tài sản ròng', muctieu: 'Mục tiêu', dautu: 'Đầu tư', tet: 'Tết', nhan: 'Nhãn' };
+var BC_DICH = { ngaytudo: 'cardNgayTuDo', diemnhan: 'cardDiemNhan', tongket: 'cardTongKet', hanmuc: 'cardHanMuc', taisan: 'cardTaiSanRong', muctieu: 'cardMucTieu', dautu: 'cardDauTu', tet: 'cardTet', nhan: 'cardNhan' };
 function bcNutChu(tens, mo){ return mo ? 'Thu gọn ⌃' : 'Xem thêm ' + tens.length + ' thẻ: ' + tens.join(', ') + ' ⌄'; }
 // hàng chip nhảy nhanh tới từng thẻ đang hiện (dùng lại tqCuon, tự mở phần gập nếu thẻ nằm trong đó)
 function bcChipsHtml(ids, coBd){

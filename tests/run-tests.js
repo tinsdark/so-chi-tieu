@@ -6181,15 +6181,15 @@ test('ht: ẩn / hiện, thứ tự, đặt lại; chỉ đổi cách vẽ; id l
   eq(ctx.htAn('baocao', 'tongket'), false); eq(ctx.htDatAn('baocao', 'tongket', true), true); eq(ctx.htAn('baocao', 'tongket'), true); eq(ctx.htAn('sotay', 'tongket'), false, 'nhóm khác không ảnh hưởng');
   ctx.htDatAn('baocao', 'tongket', false); eq(ctx.htAn('baocao', 'tongket'), false);
   eq(ctx.htDatAn('baocao', 'khong-co', true), false, 'id lạ bị bỏ qua'); eq(ctx.htAn('baocao', 'khong-co'), false);
-  eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo', 'thứ tự mặc định');
-  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,muctieu,taisan,diemnhan,ngaytudo,tet,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
-  eq(ctx.htDoiViTri('baocao', 'tongket', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[8], 'bieudo', 'biểu đồ luôn ở cuối');
+  eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,dautu,diemnhan,ngaytudo,tet,nhan,bieudo', 'thứ tự mặc định');
+  eq(ctx.htDoiViTri('baocao', 'muctieu', -1), true); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,muctieu,taisan,dautu,diemnhan,ngaytudo,tet,nhan,bieudo', 'mục tiêu lên trên tài sản ròng');
+  eq(ctx.htDoiViTri('baocao', 'tongket', -1), false, 'đã ở đầu thì không đổi'); eq(ctx.htDoiViTri('baocao', 'bieudo', -1), false, 'thẻ khongThuTu không đổi vị trí'); eq(ctx.htThuTu('baocao')[9], 'bieudo', 'biểu đồ luôn ở cuối');
   eq(ctx.htDoiViTri('baocao', 'nhan', 1), false, 'nhan là thẻ đổi được cuối cùng (bieudo cố định)');
-  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'tongket,hanmuc,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
-  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
+  ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'tongket,hanmuc,muctieu,dautu,diemnhan,ngaytudo,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
+  ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,dautu,diemnhan,ngaytudo,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
   luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 6);
   luuTru['sct_hien_thi_v1'] = JSON.stringify({ thuTu: { baocao: ['nhan', 'cu-khong-con', 'hanmuc'] } });
-  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,tongket,taisan,muctieu,diemnhan,ngaytudo,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
+  eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,tongket,taisan,muctieu,dautu,diemnhan,ngaytudo,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
   htSach();
 });
 test('ht: Công cụ chỉ đổi vị trí trong CÙNG nhóm (Quyết định / Sổ)', function(){
@@ -7885,6 +7885,25 @@ test('Đầu tư (giao diện): dòng ở Sổ tay ghi "Đầu tư" và dẫn t�
   ok(h.indexOf('data-act="goDauTu"') > 0 && h.indexOf('Vay-Nợ') < 0 && h.indexOf('Đầu tư') > 0 && h.indexOf('Bỏ vốn đầu tư') > 0, h);
   var kq = nhomTim('alpha', 'dautu'); ok(kq && kq.ds.length === 1 && kq.ds[0].tieu === 'Quỹ Alpha', 'tìm thấy khoản đầu tư');
   eq(ctx.state.data.journal['2026-10-02'].ghiChu, 'Bỏ vốn: Quỹ Alpha', 'ghi chú ngày');
+});
+
+test('Đầu tư (Báo cáo): không có khoản thì không có thẻ; có khoản thì hiện tổng, từng khoản, đường lũy kế, phép tính đúng', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' } })); setToday('2026-10-20');
+  eq(ctx.dauTuCardHtml('2026-10'), '', 'chưa có khoản đầu tư thì không có thẻ');
+  var a = ctx.dauTuThem('Quỹ A', '2026-09-05'), b = ctx.dauTuThem('Vàng', '2026-10-01');
+  ctx.dauTuBoVon(a.id, '2026-09-05', 10000000); ctx.dauTuThuVe(a.id, '2026-10-05', 2000000); ctx.dauTuThuVe(a.id, '2026-10-06', 3000000);
+  ctx.dauTuBoVon(b.id, '2026-10-08', 4000000); ctx.dauTuThuVe(b.id, '2026-10-12', 4500000);
+  var h = ctx.dauTuCardHtml('2026-10');
+  ok(h.indexOf('id="cardDauTu"') > 0 && h.indexOf('Quỹ A') > 0 && h.indexOf('Vàng') > 0, 'có thẻ, có hai khoản');
+  ok(h.indexOf('Còn lỗ ' + ctx.fmt(4500000)) > 0, 'tổng: vốn 14tr, thu 9,5tr → còn lỗ 4,5tr');
+  ok(h.indexOf('Còn lỗ ' + ctx.fmt(5000000)) > 0 && h.indexOf('Lãi ' + ctx.fmt(500000)) > 0, 'từng khoản: Quỹ A còn lỗ 5tr, Vàng lãi 500k');
+  ok(h.indexOf('<svg') > 0, 'có đường lãi / lỗ lũy kế (2 tháng có dữ liệu)');
+  ok(h.indexOf('9.500.000 − 14.000.000 = −4.500.000') > 0, 'phép tính');
+  eq(kiemPhepCong(h).loi.join(' | '), ''); ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0);
+  var h9 = ctx.dauTuCardHtml('2026-09'); ok(h9.indexOf('Còn lỗ ' + ctx.fmt(10000000)) > 0, 'tháng 9: mới bỏ 10tr, chưa thu về');
+  ok(ctx.BC_NHAN.dautu === 'Đầu tư' && ctx.BC_DICH.dautu === 'cardDauTu', 'đăng ký chip nhảy nhanh');
+  ok(ctx.htThe('baocao', 'dautu'), 'bật / tắt được ở Cài đặt → Hiển thị');
+  setToday('2026-10-01');
 });
 
 (async function ketThuc(){
