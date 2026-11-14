@@ -22,6 +22,7 @@ var HT_THE = {
     { id: 'hanmuc', ten: 'Hạn mức' },
     { id: 'taisan', ten: 'Tài sản ròng' },
     { id: 'muctieu', ten: 'Mục tiêu tiết kiệm' },
+    { id: 'dautu', ten: 'Đầu tư', mota: 'Còn lỗ hay lãi, chỉ hiện khi đã có khoản đầu tư' },
     { id: 'diemnhan', ten: 'Điều đáng chú ý', mota: 'Vài câu tự rút ra từ dữ liệu' },
     { id: 'ngaytudo', ten: 'Ngày tự do', mota: 'Tiền đang có đủ sống bao nhiêu ngày' },
     { id: 'tet', ten: 'Tết đếm ngược', mota: 'Hiện khi còn dưới 150 ngày tới Tết: số Tết năm ngoái và Quỹ Tết' },
