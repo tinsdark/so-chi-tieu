@@ -625,14 +625,15 @@ function renderSoTay(){
     if (vt <= 0) vt = '';
     var roThu = !!VN_ONLY_THU[c.id] && !vt;
     html += '<div><label>'+esc(c.ten)
-      + (lockThu > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockThu))+' khóa từ Vay-Nợ)</span>' : '')
+      + (lockThu > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockThu))+' khóa từ '+(c.id === 'dauTuThu' ? 'Đầu tư' : 'Vay-Nợ')+')</span>' : '')
       + '</label><input type="text" inputmode="numeric" autocomplete="off" class="money f_thu" data-cat="'+c.id+'" data-lock="'+lockThu+'" value="'+veSo(vt)+'" placeholder="0"'
-      + (roThu ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
+      + (roThu ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ '+(c.id === 'dauTuThu' ? 'Công cụ → Đầu tư' : 'tab Vay - Nợ')+'"' : '')
       + '>';
     if (VN_ONLY_THU[c.id]){
       html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
-        + (roThu ? 'Ghi ở tab Vay - Nợ — tự hạch toán sang đây.'
-                 : 'Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+        + (c.id === 'dauTuThu' ? (roThu ? 'Ghi ở Công cụ → Đầu tư (Thu về) — tự hạch toán sang đây.' : 'Số này nhập tay, không gắn khoản đầu tư nào. Nên xóa và ghi ở Công cụ → Đầu tư.')
+          : (roThu ? 'Ghi ở tab Vay - Nợ — tự hạch toán sang đây.'
+                 : 'Số này nhập tay, không gắn khoản vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.'))
         + '</div>';
     }
     html += '</div>';
@@ -649,14 +650,15 @@ function renderSoTay(){
     if (v <= 0) v = '';
     var roChi = !!VN_ONLY_CHI[c.id] && !v;
     html += '<div><label>'+esc(c.ten)
-      + (lockChi > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockChi))+' khóa từ Vay-Nợ)</span>' : '')
+      + (lockChi > 0 ? ' <span style="color:var(--muted);font-weight:400">(+'+fmt(Math.round(lockChi))+' khóa từ '+(c.id === 'dauTuVon' ? 'Đầu tư' : 'Vay-Nợ')+')</span>' : '')
       + '</label><input type="text" inputmode="numeric" autocomplete="off" class="money f_chi" data-cat="'+c.id+'" data-lock="'+lockChi+'" value="'+veSo(v)+'" placeholder="0"'
-      + (roChi ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ tab Vay - Nợ"' : '')
+      + (roChi ? ' readonly tabindex="-1" style="background:var(--bg);color:var(--muted)" title="Danh mục này chỉ ghi được từ '+(c.id === 'dauTuVon' ? 'Công cụ → Đầu tư' : 'tab Vay - Nợ')+'"' : '')
       + '>';
     if (VN_ONLY_CHI[c.id]){
       html += '<div class="empty" style="padding:2px 0 0;font-size:11px;text-align:left">'
-        + (roChi ? 'Ghi ở tab Vay - Nợ (thêm khoản cho vay) — tự hạch toán sang đây.'
-                 : 'Số này nhập tay, không gắn khoản cho vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.')
+        + (c.id === 'dauTuVon' ? (roChi ? 'Ghi ở Công cụ → Đầu tư (Bỏ vốn) — tự hạch toán sang đây.' : 'Số này nhập tay, không gắn khoản đầu tư nào. Nên xóa và ghi ở Công cụ → Đầu tư.')
+          : (roChi ? 'Ghi ở tab Vay - Nợ (thêm khoản cho vay) — tự hạch toán sang đây.'
+                 : 'Số này nhập tay, không gắn khoản cho vay nào. Nên xóa và tạo khoản ở tab Vay - Nợ.'))
         + '</div>';
     }
     if (c.id === 'traNo' && !state.editingDate){
@@ -801,10 +803,11 @@ function dlRefHtml(r){
   if (!m) return '';
   var ten = catTen(m.kind, m.cat);
   var vi = ((state.data.wallets || []).length > 1) ? ' · ' + esc(viTen(viCuaRef(r))) : '';
-  return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="goVayNo" title="Sửa ở tab Vay - Nợ">'
+  var dt = r.loai === 'dauTuVon' || r.loai === 'dauTuThu';
+  return '<div class="dl-row ref"><div class="dl-main" role="button" tabindex="0" data-act="'+(dt ? 'goDauTu' : 'goVayNo')+'" title="'+(dt ? 'Sửa ở Công cụ → Đầu tư' : 'Sửa ở tab Vay - Nợ')+'">'
     + '<span class="dl-dot" style="--c:'+catMau(m.kind, m.cat)+'" aria-hidden="true"></span>'
     + '<span class="dl-txt"><span class="dl-t1">'+esc(REF_LABEL[r.loai] || r.loai)+(r.ky != null ? ' · kỳ '+(num(r.ky)+1) : '')+(r.note ? ' — '+esc(dlGhiChuRef(r)) : '')+'</span>'
-    +   '<span class="dl-t2">'+esc(ten)+vi+' · '+icon('lock')+' Vay-Nợ</span></span>'
+    +   '<span class="dl-t2">'+esc(ten)+vi+' · '+icon('lock')+(dt ? ' Đầu tư' : ' Vay-Nợ')+'</span></span>'
     + '<span class="dl-amt '+m.kind+'">'+dlSoTien(m.kind, r.soTien)+'</span>'
     + '</div></div>';
 }
@@ -1584,7 +1587,9 @@ function handleSoTayAction(act, el){
     }
     var msgDel = '';
     if (refsDel.length){
-      msgDel = 'Ngày này có '+refsDel.length+' giao dịch gắn với khoản vay, xóa sẽ hoàn tác luôn ở tab Vay - Nợ:\n'
+      var chiDauTu = refsDel.every(function(r){ return r.loai === 'dauTuVon' || r.loai === 'dauTuThu'; });
+      msgDel = (chiDauTu ? 'Ngày này có '+refsDel.length+' giao dịch đầu tư, xóa sẽ bỏ luôn các lần bỏ vốn / thu về đó (lãi / lỗ ở Công cụ → Đầu tư tính lại):\n'
+                         : 'Ngày này có '+refsDel.length+' giao dịch gắn với khoản vay hoặc đầu tư, xóa sẽ hoàn tác luôn ở tab Vay - Nợ / Công cụ → Đầu tư:\n')
         + refsDel.map(function(r){
             var cvR = r.loai === 'thuHoiChoVay' && (state.data.vayNo.choVay||[]).find(function(x){ return x.id === r.loanId; });
             return '  • ' + (REF_LABEL[r.loai]||r.loai) + ' · ' + fmt(r.soTien)
@@ -1735,7 +1740,7 @@ function handleSoTayAction(act, el){
     if (tienS <= 0){ toast('Số tiền phải lớn hơn 0.', { loai:'warn' }); return true; }
     // hai danh mục này chỉ được sinh từ tab Vay - Nợ, nhập tay ở đây tạo tiền mồ côi
     if ((kindS === 'thu' && VN_ONLY_THU[catS]) || (kindS === 'chi' && VN_ONLY_CHI[catS])){
-      toast('Danh mục "'+catTen(kindS, catS)+'" chỉ ghi được từ tab Vay - Nợ.', { loai:'err' });
+      toast('Danh mục "'+catTen(kindS, catS)+'" chỉ ghi được từ '+(catS === 'dauTuVon' || catS === 'dauTuThu' ? 'Công cụ → Đầu tư' : 'tab Vay - Nợ')+'.', { loai:'err' });
       return true;
     }
     var nhanS = nhanParse((document.getElementById('st_it_nhan') || {}).value);
@@ -1799,6 +1804,9 @@ function handleSoTayAction(act, el){
   } else if (act === 'goTheoNgay'){
     state.dtTheoNgay = true; state.dtMoPhong = false;
     chuyenTab('dongtien');
+    if (window.scrollTo) window.scrollTo({ top: 0 });
+  } else if (act === 'goDauTu'){
+    state.ccTrang = 'dautu'; chuyenTab('congcu');
     if (window.scrollTo) window.scrollTo({ top: 0 });
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';

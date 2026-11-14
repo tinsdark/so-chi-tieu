@@ -211,7 +211,8 @@ var CC_TRANG = [
   { key: 'giocong', nhom: 'Quyết định', ten: 'Giờ công', icon: 'clock', tomTat: function(){ return gcTomTat(); }, trang: function(){ return gcCardHtml(); } },
   { key: 'loihua', nhom: 'Quyết định', ten: 'Lời hứa', icon: 'flag', tomTat: function(){ return lhTomTat(); }, trang: function(){ return lhCardHtml(); } },
   { key: 'sommung', nhom: 'Sổ', ten: 'Sổ mừng và quà', icon: 'gift', tomTat: function(){ return smTomTat(); }, trang: function(){ return smPageHtml(); } },
-  { key: 'dodac', nhom: 'Sổ', ten: 'Sổ đồ đạc', icon: 'package', tomTat: function(){ return ddTomTat(); }, trang: function(){ return ddPageHtml(); } }
+  { key: 'dodac', nhom: 'Sổ', ten: 'Sổ đồ đạc', icon: 'package', tomTat: function(){ return ddTomTat(); }, trang: function(){ return ddPageHtml(); } },
+  { key: 'dautu', nhom: 'Sổ', ten: 'Đầu tư', icon: 'trend', tomTat: function(){ return dtTomTat(); }, trang: function(){ return dtPageHtml(); } }
 ];
 function ccHubHtml(){
   var h = '<div class="dm-page">', nhom = '';
@@ -259,6 +260,7 @@ function ccSheetHtml(){
   if (state.ccForm.loai === 'lh') return lhSheetHtml(state.ccForm.id);
   if (state.ccForm.loai === 'sm') return smSheetHtml(state.ccForm.id);
   if (state.ccForm.loai === 'dd') return ddSheetHtml(state.ccForm.id);
+  if (state.ccForm.loai === 'dt') return dtSheetHtml(state.ccForm.id);
   var m = (state.data.muonMua || []).filter(function(x){ return x.id === state.ccForm.id; })[0];
   if (!m) return '';
   var tienGhi = mmKeHoachTra(num(m.soTien), m.thang, m.lai, todayStr())[0].soTien;
@@ -383,7 +385,7 @@ function handleCongCuAction(act, el){
       if (dd){ var di = state.data.doDac.indexOf(dd); if (di >= 0) state.data.doDac.splice(di, 1); }
       scheduleSave(); renderCongCu();
     } });
-  } else return handleGioCongAction(act, el) || handleLoiHuaAction(act, el) || handleSoMungAction(act, el) || handleDoDacAction(act, el);
+  } else return handleGioCongAction(act, el) || handleLoiHuaAction(act, el) || handleSoMungAction(act, el) || handleDoDacAction(act, el) || handleDauTuAction(act, el);
   return true;
 }
 document.addEventListener('keydown', function(ev){

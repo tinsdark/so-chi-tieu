@@ -14,7 +14,7 @@ Web app quản lý chi tiêu cá nhân bằng tiếng Việt. Chạy hoàn toàn
 | **Dòng tiền** | `2` | **Theo ngày** (hôm nay, lịch từng ngày, tiền 30 ngày tới, lịch từng ví), **Theo tháng** (tiền vào − ra, thu / chi theo danh mục, dòng tiền tích lũy 6–24 tháng) và **Mô phỏng** (vùng nháp thử thu / chi / vay thêm, không đụng dữ liệu thật). |
 | **Báo cáo** | `3` | Hạn mức từng danh mục, tài sản ròng, mục tiêu tiết kiệm, biểu đồ chi tiêu (Tổng quan / Danh mục / Xu hướng), tổng kết tháng, điều đáng chú ý, theo nhãn, ngày tự do, Tết. |
 | **Vay - Nợ** | `4` | Cho vay và vay phải trả, lịch trả theo kỳ, tất toán, bảng theo dõi 6–24 tháng, sổ nợ theo đối tượng, chia hóa đơn nhóm. |
-| **Công cụ** | `5` | Muốn mua / Mua được không, Giờ công, Lời hứa, Sổ mừng và quà, Sổ đồ đạc. |
+| **Công cụ** | `5` | Muốn mua / Mua được không, Giờ công, Lời hứa, Sổ mừng và quà, Sổ đồ đạc, Đầu tư. |
 | **Cài đặt** | `6` | Năm phần: **Danh mục** · **Tiền** (số dư đầu kỳ, ví, QR nhận tiền, chốt số dư) · **Kế hoạch** (giao dịch định kỳ, mục tiêu) · **Hiển thị** · **Ứng dụng** (phiên bản, thuật ngữ, sao lưu, khóa app, tài khoản). |
 
 Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bảng phím tắt, `Esc` đóng hộp thoại.
@@ -48,6 +48,7 @@ Phím tắt khác (máy tính): `N` thêm giao dịch, `/` tìm kiếm, `?` bả
 
 ### Công cụ
 
+- **Đầu tư** (`js/dautu.js`): theo dõi **dòng tiền** từng khoản, không định giá tài sản. Mỗi khoản chỉ có tên; **Bỏ vốn** là dòng chi, **Thu về** là dòng thu ở Sổ tay (có ổ khóa, ref `dauTuVon` / `dauTuThu`, danh mục hệ thống trong `CAT_HE_THONG`). Lãi / lỗ = tổng thu về − tổng vốn đã bỏ ("Còn lỗ 5.000.000" sau khi bỏ 10tr rồi thu 2tr + 3tr). Bỏ vốn làm số dư và Tài sản ròng giảm thật nhưng **không** tính vào Thu nhập, Chi tiêu, hạn mức, "Hôm nay còn tiêu được"; hiện ở dòng "Đầu tư (tính riêng)" cạnh "Vay nợ". Danh mục hệ thống chỉ sinh khi đã có khoản đầu tư. Đóng khoản để chốt lãi / lỗ, xóa riêng từng lần ghi (có Hoàn tác).
 - **Muốn mua**: chèn khoản chi vào lịch tiền 60 ngày, trả lời số dư thấp nhất, ngày sớm nhất mua vẫn an toàn, ảnh hưởng mục tiêu; có danh sách chờ N ngày rồi hỏi "còn muốn mua không".
 - **Giờ công**: đổi tiền ra thời gian đi làm. **Lời hứa**: cam kết có hạn (theo danh mục hoặc từ khóa ghi chú), trạng thái tính từ sổ. **Sổ mừng và quà** (có đi có lại, mặc định chỉ ghi nhớ). **Sổ đồ đạc** (chi phí mỗi ngày dùng, bảo hành).
 
@@ -176,4 +177,4 @@ node tools/bump.js --check  # chỉ kiểm tra
 - **Mã hóa dữ liệu bằng PIN** (WebCrypto): nặng và rủi ro (quên PIN là mất dữ liệu), cần migration và test kỹ.
 - **Báo cáo xuất ảnh / PDF** để chia sẻ.
 - **Đính kèm ảnh hóa đơn** vào giao dịch (lưu Drive, cần quản lý dung lượng).
-- **Sổ tiết kiệm có kỳ hạn**, vàng / chứng khoán vào tài sản ròng (giá nhập tay); **Sổ Hụi** (dây hụi, lãi suất thực theo năm).
+- **Sổ tiết kiệm có kỳ hạn** (tính lãi dự kiến, nhắc đáo hạn); **Sổ Hụi** (dây hụi, lãi suất thực theo năm).

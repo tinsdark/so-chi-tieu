@@ -6187,16 +6187,16 @@ test('ht: ẩn / hiện, thứ tự, đặt lại; chỉ đổi cách vẽ; id l
   eq(ctx.htDoiViTri('baocao', 'nhan', 1), false, 'nhan là thẻ đổi được cuối cùng (bieudo cố định)');
   ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'tongket,hanmuc,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
   ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,diemnhan,ngaytudo,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
-  luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 5);
+  luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 6);
   luuTru['sct_hien_thi_v1'] = JSON.stringify({ thuTu: { baocao: ['nhan', 'cu-khong-con', 'hanmuc'] } });
   eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,tongket,taisan,muctieu,diemnhan,ngaytudo,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
   htSach();
 });
 test('ht: Công cụ chỉ đổi vị trí trong CÙNG nhóm (Quyết định / Sổ)', function(){
   htSach();
-  eq(ctx.htDoiViTri('congcu', 'giocong', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,sommung,dodac');
+  eq(ctx.htDoiViTri('congcu', 'giocong', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,sommung,dodac,dautu');
   eq(ctx.htDoiViTri('congcu', 'loihua', 1), false, 'loihua là cuối nhóm Quyết định: không nhảy sang nhóm Sổ');
-  eq(ctx.htDoiViTri('congcu', 'dodac', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,dodac,sommung');
+  eq(ctx.htDoiViTri('congcu', 'dodac', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,dodac,sommung,dautu');
   htSach();
 });
 test('Báo cáo / Sổ tay / hub Công cụ vẽ theo tuỳ chọn: ẩn thẻ thì không vẽ, đổi thứ tự thì đổi vị trí, số liệu không đổi', function(){
@@ -6215,7 +6215,7 @@ test('Báo cáo / Sổ tay / hub Công cụ vẽ theo tuỳ chọn: ẩn thẻ t
   var hub0 = ctx.ccHubHtml(); ok(hub0.indexOf('<b>Giờ công</b>') > 0);
   ctx.htDatAn('congcu', 'giocong', true); ok(ctx.ccHubHtml().indexOf('<b>Giờ công</b>') < 0 && ctx.ccHubHtml().indexOf('<b>Lời hứa</b>') > 0, 'ẩn một ô');
   ctx.htDatAn('congcu', 'giocong', false); ctx.htDoiViTri('congcu', 'loihua', -1); var hub2 = ctx.ccHubHtml(); ok(hub2.indexOf('<b>Lời hứa</b>') < hub2.indexOf('<b>Giờ công</b>'), 'Lời hứa lên trước Giờ công');
-  ['muonmua', 'giocong', 'loihua', 'sommung', 'dodac'].forEach(function(id){ ctx.htDatAn('congcu', id, true); }); ok(ctx.ccHubHtml().indexOf('Đã ẩn hết công cụ') > 0, 'ẩn hết thì báo cách bật lại');
+  ['muonmua', 'giocong', 'loihua', 'sommung', 'dodac', 'dautu'].forEach(function(id){ ctx.htDatAn('congcu', id, true); }); ok(ctx.ccHubHtml().indexOf('Đã ẩn hết công cụ') > 0, 'ẩn hết thì báo cách bật lại');
   htSach(); setToday('2026-10-01');
 });
 test('Cài đặt: 5 phần bằng thanh chọn (không phải danh sách bấm); mỗi phần chỉ chứa đúng thẻ của nó; bảng sửa nhảy đúng phần', function(){
@@ -7812,6 +7812,79 @@ test('Đầu tư: đóng / mở lại khoản; danh mục hệ thống không nh
   ok(ctx.VN_ONLY_CHI.dauTuVon && ctx.VN_ONLY_THU.dauTuThu, 'khóa nhập tay');
   ok(!ctx.qaCats('chi').some(function(c){ return c.id === 'dauTuVon'; }) && !ctx.qaCats('thu').some(function(c){ return c.id === 'dauTuThu'; }), 'không có ở Ghi nhanh');
   ok(ctx.DK_CAT_LOAI.dauTuVon && ctx.DK_CAT_LOAI.dauTuThu, 'không khai làm định kỳ');
+});
+
+test('Đầu tư (giao diện): trang trống rồi có khoản — không NaN / undefined, phép cộng "Cách tính" đúng, tóm tắt ở Công cụ', function(){
+  dtData(50000000); setToday('2026-10-20');
+  var h0 = ctx.dtPageHtml(); ok(h0.indexOf('Chưa có khoản nào') > 0, 'trang trống có ví dụ'); eq(ctx.dtTomTat().chu, 'Bỏ vốn, thu về: còn lỗ hay đã lãi');
+  var a = ctx.dauTuThem('Quỹ A', '2026-10-02'); ctx.dauTuBoVon(a.id, '2026-10-02', 10000000); ctx.dauTuThuVe(a.id, '2026-10-05', 2000000); ctx.dauTuThuVe(a.id, '2026-10-06', 3000000);
+  var h = ctx.dtPageHtml();
+  ok(h.indexOf('Quỹ A') > 0 && h.indexOf('Còn lỗ') > 0, 'hiện khoản và còn lỗ');
+  ok(h.indexOf('5.000.000 − 10.000.000 = −5.000.000') > 0, 'phép tính lãi/lỗ: 5tr − 10tr');
+  ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0, 'không lộ undefined / NaN');
+  eq(kiemPhepCong(h).loi.join(' | '), ''); ok(kiemPhepCong(h).n >= 2);
+  ok(h.indexOf('data-act="dtVon"') > 0 && h.indexOf('data-act="dtThu"') > 0 && h.indexOf('data-act="dtXoaLan"') > 0, 'có nút bỏ thêm vốn / thu về / xóa lần');
+  ok(ctx.dtTomTat().chu.indexOf('1 khoản đang chạy') === 0, ctx.dtTomTat().chu);
+  ok(ctx.ccHubHtml().indexOf('data-trang="dautu"') > 0, 'có ô Đầu tư ở màn Công cụ');
+  ctx.dauTuDong(a.id, '2026-10-09'); var h2 = ctx.dtPageHtml(); ok(h2.indexOf('Đã đóng') > 0 && h2.indexOf('data-act="dtVon"') < 0, 'khoản đã đóng: không còn nút bỏ vốn / thu về');
+  setToday('2026-10-01');
+});
+test('Đầu tư (giao diện): thêm khoản kèm vốn, bỏ thêm vốn, thu về, xóa một lần (có hoàn tác), đóng khoản, xóa khoản', function(){
+  var d = dtData(50000000); setToday('2026-10-20'); var root = { innerHTML: '' }, kg = function(o){ o.tabContent = root; return o; };
+  var chay = function(act, els, attrs){ return voiDom(kg(els || {}), null, function(){ return ctx.handleDauTuAction(act, elAct(attrs || {})); }); };
+  ctx.state.ccForm = { loai: 'dt', id: 'k|' };
+  chay('dtKhoanLuu', { dt_ten: { value: ' Quỹ A ' }, dt_ngay: { value: '2026-10-02' }, dt_note: { value: '' }, dt_von: { value: '10.000.000' }, dt_vi: { value: '' } });
+  eq(d.dauTu.length, 1); var id = d.dauTu[0].id; eq(d.dauTu[0].ten, 'Quỹ A'); eq(ctx.dauTuTong(id).von, 10000000, 'vốn ban đầu đã ghi');
+  eq(ctx.state.ccForm, null, 'đóng bảng');
+  ctx.state.ccForm = { loai: 'dt', id: 'thu|' + id };
+  chay('dtGhiLuu', { dt_tien: { value: '2.000.000' }, dt_ngay: { value: '2026-10-05' }, dt_vi: { value: '' }, dt_note: { value: '' } });
+  ctx.state.ccForm = { loai: 'dt', id: 'thu|' + id };
+  chay('dtGhiLuu', { dt_tien: { value: '3.000.000' }, dt_ngay: { value: '2026-10-06' }, dt_vi: { value: '' }, dt_note: { value: 'đợt 2' } });
+  var t = ctx.dauTuTong(id); eq(t.thu, 5000000); eq(t.lo, 5000000, 'còn lỗ 5tr như ví dụ');
+  ctx.state.ccForm = { loai: 'dt', id: 'von|' + id };
+  chay('dtGhiLuu', { dt_tien: { value: '1.000.000' }, dt_ngay: { value: '2026-10-07' }, dt_vi: { value: '' }, dt_note: { value: '' } });
+  eq(ctx.dauTuTong(id).von, 11000000, 'bỏ thêm vốn');
+  ctx.state.ccForm = { loai: 'dt', id: 'thu|' + id };
+  chay('dtGhiLuu', { dt_tien: { value: '0' }, dt_ngay: { value: '2026-10-07' } }); eq(ctx.dauTuTong(id).thu, 5000000, 'số tiền 0 thì không ghi');
+  ctx.state.ccForm = { loai: 'dt', id: 'thu|' + id };
+  chay('dtGhiLuu', { dt_tien: { value: '1.000' }, dt_ngay: { value: 'sai' } }); eq(ctx.dauTuTong(id).thu, 5000000, 'ngày sai thì không ghi');
+  var ls = ctx.dauTuLichSu(id); eq(ls.length, 4); eq(ls[0].ngay, '2026-10-07', 'mới nhất trước');
+  var lan = ls.filter(function(l){ return l.loai === 'dauTuThu' && l.soTien === 3000000; })[0];
+  var duTruoc = ctx.balanceAt('2026-10-31');
+  chay('dtXoaLan', {}, { 'data-id': id, 'data-ngay': lan.ngay, 'data-rid': lan.rid });
+  eq(ctx.dauTuTong(id).thu, 2000000, 'đã xóa đúng lần 3tr'); eq(ctx.balanceAt('2026-10-31'), duTruoc - 3000000, 'số dư giảm lại 3tr'); eq(ctx.journalKiemTra().length, 0);
+  ctx.state.ccForm = { loai: 'dt', id: 'k|' + id };
+  chay('dtKhoanLuu', { dt_ten: { value: 'Quỹ A2' }, dt_ngay: { value: '2026-10-02' }, dt_note: { value: 'ghi chú' }, dt_dong: { checked: true } });
+  eq(ctx.dauTuTim(id).ten, 'Quỹ A2'); eq(ctx.dauTuTim(id).dong, true); eq(ctx.dauTuTim(id).ngayDong, '2026-10-20');
+  chay('dtKhoanLuu', { dt_ten: { value: '' }, dt_ngay: { value: '2026-10-02' } }); eq(ctx.dauTuTim(id).ten, 'Quỹ A2', 'thiếu tên thì không đổi');
+  ctx.state.ccForm = { loai: 'dt', id: 'k|' + id };
+  var truocXoa = ctx.balanceAt('2026-10-31');
+  chay('dtXoaKhoan', {}, { 'data-id': id });   // có dòng ở Sổ tay nên hỏi xác nhận (bất đồng bộ); trong test chỉ kiểm hàm thuần dưới đây
+  eq(ctx.dauTuXoa(id), 3, 'gỡ 3 lần ghi còn lại'); eq(ctx.balanceAt('2026-10-31'), truocXoa + 11000000 - 2000000);
+  eq(ctx.handleDauTuAction('khong-phai-viec-cua-dau-tu', {}), false);
+  ctx.state.ccForm = null; setToday('2026-10-01');
+});
+test('Đầu tư (giao diện): bảng bỏ vốn / thu về / khoản mới; ví sắp âm thì HỎI trước khi ghi bỏ vốn', function(){
+  var d = dtData(1000000); setToday('2026-10-20'); var x = ctx.dauTuThem('Quỹ A');
+  var hv = ctx.dtSheetHtml('von|' + x.id), ht = ctx.dtSheetHtml('thu|' + x.id), hk = ctx.dtSheetHtml('k|');
+  ok(hv.indexOf('Bỏ vốn: Quỹ A') > 0 && hv.indexOf('không tính là chi tiêu') > 0 && hv.indexOf('data-act="dtGhiLuu"') > 0, 'bảng bỏ vốn');
+  ok(ht.indexOf('Thu về: Quỹ A') > 0 && ht.indexOf('không tính là thu nhập') > 0, 'bảng thu về');
+  ok(hk.indexOf('Thêm khoản đầu tư') > 0 && hk.indexOf('dt_von') > 0, 'bảng khoản mới có ô vốn ban đầu');
+  ok(ctx.dtSheetHtml('k|' + x.id).indexOf('dtXoaKhoan') > 0 && ctx.dtSheetHtml('k|' + x.id).indexOf('dt_dong') > 0, 'sửa khoản có nút xóa và công tắc đóng');
+  eq(ctx.dtSheetHtml('von|khong-co'), ''); eq(ctx.dtSheetHtml('k|khong-co'), ''); eq(ctx.dtSheetHtml(''), '');
+  var root = { innerHTML: '' }; xacNhanGia(); hoi.n = 0; hoi.traLoi = false; ctx.state.ccForm = { loai: 'dt', id: 'von|' + x.id };
+  voiDom({ tabContent: root, dt_tien: { value: '5.000.000' }, dt_ngay: { value: '2026-10-12' }, dt_vi: { value: '' }, dt_note: { value: '' } }, null, function(){ ctx.handleDauTuAction('dtGhiLuu', {}); });
+  eq(hoi.n, 1, 'hỏi vì ví chỉ còn 1tr'); eq(ctx.dauTuTong(x.id).von, 0, 'Quay lại thì chưa ghi');
+  hoi.traLoi = true; ctx.state.ccForm = { loai: 'dt', id: 'von|' + x.id };
+  voiDom({ tabContent: root, dt_tien: { value: '5.000.000' }, dt_ngay: { value: '2026-10-12' }, dt_vi: { value: '' }, dt_note: { value: '' } }, null, function(){ ctx.handleDauTuAction('dtGhiLuu', {}); });
+  eq(ctx.dauTuTong(x.id).von, 5000000, 'Vẫn ghi thì ghi'); ctx.state.ccForm = null; setToday('2026-10-01');
+});
+test('Đầu tư (giao diện): dòng ở Sổ tay ghi "Đầu tư" và dẫn tới trang Đầu tư, không dẫn tới Vay - Nợ; tìm kiếm thấy khoản', function(){
+  dtData(50000000); var x = ctx.dauTuThem('Quỹ Alpha'); ctx.dauTuBoVon(x.id, '2026-10-02', 1000000);
+  var r = ctx.state.data.journal['2026-10-02'].refs[0], h = ctx.dlRefHtml(r);
+  ok(h.indexOf('data-act="goDauTu"') > 0 && h.indexOf('Vay-Nợ') < 0 && h.indexOf('Đầu tư') > 0 && h.indexOf('Bỏ vốn đầu tư') > 0, h);
+  var kq = nhomTim('alpha', 'dautu'); ok(kq && kq.ds.length === 1 && kq.ds[0].tieu === 'Quỹ Alpha', 'tìm thấy khoản đầu tư');
+  eq(ctx.state.data.journal['2026-10-02'].ghiChu, 'Bỏ vốn: Quỹ Alpha', 'ghi chú ngày');
 });
 
 (async function ketThuc(){
