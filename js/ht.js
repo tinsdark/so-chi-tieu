@@ -30,7 +30,7 @@ var HT_THE = {
   ],
   congcu: [
     { id: 'muonmua', ten: 'Muốn mua', nhomCon: 'qd' }, { id: 'giocong', ten: 'Giờ công', nhomCon: 'qd' }, { id: 'loihua', ten: 'Lời hứa', nhomCon: 'qd' },
-    { id: 'sommung', ten: 'Sổ mừng và quà', nhomCon: 'so' }, { id: 'dodac', ten: 'Sổ đồ đạc', nhomCon: 'so' }
+    { id: 'sommung', ten: 'Sổ mừng và quà', nhomCon: 'so' }, { id: 'dodac', ten: 'Sổ đồ đạc', nhomCon: 'so' }, { id: 'dautu', ten: 'Đầu tư', nhomCon: 'so' }
   ]
 };
 var HT_NHOM_TEN = { sotay: 'Sổ tay', baocao: 'Báo cáo', congcu: 'Công cụ' };

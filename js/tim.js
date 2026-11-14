@@ -5,7 +5,7 @@
    Muốn mua, Lời hứa, danh mục, ví, mục tiêu, định kỳ, nhãn, và "Đi tới" (tên các tab / trang công cụ). Gõ chữ không dấu cũng khớp ("tra sua" = "Trà sữa").
    Chỉ ĐỌC dữ liệu. timTatCa(q) là hàm thuần (trả các nhóm kết quả) để test; phần còn lại chỉ vẽ lớp phủ và điều hướng.
    Lớp phủ dùng --vv-top / --vv-h (xem quy ước lớp phủ ở README), nằm trong danh sách vnMoKhoaNen / vnKhopKhungNhin của vayno.js.
-   Cần state.js, nhan.js (nhanChuoi, nhanThongKe), vayno.js, loihua.js (lhChuanHoa), congcu.js, somung.js, dodac.js load trước; app.js (chuyenTab) lúc chạy.
+   Cần state.js, nhan.js (nhanChuoi, nhanThongKe), vayno.js, loihua.js (lhChuanHoa), congcu.js, somung.js, dodac.js, dautu.js load trước; app.js (chuyenTab) lúc chạy.
    ==================================================================== */
 
 var TIM_MOI_NHOM = 4;          // số kết quả hiện cho mỗi nhóm 
@@ -18,7 +18,7 @@ var TIM_TRANG = [
   { ten: 'Công cụ', tab: 'congcu' }, { ten: 'Cài đặt', tab: 'danhmuc' },
   { ten: 'Muốn mua', tab: 'congcu', trang: 'muonmua', phu: 'Công cụ' }, { ten: 'Giờ công', tab: 'congcu', trang: 'giocong', phu: 'Công cụ' },
   { ten: 'Lời hứa', tab: 'congcu', trang: 'loihua', phu: 'Công cụ' }, { ten: 'Sổ mừng và quà', tab: 'congcu', trang: 'sommung', phu: 'Công cụ' },
-  { ten: 'Sổ đồ đạc', tab: 'congcu', trang: 'dodac', phu: 'Công cụ' }
+  { ten: 'Sổ đồ đạc', tab: 'congcu', trang: 'dodac', phu: 'Công cụ' }, { ten: 'Đầu tư', tab: 'congcu', trang: 'dautu', phu: 'Công cụ' }
 ];
 var TIM_LENH = [
   { ten: 'Ghi khoản chi', kind: 'chi', phu: 'Mở bảng Ghi nhanh' }, { ten: 'Ghi khoản thu', kind: 'thu', phu: 'Mở bảng Ghi nhanh' }
@@ -69,6 +69,9 @@ function timTatCa(q){
   them('dodac', 'Sổ đồ đạc', gom(d.doDac, function(x){
     return (timKhop(k, so, [x.ten, x.ghiChu]) || (so > 0 && Math.round(x.gia) === Math.round(so)))
       ? { loai: 'dodac', id: x.id, tieu: x.ten, phu: 'Mua ' + ngayVN(x.ngayMua) + (x.tt === 'het' ? ' · không dùng nữa' : ''), tien: fmt(Math.round(x.gia)) } : null;
+  }));
+  them('dautu', 'Đầu tư', gom(d.dauTu, function(x){
+    return timKhop(k, so, [x.ten, x.ghiChu]) ? { loai: 'dautu', id: x.id, tieu: x.ten, phu: (x.dong ? 'Đã đóng · ' : '') + dauTuNhanLaiLo(dauTuTong(x.id)) } : null;
   }));
   var vay = gom(d.vayNo.choVay, function(c){
     return timKhop(k, so, [c.ten, c.nguoi]) ? { loai: 'vay', sub: 'cv', id: c.id, tieu: c.ten, phu: 'Cho vay' + (c.nguoi ? ' · ' + c.nguoi : '') + ' · còn thu ' + fmt(Math.round(conLaiPhaiThu(c))) } : null;
@@ -222,6 +225,7 @@ function timDi(r){
   else if (r.loai === 'nhan'){ tab = 'baocao'; }
   else if (r.loai === 'mung'){ state.ccTrang = 'sommung'; state.sm.tim = q; tab = 'congcu'; dich = lh('smSua', r.id); }
   else if (r.loai === 'dodac'){ state.ccTrang = 'dodac'; tab = 'congcu'; dich = lh('ddSua', r.id); fb = function(){ state.ccForm = { loai: 'dd', id: r.id }; renderAll(); }; }
+  else if (r.loai === 'dautu'){ state.ccTrang = 'dautu'; tab = 'congcu'; dich = lh('dtSua', r.id); fb = function(){ state.ccForm = { loai: 'dt', id: 'k|' + r.id }; renderAll(); }; }
   else if (r.loai === 'muon'){ state.ccTrang = 'muonmua'; tab = 'congcu'; dich = lh('mmMuaRoi', r.id); }
   else if (r.loai === 'hua'){ state.ccTrang = 'loihua'; tab = 'congcu'; dich = lh('lhSua', r.id); fb = function(){ state.ccForm = { loai: 'lh', id: r.id }; renderAll(); }; }
   if (!tab) return;

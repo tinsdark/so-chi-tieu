@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.14', ngay: '2026-11-14', ten: 'Công cụ: thêm trang Đầu tư',
+    muc: ['Công cụ có thêm trang "Đầu tư": mỗi khoản chỉ cần tên, rồi bấm "Bỏ thêm vốn" khi bỏ tiền vào và "Thu về" mỗi lần nhận tiền lại. App tự cho biết còn lỗ bao nhiêu hay đã lãi.',
+          'Bỏ vốn làm số dư ví và Tài sản ròng giảm thật nhưng không tính là chi tiêu: Chi tiêu, hạn mức và "Hôm nay còn tiêu được" không đổi. Tiền thu về cũng không tính là thu nhập. Hai khoản này hiện ở dòng "Đầu tư (tính riêng)" cạnh dòng "Vay nợ".',
+          'Khoản đã xong thì bấm "Đóng khoản" để chốt lãi / lỗ. Mỗi lần ghi nhầm có thể xóa riêng (có Hoàn tác). Ở Sổ tay, dòng bỏ vốn / thu về có ổ khóa và dẫn về trang Đầu tư.']},
   { ban: '2026.11.02.2', ngay: '2026-11-02', ten: 'Vay - Nợ: xem và đổi ngày thu đủ của khoản cho vay',
     muc: ['Khoản cho vay đã thu đủ giờ ghi rõ "Thu đủ ngày ..." (khoản đóng bằng xóa nợ thì "Thu lần cuối ngày ...") và có nút "Đổi ngày thu".',
           'Đổi ngày thì dòng "Thu hồi cho vay" ở Sổ tay chuyển sang ngày mới (số tiền và ví giữ nguyên), Bảng theo dõi tự xếp lại đúng tháng. Dùng khi thu tiền từ tháng trước nhưng đến tháng sau mới bấm Tất toán.']},
