@@ -10,8 +10,8 @@
    rồi tự hạch toán sang Sổ tay. Nhập tay ở đây sẽ tạo tiền mồ côi không gắn với
    khoản nào, sửa/xóa khoản vay không hoàn lại được -> khóa ô.
    Ngoại lệ: ngày đang sửa đã có số nhập tay (dữ liệu cũ) thì vẫn mở để xóa đi được. */
-var VN_ONLY_THU = { nhanTienVay: 1, thuHoiChoVay: 1 };
-var VN_ONLY_CHI = { choVay: 1 };
+var VN_ONLY_THU = { nhanTienVay: 1, thuHoiChoVay: 1, dauTuThu: 1 };
+var VN_ONLY_CHI = { choVay: 1, dauTuVon: 1 };
 
 /* ====================================================================
    GHI NHANH — thẻ ở đầu Sổ tay: số tiền, danh mục, ghi chú, 1 nút Lưu.
@@ -395,7 +395,8 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock, duH
     +   '<div><div class="l"><i class="dot chi"></i>Chi tiêu</div><div class="v">'+soGon(tongChi)+'</div></div>'
     +   '<div><div class="l">'+(chenh < 0 ? 'Chi vượt thu' : 'Để dành được')+'</div><div class="v '+(chenh < 0 ? 'am' : 'duong')+'">'+(chenh > 0 ? '+' : (chenh < 0 ? '−' : ''))+soGon(Math.abs(chenh))+'</div></div>'
     + '</div>'
-    + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
+    + bdVayNoDongHtml(ct.vayNo).replace('class="bd-vn"', 'class="bd-vn hero-vn"')
+    + bdDauTuDongHtml(ct.dauTu).replace('class="bd-vn"', 'class="bd-vn hero-vn"');
   if (laThangNay && !beforeLock && !htAn('sotay', 'tieu')) h += tieuMoiNgayHtml(todayStr());
   if (rows.length && !htAn('sotay', 'hanmuc')){
     var pct = tongCap > 0 ? tongDa / tongCap : 0;
@@ -417,18 +418,21 @@ function tongQuanHtml(mk, tongThuTat, tongChiTat, duDau, duCuoi, beforeLock, duH
 function tongQuanGiaiThichHtml(mk, ct, duDau, duCuoi, tongDa, tongCap, laThangNay, duHetThang){
   var vn = ct.vayNo, vao = vn.vay + vn.thuHoi, ra = vn.traNo + vn.choVay, rongNo = vao - ra;
   var dcThu = num(ct.theoCatThu.dieuChinh), dcChi = num(ct.theoCat.dieuChinh), dc = dcThu - dcChi;
+  var dt = ct.dauTu, dtRong = dt.thu - dt.von, coDt = dt.von + dt.thu > 0.5;
   var duThat = ct.tongThuThat - ct.tongChiThat, ds = [];
   ds.push({ ten: 'Để dành được', ct: 'Thu nhập − Chi tiêu của tháng, chưa tính vay nợ. Âm nghĩa là chi vượt thu (hiện là "Chi vượt thu").', pt: ptCong([ct.tongThuThat, -ct.tongChiThat], duThat) });
-  ds.push({ ten: 'Thu nhập', ct: 'Tổng thu − nhận vay − thu hồi cho vay − điều chỉnh số dư.',
-    pt: ptCong([ct.tongThu, -vao, -dcThu], ct.tongThuThat) });
-  ds.push({ ten: 'Chi tiêu', ct: 'Tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
-    pt: ptCong([ct.tongChi, -ra, -dcChi], ct.tongChiThat) });
+  ds.push({ ten: 'Thu nhập', ct: 'Tổng thu − nhận vay − thu hồi cho vay − điều chỉnh số dư' + (dt.thu > 0.5 ? ' − thu về từ đầu tư' : '') + '.',
+    pt: ptCong([ct.tongThu, -vao, -dcThu, -dt.thu], ct.tongThuThat) });
+  ds.push({ ten: 'Chi tiêu', ct: 'Tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư' + (dt.von > 0.5 ? ' − bỏ vốn đầu tư' : '') + '.',
+    pt: ptCong([ct.tongChi, -ra, -dcChi, -dt.von], ct.tongChiThat) });
   if (vao + ra > 0.5) ds.push({ ten: 'Vay nợ (tính riêng)', ct: 'Vào (nhận vay + thu hồi cho vay) − ra (trả nợ + cho vay).',
     pt: 'vào ' + ptTong2(vn.vay, vn.thuHoi) + ' · ra ' + ptTong2(vn.traNo, vn.choVay) + ' · ' + ptCong([vao, -ra], rongNo) });
+  if (coDt) ds.push({ ten: 'Đầu tư (tính riêng)', ct: 'Thu về − bỏ vốn trong tháng. Bỏ vốn là tiền ra thật (số dư giảm) nhưng không phải chi tiêu.',
+    pt: 'bỏ vốn ' + soGt(dt.von) + ' · thu về ' + soGt(dt.thu) + ' · ' + ptCong([dt.thu, -dt.von], dtRong) });
   var truoc = (laThangNay && duHetThang != null) ? duHetThang - duCuoi : 0;      // thu − chi của các khoản đã ghi trước cho ngày sau hôm nay
-  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Để dành được + Vay nợ ròng' + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '')
+  ds.push({ ten: laThangNay ? 'Số dư hiện tại' : 'Số dư cuối tháng', ct: 'Số dư đầu tháng + Để dành được + Vay nợ ròng' + (coDt ? ' + Đầu tư ròng' : '') + (Math.abs(dc) > 0.5 ? ' + điều chỉnh số dư' : '')
       + (Math.abs(truoc) > 0.5 ? ' − khoản đã ghi trước cho các ngày sau hôm nay (chưa tới ngày nên chưa tính)' : '') + '.',
-    pt: ptCong([duDau, duThat, rongNo, dc, -truoc], duCuoi) });
+    pt: ptCong([duDau, duThat, rongNo, dtRong, dc, -truoc], duCuoi) });
   if (tongCap > 0) ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',
     pt: soGt(tongDa) + ' ÷ ' + soGt(tongCap) + ' = ' + Math.round(tongDa / tongCap * 100) + '%, ' + (tongDa > tongCap ? 'vượt ' + soGt(tongDa - tongCap) : 'còn ' + ptCong([tongCap, -tongDa], tongCap - tongDa)) });
   var t = laThangNay ? tieuMoiNgay(todayStr()) : null;

@@ -199,7 +199,7 @@ function mtCardHtml(){
 
 /* ---- Giao dịch định kỳ: khai báo mẫu (nhắc ở Sổ tay, logic ở state.js) ----
    Loại các danh mục của Vay - Nợ: tiền vay/trả nợ đã có lịch riêng, khai ở đây là trùng. */
-var DK_CAT_LOAI = { nhanTienVay: 1, thuHoiChoVay: 1, choVay: 1, traNo: 1 };
+var DK_CAT_LOAI = { nhanTienVay: 1, thuHoiChoVay: 1, choVay: 1, traNo: 1, dauTuThu: 1, dauTuVon: 1 };
 function dkCatOptions(kind, sel){
   var o = (state.data.categories[kind] || []).filter(function(c){ return !DK_CAT_LOAI[c.id]; }).map(function(c){
     var v = kind + '|' + c.id;

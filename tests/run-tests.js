@@ -38,7 +38,7 @@ var ctx = {
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-['state.js', 'lock.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'qr.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
+['state.js', 'lock.js', 'drive-sync.js', 'amlich.js', 'vayno-tinh.js', 'qr.js', 'vayno.js', 'dongtien.js', 'sotay.js', 'bieudo.js', 'nhan.js', 'nhachan.js', 'doisoat.js', 'thetindung.js', 'lich.js', 'nguoi.js', 'nhap.js', 'danhmuc.js', 'ngansach.js', 'mophong.js', 'theongay.js', 'tongket.js', 'congcu.js', 'giocong.js', 'ngaytudo.js', 'tet.js', 'loihua.js', 'somung.js', 'dodac.js', 'dautu.js', 'ht.js', 'tim.js', 'canhbao.js', 'chuong.js', 'hienthi.js', 'diemnhan.js', 'phienban.js'].forEach(function(f){
   var code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   vm.runInContext(code, ctx, { filename: f });
 });
@@ -7711,6 +7711,107 @@ test('QR cần xác nhận: normalize giữ mục hợp lệ, chuông hiện "C�
   eq(ctx.qrDanhSachCho().length, 0, 'khoản cho vay đã thu đủ');
   var d3 = loadData(baseData({ settings: { soDuDauKy: 0, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10', qr: { bin: '12', stk: 'x' } } }));
   ok(!d3.settings.qr, 'tài khoản QR sai thì bỏ');
+});
+
+/* ==================================================================== */
+group('7m. Khoản đầu tư: dòng tiền bỏ vốn / thu về, lãi lỗ, tách khỏi chi tiêu (dautu.js)');
+
+function dtData(soDu){
+  return loadData(baseData({ settings: { soDuDauKy: soDu == null ? 50000000 : soDu, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } }));
+}
+test('Đầu tư: file cũ không có dauTu nạp vào không đổi số nào và không sinh danh mục đầu tư', function(){
+  var d = loadData(baseData({ settings: { soDuDauKy: 7000000, ngayBatDau: '2026-10-01', thangBatDauDuTru: '2026-10' } }));
+  ok(Array.isArray(d.dauTu) && d.dauTu.length === 0, 'dauTu là mảng rỗng');
+  eq(ctx.balanceAt('2026-10-31'), 7000000);
+  ok(!d.categories.chi.some(function(c){ return c.id === 'dauTuVon'; }), 'chưa đầu tư thì chưa có danh mục');
+  eq(ctx.journalKiemTra().length, 0);
+});
+test('Đầu tư: normalize bỏ khoản thiếu tên, sửa ngày sai, và có khoản thì có đủ 2 danh mục hệ thống', function(){
+  var d = loadData(baseData({ dauTu: [{ id: 'a', ten: '  Vàng   nhẫn ', ngayMo: 'sai' }, { id: 'b', ten: '' }, null, { id: 'c', ten: 'Quỹ', ngayMo: '2026-10-02', dong: true }] }));
+  eq(d.dauTu.length, 2); eq(d.dauTu[0].ten, 'Vàng nhẫn'); ok(/^\d{4}-\d{2}-\d{2}$/.test(d.dauTu[0].ngayMo));
+  eq(d.dauTu[1].ngayDong, '2026-10-02', 'khoản đã đóng thiếu ngày đóng thì lấy ngày mở');
+  ok(d.categories.chi.some(function(c){ return c.id === 'dauTuVon' && c.khongDuTru; }) && d.categories.thu.some(function(c){ return c.id === 'dauTuThu' && c.khongDuTru; }));
+});
+test('Đầu tư: bỏ vốn 10tr, thu về 2tr rồi 3tr → còn lỗ 5tr; thu thêm 5tr → hòa vốn; thu thêm nữa → lãi', function(){
+  dtData(); setToday('2026-10-20');
+  var x = ctx.dauTuThem('Quỹ A', '2026-10-02');
+  ok(x && x.id, 'thêm được khoản');
+  var t0 = ctx.dauTuTong(x.id); eq(t0.tt, 'chua');
+  ok(ctx.dauTuBoVon(x.id, '2026-10-02', 10000000));
+  ok(ctx.dauTuThuVe(x.id, '2026-10-05', 2000000));
+  var t1 = ctx.dauTuTong(x.id); eq(t1.von, 10000000); eq(t1.thu, 2000000); eq(t1.lo, 8000000); eq(t1.tt, 'lo'); eq(ctx.dauTuNhanLaiLo(t1), 'Còn lỗ ' + ctx.fmt(8000000));
+  ok(ctx.dauTuThuVe(x.id, '2026-10-06', 3000000));
+  var t2 = ctx.dauTuTong(x.id); eq(t2.thu, 5000000); eq(t2.lo, 5000000); eq(t2.soLanThu, 2); eq(t2.soLanVon, 1);
+  eq(ctx.dauTuTong(x.id, '2026-10-05').lo, 8000000, 'tính tới hết một ngày cho trước');
+  ctx.dauTuThuVe(x.id, '2026-10-07', 5000000); eq(ctx.dauTuTong(x.id).tt, 'hoa'); eq(ctx.dauTuNhanLaiLo(ctx.dauTuTong(x.id)), 'Hòa vốn');
+  ctx.dauTuThuVe(x.id, '2026-10-08', 1500000); var t3 = ctx.dauTuTong(x.id); eq(t3.tt, 'lai'); eq(t3.lai, 1500000); eq(ctx.dauTuNhanLaiLo(t3), 'Lãi ' + ctx.fmt(1500000));
+  setToday('2026-10-01');
+});
+test('Đầu tư: từ chối số tiền 0, ngày sai, khoản không tồn tại; số tiền làm tròn về đồng', function(){
+  dtData(); var x = ctx.dauTuThem('Vàng');
+  eq(ctx.dauTuBoVon(x.id, '2026-10-02', 0), false); eq(ctx.dauTuBoVon(x.id, 'sai', 1000), false); eq(ctx.dauTuBoVon('khong-co', '2026-10-02', 1000), false);
+  eq(ctx.dauTuThem('   '), null);
+  ok(ctx.dauTuBoVon(x.id, '2026-10-02', 1000000.4)); eq(ctx.dauTuTong(x.id).von, 1000000);
+});
+test('Đầu tư: bỏ vốn làm số dư và ví giảm thật nhưng KHÔNG đổi Thu nhập / Chi tiêu / chi hằng ngày / hạn mức', function(){
+  var d = dtData(50000000); setToday('2026-10-20');
+  ctx.entryAddItem('2026-10-03', 'chi', 'an', 200000, 'cơm', '');
+  var truoc = ctx.bdThang('2026-10'), hmTruoc = ctx.hanMucHangNgay().cap, tieuTruoc = ctx.tieuMoiNgay('2026-10-20');
+  var duTruoc = ctx.balanceAt('2026-10-31'), viTruoc = ctx.soDuTheoVi(d.wallets[0].id, '2026-10-31');
+  var x = ctx.dauTuThem('Quỹ A');
+  ctx.dauTuBoVon(x.id, '2026-10-04', 10000000); ctx.dauTuThuVe(x.id, '2026-10-10', 2000000);
+  var sau = ctx.bdThang('2026-10');
+  eq(ctx.balanceAt('2026-10-31'), duTruoc - 8000000, 'số dư tổng giảm đúng phần chưa thu về');
+  eq(ctx.soDuTheoVi(d.wallets[0].id, '2026-10-31'), viTruoc - 8000000, 'ví giảm đúng');
+  eq(sau.tongChiThat, truoc.tongChiThat, 'Chi tiêu không đổi'); eq(sau.tongThuThat, truoc.tongThuThat, 'Thu nhập không đổi');
+  eq(sau.tongChiHN, truoc.tongChiHN, 'chi hằng ngày không đổi');
+  eq(ctx.hanMucHangNgay().cap, hmTruoc); eq(JSON.stringify(ctx.tieuMoiNgay('2026-10-20')), JSON.stringify(tieuTruoc), 'Hôm nay còn tiêu được không đổi');
+  eq(sau.dauTu.von, 10000000); eq(sau.dauTu.thu, 2000000); eq(sau.vayNo.choVay + sau.vayNo.traNo + sau.vayNo.vay + sau.vayNo.thuHoi, 0, 'không lẫn sang Vay nợ');
+  eq(ctx.journalKiemTra().length, 0, 'journal không lệch nguồn gốc');
+  ok(ctx.catChiHangNgay('dauTuVon') === false, 'bỏ vốn không phải chi hằng ngày');
+  setToday('2026-10-01');
+});
+test('Đầu tư: Tài sản ròng giảm theo vốn đã bỏ, tăng khi thu về (không cần sửa công thức Tài sản ròng)', function(){
+  dtData(50000000); setToday('2026-10-20');
+  var r0 = ctx.taiSanRongThang('2026-10').rong, x = ctx.dauTuThem('Quỹ A');
+  ctx.dauTuBoVon(x.id, '2026-10-04', 10000000); eq(ctx.taiSanRongThang('2026-10').rong, r0 - 10000000);
+  ctx.dauTuThuVe(x.id, '2026-10-10', 2000000); eq(ctx.taiSanRongThang('2026-10').rong, r0 - 8000000);
+  setToday('2026-10-01');
+});
+test('Đầu tư: "Cách tính" ở thẻ đầu Sổ tay có dòng Đầu tư, phép cộng đúng và khớp số dư', function(){
+  dtData(50000000); setToday('2026-10-20');
+  ctx.entryAddItem('2026-10-03', 'thu', 'luong', 20000000, '', ''); ctx.entryAddItem('2026-10-03', 'chi', 'an', 300000, '', '');
+  var x = ctx.dauTuThem('Quỹ A'); ctx.dauTuBoVon(x.id, '2026-10-04', 10000000); ctx.dauTuThuVe(x.id, '2026-10-10', 2000000);
+  var ct = ctx.bdThang('2026-10'), duDau = ctx.balanceBeforeMonth('2026-10'), duCuoi = ctx.balanceAtEndOfMonth('2026-10');
+  var h = ctx.tongQuanGiaiThichHtml('2026-10', ct, duDau, duCuoi, 0, 0, false, null);
+  ok(h.indexOf('Đầu tư (tính riêng)') > 0, 'có dòng giải thích Đầu tư');
+  ok(h.indexOf('bỏ vốn 10.000.000 · thu về 2.000.000 · 2.000.000 − 10.000.000 = −8.000.000') > 0, 'phép tính đầu tư: ' + h);
+  ok(h.indexOf('22.000.000 − 2.000.000 = 20.000.000') > 0, 'Thu nhập trừ thu về đầu tư');
+  ok(h.indexOf('10.300.000 − 10.000.000 = 300.000') > 0, 'Chi tiêu trừ bỏ vốn');
+  var k = kiemPhepCong(h); ok(k.n >= 4, 'có phép tính'); eq(k.loi.join(' | '), '');
+  ok(ctx.bdDauTuDongHtml(ct.dauTu).indexOf('bỏ vốn <b>' + ctx.bdTien(10000000) + '</b>') > 0 && ctx.bdDauTuDongHtml({ von: 0, thu: 0 }) === '', 'dòng Đầu tư chỉ hiện khi có tiền');
+  var dau = ctx.bcDauGiaiThichHtml('2026-10', ct, [], 0, 0, { ngayQua: 0, soNgay: 31 }, false);
+  eq(kiemPhepCong(dau).loi.join(' | '), '', 'Báo cáo: Đã chi tháng này cũng trừ bỏ vốn');
+  setToday('2026-10-01');
+});
+test('Đầu tư: xóa khoản gỡ sạch dòng ở Sổ tay, số dư trả lại, xóa ngày không làm hỏng khoản khác', function(){
+  var d = dtData(50000000); var duTruoc = ctx.balanceAt('2026-10-31');
+  var a = ctx.dauTuThem('A'), b = ctx.dauTuThem('B');
+  ctx.dauTuBoVon(a.id, '2026-10-04', 3000000); ctx.dauTuThuVe(a.id, '2026-10-05', 1000000); ctx.dauTuBoVon(b.id, '2026-10-04', 5000000);
+  eq(ctx.dauTuXoa(a.id), 2, 'gỡ 2 dòng'); eq(ctx.dauTuTim(a.id), null);
+  eq(ctx.balanceAt('2026-10-31'), duTruoc - 5000000, 'chỉ còn vốn của khoản B');
+  eq(ctx.dauTuTong(b.id).von, 5000000); eq(ctx.journalKiemTra().length, 0);
+  eq(ctx.dauTuXoa('khong-co'), -1);
+  ctx.loanRevertRef({ loai: 'dauTuVon', loanId: b.id, soTien: 5000000 });   // xóa ngày ở Sổ tay đi qua hàm này: loai lạ phải bị bỏ qua, không lỗi
+  var tong = ctx.dauTuTongTat(); eq(tong.von, 5000000); eq(tong.thu, 0); eq(tong.lai, -5000000);
+});
+test('Đầu tư: đóng / mở lại khoản; danh mục hệ thống không nhập tay được và không vào Ghi nhanh / định kỳ', function(){
+  dtData(); var x = ctx.dauTuThem('A');
+  ok(ctx.dauTuDong(x.id, '2026-10-09')); eq(ctx.dauTuTim(x.id).dong, true); eq(ctx.dauTuTim(x.id).ngayDong, '2026-10-09');
+  ok(ctx.dauTuMoLai(x.id)); eq(ctx.dauTuTim(x.id).dong, false); ok(!('ngayDong' in ctx.dauTuTim(x.id)));
+  ok(ctx.VN_ONLY_CHI.dauTuVon && ctx.VN_ONLY_THU.dauTuThu, 'khóa nhập tay');
+  ok(!ctx.qaCats('chi').some(function(c){ return c.id === 'dauTuVon'; }) && !ctx.qaCats('thu').some(function(c){ return c.id === 'dauTuThu'; }), 'không có ở Ghi nhanh');
+  ok(ctx.DK_CAT_LOAI.dauTuVon && ctx.DK_CAT_LOAI.dauTuThu, 'không khai làm định kỳ');
 });
 
 (async function ketThuc(){

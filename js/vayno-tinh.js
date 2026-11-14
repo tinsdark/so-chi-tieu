@@ -574,7 +574,7 @@ function duTruGoiY(kind, cid, mk){
   if (kind==='thu' && cid==='thuHoiChoVay') return tongThuHoiThang(mk) || null;
   // Cho vay / Nhận tiền vay không đoán, nhưng giao dịch đã GHI ở ngày tương lai (cho vay hẹn tháng sau) là tiền chắc chắn đi / về
   if (cat0 && cat0.khongDuTru){
-    var ghi = (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay')) ? actualCatInMonth(kind, cid, mk) : 0;
+    var ghi = (mk > monthKey(todayStr()) && (cid === 'choVay' || cid === 'nhanTienVay' || cid === 'dauTuVon' || cid === 'dauTuThu')) ? actualCatInMonth(kind, cid, mk) : 0;
     return ghi > 0 ? ghi : null;
   }
   if (!cat0 || (cat0.coDinhChiTieu && num(cat0.chiTieu) <= 0)) return null;

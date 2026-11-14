@@ -121,6 +121,7 @@ function dtThangDuLieu(mk){
   d.cb = d.thuDK - d.chiDK;
   var hs = function(k){ return d.heThong[k] ? d.heThong[k].act : 0; };
   d.vayThem = hs('thu:nhanTienVay'); d.thuHoi = hs('thu:thuHoiChoVay'); d.choVay = hs('chi:choVay');
+  d.dauTuVon = hs('chi:dauTuVon'); d.dauTuThu = hs('thu:dauTuThu');
   d.thuHoiKH = d.heThong['thu:thuHoiChoVay'] ? d.heThong['thu:thuHoiChoVay'].plan : 0;
   d.tn = dtTraNoKy(mk);
   return d;
@@ -213,7 +214,11 @@ function dtVayNoDongHtml(d){
   if (d.vayThem > 0.5) p.push('vay thêm <b class="thu">+' + fmt(Math.round(d.vayThem)) + '</b>');
   if (d.thuHoi > 0.5 || d.thuHoiKH > 0.5) p.push('thu hồi cho vay <b class="thu">+' + fmt(Math.round(d.thuHoi)) + '</b>' + (d.thuHoiKH > d.thuHoi + 0.5 ? ' / ' + fmt(Math.round(d.thuHoiKH)) + ' dự kiến' : ''));
   if (d.choVay > 0.5) p.push('cho vay <b class="chi">−' + fmt(Math.round(d.choVay)) + '</b>');
-  return p.length ? '<div class="bd-vn"><span>Vay nợ <small>(tính riêng)</small></span><span>' + p.join(' · ') + '</span></div>' : '';
+  var dt = [];
+  if (d.dauTuVon > 0.5) dt.push('bỏ vốn <b class="chi">−' + fmt(Math.round(d.dauTuVon)) + '</b>');
+  if (d.dauTuThu > 0.5) dt.push('thu về <b class="thu">+' + fmt(Math.round(d.dauTuThu)) + '</b>');
+  return (p.length ? '<div class="bd-vn"><span>Vay nợ <small>(tính riêng)</small></span><span>' + p.join(' · ') + '</span></div>' : '')
+    + (dt.length ? '<div class="bd-vn"><span>Đầu tư <small>(tính riêng)</small></span><span>' + dt.join(' · ') + '</span></div>' : '');
 }
 // cách tính Tiền vào − ra và số dư lũy kế, có phép tính bằng số thật (giaiThichSo ở state.js)
 function dtCanDoiGiaiThichHtml(d, bal){
