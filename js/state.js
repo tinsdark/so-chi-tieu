@@ -94,7 +94,10 @@ var REF_MAP = {
   thuHoiChoVay: { kind: 'thu', cat: 'thuHoiChoVay' },
   choVay:       { kind: 'chi', cat: 'choVay'       },
   traNo:        { kind: 'chi', cat: 'traNo'        },
-  tatToan:      { kind: 'chi', cat: 'traNo'        }
+  tatToan:      { kind: 'chi', cat: 'traNo'        },
+  // khoản đầu tư (dautu.js): tiền bỏ vốn / thu về. Cùng cơ chế ref như vay nợ nhưng loanId là id khoản đầu tư (d.dauTu)
+  dauTuVon:     { kind: 'chi', cat: 'dauTuVon'     },
+  dauTuThu:     { kind: 'thu', cat: 'dauTuThu'     }
 };
 // nhãn tiếng Việt của từng loại ref, dùng khi báo cho người dùng biết 1 ngày ở Sổ tay
 // đang chứa giao dịch gì của khoản vay (sotay.js nhánh delDay).
@@ -103,7 +106,9 @@ var REF_LABEL = {
   thuHoiChoVay: 'Thu hồi cho vay',
   choVay:       'Cho vay (chi)',
   traNo:        'Trả nợ',
-  tatToan:      'Tất toán'
+  tatToan:      'Tất toán',
+  dauTuVon:     'Bỏ vốn đầu tư',
+  dauTuThu:     'Thu về từ đầu tư'
 };
 
 function blankEntry(){ return { thu: {}, chi: {}, ghiChu: '', refs: [], items: [] }; }
@@ -461,7 +466,7 @@ function catTen(kind, catId){
 }
 
 // danh mục do tab Vay - Nợ sinh/dùng: xóa đi là tiền khoản vay mất chỗ hiển thị
-var CAT_HE_THONG = { thu: { nhanTienVay: 1, thuHoiChoVay: 1, dieuChinh: 1 }, chi: { choVay: 1, traNo: 1, dieuChinh: 1 } };
+var CAT_HE_THONG = { thu: { nhanTienVay: 1, thuHoiChoVay: 1, dieuChinh: 1, dauTuThu: 1 }, chi: { choVay: 1, traNo: 1, dieuChinh: 1, dauTuVon: 1 } };
 // số NGÀY trong Sổ tay còn tiền ở danh mục này (>0 thì không được xóa danh mục)
 // các khoản định kỳ đang trỏ vào danh mục này (bật hay tắt đều tính): xóa danh mục sẽ làm chúng mồ côi
 function catDangDuocDinhKyDung(kind, catId){
@@ -630,6 +635,17 @@ function normalizeData(d){
   if (!d.categories.chi.some(function(c){ return c.id === 'choVay'; })){
     d.categories.chi.push({ id: 'choVay', ten: 'Cho vay', chiTieu: 0, khongDuTru: true });
   }
+  // khoản đầu tư (dautu.js): chỉ giữ tên + ngày mở; tiền nằm ở journal (refs). Danh mục hệ thống chỉ có khi đã dùng tới đầu tư
+  d.dauTu = (Array.isArray(d.dauTu) ? d.dauTu : []).filter(function(x){ return x && String(x.ten || '').trim(); });
+  d.dauTu.forEach(function(x){
+    if (!x.id) x.id = 'dt_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    x.ten = String(x.ten).replace(/\s+/g, ' ').trim().slice(0, 60);
+    x.ngayMo = /^\d{4}-\d{2}-\d{2}$/.test(x.ngayMo || '') ? x.ngayMo : todayStr();
+    x.dong = !!x.dong;
+    if (x.dong && !/^\d{4}-\d{2}-\d{2}$/.test(x.ngayDong || '')) x.ngayDong = x.ngayMo; else if (!x.dong) delete x.ngayDong;
+    x.ghiChu = String(x.ghiChu || '').slice(0, 120);
+  });
+  if (d.dauTu.length) dauTuDamBaoDanhMuc(d);
   // mốc bắt đầu tính dự trù: tháng ĐẦY ĐỦ đầu tiên. Nếu ngayBatDau không phải ngày 01
   // thì tháng đó là tháng lẻ (số liệu không phản ánh đúng cả tháng) -> bỏ, lấy tháng sau.
   // Cố ý tách khỏi ngayBatDau để khóa sổ KHÔNG làm mất lịch sử dùng cho dự trù.

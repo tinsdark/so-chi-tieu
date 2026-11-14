@@ -315,6 +315,7 @@ function bdThang(mk, denNgay){
   var soNgay = daysInMonth(mk), chi = [], thu = [], theoCat = {}, theoCatThu = {}, topCatNgay = [], coDl = false;
   var chiHN = [], topCatHN = [], laHN = {}, chiThat = [], thuThat = [], theoCatThat = {}, theoCatThuThat = {};
   var vayNo = { vay: 0, thuHoi: 0, choVay: 0, traNo: 0 };
+  var dauTu = { von: 0, thu: 0 };   // khoản đầu tư (dautu.js): bỏ vốn / thu về, tách khỏi thu chi thật như vay nợ
   var heChi = CAT_HE_THONG.chi, heThu = CAT_HE_THONG.thu;
   var het = denNgay ? Math.min(soNgay, denNgay) : soNgay;
   for (var d = 1; d <= het; d++){
@@ -328,13 +329,13 @@ function bdThang(mk, denNgay){
         if (v > bv){ bv = v; best = k; }
         if (!(k in laHN)) laHN[k] = catChiHangNgay(k);
         if (laHN[k]){ hn += v; if (v > bvHN){ bvHN = v; bestHN = k; } }
-        if (k === 'choVay') vayNo.choVay += v; else if (k === 'traNo') vayNo.traNo += v;
+        if (k === 'choVay') vayNo.choVay += v; else if (k === 'traNo') vayNo.traNo += v; else if (k === 'dauTuVon') dauTu.von += v;
         if (!heChi[k]){ ct += v; theoCatThat[k] = (theoCatThat[k] || 0) + v; }
       });
       if (e.thu && typeof e.thu === 'object') Object.keys(e.thu).forEach(function(k){
         var v = num(e.thu[k]);
         theoCatThu[k] = (theoCatThu[k] || 0) + v;
-        if (k === 'nhanTienVay') vayNo.vay += v; else if (k === 'thuHoiChoVay') vayNo.thuHoi += v;
+        if (k === 'nhanTienVay') vayNo.vay += v; else if (k === 'thuHoiChoVay') vayNo.thuHoi += v; else if (k === 'dauTuThu') dauTu.thu += v;
         if (!heThu[k]){ tt2 += v; theoCatThuThat[k] = (theoCatThuThat[k] || 0) + v; }
       });
     }
@@ -345,7 +346,7 @@ function bdThang(mk, denNgay){
   chiThat.forEach(function(v){ tcT += v; }); thuThat.forEach(function(v){ ttT += v; });
   return { mk: mk, soNgay: soNgay, chi: chi, thu: thu, tongChi: tc, tongThu: tt, theoCat: theoCat, theoCatThu: theoCatThu, topCatNgay: topCatNgay, coDl: coDl,
            chiHN: chiHN, topCatHN: topCatHN, tongChiHN: thn,
-           chiThat: chiThat, thuThat: thuThat, tongChiThat: tcT, tongThuThat: ttT, theoCatThat: theoCatThat, theoCatThuThat: theoCatThuThat, vayNo: vayNo };
+           chiThat: chiThat, thuThat: thuThat, tongChiThat: tcT, tongThuThat: ttT, theoCatThat: theoCatThat, theoCatThuThat: theoCatThuThat, vayNo: vayNo, dauTu: dauTu };
 }
 // danh mục xếp từ lớn tới nhỏ; quá 6 mục thì gộp phần còn lại thành "Khác"
 function bdXepCat(kind, theo, truocTheo, gop){
@@ -419,6 +420,12 @@ function bdUocTinhChiThang(mk, denNgay){
 }
 
 // dòng VAY NỢ (tính riêng, không nằm trong thu nhập / chi tiêu): vào = nhận vay + thu hồi cho vay, ra = trả nợ (gồm tất toán) + cho vay
+// dòng "Đầu tư (tính riêng)": bỏ vốn / thu về trong tháng. Không có thì không hiện gì.
+function bdDauTuDongHtml(v){
+  var ro = v.thu - v.von;
+  if (v.von + v.thu < 0.5) return '';
+  return '<div class="bd-vn"><span>Đầu tư <small>(tính riêng)</small></span><span>bỏ vốn <b>'+bdTien(v.von)+'</b> · thu về <b>'+bdTien(v.thu)+'</b> · ròng <b class="'+(ro >= 0 ? 'thu' : 'chi')+'">'+(ro > 0 ? '+' : (ro < 0 ? '−' : ''))+bdTien(Math.abs(ro))+'</b></span></div>';
+}
 function bdVayNoDongHtml(v){
   var vao = v.vay + v.thuHoi, ra = v.traNo + v.choVay, rong = vao - ra;
   if (vao + ra < 0.5) return '';
@@ -478,7 +485,7 @@ function bdTongQuanHtml(mk){
   var so = function(p, tot){ return p == null ? '<em class="muted">—</em>' : '<em class="'+tot+'">'+(p > 0 ? icon('arrow-up','ic-d')+' ' : (p < 0 ? icon('arrow-down','ic-d')+' ' : '= '))+Math.abs(p)+'% so với '+bdKySoSanh(prev.nhanNgan)+'</em>'; };
   h += '<div class="bd-kpi"><div><small>Thu nhập</small><b class="thu">'+bdTien(cur.tongThuThat)+'</b>'+so(pt, 'thu')+'</div>'
     + '<div><small>Chi tiêu</small><b class="chi">'+bdTien(cur.tongChiThat)+'</b>'+so(prev.coDl ? pc : null, 'chi')+'</div></div>'
-    + bdVayNoDongHtml(cur.vayNo);
+    + bdVayNoDongHtml(cur.vayNo) + bdDauTuDongHtml(cur.dauTu);
   // --- từ đây là phần chi tiết từng ngày: gập sau nút "Xem ..." (màn rộng hiện hết), xem bdMoHtml ---
   var hTruoc = h; h = '';
   // --- số dư cuối ngày ---
@@ -727,8 +734,8 @@ function baoCaoDauHtml(mk){
 // cách tính các số ở thẻ đầu Báo cáo, mỗi dòng có phép tính bằng số thật (giaiThichSo ở state.js)
 function bcDauGiaiThichHtml(mk, cur, rows, cap, daHM, nhip, dang){
   var ds = [], rieng = cur.vayNo.traNo + cur.vayNo.choVay;
-  ds.push({ ten: 'Đã chi tháng này', ct: 'Chi tiêu thật = tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư.',
-    pt: ptCong([cur.tongChi, -rieng, -num(cur.theoCat.dieuChinh)], cur.tongChiThat) });
+  ds.push({ ten: 'Đã chi tháng này', ct: 'Chi tiêu thật = tổng chi − trả nợ (gồm tất toán) − cho vay − điều chỉnh số dư' + (cur.dauTu.von > 0.5 ? ' − bỏ vốn đầu tư' : '') + '.',
+    pt: ptCong([cur.tongChi, -rieng, -num(cur.theoCat.dieuChinh), -cur.dauTu.von], cur.tongChiThat) });
   if (cap > 0){
     ds.push({ ten: 'Chi hằng ngày theo hạn mức', ct: 'Chi của các danh mục tiêu hằng ngày có hạn mức ÷ tổng hạn mức của chúng (khoản cố định không tính).',
       pt: soGt(daHM) + ' ÷ ' + soGt(cap) + ' = ' + Math.round(daHM / cap * 100) + '%, ' + (daHM > cap ? 'vượt ' + soGt(daHM - cap) : 'còn ' + ptCong([cap, -daHM], cap - daHM)) });
