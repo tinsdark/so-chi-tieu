@@ -1,11 +1,11 @@
 "use strict";
 /* ====================================================================
    tongket.js — TỔNG KẾT THÁNG: nhìn lại một tháng ĐÃ KẾT THÚC, ở tab Báo cáo (chọn tháng bằng thanh tháng sẵn có).
-   Một thẻ, các dòng: thu - chi, chi hằng ngày so với hạn mức (và số ngày trong mức), chi cố định, trả nợ + nợ gốc còn lại,
+   Một thẻ, các dòng: thu - chi, chi hằng ngày so với hạn mức (và số ngày trong mức), chi cố định, trả nợ + nợ gốc còn lại, đầu tư (nếu tháng đó có bỏ vốn / thu về),
    tài sản ròng so với tháng trước, danh mục chi hằng ngày tăng mạnh nhất.
    Sổ tay chỉ có 1 chip "Tổng kết tháng N ›" trong 7 ngày đầu tháng để dẫn sang đây (tkGoiY), không có thẻ riêng.
    Chỉ ĐỌC dữ liệu. Ngày trong mức tính theo hạn mức HIỆN TẠI (xem tnNgayThang, theongay.js): đổi hạn mức rồi xem lại tháng cũ
-   thì số ngày này đổi theo. Cần state.js, vayno-tinh.js (taiSanRongThang), sotay.js (hanMucHangNgay, catChiHangNgay),
+   thì số ngày này đổi theo. Cần state.js, dautu.js (dauTuTongTat), vayno-tinh.js (taiSanRongThang), sotay.js (hanMucHangNgay, catChiHangNgay),
    bieudo.js (bdThang, bdThangTruoc, bdTien), theongay.js (tnNgayThang) load trước.
    ==================================================================== */
 
@@ -24,7 +24,8 @@ function tongKetThang(mk){
   // thu / chi THẬT (không gồm vay nợ, xem bdThang); phần vay nợ tính riêng ở r.vayNo
   var r = { mk: mk, prevMk: prevMk, soNgay: cur.soNgay, thu: cur.tongThuThat, chi: cur.tongChiThat, hangNgay: cur.tongChiHN,
             coDinh: cur.tongChiThat - cur.tongChiHN, traNo: cur.vayNo.traNo, vayNo: cur.vayNo, cap: hanMucHangNgay().cap,
-            ngayOk: null, tang: null, no: null, noTruoc: null, rong: null, rongTruoc: null };
+            ngayOk: null, tang: null, no: null, noTruoc: null, rong: null, rongTruoc: null,
+            dauTu: cur.dauTu, dauTuTong: dauTuTongTat(mk + '-31') };      // đầu tư: bỏ vốn / thu về trong tháng + lãi lỗ lũy kế tới cuối tháng (dautu.js)
   // số ngày chi hằng ngày không vượt mức (không chi gì cũng là trong mức)
   var t = tnNgayThang(mk + '-' + pad2(cur.soNgay));
   if (t) r.ngayOk = t.ngay.filter(function(x){ return x.ok; }).length;
@@ -66,6 +67,11 @@ function tongKetCardHtml(mk){
     h += tkDong('Trả nợ (tính riêng)', bdTien(r.traNo), (r.vayNo.vay > 0.5 ? 'vay thêm ' + bdTien(r.vayNo.vay) + ' · ' : '') + 'nợ gốc còn ' + bdTien(r.no)
       + (giam != null && Math.abs(giam) >= 1 ? (giam > 0 ? ', giảm ' : ', tăng ') + bdTien(Math.abs(giam)) + ' so với đầu tháng' : ''));
   }
+  if (r.dauTu.von + r.dauTu.thu > 0.5){
+    var dtR = r.dauTu.thu - r.dauTu.von, lk = r.dauTuTong.lai;
+    h += tkDong('Đầu tư (tính riêng)', (dtR > 0 ? '+' : (dtR < 0 ? '−' : '')) + bdTien(Math.abs(dtR)), 'bỏ vốn ' + bdTien(r.dauTu.von) + ' · thu về ' + bdTien(r.dauTu.thu) + ' · tính tới cuối tháng '
+      + (Math.abs(lk) < 0.5 ? 'hòa vốn' : (lk < 0 ? 'còn lỗ ' : 'lãi ') + bdTien(Math.abs(lk))));
+  }
   if (r.rong != null){
     var dRong = r.rongTruoc != null ? r.rong - r.rongTruoc : null;
     h += tkDong('Tài sản ròng thực tế cuối tháng', bdTien(r.rong),
@@ -85,6 +91,8 @@ function tkGiaiThichHtml(r){
     ds.push({ ten: 'Trả nợ (tính riêng)', ct: 'Tổng các lần trả nợ trong tháng (gồm tất toán). Nợ gốc còn lại tính từ lịch vay tới cuối tháng.',
       pt: 'trả ' + soGt(r.traNo) + (r.vayNo.vay > 0.5 ? ' · vay thêm ' + soGt(r.vayNo.vay) : '') + ' · nợ gốc cuối tháng ' + soGt(r.no) + (r.noTruoc != null ? ' (đầu tháng ' + soGt(r.noTruoc) + ')' : '') });
   }
+  if (r.dauTu.von + r.dauTu.thu > 0.5) ds.push({ ten: 'Đầu tư (tính riêng)', ct: 'Thu về − bỏ vốn trong tháng (bỏ vốn là tiền ra thật nhưng không phải chi tiêu). Lãi / lỗ tới cuối tháng = tổng thu về − tổng vốn đã bỏ của mọi khoản.',
+    pt: ptCong([r.dauTu.thu, -r.dauTu.von], r.dauTu.thu - r.dauTu.von) + '; lũy kế ' + ptCong([r.dauTuTong.thu, -r.dauTuTong.von], r.dauTuTong.lai) });
   if (r.rong != null) ds.push({ ten: 'Tài sản ròng thực tế cuối tháng', ct: 'Số dư các ví + cho vay chưa thu − nợ gốc còn lại, theo số đã ghi.',
     pt: soGt(r.rong) + (r.rongTruoc != null ? ' (tháng trước ' + soGt(r.rongTruoc) + ' → ' + (r.rong - r.rongTruoc >= 0 ? '+' : '−') + soGt(Math.abs(r.rong - r.rongTruoc)) + ')' : '') });
   if (r.tang) ds.push({ ten: 'Tăng mạnh nhất', ct: 'Danh mục chi hằng ngày có mức tăng lớn nhất so với tháng trước.', pt: soGt(r.tang.v) + ' − ' + soGt(r.tang.v - r.tang.d) + ' = +' + soGt(r.tang.d) });

@@ -42,7 +42,7 @@ Tên "Sổ Tiền", giọng thân mật bằng tiếng Việt. Bảng màu lấy
 
 ## Evidence on Hand
 
-README đầy đủ (mục 1 đến 5), trang quyền riêng tư `privacy.html`, 549 unit test chạy trong CI, ảnh logo trong `brand/`. Không có testimonial, số liệu người dùng hay số liệu thị trường; đừng bịa.
+README đầy đủ (mục 1 đến 5), trang quyền riêng tư `privacy.html`, 552 unit test chạy trong CI, ảnh logo trong `brand/`. Không có testimonial, số liệu người dùng hay số liệu thị trường; đừng bịa.
 
 ## Product Principles
 
