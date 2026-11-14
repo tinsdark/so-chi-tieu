@@ -5,9 +5,9 @@
    Đặt ở Báo cáo (nơi để HIỂU tiền) chứ không ở chuông (nơi để LÀM việc): chuông có số đỏ, điều đáng chú ý thì không.
    Chỉ ĐỌC dữ liệu. Tháng đang chạy so với CÙNG KHOẢNG NGÀY của các tháng trước (không so tháng dở với tháng trọn).
    Luật: tổng chi so với TB 3 tháng trước · danh mục tăng mạnh nhất · dư thật (để dành / chi vượt thu) · chuỗi ngày chi hằng ngày trong mức ·
-         khoản chi lớn nhất · giờ công chi tiêu · thứ trong tuần chi nhiều nhất · lời hứa đang giữ / vừa phá · nợ gốc tăng giảm · số ngày không chi.
+         khoản chi lớn nhất · giờ công chi tiêu · thứ trong tuần chi nhiều nhất · lời hứa đang giữ / vừa phá · nợ gốc tăng giảm · số ngày không chi · đầu tư còn lỗ / đã lãi.
    dnTatCa(mk, homNay) là hàm thuần để test; dnCardHtml(mk) là thẻ (rỗng nếu chưa có gì đáng nói), ẩn / hiện được ở Cài đặt → Hiển thị.
-   Cần bieudo.js (bdThang, bdTheoThu), theongay.js, tongket.js, giocong.js, loihua.js, sotay.js load trước.
+   Cần bieudo.js (bdThang, bdTheoThu), dautu.js (dauTuTongTat), theongay.js, tongket.js, giocong.js, loihua.js, sotay.js load trước.
    ==================================================================== */
 
 var DN_TOI_DA = 5;
@@ -141,6 +141,13 @@ function dnTatCa(mk, homNay, giuHet){
   for (var d = 0; d < soDuyet; d++) if (!(cur.chiHN[d] > 0)) khong++;
   if (soDuyet >= 7 && khong >= 5 && soDuyet - khong >= 5) them({ id: 'khong', tone: 'tot', diem: 28, ten: 'Ngày không chi',
     html: 'Có <b>' + khong + ' ngày</b> không chi tiêu hằng ngày ' + nhan + '.', ct: 'Số ngày mà chi hằng ngày (không gồm khoản cố định, vay nợ) bằng 0; chỉ nêu khi tháng có ít nhất 5 ngày có ghi chi (ghi thưa thì con số này không đáng tin).', pt: khong + ' ngày trong ' + soDuyet + ' ngày' });
+  // 11. đầu tư: tháng này có bỏ vốn / thu về thì nói còn lỗ hay đã lãi (tính tới hết tháng, hoặc tới hôm nay nếu tháng đang chạy)
+  if (cur.dauTu.von + cur.dauTu.thu > 0.5){
+    var tdt = dauTuTongTat(laNay ? homNay : mk + '-31');
+    if (Math.abs(tdt.lai) >= 100000) them({ id: 'dautu', tone: tdt.lai < 0 ? 'xau' : 'tot', diem: tdt.lai < 0 ? 52 : 46, ten: 'Đầu tư',
+      html: 'Đầu tư ' + (tdt.lai < 0 ? '<b>còn lỗ ' : '<b>đã lãi ') + fmt(Math.round(Math.abs(tdt.lai))) + '</b>: bỏ vốn ' + fmt(Math.round(tdt.von)) + ', thu về ' + fmt(Math.round(tdt.thu)) + '.',
+      ct: 'Tổng tiền thu về − tổng vốn đã bỏ của mọi khoản đầu tư (xem Công cụ → Đầu tư). Chỉ nêu khi tháng có bỏ vốn hoặc thu về và chênh lệch từ 100.000.', pt: ptCong([tdt.thu, -tdt.von], tdt.lai) });
+  }
 
   out.sort(function(a, b){ return b.diem - a.diem; });
   return giuHet ? out : out.slice(0, DN_TOI_DA);       // giuHet: chỉ để test, lấy mọi câu thay vì 5 câu đầu

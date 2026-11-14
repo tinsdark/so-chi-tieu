@@ -7906,6 +7906,38 @@ test('Đầu tư (Báo cáo): không có khoản thì không có thẻ; có kho�
   setToday('2026-10-01');
 });
 
+test('Đầu tư (Tổng kết tháng): tháng không có đầu tư thì không có dòng; có thì hiện ròng tháng + lũy kế, phép cộng đúng', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' } })); setToday('2026-11-03');
+  ctx.entryAddItem('2026-10-03', 'chi', 'an', 200000, '', ''); ctx.entryAddItem('2026-10-03', 'thu', 'luong', 20000000, '', '');
+  var h0 = ctx.tongKetCardHtml('2026-10'); ok(h0.indexOf('Đầu tư (tính riêng)') < 0, 'chưa có đầu tư thì không có dòng');
+  var a = ctx.dauTuThem('Quỹ A', '2026-09-05'); ctx.dauTuBoVon(a.id, '2026-09-05', 10000000); ctx.dauTuThuVe(a.id, '2026-10-05', 2000000); ctx.dauTuThuVe(a.id, '2026-10-06', 3000000);
+  var h = ctx.tongKetCardHtml('2026-10');
+  ok(h.indexOf('Đầu tư (tính riêng)') > 0, 'có dòng Đầu tư');
+  ok(h.indexOf('thu về ' + ctx.bdTien(5000000)) > 0 && h.indexOf('bỏ vốn ' + ctx.bdTien(0)) > 0, 'tháng 10: thu về 5tr, không bỏ vốn');
+  ok(h.indexOf('còn lỗ ' + ctx.bdTien(5000000)) > 0, 'lũy kế còn lỗ 5tr');
+  ok(h.indexOf('5.000.000 − 0 = 5.000.000') > 0 || h.indexOf('5.000.000 = 5.000.000') > 0 || h.indexOf('lũy kế 5.000.000 − 10.000.000 = −5.000.000') > 0, 'phép tính lũy kế: ' + h.slice(h.indexOf('Đầu tư (tính riêng)', h.indexOf('Cách tính'))));
+  eq(kiemPhepCong(h).loi.join(' | '), ''); ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0);
+  var r = ctx.tongKetThang('2026-10'); eq(r.thu, 20000000, 'Để dành / Thu nhập không gồm tiền thu về đầu tư'); eq(r.chi, 200000);
+  var h9 = ctx.tongKetCardHtml('2026-09'); ok(h9 === '' || h9.indexOf('bỏ vốn ' + ctx.bdTien(10000000)) > 0, 'tháng 9 (nếu có giao dịch) hiện bỏ vốn 10tr');
+  setToday('2026-10-01');
+});
+
+test('Đầu tư (Điều đáng chú ý): có bỏ vốn / thu về trong tháng thì có câu còn lỗ / đã lãi, số đúng; không có đầu tư thì không có câu', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' } })); setToday('2026-11-03');
+  ctx.entryAddItem('2026-10-03', 'chi', 'an', 200000, '', '');
+  eq(ctx.dnTatCa('2026-10', '2026-11-03', true).filter(function(x){ return x.id === 'dautu'; }).length, 0, 'chưa có đầu tư');
+  var a = ctx.dauTuThem('Quỹ A', '2026-10-01'); ctx.dauTuBoVon(a.id, '2026-10-01', 10000000); ctx.dauTuThuVe(a.id, '2026-10-05', 5000000);
+  var c = ctx.dnTatCa('2026-10', '2026-11-03', true).filter(function(x){ return x.id === 'dautu'; })[0];
+  ok(c, 'có câu đầu tư'); eq(c.tone, 'xau'); ok(c.html.indexOf('còn lỗ <b>') < 0 && c.html.indexOf('<b>còn lỗ ' + ctx.fmt(5000000) + '</b>') >= 0, c.html);
+  eq(c.pt, '5.000.000 − 10.000.000 = −5.000.000'); eq(kiemPhepCong(c.pt).loi.join(' | '), '');
+  ctx.dauTuThuVe(a.id, '2026-10-20', 6000000);
+  var c2 = ctx.dnTatCa('2026-10', '2026-11-03', true).filter(function(x){ return x.id === 'dautu'; })[0]; eq(c2.tone, 'tot'); ok(c2.html.indexOf('đã lãi') > 0);
+  ctx.dauTuThuVe(a.id, '2026-10-21', 100000); ctx.dauTuBoVon(a.id, '2026-10-22', 100000);
+  eq(ctx.dnTatCa('2026-10', '2026-11-03', true).filter(function(x){ return x.id === 'dautu'; })[0].tone, 'tot');
+  eq(ctx.dnTatCa('2026-11', '2026-11-03', true).filter(function(x){ return x.id === 'dautu'; }).length, 0, 'tháng không phát sinh đầu tư thì không nhắc');
+  setToday('2026-10-01');
+});
+
 (async function ketThuc(){
   if (hangDoiAsync.length) console.log('\nTest bất đồng bộ');
   for (var i = 0; i < hangDoiAsync.length; i++){

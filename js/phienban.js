@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.14.3', ngay: '2026-11-14', ten: 'Đầu tư: có mặt ở Tổng kết tháng và Điều đáng chú ý',
+    muc: ['Tổng kết tháng có dòng "Đầu tư (tính riêng)" khi tháng đó có bỏ vốn hoặc thu về: ròng của tháng và còn lỗ / đã lãi tính tới cuối tháng, kèm cách tính.',
+          'Điều đáng chú ý có thêm một câu về đầu tư (còn lỗ hay đã lãi, bao nhiêu) khi tháng đang xem có bỏ vốn hoặc thu về.']},
   { ban: '2026.11.14.2', ngay: '2026-11-14', ten: 'Báo cáo: thẻ Đầu tư',
     muc: ['Báo cáo có thẻ "Đầu tư" (chỉ hiện khi đã có khoản đầu tư): tổng còn lỗ / lãi tới cuối tháng đang xem, từng khoản, bỏ vốn và thu về trong tháng, đường lãi / lỗ lũy kế các tháng, kèm cách tính. Bật / tắt và đổi vị trí ở Cài đặt → Hiển thị.']},
   { ban: '2026.11.14', ngay: '2026-11-14', ten: 'Công cụ: thêm trang Đầu tư',
