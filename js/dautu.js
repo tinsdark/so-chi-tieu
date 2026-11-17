@@ -242,9 +242,8 @@ state.dtTab = state.dtTab || 'ds';        // 'ds' | 'ls' | 'pt'
 state.dtLoc = state.dtLoc || '';          // tab Lịch sử: lọc theo id khoản ('' = tất cả)
 state.dtDonVi = state.dtDonVi || 'thang';  // tab Phân tích: xem biểu đồ theo 'thang' | 'ngay'
 state.dtKy = state.dtKy || 30;            // theo ngày: số ngày gần nhất (14 | 30 | 90)
-state.dtLs = state.dtLs || {};            // số lần ghi đang hiện: theo id khoản (tab Danh sách) hoặc '*' (tab Lịch sử)
+state.dtLs = state.dtLs || {};            // tab Lịch sử: số lần ghi đang hiện (khóa '*')
 var DT_KY = [14, 30, 90];
-var DT_LS_DAU = 5, DT_LS_BUOC = 10;       // dưới mỗi khoản ở tab Danh sách: hiện 5 lần mới nhất, "Xem thêm" +10
 var DT_LS_TAT_DAU = 20, DT_LS_TAT_BUOC = 20;   // tab Lịch sử: 20 lần, "Xem thêm" +20
 function dtTomTat(){
   var ds = state.data.dauTu || [];
@@ -274,15 +273,23 @@ function dtNutXemThem(key, dangHien, tong, dau, buoc){
   if (dangHien > dau) h += '<button type="button" class="btn secondary sm" data-act="dtThuGon" data-k="' + esc(key) + '">Thu gọn</button>';
   return h + '</div>';
 }
+// thẻ 1 khoản ở tab Danh sách: TÌNH HÌNH của khoản (vốn, thu về, đã thu lại bao nhiêu %, lần ghi gần nhất) và các nút thao tác.
+// Từng lần ghi KHÔNG in ở đây (đã có tab Lịch sử): chỉ có nút "Xem lịch sử" nhảy sang Lịch sử, lọc sẵn khoản này.
 function dtDongHtml(x){
-  var t = dauTuTong(x.id), ls = dauTuLichSu(x.id), n = Math.min(ls.length, num(state.dtLs[x.id]) || DT_LS_DAU), h = '<div class="cc-it">'
+  var t = dauTuTong(x.id), ls = dauTuLichSu(x.id), gan = ls[0], pct = t.von > 0 ? Math.round(t.thu / t.von * 100) : null;
+  var h = '<div class="cc-it">'
     + '<div class="cc-it-h"><b>' + esc(x.ten) + '</b>' + dtTagLaiLo(t) + '</div>'
-    + '<div class="cc-it-s"><span class="muted">Đã bỏ vốn ' + fmt(Math.round(t.von)) + ' · thu về ' + fmt(Math.round(t.thu)) + '</span></div>'
-    + (x.ghiChu ? '<div class="cc-it-s"><span class="muted">' + esc(x.ghiChu) + '</span></div>' : '');
-  if (ls.length) h += '<div class="dt-lsx">' + ls.slice(0, n).map(function(l){ return dtLanHtml(l, false); }).join('') + '</div>' + dtNutXemThem(x.id, n, ls.length, DT_LS_DAU, DT_LS_BUOC);
+    + '<div class="cc-it-s"><span class="muted">Đã bỏ vốn ' + fmt(Math.round(t.von)) + ' · thu về ' + fmt(Math.round(t.thu)) + '</span></div>';
+  if (pct != null){
+    h += '<div class="dt-bar" aria-hidden="true"><i class="' + (pct >= 100 ? 'thu' : '') + '" style="width:' + Math.max(2, Math.min(100, pct)) + '%"></i></div>'
+      + '<div class="cc-it-s"><span class="muted">Đã thu lại ' + pct + '% vốn' + (t.lo > 0 ? ' · còn thiếu ' + fmt(Math.round(t.lo)) + ' để hòa vốn' : '') + '</span></div>';
+  }
+  if (x.ghiChu) h += '<div class="cc-it-s"><span class="muted">' + esc(x.ghiChu) + '</span></div>';
+  if (gan) h += '<div class="cc-it-s"><span class="muted">Lần ghi gần nhất ' + ngayVN(gan.ngay) + ': ' + (gan.loai === 'dauTuVon' ? 'bỏ vốn ' : 'thu về ') + fmt(Math.round(gan.soTien)) + ' · tổng ' + ls.length + ' lần ghi</span></div>';
   h += '<div class="cc-it-b">'
     + (x.dong ? '' : '<button type="button" class="btn secondary sm" data-act="dtVon" data-id="' + esc(x.id) + '">Bỏ thêm vốn</button>'
                + '<button type="button" class="btn secondary sm" data-act="dtThu" data-id="' + esc(x.id) + '">Thu về</button>')
+    + (ls.length ? '<button type="button" class="btn secondary sm" data-act="dtXemLs" data-id="' + esc(x.id) + '">Xem lịch sử</button>' : '')
     + '<button type="button" class="btn secondary sm" data-act="dtSua" data-id="' + esc(x.id) + '">' + icon('pencil') + ' Sửa</button></div></div>';
   return h;
 }
@@ -311,7 +318,8 @@ function dtTabDanhSachHtml(){
 function dtTabLichSuHtml(){
   var ds = state.data.dauTu || [];
   if (state.dtLoc && !dauTuTim(state.dtLoc)) state.dtLoc = '';
-  var h = '<div class="qa-chips" role="group" aria-label="Lọc theo khoản"><button type="button" class="qa-chip' + (state.dtLoc ? '' : ' on') + '" data-act="dtLoc" data-id="">Tất cả</button>'
+  // chỉ có 1 khoản thì chip lọc vô nghĩa (Tất cả = khoản đó): ẩn đi, trừ khi đang lọc dở
+  var h = (ds.length < 2 && !state.dtLoc) ? '' : '<div class="qa-chips" role="group" aria-label="Lọc theo khoản"><button type="button" class="qa-chip' + (state.dtLoc ? '' : ' on') + '" data-act="dtLoc" data-id="">Tất cả</button>'
     + ds.map(function(x){ return '<button type="button" class="qa-chip' + (state.dtLoc === x.id ? ' on' : '') + '" data-act="dtLoc" data-id="' + esc(x.id) + '">' + esc(x.ten) + '</button>'; }).join('') + '</div>';
   var ls = dauTuLichSu(state.dtLoc), n = Math.min(ls.length, num(state.dtLs['*']) || DT_LS_TAT_DAU);
   if (!ls.length) return h + '<div class="empty" style="margin-top:12px">Chưa có lần bỏ vốn hay thu về nào.</div>';
@@ -474,9 +482,9 @@ function handleDauTuAction(act, el){
   else if (act === 'dtKy'){ var kyN = Math.round(num(attr('data-v'))); state.dtKy = DT_KY.indexOf(kyN) >= 0 ? kyN : 30; renderCongCu(); }
   else if (act === 'dtLoc'){ state.dtLoc = attr('data-id'); state.dtLs['*'] = 0; renderCongCu(); }
   else if (act === 'dtXemThem'){
-    var kx0 = attr('data-k'), tat = kx0 === '*';
-    state.dtLs[kx0] = (num(state.dtLs[kx0]) || (tat ? DT_LS_TAT_DAU : DT_LS_DAU)) + (tat ? DT_LS_TAT_BUOC : DT_LS_BUOC); renderCongCu();
-  } else if (act === 'dtThuGon'){ state.dtLs[attr('data-k')] = 0; renderCongCu(); }
+    state.dtLs['*'] = (num(state.dtLs['*']) || DT_LS_TAT_DAU) + DT_LS_TAT_BUOC; renderCongCu();
+  } else if (act === 'dtThuGon'){ state.dtLs['*'] = 0; renderCongCu(); }
+  else if (act === 'dtXemLs'){ state.dtTab = 'ls'; state.dtLoc = attr('data-id'); state.dtLs['*'] = 0; renderCongCu(); if (window.scrollTo) window.scrollTo(0, 0); }
   else if (act === 'dtThem'){ state.ccForm = { loai: 'dt', id: 'k|' }; ccSheetVe(); }
   else if (act === 'dtSua'){ state.ccForm = { loai: 'dt', id: 'k|' + attr('data-id') }; ccSheetVe(); }
   else if (act === 'dtVon' || act === 'dtThu'){ state.ccForm = { loai: 'dt', id: (act === 'dtVon' ? 'von|' : 'thu|') + attr('data-id') }; ccSheetVe(); }
