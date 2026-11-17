@@ -8,6 +8,10 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.17.4', ngay: '2026-11-17', ten: 'Đầu tư: phân tích theo ngày tính từ ngày mở khoản',
+    muc: ['Phân tích theo ngày giờ bắt đầu từ ngày mở khoản (khoản đã đóng thì tới ngày đóng), không còn lùi 14 / 30 / 90 ngày từ hôm nay kể cả những ngày khoản chưa có. Có nút "Từ ngày mở" (mặc định), "30 ngày", "90 ngày"; 30 / 90 ngày cũng không lùi qua ngày mở.',
+          'Có từ 2 khoản trở lên thì chọn xem mọi khoản (từ ngày mở sớm nhất) hoặc một khoản (từ ngày mở của khoản đó). Biểu đồ cột chỉ vẽ 90 ngày gần nhất khi kỳ dài hơn, biểu đồ đường vẽ đủ.',
+          'Phân tích theo tháng cũng bắt đầu từ tháng mở khoản.']},
   { ban: '2026.11.17.3', ngay: '2026-11-17', ten: 'Đầu tư: Danh sách và Lịch sử khác nhau rõ hơn',
     muc: ['Danh sách chỉ nói tình hình từng khoản: đã bỏ vốn, thu về, đã thu lại bao nhiêu % vốn (có thanh tiến độ), còn thiếu bao nhiêu để hòa vốn, lần ghi gần nhất. Không in lại từng lần ghi nữa.',
           'Từng lần bỏ vốn / thu về xem ở Lịch sử; mỗi khoản có nút "Xem lịch sử" nhảy sang đó, lọc sẵn khoản đó. Chỉ có một khoản thì ẩn hàng nút lọc.']},

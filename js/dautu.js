@@ -180,7 +180,9 @@ function dauTuPhanTich(homNay, d){
     .sort(function(a, b){ return a.lanCuoi < b.lanCuoi ? -1 : 1; })[0] || null;
   // theo tháng: từ tháng có lần ghi đầu tiên tới tháng hiện tại (hoặc tháng của lần ghi cuối nếu ở tương lai)
   if (refs.length){
-    var mk0 = monthKey(refs[0].ngay), mk1 = monthKey(homNay), mkL = monthKey(refs[refs.length - 1].ngay);
+    var ngay0 = refs[0].ngay;                                        // bắt đầu từ tháng MỞ khoản sớm nhất (hoặc tháng có lần ghi đầu, nếu sớm hơn)
+    ds.forEach(function(x){ if (x.ngayMo && x.ngayMo < ngay0 && x.ngayMo <= homNay) ngay0 = x.ngayMo; });
+    var mk0 = monthKey(ngay0), mk1 = monthKey(homNay), mkL = monthKey(refs[refs.length - 1].ngay);
     if (mkL > mk1) mk1 = mkL;
     var cum = 0, m = mk0, bang = {};
     refs.forEach(function(r){ var mk = monthKey(r.ngay); bang[mk] = bang[mk] || { von: 0, thu: 0, thuDang: 0 }; bang[mk].von += r.von; bang[mk].thu += r.thu; if (!byId[r.id].x.dong) bang[mk].thuDang += r.thu; });
@@ -201,28 +203,49 @@ function dauTuPhanTich(homNay, d){
   return out;
 }
 
-/* PHÂN TÍCH THEO NGÀY: soNgay ngày liền nhau kết thúc ở homNay (ngày cuối = hôm nay). Trả
-   { soNgay, tu, den, ngay:[{ngay,von,thu,lai(lũy kế tới cuối ngày)}], von, thu, rong (thu − vốn của kỳ), homNay:{von,thu}, laiDau (lũy kế trước kỳ), laiCuoi,
-     ngayCoPhatSinh, ngayThuNhieuNhat:{ngay,thu}|null, thuTBNgay (thu về TB mỗi ngày của khoản đang chạy trong kỳ), ngayHoaVon (ước số ngày nữa; null nếu không ước được), conKet }
-   Cần theongay.js (tnNgayCong). Ngày trong tương lai không tính. */
-function dauTuPhanTichNgay(homNay, soNgay, d){
-  d = d || state.data; homNay = homNay || todayStr(); soNgay = Math.max(1, Math.round(num(soNgay)) || 30);
-  var tu = tnNgayCong(homNay, -(soNgay - 1)), dang = {}, bang = {}, laiDau = 0, laiCuoi = 0, rongK = {};
-  (d.dauTu || []).forEach(function(x){ dang[x.id] = !x.dong; });
+/* PHÂN TÍCH THEO NGÀY: từng ngày TỪ NGÀY MỞ KHOẢN tới hôm nay (khoản đã đóng thì tới ngày đóng / lần ghi cuối). Không có ngày nào trước ngày mở.
+   ky = 0: từ ngày mở; ky = N: N ngày gần nhất nhưng KHÔNG lùi qua ngày mở (khoản mới mở thì kỳ ngắn hơn N). khoanId rỗng = mọi khoản: bắt đầu từ ngày mở SỚM NHẤT
+   (ngày mở = ngày mở khoản hoặc ngày có lần ghi đầu tiên, lấy ngày sớm hơn). Trả
+   { ky, soNgay, tu, den, tuMo, denLaHomNay, khoan, ngay:[{ngay,von,thu,lai(lũy kế tới cuối ngày)}], von, thu, rong (thu − vốn của kỳ), homNay:{von,thu} (ngày cuối của kỳ), laiDau (lũy kế trước kỳ), laiCuoi,
+     ngayCoPhatSinh, ngayThuNhieuNhat:{ngay,thu}|null, thuTBNgay (thu về TB mỗi ngày của khoản đang chạy trong kỳ), thuDangKy, ngayHoaVon (ước số ngày nữa; null nếu không ước được), conKet }
+   Cần theongay.js (tnNgayCong), loihua.js (lhSoNgay). Ngày sau hôm nay không tính. */
+function dauTuPhanTichNgay(homNay, ky, d, khoanId){
+  d = d || state.data; homNay = homNay || todayStr(); ky = Math.max(0, Math.round(num(ky)) || 0);
+  var ds = (d.dauTu || []).filter(function(x){ return !khoanId || x.id === khoanId; }), dang = {}, dau = {}, cuoi = {}, refs = [];
+  ds.forEach(function(x){ dang[x.id] = !x.dong; });
   Object.keys(d.journal).sort().forEach(function(date){
     if (date > homNay) return;
     ((d.journal[date] || {}).refs || []).forEach(function(r){
       if (!(r.loanId in dang) || (r.loai !== 'dauTuVon' && r.loai !== 'dauTuThu')) return;
-      var v = num(r.soTien), von = r.loai === 'dauTuVon' ? v : 0, thu = r.loai === 'dauTuThu' ? v : 0;
-      laiCuoi += thu - von; rongK[r.loanId] = (rongK[r.loanId] || 0) + thu - von;
-      if (date < tu){ laiDau += thu - von; return; }
-      var b = bang[date] = bang[date] || { von: 0, thu: 0, thuDang: 0 };
-      b.von += von; b.thu += thu; if (dang[r.loanId]) b.thuDang += thu;
+      var v = num(r.soTien);
+      refs.push({ id: r.loanId, ngay: date, von: r.loai === 'dauTuVon' ? v : 0, thu: r.loai === 'dauTuThu' ? v : 0 });
+      if (!dau[r.loanId]) dau[r.loanId] = date; cuoi[r.loanId] = date;
     });
   });
-  var out = { soNgay: soNgay, tu: tu, den: homNay, ngay: [], von: 0, thu: 0, rong: 0, homNay: { von: 0, thu: 0 }, laiDau: laiDau, laiCuoi: laiCuoi,
-              ngayCoPhatSinh: 0, ngayThuNhieuNhat: null, thuTBNgay: 0, ngayHoaVon: null, conKet: 0 }, cum = laiDau, thuDangKy = 0;
-  Object.keys(rongK).forEach(function(id){ if (dang[id] && rongK[id] < 0) out.conKet += -rongK[id]; });      // còn kẹt: khoản đang chạy còn lỗ, tới hết hôm nay
+  // ngày mở sớm nhất và ngày cuối của phạm vi
+  var tuMo = homNay, den = ds.length ? '' : homNay;
+  ds.forEach(function(x){
+    var mo = dau[x.id] && dau[x.id] < x.ngayMo ? dau[x.id] : x.ngayMo;
+    if (mo < tuMo) tuMo = mo;
+    var denK = x.dong ? (cuoi[x.id] && cuoi[x.id] > x.ngayDong ? cuoi[x.id] : x.ngayDong) : homNay;
+    if (denK > homNay) denK = homNay;
+    if (denK > den) den = denK;
+  });
+  if (!den || den > homNay) den = homNay;
+  if (tuMo > den) tuMo = den;
+  var tu = tuMo;
+  if (ky > 0){ var lui = tnNgayCong(den, -(ky - 1)); if (lui > tu) tu = lui; }
+  var soNgay = lhSoNgay(tu, den) + 1, bang = {}, laiDau = 0, laiCuoi = 0, rongK = {};
+  refs.forEach(function(r){
+    if (r.ngay > den) return;
+    laiCuoi += r.thu - r.von; rongK[r.id] = (rongK[r.id] || 0) + r.thu - r.von;
+    if (r.ngay < tu){ laiDau += r.thu - r.von; return; }
+    var b = bang[r.ngay] = bang[r.ngay] || { von: 0, thu: 0, thuDang: 0 };
+    b.von += r.von; b.thu += r.thu; if (dang[r.id]) b.thuDang += r.thu;
+  });
+  var out = { ky: ky, soNgay: soNgay, tu: tu, den: den, tuMo: tuMo, denLaHomNay: den === homNay, khoan: khoanId || '', ngay: [], von: 0, thu: 0, rong: 0, homNay: { von: 0, thu: 0 }, laiDau: laiDau, laiCuoi: laiCuoi,
+              ngayCoPhatSinh: 0, ngayThuNhieuNhat: null, thuTBNgay: 0, thuDangKy: 0, ngayHoaVon: null, conKet: 0 }, cum = laiDau, thuDangKy = 0;
+  Object.keys(rongK).forEach(function(id){ if (dang[id] && rongK[id] < 0) out.conKet += -rongK[id]; });      // còn kẹt: khoản đang chạy còn lỗ, tới hết ngày cuối
   for (var i = 0; i < soNgay; i++){
     var ng = tnNgayCong(tu, i), b = bang[ng] || { von: 0, thu: 0, thuDang: 0 };
     cum += b.thu - b.von;
@@ -241,9 +264,12 @@ function dauTuPhanTichNgay(homNay, soNgay, d){
 state.dtTab = state.dtTab || 'ds';        // 'ds' | 'ls' | 'pt'
 state.dtLoc = state.dtLoc || '';          // tab Lịch sử: lọc theo id khoản ('' = tất cả)
 state.dtDonVi = state.dtDonVi || 'thang';  // tab Phân tích: xem biểu đồ theo 'thang' | 'ngay'
-state.dtKy = state.dtKy || 30;            // theo ngày: số ngày gần nhất (14 | 30 | 90)
+state.dtKy = state.dtKy == null ? 0 : state.dtKy;   // theo ngày: 0 = từ ngày mở khoản, 30 | 90 = N ngày gần nhất (không lùi qua ngày mở)
+state.dtKhoanNgay = state.dtKhoanNgay || '';        // theo ngày: '' = mọi khoản, hoặc id một khoản (bắt đầu từ ngày mở của khoản đó)
 state.dtLs = state.dtLs || {};            // tab Lịch sử: số lần ghi đang hiện (khóa '*')
-var DT_KY = [14, 30, 90];
+var DT_KY = [0, 30, 90];
+var DT_KY_NHAN = { 0: 'Từ ngày mở', 30: '30 ngày', 90: '90 ngày' };
+var DT_NGAY_COMBO = 90;      // biểu đồ cột theo ngày chỉ vẽ tối đa ngần này ngày gần nhất (nhiều hơn thì cột nhỏ quá không đọc được); biểu đồ đường vẽ đủ
 var DT_LS_TAT_DAU = 20, DT_LS_TAT_BUOC = 20;   // tab Lịch sử: 20 lần, "Xem thêm" +20
 function dtTomTat(){
   var ds = state.data.dauTu || [];
@@ -340,26 +366,29 @@ function dtTabLichSuHtml(){
   return h + '</div>' + dtNutXemThem('*', n, ls.length, DT_LS_TAT_DAU, DT_LS_TAT_BUOC);
 }
 // tab Phân tích: số tổng, vốn còn kẹt và ước hòa vốn, 2 biểu đồ, từng khoản, nhận xét. Mọi con số có "Cách tính".
-// khối biểu đồ theo NGÀY của tab Phân tích (pn = dauTuPhanTichNgay): số của kỳ, hôm nay, 2 biểu đồ, vài dòng nhận xét về nhịp thu về
+// khối biểu đồ theo NGÀY của tab Phân tích (pn = dauTuPhanTichNgay): số của kỳ, ngày cuối, 2 biểu đồ, vài dòng về nhịp thu về
 function dtKhoiNgayHtml(pn, t){
   var kpi = function(nhan, v, lop, phu){ return '<div><small>' + nhan + '</small><b' + (lop ? ' class="' + lop + '"' : '') + '>' + v + '</b>' + (phu ? '<em class="muted">' + phu + '</em>' : '') + '</div>'; };
   var dau = function(v){ return (v > 0 ? '+' : (v < 0 ? '−' : '')) + bdTien(Math.abs(v)); };
-  var homRong = pn.homNay.thu - pn.homNay.von, ky = pn.soNgay + ' ngày gần nhất';
-  var h = '<div class="dm-sub" style="margin-top:10px">' + ky + ' (' + ngayVN(pn.tu).slice(0, 5) + ' → ' + ngayVN(pn.den).slice(0, 5) + ')</div>'
+  var homRong = pn.homNay.thu - pn.homNay.von, coCuoi = pn.homNay.von + pn.homNay.thu > 0;
+  var tieuDe = (pn.ky === 0 ? 'Từ ngày mở ' : pn.ky + ' ngày gần nhất, từ ') + ngayVN(pn.tu) + ' → ' + (pn.denLaHomNay ? 'hôm nay' : ngayVN(pn.den)) + ' · ' + pn.soNgay + ' ngày';
+  var h = '<div class="dm-sub" style="margin-top:10px">' + tieuDe + (pn.ky > 0 && pn.soNgay < pn.ky ? ' (khoản mới mở nên chưa đủ ' + pn.ky + ' ngày)' : '') + '</div>'
     + '<div class="bd-kpi" style="margin-top:8px">' + kpi('Bỏ vốn', bdTien(pn.von), 'chi') + kpi('Thu về', bdTien(pn.thu), 'thu') + '</div>'
     + '<div class="bd-kpi" style="margin-top:12px">' + kpi('Ròng của kỳ', dau(pn.rong), pn.rong < 0 ? 'chi' : (pn.rong > 0 ? 'thu' : ''), 'thu về − bỏ vốn')
-    + kpi('Hôm nay', pn.homNay.von + pn.homNay.thu > 0 ? dau(homRong) : 'chưa có', homRong < 0 ? 'chi' : (homRong > 0 ? 'thu' : ''), pn.homNay.von + pn.homNay.thu > 0 ? 'bỏ vốn ' + bdTien(pn.homNay.von) + ' · thu về ' + bdTien(pn.homNay.thu) : '') + '</div>';
+    + kpi(pn.denLaHomNay ? 'Hôm nay' : 'Ngày ' + ngayVN(pn.den).slice(0, 5), coCuoi ? dau(homRong) : 'chưa có', homRong < 0 ? 'chi' : (homRong > 0 ? 'thu' : ''), coCuoi ? 'bỏ vốn ' + bdTien(pn.homNay.von) + ' · thu về ' + bdTien(pn.homNay.thu) : '') + '</div>';
   var nhan = pn.ngay.map(function(x){ return parseInt(x.ngay.slice(8), 10) + '/' + parseInt(x.ngay.slice(5, 7), 10); });
   h += '<div class="dm-sub" style="margin-top:14px"><b>Lãi / lỗ lũy kế theo ngày</b></div><div class="bd-box">' + bdLine({ W: 350, H: 170, labels: nhan, series: [{ ten: 'Lãi / lỗ lũy kế', vals: pn.ngay.map(function(x){ return x.lai; }), cls: pn.laiCuoi < 0 ? 'chi' : 'thu', fill: true }],
     tipTitle: function(ix){ return ngayVN(pn.ngay[ix].ngay); }, money: bdTien, aria: 'Lãi / lỗ đầu tư lũy kế theo ngày' }) + '</div>';
-  h += '<div class="dm-sub" style="margin-top:14px"><b>Bỏ vốn và thu về theo ngày</b></div><div class="bd-box">' + bdCombo({ W: 350, H: 190, labels: nhan, thu: pn.ngay.map(function(x){ return x.thu; }), chi: pn.ngay.map(function(x){ return x.von; }),
-    nhanThu: 'Thu về', nhanChi: 'Bỏ vốn', money: bdTien, aria: 'Bỏ vốn và thu về đầu tư theo ngày', thuaNhan: true }) + '</div>';
+  var cat = pn.ngay.length > DT_NGAY_COMBO, gan = cat ? pn.ngay.slice(-DT_NGAY_COMBO) : pn.ngay, nGan = cat ? nhan.slice(-DT_NGAY_COMBO) : nhan;
+  h += '<div class="dm-sub" style="margin-top:14px"><b>Bỏ vốn và thu về theo ngày</b>' + (cat ? ' <span class="muted">(' + DT_NGAY_COMBO + ' ngày gần nhất)</span>' : '') + '</div><div class="bd-box">'
+    + bdCombo({ W: 350, H: 190, labels: nGan, thu: gan.map(function(x){ return x.thu; }), chi: gan.map(function(x){ return x.von; }),
+      nhanThu: 'Thu về', nhanChi: 'Bỏ vốn', money: bdTien, aria: 'Bỏ vốn và thu về đầu tư theo ngày', thuaNhan: true }) + '</div>';
   h += '<div class="cc-r" style="margin-top:12px"><span>Số ngày có bỏ vốn hoặc thu về</span><b>' + pn.ngayCoPhatSinh + '/' + pn.soNgay + '</b></div>';
   if (pn.ngayThuNhieuNhat) h += '<div class="cc-r"><span>Ngày thu về nhiều nhất</span><b class="thu">' + ngayVN(pn.ngayThuNhieuNhat.ngay).slice(0, 5) + ' · ' + fmt(Math.round(pn.ngayThuNhieuNhat.thu)) + '</b></div>';
   h += '<div class="cc-r"><span>Thu về trung bình mỗi ngày (khoản đang chạy)</span><b>' + fmt(Math.round(pn.thuTBNgay)) + '</b></div>';
   if (pn.conKet > 0.5){
     if (pn.ngayHoaVon != null) h += '<div class="cc-r"><span>Nếu giữ nhịp này, còn cần thu về ' + fmt(Math.round(pn.conKet)) + '</span><b>khoảng ' + pn.ngayHoaVon + ' ngày nữa</b></div>';
-    else h += '<div class="vn-sub">Trong ' + pn.soNgay + ' ngày qua khoản đang chạy chưa thu về đồng nào nên chưa ước được thời gian hòa vốn.</div>';
+    else h += '<div class="vn-sub">Trong ' + pn.soNgay + ' ngày này khoản đang chạy chưa thu về đồng nào nên chưa ước được thời gian hòa vốn.</div>';
   }
   return h;
 }
@@ -382,11 +411,17 @@ function dtTabPhanTichHtml(){
   h += '<div class="dm-sub" style="margin-top:14px"><b>Xem theo</b></div><div class="qa-chips" role="group" aria-label="Xem theo">'
     + '<button type="button" class="qa-chip' + (state.dtDonVi === 'ngay' ? '' : ' on') + '" data-act="dtDonVi" data-v="thang">Tháng</button>'
     + '<button type="button" class="qa-chip' + (state.dtDonVi === 'ngay' ? ' on' : '') + '" data-act="dtDonVi" data-v="ngay">Ngày</button>'
-    + (state.dtDonVi === 'ngay' ? DT_KY.map(function(k){ return '<button type="button" class="qa-chip' + (state.dtKy === k ? ' on' : '') + '" data-act="dtKy" data-v="' + k + '">' + k + ' ngày</button>'; }).join('') : '') + '</div>';
+    + (state.dtDonVi === 'ngay' ? DT_KY.map(function(k){ return '<button type="button" class="qa-chip' + (state.dtKy === k ? ' on' : '') + '" data-act="dtKy" data-v="' + k + '">' + DT_KY_NHAN[k] + '</button>'; }).join('') : '') + '</div>';
+  // theo ngày có từ 2 khoản trở lên: chọn xem mọi khoản hay một khoản (bắt đầu từ ngày mở của khoản đó)
+  if (state.dtDonVi === 'ngay' && p.dem.tong >= 2){
+    if (state.dtKhoanNgay && !dauTuTim(state.dtKhoanNgay)) state.dtKhoanNgay = '';
+    h += '<div class="qa-chips" style="margin-top:8px" role="group" aria-label="Khoản xem theo ngày"><button type="button" class="qa-chip' + (state.dtKhoanNgay ? '' : ' on') + '" data-act="dtKhoanNgay" data-id="">Mọi khoản</button>'
+      + (state.data.dauTu || []).map(function(x){ return '<button type="button" class="qa-chip' + (state.dtKhoanNgay === x.id ? ' on' : '') + '" data-act="dtKhoanNgay" data-id="' + esc(x.id) + '">' + esc(x.ten) + '</button>'; }).join('') + '</div>';
+  }
   var pn = null;
   if (state.dtDonVi === 'ngay'){
-    if (DT_KY.indexOf(state.dtKy) < 0) state.dtKy = 30;
-    pn = dauTuPhanTichNgay(todayStr(), state.dtKy);
+    if (DT_KY.indexOf(state.dtKy) < 0) state.dtKy = 0;
+    pn = dauTuPhanTichNgay(todayStr(), state.dtKy, null, state.dtKhoanNgay);
     h += dtKhoiNgayHtml(pn, t);
   } else {
   // biểu đồ
@@ -426,9 +461,9 @@ function dtTabPhanTichHtml(){
       pt: soGt(p.conKet) + ' ÷ ' + soGt(p.thuTB) + ' (' + soGt(p.sumTB) + ' ÷ ' + p.soThangTB + ') → ' + p.thangHoaVon + ' tháng' });
   }
   if (pn){
-    ds.push({ ten: 'Ròng của ' + pn.soNgay + ' ngày', ct: 'Tổng thu về − tổng bỏ vốn trong ' + pn.soNgay + ' ngày gần nhất (tính cả hôm nay).', pt: ptCong([pn.thu, -pn.von], pn.rong) });
+    ds.push({ ten: 'Ròng của ' + pn.soNgay + ' ngày', ct: 'Tổng thu về − tổng bỏ vốn trong kỳ đang xem (' + (pn.ky === 0 ? 'từ ngày mở khoản' : pn.ky + ' ngày gần nhất') + ').', pt: ptCong([pn.thu, -pn.von], pn.rong) });
     ds.push({ ten: 'Lãi / lỗ lũy kế theo ngày', ct: 'Lãi / lỗ trước kỳ cộng dồn thu về − bỏ vốn từng ngày. Ngày cuối bằng tổng lãi / lỗ hiện tại.', pt: ptCong([pn.laiDau, pn.rong], pn.laiCuoi) });
-    ds.push({ ten: 'Thu về trung bình mỗi ngày', ct: 'Tiền thu về của các khoản đang chạy trong kỳ ÷ số ngày của kỳ (ngày không thu về vẫn tính là 0).', pt: soGt(pn.thuDangKy) + ' ÷ ' + pn.soNgay + ' = ' + soGt(pn.thuTBNgay) });
+    ds.push({ ten: 'Thu về trung bình mỗi ngày', ct: 'Tiền thu về của các khoản đang chạy trong kỳ ÷ số ngày của kỳ tính từ ngày mở (ngày không thu về vẫn tính là 0).', pt: soGt(pn.thuDangKy) + ' ÷ ' + pn.soNgay + ' = ' + soGt(pn.thuTBNgay) });
     if (pn.ngayHoaVon != null) ds.push({ ten: 'Ước số ngày hòa vốn', ct: 'Số còn cần thu về ÷ thu về trung bình mỗi ngày, làm tròn lên. Chỉ là ước lượng thô, tiền thu về thường không đều.', pt: soGt(pn.conKet) + ' ÷ ' + soGt(pn.thuTBNgay) + ' → ' + pn.ngayHoaVon + ' ngày' });
   }
   return h + giaiThichSo(ds, 'Cách tính các số này');
@@ -479,7 +514,8 @@ function handleDauTuAction(act, el){
   var ngayOk = function(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s); };
   if (act === 'dtTab'){ state.dtTab = ['ds', 'ls', 'pt'].indexOf(attr('data-v')) >= 0 ? attr('data-v') : 'ds'; renderCongCu(); }
   else if (act === 'dtDonVi'){ state.dtDonVi = attr('data-v') === 'ngay' ? 'ngay' : 'thang'; renderCongCu(); }
-  else if (act === 'dtKy'){ var kyN = Math.round(num(attr('data-v'))); state.dtKy = DT_KY.indexOf(kyN) >= 0 ? kyN : 30; renderCongCu(); }
+  else if (act === 'dtKy'){ var kyN = Math.round(num(attr('data-v'))); state.dtKy = DT_KY.indexOf(kyN) >= 0 ? kyN : 0; renderCongCu(); }
+  else if (act === 'dtKhoanNgay'){ state.dtKhoanNgay = dauTuTim(attr('data-id')) ? attr('data-id') : ''; renderCongCu(); }
   else if (act === 'dtLoc'){ state.dtLoc = attr('data-id'); state.dtLs['*'] = 0; renderCongCu(); }
   else if (act === 'dtXemThem'){
     state.dtLs['*'] = (num(state.dtLs['*']) || DT_LS_TAT_DAU) + DT_LS_TAT_BUOC; renderCongCu();

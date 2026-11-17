@@ -8015,45 +8015,72 @@ test('Đầu tư (giao diện): có 3 phần Danh sách / Lịch sử / Phân t�
   setToday('2026-10-01');
 });
 
-test('Đầu tư (phân tích theo ngày): kỳ N ngày kết thúc hôm nay, số kỳ / hôm nay / lũy kế / ước hòa vốn đúng', function(){
+test('Đầu tư (phân tích theo ngày): bắt đầu TỪ NGÀY MỞ khoản, kỳ N ngày không lùi qua ngày mở, số liệu đúng', function(){
   loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } })); setToday('2026-11-16');
   var a = ctx.dauTuThem('Quỹ A', '2026-10-20'); ctx.dauTuBoVon(a.id, '2026-10-20', 10000000);
   ctx.dauTuThuVe(a.id, '2026-11-05', 1000000); ctx.dauTuThuVe(a.id, '2026-11-10', 2000000); ctx.dauTuBoVon(a.id, '2026-11-10', 500000); ctx.dauTuThuVe(a.id, '2026-11-16', 1000000);
   ctx.dauTuThuVe(a.id, '2026-11-20', 9999999);   // ngày tương lai: không tính
-  var p = ctx.dauTuPhanTichNgay('2026-11-16', 14);
-  eq(p.ngay.length, 14); eq(p.tu, '2026-11-03'); eq(p.den, '2026-11-16'); eq(p.ngay[0].ngay, '2026-11-03'); eq(p.ngay[13].ngay, '2026-11-16');
-  eq(p.von, 500000); eq(p.thu, 4000000); eq(p.rong, 3500000); eq(p.homNay.thu, 1000000); eq(p.homNay.von, 0);
-  eq(p.laiDau, -10000000, 'lũy kế trước kỳ: mới bỏ vốn 10tr'); eq(p.ngay[0].lai, -10000000); eq(p.ngay[2].lai, -9000000, '05/11'); eq(p.ngay[7].lai, -7500000, '10/11: +2tr −0,5tr'); eq(p.ngay[13].lai, -6500000); eq(p.laiCuoi, -6500000, 'không tính ngày tương lai');
-  eq(p.ngayCoPhatSinh, 3); eq(p.ngayThuNhieuNhat.ngay, '2026-11-10'); eq(p.ngayThuNhieuNhat.thu, 2000000);
-  near(p.thuTBNgay, 4000000 / 14, 0.01); eq(p.conKet, 6500000); eq(p.ngayHoaVon, 23, '6,5tr ÷ (4tr/14) = 22,75 → 23');
-  var p30 = ctx.dauTuPhanTichNgay('2026-11-16', 30); eq(p30.laiDau, 0, 'trước kỳ 30 ngày (từ 18/10) chưa có gì'); eq(p30.von, 10500000); eq(p30.rong, 4000000 - 10500000); eq(p30.ngay[29].lai, -6500000);
-  eq(ctx.dauTuPhanTichNgay('2026-11-16', 0).ngay.length, 30, 'số ngày vô lý thì lấy 30');
-  var rong = ctx.dauTuPhanTichNgay('2026-11-16', 7); eq(rong.von, 500000, 'kỳ 7 ngày bắt đầu 10/11'); eq(rong.thu, 3000000, '10/11 (2tr) + 16/11 (1tr)'); eq(rong.ngayCoPhatSinh, 2); eq(rong.laiDau, -9000000, 'trước 10/11: −10tr + 1tr');
+  var p = ctx.dauTuPhanTichNgay('2026-11-16', 0);
+  eq(p.tu, '2026-10-20', 'bắt đầu đúng ngày mở khoản'); eq(p.den, '2026-11-16'); eq(p.tuMo, '2026-10-20'); eq(p.soNgay, 28, '20/10 → 16/11 là 28 ngày'); eq(p.ngay.length, 28); eq(p.ngay[0].ngay, '2026-10-20'); eq(p.ngay[27].ngay, '2026-11-16');
+  eq(p.laiDau, 0, 'không có gì trước ngày mở'); eq(p.ngay[0].lai, -10000000, 'ngày mở: vừa bỏ vốn 10tr');
+  eq(p.von, 10500000); eq(p.thu, 4000000); eq(p.rong, -6500000); eq(p.homNay.thu, 1000000);
+  eq(p.ngay[16].ngay, '2026-11-05'); eq(p.ngay[16].lai, -9000000); eq(p.ngay[21].lai, -7500000, '10/11: +2tr −0,5tr'); eq(p.laiCuoi, -6500000, 'không tính ngày tương lai'); eq(p.ngay[27].lai, p.laiCuoi);
+  eq(p.ngayCoPhatSinh, 4); eq(p.ngayThuNhieuNhat.ngay, '2026-11-10'); eq(p.ngayThuNhieuNhat.thu, 2000000);
+  near(p.thuTBNgay, 4000000 / 28, 0.01); eq(p.conKet, 6500000); eq(p.ngayHoaVon, 46, '6,5tr ÷ (4tr/28) = 45,5 → 46');
+  eq(JSON.stringify(ctx.dauTuPhanTichNgay('2026-11-16').tu), JSON.stringify('2026-10-20'), 'không truyền kỳ = từ ngày mở');
+  var p14 = ctx.dauTuPhanTichNgay('2026-11-16', 14); eq(p14.tu, '2026-11-03'); eq(p14.soNgay, 14); eq(p14.von, 500000); eq(p14.thu, 4000000); eq(p14.rong, 3500000); eq(p14.laiDau, -10000000, 'trước kỳ: đã bỏ vốn 10tr'); eq(p14.ngayHoaVon, 23);
+  var p30 = ctx.dauTuPhanTichNgay('2026-11-16', 30); eq(p30.tu, '2026-10-20', '30 ngày lùi tới 18/10 nhưng khoản mở 20/10 nên KHÔNG lùi qua ngày mở'); eq(p30.soNgay, 28); eq(p30.von, 10500000);
+  var p7 = ctx.dauTuPhanTichNgay('2026-11-16', 7); eq(p7.tu, '2026-11-10'); eq(p7.von, 500000); eq(p7.thu, 3000000); eq(p7.ngayCoPhatSinh, 2); eq(p7.laiDau, -9000000);
+  // nhiều khoản: mọi khoản = từ ngày mở SỚM NHẤT; chọn một khoản = từ ngày mở của khoản đó; khoản đã đóng = tới ngày đóng
+  var b = ctx.dauTuThem('Vàng', '2026-11-01'); ctx.dauTuBoVon(b.id, '2026-11-01', 1000000);
+  var c = ctx.dauTuThem('Cổ phiếu', '2026-10-25'); ctx.dauTuBoVon(c.id, '2026-10-25', 1000000); ctx.dauTuThuVe(c.id, '2026-11-01', 1500000); ctx.dauTuDong(c.id, '2026-11-02');
+  eq(ctx.dauTuPhanTichNgay('2026-11-16', 0).tu, '2026-10-20', 'mọi khoản: từ ngày mở sớm nhất');
+  var pb = ctx.dauTuPhanTichNgay('2026-11-16', 0, null, b.id); eq(pb.tu, '2026-11-01'); eq(pb.soNgay, 16); eq(pb.von, 1000000); eq(pb.thu, 0); eq(pb.khoan, b.id); eq(pb.denLaHomNay, true);
+  var pc = ctx.dauTuPhanTichNgay('2026-11-16', 0, null, c.id); eq(pc.tu, '2026-10-25'); eq(pc.den, '2026-11-02', 'khoản đã đóng: tới ngày đóng'); eq(pc.soNgay, 9); eq(pc.denLaHomNay, false); eq(pc.thu, 1500000); eq(pc.conKet, 0, 'đã đóng thì không còn kẹt'); eq(pc.ngayHoaVon, null);
+  eq(ctx.dauTuPhanTichNgay('2026-11-16', 30, null, b.id).soNgay, 16, 'kỳ 30 ngày của khoản mới mở: chỉ 16 ngày');
+  // khoản ghi sớm hơn ngày mở: lấy ngày sớm hơn; khoản mở ở tương lai không làm hỏng
+  var f = ctx.dauTuThem('Quỹ F', '2026-12-25'); var pf = ctx.dauTuPhanTichNgay('2026-11-16', 0, null, f.id); eq(pf.soNgay, 1); eq(pf.von, 0); ok(!isNaN(pf.thuTBNgay));
+  eq(ctx.dauTuPhanTichNgay('2026-11-16', 0, { journal: {}, dauTu: [] }).soNgay, 1, 'chưa có khoản nào: 1 ngày, không lỗi');
 });
-test('Đầu tư (phân tích theo ngày): chuyển Tháng / Ngày, chọn 14 / 30 / 90 ngày, biểu đồ + cách tính đúng; khoản đã đóng không làm nhịp thu về sai', function(){
+test('Đầu tư (phân tích theo ngày): giao diện Từ ngày mở / 30 / 90 ngày, chọn khoản, biểu đồ + cách tính đúng; khoản đã đóng không làm nhịp thu về sai', function(){
   loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } })); setToday('2026-11-16');
   var a = ctx.dauTuThem('Quỹ A', '2026-10-20'), b = ctx.dauTuThem('Vàng', '2026-10-01'); ctx.dauTuBoVon(a.id, '2026-10-20', 10000000); ctx.dauTuThuVe(a.id, '2026-11-05', 1000000); ctx.dauTuThuVe(a.id, '2026-11-10', 3000000);
   ctx.dauTuBoVon(b.id, '2026-10-01', 2000000); ctx.dauTuThuVe(b.id, '2026-11-08', 5000000); ctx.dauTuDong(b.id, '2026-11-09');
   var root = { innerHTML: '' }, ch = function(act, a2){ voiDom({ tabContent: root }, null, function(){ ctx.handleDauTuAction(act, elAct(a2 || {})); }); };
-  ctx.state.dtTab = 'pt'; ctx.state.dtDonVi = 'thang'; ctx.state.dtKy = 30;
+  ctx.state.dtTab = 'pt'; ctx.state.dtDonVi = 'thang'; ctx.state.dtKy = 0; ctx.state.dtKhoanNgay = '';
   var h = ctx.dtPageHtml(); ok(h.indexOf('data-act="dtDonVi" data-v="ngay"') > 0 && h.indexOf('data-act="dtKy"') < 0, 'mặc định theo tháng, chưa có nút chọn kỳ');
-  ch('dtDonVi', { 'data-v': 'ngay' }); eq(ctx.state.dtDonVi, 'ngay'); h = ctx.dtPageHtml();
-  ok(h.indexOf('30 ngày gần nhất') > 0 && h.indexOf('Lãi / lỗ lũy kế theo ngày') > 0 && h.indexOf('Bỏ vốn và thu về theo ngày') > 0 && h.indexOf('<svg') > 0, 'khối theo ngày');
-  ok(h.indexOf('data-act="dtKy" data-v="14"') > 0 && h.indexOf('data-act="dtKy" data-v="90"') > 0, 'nút chọn 14 / 30 / 90 ngày');
+  ch('dtDonVi', { 'data-v': 'ngay' }); eq(ctx.state.dtDonVi, 'ngay'); eq(ctx.state.dtKy, 0, 'mặc định: từ ngày mở'); h = ctx.dtPageHtml();
+  ok(h.indexOf('Từ ngày mở 01/10/2026 → hôm nay · 47 ngày') > 0, 'bắt đầu từ ngày mở sớm nhất (Vàng 01/10): ' + h.slice(h.indexOf('Từ ngày mở'), h.indexOf('Từ ngày mở') + 80));
+  ok(h.indexOf('Lãi / lỗ lũy kế theo ngày') > 0 && h.indexOf('Bỏ vốn và thu về theo ngày') > 0 && h.indexOf('<svg') > 0, 'khối theo ngày');
+  ok(h.indexOf('data-act="dtKy" data-v="0">Từ ngày mở') > 0 && h.indexOf('data-act="dtKy" data-v="30">30 ngày') > 0 && h.indexOf('data-act="dtKy" data-v="90">90 ngày') > 0 && h.indexOf('data-v="14"') < 0, 'nút: Từ ngày mở / 30 / 90 ngày');
+  ok(h.indexOf('aria-label="Khoản xem theo ngày"') > 0 && h.indexOf('>Mọi khoản<') > 0, 'có 2 khoản thì có chọn khoản');
   ok(h.indexOf('Lãi / lỗ lũy kế theo tháng') < 0, 'theo ngày thì không vẽ biểu đồ theo tháng');
-  // nhịp thu về chỉ tính khoản ĐANG CHẠY (Quỹ A: 4tr/30 ngày), 5tr của Vàng (đã đóng) không tính
-  var p = ctx.dauTuPhanTichNgay('2026-11-16', 30); near(p.thuTBNgay, 4000000 / 30, 0.01); eq(p.thu, 9000000, 'tổng thu về của kỳ gồm cả khoản đã đóng');
-  eq(p.conKet, 6000000); eq(p.ngayHoaVon, 45, '6tr ÷ (4tr/30) = 45');
-  ok(h.indexOf('khoảng 45 ngày nữa') > 0, 'ước hòa vốn theo ngày');
-  ok(h.indexOf('9.000.000 − 0 = 9.000.000') > 0 || h.indexOf('Ròng của 30 ngày') > 0, 'có cách tính ròng của kỳ');
-  eq(kiemPhepCong(h).loi.join(' | '), ''); ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0, 'không lộ undefined / NaN');
-  ch('dtKy', { 'data-v': '14' }); eq(ctx.state.dtKy, 14); ok(ctx.dtPageHtml().indexOf('14 ngày gần nhất') > 0);
-  ch('dtKy', { 'data-v': '7' }); eq(ctx.state.dtKy, 30, 'kỳ lạ thì về 30'); ch('dtKy', { 'data-v': '90' }); eq(ctx.state.dtKy, 90); ok(ctx.dtPageHtml().indexOf('90 ngày gần nhất') > 0);
+  // nhịp thu về chỉ tính khoản ĐANG CHẠY (Quỹ A: 4tr trong 47 ngày); 5tr của Vàng (đã đóng) không tính
+  var p = ctx.dauTuPhanTichNgay('2026-11-16', 0); near(p.thuTBNgay, 4000000 / 47, 0.01); eq(p.thu, 9000000, 'tổng thu về của kỳ gồm cả khoản đã đóng');
+  eq(p.conKet, 6000000); eq(p.ngayHoaVon, 71, '6tr ÷ (4tr/47) = 70,5 → 71'); ok(h.indexOf('khoảng 71 ngày nữa') > 0, 'ước hòa vốn theo ngày');
+  ok(h.indexOf('Ròng của kỳ') > 0, 'có cách tính ròng của kỳ'); eq(kiemPhepCong(h).loi.join(' | '), ''); ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0, 'không lộ undefined / NaN');
+  // chọn một khoản: bắt đầu từ ngày mở của khoản đó; khoản đã đóng tới ngày đóng
+  ch('dtKhoanNgay', { 'data-id': a.id }); h = ctx.dtPageHtml(); ok(h.indexOf('Từ ngày mở 20/10/2026 → hôm nay · 28 ngày') > 0, 'Quỹ A: từ 20/10');
+  ch('dtKhoanNgay', { 'data-id': b.id }); h = ctx.dtPageHtml(); ok(h.indexOf('Từ ngày mở 01/10/2026 → 09/11/2026 · 40 ngày') > 0 && h.indexOf('Ngày 09/11') > 0, 'Vàng: tới ngày đóng: ' + h.slice(h.indexOf('Từ ngày mở'), h.indexOf('Từ ngày mở') + 80));
+  ch('dtKhoanNgay', { 'data-id': 'khong-co' }); eq(ctx.state.dtKhoanNgay, '', 'khoản lạ thì về Mọi khoản');
+  ch('dtKy', { 'data-v': '30' }); eq(ctx.state.dtKy, 30); h = ctx.dtPageHtml(); ok(h.indexOf('30 ngày gần nhất, từ 18/10/2026 → hôm nay · 30 ngày') > 0, h.slice(h.indexOf('ngày gần nhất') - 5, h.indexOf('ngày gần nhất') + 80));
+  ch('dtKhoanNgay', { 'data-id': a.id }); h = ctx.dtPageHtml(); ok(h.indexOf('30 ngày gần nhất, từ 20/10/2026') > 0 && h.indexOf('khoản mới mở nên chưa đủ 30 ngày') > 0, 'kỳ 30 ngày của khoản mới: không lùi qua ngày mở'); ch('dtKhoanNgay', { 'data-id': '' });
+  ch('dtKy', { 'data-v': '7' }); eq(ctx.state.dtKy, 0, 'kỳ lạ thì về Từ ngày mở'); ch('dtKy', { 'data-v': '90' }); eq(ctx.state.dtKy, 90); ok(ctx.dtPageHtml().indexOf('90 ngày gần nhất, từ 01/10/2026') > 0, 'kỳ 90 ngày mà khoản mới mở 47 ngày thì bắt đầu từ ngày mở');
   ch('dtDonVi', { 'data-v': 'sai' }); eq(ctx.state.dtDonVi, 'thang', 'giá trị lạ thì về Tháng'); ok(ctx.dtPageHtml().indexOf('Lãi / lỗ lũy kế theo tháng') > 0);
+  // quá 90 ngày: biểu đồ cột chỉ vẽ 90 ngày gần nhất và nói rõ
+  ctx.state.dtDonVi = 'ngay'; ctx.state.dtKy = 0; setToday('2027-01-30'); h = ctx.dtPageHtml(); ok(h.indexOf('(90 ngày gần nhất)') > 0, 'từ ngày mở > 90 ngày: cột chỉ vẽ 90 ngày'); ok(h.indexOf('Lãi / lỗ lũy kế theo ngày') > 0, 'đường vẫn vẽ đủ');
   // kỳ không có lần ghi nào: không NaN, nói rõ chưa ước được
-  ctx.state.dtDonVi = 'ngay'; ctx.state.dtKy = 14; setToday('2026-12-30'); h = ctx.dtPageHtml();
+  ctx.state.dtKy = 30; setToday('2026-12-30'); h = ctx.dtPageHtml();
   ok(h.indexOf('chưa thu về đồng nào') > 0 && h.indexOf('NaN') < 0 && h.indexOf('undefined') < 0, 'kỳ trống');
-  ctx.state.dtTab = 'ds'; ctx.state.dtDonVi = 'thang'; ctx.state.dtKy = 30; setToday('2026-10-01');
+  ctx.state.dtTab = 'ds'; ctx.state.dtDonVi = 'thang'; ctx.state.dtKy = 0; ctx.state.dtKhoanNgay = ''; setToday('2026-10-01');
+});
+
+test('Đầu tư (phân tích theo tháng): bắt đầu từ tháng MỞ khoản, kể cả khi lần ghi đầu tiên ở tháng sau', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } })); setToday('2026-11-16');
+  var a = ctx.dauTuThem('Quỹ A', '2026-08-15'); ctx.dauTuBoVon(a.id, '2026-10-02', 3000000);
+  var p = ctx.dauTuPhanTich('2026-11-16'); eq(p.thang[0].mk, '2026-08', 'khoản mở tháng 8 thì biểu đồ bắt đầu từ tháng 8'); eq(p.thang[0].lai, 0); eq(p.thang.length, 4); eq(p.thang[3].lai, -3000000);
+  var b = ctx.dauTuThem('Vàng', '2027-03-01'); eq(ctx.dauTuPhanTich('2026-11-16').thang[0].mk, '2026-08', 'khoản mở ở tương lai không kéo lùi');
+  setToday('2026-10-01');
 });
 
 (async function ketThuc(){
