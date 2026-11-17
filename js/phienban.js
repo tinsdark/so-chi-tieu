@@ -8,6 +8,9 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.17.2', ngay: '2026-11-17', ten: 'Đầu tư: phân tích theo ngày',
+    muc: ['Trang Đầu tư, phần Phân tích có thêm nút "Xem theo Tháng / Ngày". Chọn Ngày thì xem 14, 30 hoặc 90 ngày gần nhất.',
+          'Theo ngày có: bỏ vốn, thu về, ròng của kỳ; hôm nay có gì; biểu đồ lãi / lỗ lũy kế và bỏ vốn - thu về từng ngày; số ngày có phát sinh; ngày thu về nhiều nhất; thu về trung bình mỗi ngày và ước còn khoảng bao nhiêu ngày nữa thì hòa vốn. Mọi số có cách tính.']},
   { ban: '2026.11.17', ngay: '2026-11-17', ten: 'Đầu tư: lịch sử đầy đủ và phân tích',
     muc: ['Trang Đầu tư chia 3 phần: Danh sách, Lịch sử, Phân tích.',
           'Lịch sử xem ngay trong trang, không cần sang Sổ tay: mỗi khoản hiện 5 lần mới nhất, bấm "Xem thêm" để hiện nữa; phần Lịch sử gom mọi lần bỏ vốn / thu về theo tháng, lọc được theo khoản, hiện cả ví và ghi chú, xóa được từng lần.',
