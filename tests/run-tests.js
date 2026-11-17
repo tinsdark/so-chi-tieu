@@ -7938,6 +7938,76 @@ test('Đầu tư (Điều đáng chú ý): có bỏ vốn / thu về trong thán
   setToday('2026-10-01');
 });
 
+function dtDem(h, cls){ return (h.match(new RegExp('class="' + cls + '"', 'g')) || []).length; }
+test('Đầu tư (lịch sử đầy đủ): mỗi khoản hiện 5 lần mới nhất, Xem thêm +10, Thu gọn; ghi chú và ví hiện đúng', function(){
+  var d = loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' }, wallets: [{ id: 'w1', ten: 'Ví A', soDuDauKy: 40000000 }, { id: 'w2', ten: 'Ví B', soDuDauKy: 10000000 }] }));
+  setToday('2026-11-16'); var x = ctx.dauTuThem('Quỹ A', '2026-09-01'), root = { innerHTML: '' }, ch = function(act, a){ voiDom({ tabContent: root }, null, function(){ ctx.handleDauTuAction(act, elAct(a || {})); }); };
+  ctx.dauTuBoVon(x.id, '2026-09-01', 10000000, 'w2', 'Bỏ vốn: Quỹ A (đợt đầu)', 'đợt đầu');
+  for (var i = 1; i <= 25; i++) ctx.dauTuThuVe(x.id, '2026-10-' + (i < 10 ? '0' + i : i), 1000 * i, 'w1');
+  var ls = ctx.dauTuLichSu(x.id); eq(ls.length, 26, 'đủ 26 lần'); eq(ls[0].ngay, '2026-10-25', 'mới nhất trước'); eq(ls[25].gc, 'đợt đầu', 'ghi chú người dùng lưu riêng'); eq(ls[25].viId, 'w2');
+  ctx.state.dtTab = 'ds'; ctx.state.dtLs = {}; ctx.state.dtLoc = '';
+  var h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 5, 'mặc định 5 lần'); ok(h.indexOf('Xem thêm 10 lần (còn 21)') > 0, 'nút Xem thêm: ' + h.slice(h.indexOf('dt-xt') - 5, h.indexOf('dt-xt') + 200)); ok(h.indexOf('Thu gọn') < 0);
+  ok(h.indexOf('Ví A') > 0, 'nhiều ví thì hiện tên ví');
+  ch('dtXemThem', { 'data-k': x.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 15); ok(h.indexOf('(còn 11)') > 0 && h.indexOf('Thu gọn') > 0);
+  ch('dtXemThem', { 'data-k': x.id }); ch('dtXemThem', { 'data-k': x.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 26, 'hiện đủ'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Thu gọn') > 0, 'hết thì chỉ còn Thu gọn');
+  ok(h.indexOf('đợt đầu') > 0, 'ghi chú người dùng hiện ở dòng lịch sử');
+  ch('dtThuGon', { 'data-k': x.id }); eq(dtDem(ctx.dtPageHtml(), 'dt-ln'), 5, 'Thu gọn về 5');
+  // tab Lịch sử: mọi khoản, 20 lần đầu, Xem thêm +20, gom tháng, lọc theo khoản
+  var y = ctx.dauTuThem('Vàng', '2026-10-02'); ctx.dauTuBoVon(y.id, '2026-10-02', 2000000, 'w1');
+  ch('dtTab', { 'data-v': 'ls' }); eq(ctx.state.dtTab, 'ls'); h = ctx.dtPageHtml();
+  eq(dtDem(h, 'dt-ln'), 20, 'tab Lịch sử: 20 lần đầu'); ok(h.indexOf('Xem thêm 7 lần (còn 7)') > 0, 'còn 7 lần: ' + h.slice(h.indexOf('dt-xt'), h.indexOf('dt-xt') + 150));
+  ok(h.indexOf('Tháng 10/2026') > 0 && h.indexOf('27 lần') > 0, 'gom theo tháng, tổng số lần'); ok(h.indexOf('Quỹ A') > 0 && h.indexOf('Vàng') > 0, 'có tên khoản');
+  ch('dtXemThem', { 'data-k': '*' }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 27, 'xem thêm hết'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Tháng 9/2026') > 0, 'có cả tháng 9');
+  ch('dtLoc', { 'data-id': y.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 1, 'lọc còn khoản Vàng'); ok(h.indexOf('1 lần') > 0);
+  ch('dtXoaLan', { 'data-id': y.id, 'data-ngay': '2026-10-02', 'data-rid': ctx.dauTuLichSu(y.id)[0].rid }); eq(ctx.dauTuLichSu(y.id).length, 0, 'xóa được ngay trong tab Lịch sử');
+  // dữ liệu cũ chưa có gc: lấy phần trong ngoặc của ghi chú
+  eq(ctx.dauTuGcCuaRef({ note: 'Thu về: Quỹ A (đợt 2)' }), 'đợt 2'); eq(ctx.dauTuGcCuaRef({ note: 'Thu về: Quỹ A' }), ''); eq(ctx.dauTuGcCuaRef({ note: 'x (a)', gc: 'b' }), 'b');
+  ctx.state.dtTab = 'ds'; ctx.state.dtLs = {}; ctx.state.dtLoc = ''; setToday('2026-10-01');
+});
+test('Đầu tư (phân tích): số tổng, đếm khoản, vốn còn kẹt, ước hòa vốn, theo tháng, khoản tốt / tệ nhất đều đúng', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } })); setToday('2026-11-16');
+  var a = ctx.dauTuThem('Quỹ A', '2026-07-05'), b = ctx.dauTuThem('Vàng', '2026-08-01');
+  ctx.dauTuBoVon(a.id, '2026-07-05', 10000000); ['2026-08-10', '2026-09-10', '2026-10-10', '2026-11-05'].forEach(function(n){ ctx.dauTuThuVe(a.id, n, 1000000); });
+  ctx.dauTuBoVon(b.id, '2026-08-01', 4000000); ctx.dauTuThuVe(b.id, '2026-09-01', 4500000); ctx.dauTuDong(b.id, '2026-09-02');
+  var p = ctx.dauTuPhanTich('2026-11-16');
+  eq(p.tong.von, 14000000); eq(p.tong.thu, 8500000); eq(p.tong.lai, -5500000); near(p.tong.thuLai, 8.5 / 14, 0.0001);
+  eq(JSON.stringify(p.dem), JSON.stringify({ tong: 2, dang: 1, dong: 1, lai: 1, lo: 1, hoa: 0 }));
+  eq(p.khoan[0].ten, 'Quỹ A', 'lỗ nhiều nhất lên đầu'); eq(p.khoan[0].conKet, 6000000, 'còn kẹt = 10tr − 4tr đã thu'); eq(p.khoan[1].conKet, 0, 'khoản đã đóng không tính kẹt');
+  eq(p.conKet, 6000000); eq(p.thuTB, 1000000, '3 tháng trọn 8, 9, 10: mỗi tháng thu về 1tr từ khoản đang chạy (4,5tr của khoản đã đóng không tính)'); eq(p.thangHoaVon, 6, '6tr ÷ 1tr');
+  eq(p.tot.ten, 'Vàng'); eq(p.te.ten, 'Quỹ A'); eq(p.lau, null, 'Quỹ A mới có lần ghi 11 ngày trước');
+  eq(p.thang.length, 5, 'tháng 7 → 11'); eq(p.thang[0].mk, '2026-07'); eq(p.thang[0].lai, -10000000); eq(p.thang[4].lai, -5500000, 'lũy kế cuối = tổng lãi / lỗ'); eq(p.thang[2].mk, '2026-09'); eq(p.thang[2].lai, -10000000 + 1000000 + 1000000 - 4000000 + 4500000);
+  var h = (ctx.state.dtTab = 'pt', ctx.dtPageHtml());
+  ok(h.indexOf('khoảng 6 tháng nữa') > 0, 'ước hòa vốn'); ok(h.indexOf('Còn cần thu về thêm') > 0 && h.indexOf('<svg') > 0, 'có số còn kẹt và biểu đồ');
+  ok(h.indexOf('Khoản lãi nhất') > 0 && h.indexOf('Khoản lỗ nhất') > 0, 'nhận xét'); ok(h.indexOf('Đã đóng') > 0, 'khoản đã đóng được đánh dấu');
+  ok(h.indexOf('Đã thu lại') > 0 && h.indexOf('61%') > 0, 'thu lại 61%: ' + h.slice(h.indexOf('Đã thu lại'), h.indexOf('Đã thu lại') + 120));
+  ok(h.indexOf('8.500.000 − 14.000.000 = −5.500.000') > 0, 'phép tính lãi / lỗ'); ok(h.indexOf('6.000.000 ÷ 1.000.000') > 0, 'phép tính ước hòa vốn');
+  eq(kiemPhepCong(h).loi.join(' | '), ''); ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0, 'không lộ undefined / NaN');
+  ctx.state.dtTab = 'ds'; setToday('2026-10-01');
+});
+test('Đầu tư (phân tích): chưa có lần ghi nào, chưa đủ tháng, lâu chưa thu về, đang lãi — không NaN và không ước bậy', function(){
+  loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-06-01', thangBatDauDuTru: '2026-06' } })); setToday('2026-11-16');
+  var p0 = ctx.dauTuPhanTich('2026-11-16'); eq(p0.dem.tong, 0); eq(p0.thang.length, 0); eq(p0.tong.thuLai, null);
+  var a = ctx.dauTuThem('Quỹ A', '2026-11-10'); var p1 = ctx.dauTuPhanTich('2026-11-16'); eq(p1.tong.von, 0); eq(p1.khoan[0].tt, 'chua');
+  ctx.state.dtTab = 'pt'; ok(ctx.dtPageHtml().indexOf('Chưa có lần bỏ vốn hay thu về nào để phân tích') > 0, 'chưa có lần ghi: báo trống');
+  ctx.dauTuBoVon(a.id, '2026-11-10', 5000000);
+  var p2 = ctx.dauTuPhanTich('2026-11-16'); eq(p2.thuTB, null, 'mới có 1 tháng thì chưa ước'); eq(p2.thangHoaVon, null);
+  var h = ctx.dtPageHtml(); ok(h.indexOf('Chưa đủ 2 tháng trọn') > 0, 'nói rõ vì sao chưa ước'); ok(h.indexOf('NaN') < 0 && h.indexOf('undefined') < 0);
+  ctx.dauTuThuVe(a.id, '2026-11-12', 6000000); var p3 = ctx.dauTuPhanTich('2026-11-16'); eq(p3.dem.lai, 1); eq(p3.conKet, 0); eq(p3.te, null); eq(p3.tot.ten, 'Quỹ A');
+  // lâu chưa có lần ghi mà còn lỗ
+  var b = ctx.dauTuThem('Cổ phiếu', '2026-06-10'); ctx.dauTuBoVon(b.id, '2026-06-10', 3000000);
+  var p4 = ctx.dauTuPhanTich('2026-11-16'); eq(p4.lau.ten, 'Cổ phiếu'); ok((ctx.dtPageHtml()).indexOf('chưa có lần ghi nào') > 0, 'nhận xét lâu chưa thu về');
+  ctx.state.dtTab = 'ds'; setToday('2026-10-01');
+});
+test('Đầu tư (giao diện): có 3 phần Danh sách / Lịch sử / Phân tích; Báo cáo dẫn thẳng sang Phân tích', function(){
+  dtData(50000000); setToday('2026-10-20'); var x = ctx.dauTuThem('Quỹ A'); ctx.dauTuBoVon(x.id, '2026-10-02', 1000000);
+  ctx.state.dtTab = 'ds'; var h = ctx.dtPageHtml();
+  ok(h.indexOf('data-act="dtTab" data-v="ds"') > 0 && h.indexOf('data-act="dtTab" data-v="ls"') > 0 && h.indexOf('data-act="dtTab" data-v="pt"') > 0, 'thanh chọn 3 phần');
+  ok(h.indexOf('xem ở Sổ tay') < 0, 'không còn bắt sang Sổ tay xem lịch sử');
+  ctx.state.dtTab = 'sai'; ok(ctx.dtPageHtml().indexOf('aria-selected="true"') > 0, 'giá trị lạ thì về Danh sách'); eq(ctx.state.dtTab, 'ds');
+  ok(ctx.dauTuCardHtml('2026-10').indexOf('data-act="goDauTu" data-v="pt"') > 0, 'nút ở Báo cáo mở thẳng tab Phân tích');
+  setToday('2026-10-01');
+});
+
 (async function ketThuc(){
   if (hangDoiAsync.length) console.log('\nTest bất đồng bộ');
   for (var i = 0; i < hangDoiAsync.length; i++){

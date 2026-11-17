@@ -1904,3 +1904,19 @@ label.dm-row::after{content:"";flex:0 0 7px;width:7px;height:7px;border-right:2p
 /* mũi tên / chỉ báo tăng giảm vẽ bằng SVG thay cho ký tự → ↑ ↓ */
 .ic-mui{width:.95em;height:.95em;vertical-align:-.14em;margin:0 1px;opacity:.7}
 .ic-d{width:.9em;height:.9em;vertical-align:-.12em;stroke-width:2.2}
+
+/* Đầu tư (dautu.js): lịch sử từng lần ghi, Xem thêm, thanh so sánh các khoản */
+.dt-lsx{margin-top:6px}
+.dt-ln{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px}
+.dt-lsx .dt-ln:first-child{border-top:0}
+.dt-ln-m{flex:1;min-width:0}.dt-ln-m b{display:block;font-weight:600}.dt-ln-m small{display:block;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.dt-ln>b{white-space:nowrap}.dt-ln>b.chi{color:var(--red)}.dt-ln>b.thu{color:var(--green)}
+.dt-th{display:flex;justify-content:space-between;gap:10px;margin-top:14px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.dt-th .chi{color:var(--red)}.dt-th .thu{color:var(--green)}
+.dt-xt{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+.dt-ls-tong{margin-top:12px;font-size:13px;color:var(--muted)}.dt-ls-tong b.chi{color:var(--red)}.dt-ls-tong b.thu{color:var(--green)}
+.dt-kk{display:flex;flex-direction:column;gap:12px}
+.dt-kk-r{border:1px solid var(--border);border-radius:14px;padding:10px 12px}
+.dt-bar{height:8px;border-radius:99px;background:var(--hover);overflow:hidden;margin-top:8px}
+.dt-bar i{display:block;height:100%;border-radius:99px;background:var(--muted)}
+.dt-bar i.chi{background:var(--red)}.dt-bar i.thu{background:var(--green)}

@@ -1806,7 +1806,7 @@ function handleSoTayAction(act, el){
     chuyenTab('dongtien');
     if (window.scrollTo) window.scrollTo({ top: 0 });
   } else if (act === 'goDauTu'){
-    state.ccTrang = 'dautu'; chuyenTab('congcu');
+    state.ccTrang = 'dautu'; state.dtTab = (el.getAttribute && el.getAttribute('data-v') === 'pt') ? 'pt' : (state.dtTab || 'ds'); chuyenTab('congcu');
     if (window.scrollTo) window.scrollTo({ top: 0 });
   } else if (act === 'goVayNo'){
     state.tab = 'vayno';
