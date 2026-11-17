@@ -7823,7 +7823,7 @@ test('Đầu tư (giao diện): trang trống rồi có khoản — không NaN /
   ok(h.indexOf('5.000.000 − 10.000.000 = −5.000.000') > 0, 'phép tính lãi/lỗ: 5tr − 10tr');
   ok(h.indexOf('undefined') < 0 && h.indexOf('NaN') < 0, 'không lộ undefined / NaN');
   eq(kiemPhepCong(h).loi.join(' | '), ''); ok(kiemPhepCong(h).n >= 2);
-  ok(h.indexOf('data-act="dtVon"') > 0 && h.indexOf('data-act="dtThu"') > 0 && h.indexOf('data-act="dtXoaLan"') > 0, 'có nút bỏ thêm vốn / thu về / xóa lần');
+  ok(h.indexOf('data-act="dtVon"') > 0 && h.indexOf('data-act="dtThu"') > 0 && h.indexOf('data-act="dtXemLs"') > 0, 'có nút bỏ thêm vốn / thu về / xem lịch sử'); ok(h.indexOf('dt-ln') < 0, 'Danh sách không in từng lần ghi (đã có tab Lịch sử)');
   ok(ctx.dtTomTat().chu.indexOf('1 khoản đang chạy') === 0, ctx.dtTomTat().chu);
   ok(ctx.ccHubHtml().indexOf('data-trang="dautu"') > 0, 'có ô Đầu tư ở màn Công cụ');
   ctx.dauTuDong(a.id, '2026-10-09'); var h2 = ctx.dtPageHtml(); ok(h2.indexOf('Đã đóng') > 0 && h2.indexOf('data-act="dtVon"') < 0, 'khoản đã đóng: không còn nút bỏ vốn / thu về');
@@ -7939,25 +7939,32 @@ test('Đầu tư (Điều đáng chú ý): có bỏ vốn / thu về trong thán
 });
 
 function dtDem(h, cls){ return (h.match(new RegExp('class="' + cls + '"', 'g')) || []).length; }
-test('Đầu tư (lịch sử đầy đủ): mỗi khoản hiện 5 lần mới nhất, Xem thêm +10, Thu gọn; ghi chú và ví hiện đúng', function(){
+test('Đầu tư (lịch sử đầy đủ): Danh sách chỉ nói tình hình khoản, Lịch sử có Xem thêm / Thu gọn / lọc; ghi chú và ví hiện đúng', function(){
   var d = loadData(baseData({ settings: { soDuDauKy: 50000000, ngayBatDau: '2026-08-01', thangBatDauDuTru: '2026-08' }, wallets: [{ id: 'w1', ten: 'Ví A', soDuDauKy: 40000000 }, { id: 'w2', ten: 'Ví B', soDuDauKy: 10000000 }] }));
   setToday('2026-11-16'); var x = ctx.dauTuThem('Quỹ A', '2026-09-01'), root = { innerHTML: '' }, ch = function(act, a){ voiDom({ tabContent: root }, null, function(){ ctx.handleDauTuAction(act, elAct(a || {})); }); };
   ctx.dauTuBoVon(x.id, '2026-09-01', 10000000, 'w2', 'Bỏ vốn: Quỹ A (đợt đầu)', 'đợt đầu');
   for (var i = 1; i <= 25; i++) ctx.dauTuThuVe(x.id, '2026-10-' + (i < 10 ? '0' + i : i), 1000 * i, 'w1');
   var ls = ctx.dauTuLichSu(x.id); eq(ls.length, 26, 'đủ 26 lần'); eq(ls[0].ngay, '2026-10-25', 'mới nhất trước'); eq(ls[25].gc, 'đợt đầu', 'ghi chú người dùng lưu riêng'); eq(ls[25].viId, 'w2');
   ctx.state.dtTab = 'ds'; ctx.state.dtLs = {}; ctx.state.dtLoc = '';
-  var h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 5, 'mặc định 5 lần'); ok(h.indexOf('Xem thêm 10 lần (còn 21)') > 0, 'nút Xem thêm: ' + h.slice(h.indexOf('dt-xt') - 5, h.indexOf('dt-xt') + 200)); ok(h.indexOf('Thu gọn') < 0);
+  var h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 0, 'Danh sách KHÔNG in từng lần ghi: chỉ có tình hình của khoản');
+  ok(h.indexOf('Đã thu lại 0% vốn') < 0 && h.indexOf('Đã thu lại') > 0 && h.indexOf('tổng 26 lần ghi') > 0 && h.indexOf('Lần ghi gần nhất 25/10/2026: thu về') > 0, 'tình hình: % thu lại, lần ghi gần nhất, tổng số lần: ' + h.slice(h.indexOf('cc-it'), h.indexOf('cc-it') + 700));
+  ok(h.indexOf('data-act="dt-ln"') < 0 && h.indexOf('data-act="dtXemLs"') > 0, 'có nút Xem lịch sử'); ok(h.indexOf('class="dt-bar"') > 0, 'thanh tiến độ thu lại vốn');
+  // Xem lịch sử: nhảy sang tab Lịch sử, lọc sẵn khoản; chỉ có 1 khoản thì không có chip lọc
+  ch('dtXemLs', { 'data-id': x.id }); eq(ctx.state.dtTab, 'ls'); eq(ctx.state.dtLoc, x.id); h = ctx.dtPageHtml();
+  eq(dtDem(h, 'dt-ln'), 20, 'Lịch sử: 20 lần đầu'); ok(h.indexOf('Xem thêm 6 lần (còn 6)') > 0, 'nút Xem thêm: ' + h.slice(h.indexOf('dt-xt'), h.indexOf('dt-xt') + 150)); ok(h.indexOf('Thu gọn') < 0);
   ok(h.indexOf('Ví A') > 0, 'nhiều ví thì hiện tên ví');
-  ch('dtXemThem', { 'data-k': x.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 15); ok(h.indexOf('(còn 11)') > 0 && h.indexOf('Thu gọn') > 0);
-  ch('dtXemThem', { 'data-k': x.id }); ch('dtXemThem', { 'data-k': x.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 26, 'hiện đủ'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Thu gọn') > 0, 'hết thì chỉ còn Thu gọn');
+  ctx.state.dtLoc = ''; ok(ctx.dtPageHtml().indexOf('aria-label="Lọc theo khoản"') < 0, 'mới có 1 khoản thì ẩn chip lọc');
+  ctx.state.dtLoc = x.id; ok(ctx.dtPageHtml().indexOf('aria-label="Lọc theo khoản"') > 0, 'đang lọc dở thì vẫn hiện để bỏ lọc');
+  ch('dtXemThem', {}); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 26, 'hiện đủ'); ok(h.indexOf('Ví B') > 0, 'lần bỏ vốn đầu từ Ví B'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Thu gọn') > 0, 'hết thì chỉ còn Thu gọn');
   ok(h.indexOf('đợt đầu') > 0, 'ghi chú người dùng hiện ở dòng lịch sử');
-  ch('dtThuGon', { 'data-k': x.id }); eq(dtDem(ctx.dtPageHtml(), 'dt-ln'), 5, 'Thu gọn về 5');
+  ch('dtThuGon', {}); eq(dtDem(ctx.dtPageHtml(), 'dt-ln'), 20, 'Thu gọn về 20');
+  ch('dtLoc', { 'data-id': '' });
   // tab Lịch sử: mọi khoản, 20 lần đầu, Xem thêm +20, gom tháng, lọc theo khoản
   var y = ctx.dauTuThem('Vàng', '2026-10-02'); ctx.dauTuBoVon(y.id, '2026-10-02', 2000000, 'w1');
   ch('dtTab', { 'data-v': 'ls' }); eq(ctx.state.dtTab, 'ls'); h = ctx.dtPageHtml();
-  eq(dtDem(h, 'dt-ln'), 20, 'tab Lịch sử: 20 lần đầu'); ok(h.indexOf('Xem thêm 7 lần (còn 7)') > 0, 'còn 7 lần: ' + h.slice(h.indexOf('dt-xt'), h.indexOf('dt-xt') + 150));
+  eq(dtDem(h, 'dt-ln'), 20, 'tab Lịch sử: 20 lần đầu'); ok(h.indexOf('aria-label="Lọc theo khoản"') > 0, 'có 2 khoản thì có chip lọc'); ok(h.indexOf('Xem thêm 7 lần (còn 7)') > 0, 'còn 7 lần: ' + h.slice(h.indexOf('dt-xt'), h.indexOf('dt-xt') + 150));
   ok(h.indexOf('Tháng 10/2026') > 0 && h.indexOf('27 lần') > 0, 'gom theo tháng, tổng số lần'); ok(h.indexOf('Quỹ A') > 0 && h.indexOf('Vàng') > 0, 'có tên khoản');
-  ch('dtXemThem', { 'data-k': '*' }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 27, 'xem thêm hết'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Tháng 9/2026') > 0, 'có cả tháng 9');
+  ch('dtXemThem', {}); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 27, 'xem thêm hết'); ok(h.indexOf('Xem thêm') < 0 && h.indexOf('Tháng 9/2026') > 0, 'có cả tháng 9');
   ch('dtLoc', { 'data-id': y.id }); h = ctx.dtPageHtml(); eq(dtDem(h, 'dt-ln'), 1, 'lọc còn khoản Vàng'); ok(h.indexOf('1 lần') > 0);
   ch('dtXoaLan', { 'data-id': y.id, 'data-ngay': '2026-10-02', 'data-rid': ctx.dauTuLichSu(y.id)[0].rid }); eq(ctx.dauTuLichSu(y.id).length, 0, 'xóa được ngay trong tab Lịch sử');
   // dữ liệu cũ chưa có gc: lấy phần trong ngoặc của ghi chú
