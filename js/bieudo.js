@@ -819,7 +819,7 @@ function dauTuCardHtml(mk){
     h += '<div class="bd-box" style="margin-top:12px">' + bdLine({ W: 350, H: 150, labels: ml, series: [{ ten: 'Lãi / lỗ lũy kế', vals: mv, cls: tong.lai < 0 ? 'chi' : 'thu', fill: true }],
       tipTitle: function(ix){ return ml[ix]; }, money: bdTien, aria: 'Lãi / lỗ đầu tư lũy kế cuối tháng' }) + '</div>';
   }
-  h += '<button type="button" class="btn secondary sm" style="margin-top:10px" data-act="goDauTu">Ghi bỏ vốn / thu về ở Công cụ → Đầu tư</button>';
+  h += '<button type="button" class="btn secondary sm" style="margin-top:10px" data-act="goDauTu" data-v="pt">Xem lịch sử và phân tích ở Công cụ → Đầu tư</button>';
   h += giaiThichSo([
     { ten: 'Lãi / lỗ lũy kế', ct: 'Tổng tiền thu về − tổng vốn đã bỏ, của mọi khoản tới cuối tháng đang xem. Vốn coi như đã mất, chỉ tiền thu về mới cộng lại. Không có "giá trị hiện tại" của khoản đang giữ.',
       pt: ptCong([tong.thu, -tong.von], tong.lai) },

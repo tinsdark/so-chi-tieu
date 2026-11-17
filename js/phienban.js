@@ -8,6 +8,11 @@
    ==================================================================== */
 
 var NHAT_KY = [
+  { ban: '2026.11.17', ngay: '2026-11-17', ten: 'Đầu tư: lịch sử đầy đủ và phân tích',
+    muc: ['Trang Đầu tư chia 3 phần: Danh sách, Lịch sử, Phân tích.',
+          'Lịch sử xem ngay trong trang, không cần sang Sổ tay: mỗi khoản hiện 5 lần mới nhất, bấm "Xem thêm" để hiện nữa; phần Lịch sử gom mọi lần bỏ vốn / thu về theo tháng, lọc được theo khoản, hiện cả ví và ghi chú, xóa được từng lần.',
+          'Phân tích: tổng đã bỏ vốn, đã thu về, còn lỗ hay lãi, đã thu lại bao nhiêu % vốn; số còn cần thu về để hòa vốn và ước khoảng bao nhiêu tháng nữa nếu giữ nhịp thu về hiện tại; biểu đồ lãi / lỗ lũy kế và bỏ vốn - thu về theo tháng; so sánh từng khoản; khoản lãi nhất, lỗ nhất, khoản lâu chưa có lần ghi nào. Mọi số đều có cách tính.',
+          'Thẻ Đầu tư ở Báo cáo giữ gọn, có nút mở thẳng phần Phân tích.']},
   { ban: '2026.11.14.3', ngay: '2026-11-14', ten: 'Đầu tư: có mặt ở Tổng kết tháng và Điều đáng chú ý',
     muc: ['Tổng kết tháng có dòng "Đầu tư (tính riêng)" khi tháng đó có bỏ vốn hoặc thu về: ròng của tháng và còn lỗ / đã lãi tính tới cuối tháng, kèm cách tính.',
           'Điều đáng chú ý có thêm một câu về đầu tư (còn lỗ hay đã lãi, bao nhiêu) khi tháng đang xem có bỏ vốn hoặc thu về.']},
