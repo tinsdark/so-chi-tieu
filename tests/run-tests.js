@@ -4654,6 +4654,13 @@ test('chưa tới 7 ngày thì chưa nhắc; trong 7 ngày thì nhắc đúng s�
   eq(ds.length, 1); eq(ds[0].id, 'luong'); eq(ds[0].kind, 'thu'); eq(ds[0].soNgay, 6); eq(ds[0].han, '2026-10-20');
   eq(ctx.nhacHanNhan(0), 'Hôm nay'); eq(ctx.nhacHanNhan(1), 'Ngày mai'); eq(ctx.nhacHanNhan(-3), 'Quá hạn 3 ngày');
 });
+test('danh mục có mức (chiTieu) mới ghi một phần thì vẫn nhắc (khớp Dòng tiền); ghi đủ mức thì hết nhắc', function(){
+  hanData(20, 0, { '2026-10-05': { thu: { luong: 2000000 } } });
+  ctx.state.data.categories.thu[0].chiTieu = 9400000;
+  eq(ctx.dsCatSapDenHan(7, '2026-10-19').length, 1, 'ghi 2tr / 9,4tr: còn thiếu nên vẫn nhắc');
+  ctx.state.data.journal['2026-10-06'] = { thu: { luong: 7400000 } };
+  eq(ctx.dsCatSapDenHan(7, '2026-10-19').filter(function(x){ return x.id === 'luong' && x.mk === '2026-10'; }).length, 0, 'ghi đủ 9,4tr: hết nhắc kỳ tháng này');
+});
 test('quá hạn mà tháng này chưa ghi thì nhắc quá hạn; ghi rồi thì hết nhắc', function(){
   hanData(20, 5);
   var ds = ctx.dsCatSapDenHan(7, '2026-10-08');
@@ -6094,7 +6101,8 @@ test('chuông: khoản vừa là danh mục có ngày vừa là định kỳ cù
   d.dinhKy = [{ id: 'dkNha', ten: 'Tiền nhà', kind: 'chi', catId: 'nha', soTien: 1400000, ngay: 20, bat: true, bo: [] },
               { id: 'dkDien', ten: 'Tiền điện nước', kind: 'chi', catId: 'nha', soTien: 554000, ngay: 11, bat: true, bo: [] }];
   var dem = function(h){ return ctx.cbTatCa(h).filter(function(x){ return x.loai === 'dk' || x.loai === 'cat'; }).map(function(x){ return x.loai + ':' + x.tieu; }); };
-  eq(dem('2026-10-15').join(','), 'dk:Tiền điện nước,cat:Tiền nhà', 'trước hạn: Tiền nhà chỉ có lời nhắc sớm của danh mục (định kỳ ngày 20 chưa đến); điện nước ngày 11 đã đến hạn');
+  eq(dem('2026-10-15').join(','), 'dk:Tiền điện nước,dk:Tiền nhà', 'trước hạn: định kỳ ngày 20 đã báo sớm (trong 7 ngày) nên danh mục KHÔNG nhắc lần hai; điện nước ngày 11 đã đến hạn');
+  eq(dem('2026-10-12').join(','), 'dk:Tiền điện nước', 'còn 8 ngày tới ngày 20: chưa báo');
   eq(dem('2026-10-20').join(','), 'dk:Tiền điện nước,dk:Tiền nhà', 'đến hạn: định kỳ thay thế, KHÔNG còn nhắc lần hai từ danh mục; "điện nước" cùng danh mục nhưng ngày 11 vẫn nhắc riêng');
   d.dinhKy[0].bo = ['2026-10']; d.dinhKy[1].bo = ['2026-10'];
   eq(dem('2026-10-20').join(','), 'cat:Tiền nhà', 'định kỳ đã bỏ qua tháng này thì danh mục nhắc lại như cũ (không mất lời nhắc)');

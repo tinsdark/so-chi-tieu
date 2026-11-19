@@ -44,16 +44,17 @@ function cbTatCa(homNay){
   };
   var giaiDoan = function(han){ return han <= homNay ? 'q' : 's'; };
   // 1. định kỳ đến hạn
-  dinhKyDenHan(homNay).forEach(function(x){
+  dinhKyDenHan(homNay, NHAC_HAN_NGAY).forEach(function(x){
     var daGhi = x.daGhi > 0;   // tháng này đã ghi tay: chỉ hỏi "ghi thêm hay chốt", không còn gấp
-    them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':q' + (daGhi ? 'g' : ''), muc: daGhi ? 'sap' : 'khan', han: x.han, tieu: x.dk.ten,
-           phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · hạn ' + ngayNganVN(x.han) + (daGhi ? ' · đã ghi ' + fmt(Math.round(x.daGhi)) + ', ghi thêm hay chốt?' : ''),
+    var g = giaiDoan(x.han);   // chưa tới hạn: 's' (sắp tới); tới / quá hạn: 'q' => thành thông báo mới
+    them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':' + g + (daGhi ? 'g' : ''), muc: (daGhi || g === 's') ? 'sap' : 'khan', han: x.han, tieu: x.dk.ten,
+           phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · ' + (g === 's' ? cbNhan(daysBetween(homNay, x.han)) + ' · ' : '') + 'hạn ' + ngayNganVN(x.han) + (daGhi ? ' · đã ghi ' + fmt(Math.round(x.daGhi)) + ', ghi thêm hay chốt?' : ''),
            tien: fmt(Math.round(x.tien)), dich: { loai: 'dk' } });
   });
   // 2. khoản thu / chi theo ngày của danh mục
   // cùng một khoản (cùng loại, danh mục và ngày hạn) đã có thông báo định kỳ ở trên thì không nhắc lần hai: định kỳ có số tiền và nút Ghi nên giữ cái đó
   var daCoDk = {};
-  dinhKyDenHan(homNay).forEach(function(x){ daCoDk[x.dk.kind + '|' + x.dk.catId + '|' + x.han] = 1; });
+  dinhKyDenHan(homNay, NHAC_HAN_NGAY).forEach(function(x){ daCoDk[x.dk.kind + '|' + x.dk.catId + '|' + x.han] = 1; });
   dsCatSapDenHan(undefined, homNay).forEach(function(x){
     if (daCoDk[x.kind + '|' + x.id + '|' + x.han]) return;
     var g = giaiDoan(x.han);
