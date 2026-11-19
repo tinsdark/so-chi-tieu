@@ -1174,12 +1174,13 @@ function ghiTayChiTiet(kind, catId, mk){
 }
 // Khoản "Dùng làm dự báo" = toàn bộ khoản của danh mục (điện nước, tiền nhà, lương...): nếu tháng này đã ghi TAY vào danh mục đó
 // (không qua nút định kỳ) thì vẫn nhắc nhưng kèm daGhi / ngayGhi để thẻ HỎI "ghi thêm hay chốt", không tự ghi và không tự ẩn.
-function dinhKyDenHan(homNay){
-  var mk = monthKey(homNay), out = [];
+// truoc (tuỳ chọn, mặc định 0): lấy cả khoản sẽ tới hạn trong `truoc` ngày tới (chuông báo trước, chỉ trong tháng của homNay)
+function dinhKyDenHan(homNay, truoc){
+  var mk = monthKey(homNay), out = [], gioiHan = truoc > 0 ? tnNgayCong(homNay, truoc) : homNay;
   (state.data.dinhKy || []).forEach(function(dk){
     if (!dk.bat || !dinhKyTrongHan(dk, mk)) return;
     var han = ngayTraCuaKy(mk, dk.ngay);
-    if (homNay < han || (dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
+    if (gioiHan < han ||(dk.bo || []).indexOf(mk) >= 0 || dinhKyDaGhi(dk, mk)) return;
     var it = { dk: dk, mk: mk, han: han, tien: dinhKySoTien(dk, mk), daGhi: 0, ngayGhi: '' };
     if (dk.duBao){ var g = ghiTayChiTiet(dk.kind, dk.catId, mk); it.daGhi = g.tong; it.ngayGhi = g.ngay; }
     out.push(it);
