@@ -6120,6 +6120,19 @@ test('chuông: khoản vừa là danh mục có ngày vừa là định kỳ cù
   eq(dem('2026-10-20').join(','), 'cat:Tiền nhà', 'định kỳ đã bỏ qua tháng này thì danh mục nhắc lại như cũ (không mất lời nhắc)');
   setToday('2026-10-01');
 });
+test('chuông: màu thẻ theo chiều tiền (thu xanh / chi đỏ / thông báo vàng), số tiền có dấu', function(){
+  var row = function(o){ return ctx.cbDongHtml(Object.assign({ key: 'x', muc: 'sap', tieu: 'A', phu: 'b' }, o), 0); };
+  var thu = row({ chieu: 'thu', tien: '9.400.000' }), chi = row({ chieu: 'chi', tien: '1.400.000' }), tb = row({ chieu: '' });
+  ok(thu.indexOf(' k-thu') > 0 && thu.indexOf('cb-t thu">+9.400.000') > 0, 'thu: k-thu, +');
+  ok(chi.indexOf(' k-chi') > 0 && chi.indexOf('cb-t chi">−1.400.000') > 0, 'chi: k-chi, −');
+  ok(tb.indexOf(' k-tb') > 0 && tb.indexOf('cb-t') < 0, 'thông báo: k-tb, không có số');
+  hanData(20, 0); var d = ctx.state.data;
+  d.dinhKy = [{ id: 'dkL', ten: 'Lương', kind: 'thu', catId: 'luong', soTien: 9400000, ngay: 20, bat: true, bo: [] },
+              { id: 'dkN', ten: 'Tiền nhà', kind: 'chi', catId: 'nha', soTien: 1400000, ngay: 20, bat: true, bo: [] }];
+  var ds = ctx.cbTatCa('2026-10-19'), ch = function(t){ return ds.filter(function(x){ return x.tieu === t; })[0].chieu; };
+  eq(ch('Lương'), 'thu'); eq(ch('Tiền nhà'), 'chi');
+  setToday('2026-10-01');
+});
 test('chuông: sắp đến hạn -> đến hạn là THÔNG BÁO MỚI (số đỏ tăng lại); xong thì mất khỏi chuông', function(){
   setToday('2026-10-14'); hanData(20, 0);
   var k1 = ctx.cbTatCa('2026-10-14')[0].key; ctx.cbDanhDauXem(k1, '2026-10-14');
