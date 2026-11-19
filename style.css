@@ -312,6 +312,10 @@ html[data-kb] .tabs,html[data-kb] .qa-bar-wrap{visibility:hidden}
 .chenh-chuthich .tot,.chenh-chuthich .xau{font-weight:700}
 
 /* ---- Danh sách chuyển tiền giữa ví ---- */
+.vi-tong{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:none;background:none;padding:2px 0;min-height:36px;color:var(--text);font-size:14px;text-align:left;cursor:pointer}
+.vi-tong-r{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.vi-tong-i{width:16px;height:16px;color:var(--muted);transform:rotate(-90deg);transition:transform .15s}
+.vi-tong[aria-expanded="true"] .vi-tong-i{transform:none}
 .vi-ds{margin-top:10px}
 .vi-ct{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border)}
 .vi-ct-main{flex:1;min-width:0;overflow-wrap:anywhere}

@@ -997,9 +997,10 @@ function viSoDuCardHtml(mk){
     .sort(function(a, b){ return a.ngay < b.ngay ? 1 : (a.ngay > b.ngay ? -1 : 0); });
   // số dư từng ví đã nằm ở thẻ tổng quan; thẻ này chỉ hiện khi đang chuyển tiền hoặc tháng có lần chuyển
   if (!state.viFormOpen && !ds.length) return '';
-  var h = '<div class="card k-wal"><h3>Chuyển tiền giữa ví'
-    + (state.viFormOpen ? '' : '<button class="btn secondary sm" data-act="viChuyenMo">'+icon('transfer')+' Chuyển ví</button>') + '</h3>';
+  // nút "Chuyển ví" đã có ở dải "Số dư theo ví" (viTheHtml) nên thẻ này không lặp lại: chỉ là form chuyển + dòng TỔNG tháng, bấm mới bung lịch sử
+  var h = '<div class="card k-wal">';
   if (state.viFormOpen){
+    h += '<h3>Chuyển tiền giữa ví</h3>';
     var tuMd = walletById(viDienSan()) ? viDienSan() : ws[0].id;
     var denMd = (ws.find(function(w){ return w.id !== tuMd; }) || ws[1]).id;
     var gy = state.viChuyenGoiY;                // gợi ý từ cảnh báo "ví thiếu tiền" (theongay.js): ví nhận + số cần chuyển
@@ -1019,6 +1020,13 @@ function viSoDuCardHtml(mk){
       + '<div class="empty" style="padding:0;text-align:left">Chuyển tiền không phải thu hay chi: không vào tổng thu/chi, biểu đồ hay dự kiến, và không đổi tổng số dư.</div></div>';
   }
   if (ds.length){
+    var tong = 0, mo = !!state.viDsMo;
+    ds.forEach(function(t){ tong += num(t.soTien); });
+    h += '<button type="button" class="vi-tong" data-act="viDsMo" aria-expanded="'+mo+'">'
+      + '<span>Chuyển giữa ví tháng này · '+ds.length+' lần</span>'
+      + '<span class="vi-tong-r"><b>'+fmt(Math.round(tong))+'</b>'+icon('chev', 'vi-tong-i')+'</span></button>';
+  }
+  if (ds.length && state.viDsMo){
     // danh sách (không phải bảng): bảng 4 cột tràn ngang màn hình điện thoại, cột Ghi chú bị cắt
     h += '<div class="vi-ds">';
     ds.forEach(function(t){
@@ -1698,6 +1706,9 @@ function handleSoTayAction(act, el){
     } });
   } else if (act === 'viChuyenMo'){
     state.viFormOpen = !state.viFormOpen; state.viChuyenGoiY = null;
+    renderSoTay();
+  } else if (act === 'viDsMo'){
+    state.viDsMo = !state.viDsMo;
     renderSoTay();
   } else if (act === 'viChuyenHuy'){
     state.viFormOpen = false; state.viChuyenGoiY = null;
