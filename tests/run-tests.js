@@ -4654,6 +4654,13 @@ test('chưa tới 7 ngày thì chưa nhắc; trong 7 ngày thì nhắc đúng s�
   eq(ds.length, 1); eq(ds[0].id, 'luong'); eq(ds[0].kind, 'thu'); eq(ds[0].soNgay, 6); eq(ds[0].han, '2026-10-20');
   eq(ctx.nhacHanNhan(0), 'Hôm nay'); eq(ctx.nhacHanNhan(1), 'Ngày mai'); eq(ctx.nhacHanNhan(-3), 'Quá hạn 3 ngày');
 });
+test('danh mục có mức (chiTieu) mới ghi một phần thì vẫn nhắc (khớp Dòng tiền); ghi đủ mức thì hết nhắc', function(){
+  hanData(20, 0, { '2026-10-05': { thu: { luong: 2000000 } } });
+  ctx.state.data.categories.thu[0].chiTieu = 9400000;
+  eq(ctx.dsCatSapDenHan(7, '2026-10-19').length, 1, 'ghi 2tr / 9,4tr: còn thiếu nên vẫn nhắc');
+  ctx.state.data.journal['2026-10-06'] = { thu: { luong: 7400000 } };
+  eq(ctx.dsCatSapDenHan(7, '2026-10-19').filter(function(x){ return x.id === 'luong' && x.mk === '2026-10'; }).length, 0, 'ghi đủ 9,4tr: hết nhắc kỳ tháng này');
+});
 test('quá hạn mà tháng này chưa ghi thì nhắc quá hạn; ghi rồi thì hết nhắc', function(){
   hanData(20, 5);
   var ds = ctx.dsCatSapDenHan(7, '2026-10-08');

@@ -63,7 +63,11 @@ function dsCatSapDenHan(nNgay, homNay){
       if (!n || he[c.id]) return;
       var xong = Array.isArray(c.xong) ? c.xong : [];
       var han = ngayTraCuaKy(mk, n);
-      if (!(actualCatInMonth(kind, c.id, mk) > 0)){
+      // "đã thực hiện" cùng quy tắc với Dòng tiền: khoản thu / chi cố định có mức (chiTieu) thì phải ghi ĐỦ mức mới thôi nhắc
+      // (ghi một phần, vd trả tiền nhà 500k / 1,4tr, Dòng tiền vẫn tính phần còn lại nên chuông cũng phải nhắc); không có mức thì có ghi là xong
+      var daGhi = actualCatInMonth(kind, c.id, mk), mucTien = num(c.chiTieu);
+      var daDu = (mucTien > 0 && (kind === 'thu' || catChiCoDinh(c))) ? daGhi >= mucTien : daGhi > 0;
+      if (!daDu){
         if (xong.indexOf(mk) >= 0) return;
         // tháng này chưa có giao dịch: nhắc (kể cả quá hạn) khi còn trong N ngày
         var so = daysBetween(homNay, han);
