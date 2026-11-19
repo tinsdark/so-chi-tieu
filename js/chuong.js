@@ -15,6 +15,7 @@
    11 loại: dk (định kỳ đến hạn), cat (khoản thu/chi theo ngày của danh mục), vn (Vay - Nợ đến hạn), the (thanh toán thẻ), vt (ví sắp thiếu tiền),
    ds (ví lâu chưa đối soát), bh (bảo hành sắp hết), mm (món Muốn mua đủ thời gian chờ), hm (danh mục vượt hạn mức), tk (tổng kết tháng),
    lh (lời hứa vừa bị phá). Ba mức: khan (cần làm ngay: đến hạn / quá hạn / sắp thiếu tiền), sap (sắp tới), de (để ý).
+   Mức gấp thể hiện bằng tiêu đề nhóm; chấm tròn chỉ báo CHƯA XEM (đỏ, cùng nghĩa số đỏ trên chuông). Màu thẻ theo it.chieu: thu / chi / '' (thông báo).
    cbTatCa là hàm thuần (đọc dữ liệu) để test. Cần mọi file dữ liệu load trước; ht.js (htTbTat); app.js (chuyenTab) lúc chạy.
    ==================================================================== */
 
@@ -47,7 +48,7 @@ function cbTatCa(homNay){
   dinhKyDenHan(homNay, NHAC_HAN_NGAY).forEach(function(x){
     var daGhi = x.daGhi > 0;   // tháng này đã ghi tay: chỉ hỏi "ghi thêm hay chốt", không còn gấp
     var g = giaiDoan(x.han);   // chưa tới hạn: 's' (sắp tới); tới / quá hạn: 'q' => thành thông báo mới
-    them({ loai: 'dk', key: 'dk:' + x.dk.id + ':' + x.mk + ':' + g + (daGhi ? 'g' : ''), muc: (daGhi || g === 's') ? 'sap' : 'khan', han: x.han, tieu: x.dk.ten,
+    them({ loai: 'dk', chieu: x.dk.kind, key: 'dk:' + x.dk.id + ':' + x.mk + ':' + g + (daGhi ? 'g' : ''), muc: (daGhi || g === 's') ? 'sap' : 'khan', han: x.han, tieu: x.dk.ten,
            phu: (x.dk.kind === 'thu' ? 'Thu' : 'Chi') + ' định kỳ · ' + (g === 's' ? cbNhan(daysBetween(homNay, x.han)) + ' · ' : '') + 'hạn ' + ngayNganVN(x.han) + (daGhi ? ' · đã ghi ' + fmt(Math.round(x.daGhi)) + ', ghi thêm hay chốt?' : ''),
            tien: fmt(Math.round(x.tien)), dich: { loai: 'dk' } });
   });
@@ -58,19 +59,19 @@ function cbTatCa(homNay){
   dsCatSapDenHan(undefined, homNay).forEach(function(x){
     if (daCoDk[x.kind + '|' + x.id + '|' + x.han]) return;
     var g = giaiDoan(x.han);
-    them({ loai: 'cat', key: 'cat:' + x.kind + ':' + x.id + ':' + x.mk + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.han, tieu: x.ten,
+    them({ loai: 'cat', chieu: x.kind, key: 'cat:' + x.kind + ':' + x.id + ':' + x.mk + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.han, tieu: x.ten,
            phu: (x.kind === 'thu' ? 'Thu' : 'Chi') + ' · ' + cbNhan(x.soNgay) + ' (hạn ' + ngayNganVN(x.han) + ')', dich: { loai: 'cat', kind: x.kind, id: x.id, mk: x.mk }, coXong: true });
   });
   // 3. Vay - Nợ đến hạn / quá hạn
   danhSachSapDenHan(7).forEach(function(x){
     var g = giaiDoan(x.ngay), sn = daysBetween(homNay, x.ngay);
-    them({ loai: 'vn', key: 'vn:' + x.loai + ':' + x.id + ':' + x.ngay + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.ngay, tieu: x.ten,
+    them({ loai: 'vn', chieu: x.loai === 'choVay' ? 'thu' : 'chi', key: 'vn:' + x.loai + ':' + x.id + ':' + x.ngay + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.ngay, tieu: x.ten,
            phu: (x.loai === 'choVay' ? 'Thu nợ' : 'Trả nợ') + (x.soKy ? ' ' + x.soKy + ' kỳ' : '') + ' · ' + cbNhan(sn), tien: fmt(Math.round(x.soTien)), dich: { loai: 'vn' } });
   });
   // 4. thanh toán thẻ tín dụng
   theSapDenHan(homNay).forEach(function(x){
     var g = giaiDoan(x.t.han);
-    them({ loai: 'the', key: 'the:' + x.w.id + ':' + x.t.han + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.t.han, tieu: 'Thẻ ' + x.w.ten,
+    them({ loai: 'the', chieu: 'chi', key: 'the:' + x.w.id + ':' + x.t.han + ':' + g, muc: g === 'q' ? 'khan' : 'sap', han: x.t.han, tieu: 'Thẻ ' + x.w.ten,
            phu: 'Thanh toán thẻ · ' + cbNhan(x.t.soNgay) + ' (hạn ' + ngayNganVN(x.t.han) + ')' + (x.t.toiThieu != null && x.t.toiThieu > 0 ? ' · tối thiểu ' + fmt(Math.round(x.t.toiThieu)) : ''), tien: fmt(Math.round(x.t.conPhaiTra)), dich: { loai: 'the', id: x.w.id } });
   });
   // 5. ví có thể thiếu tiền (cần từ 2 ví trở lên)
@@ -124,7 +125,7 @@ function cbTatCa(homNay){
   // 12. khoản tiền cần xác nhận: QR nhận tiền đã tạo (qr.js) nhưng chưa ghi vào sổ
   qrDanhSachCho().forEach(function(x){
     var cv = x.cvId ? ((d.vayNo || {}).choVay || []).filter(function(v){ return v.id === x.cvId; })[0] : null;
-    them({ loai: 'qr', key: 'qr:' + x.id, muc: 'khan', han: null, tieu: 'Có 1 khoản tiền cần xác nhận',
+    them({ loai: 'qr', chieu: 'thu', key: 'qr:' + x.id, muc: 'khan', han: null, tieu: 'Có 1 khoản tiền cần xác nhận',
            phu: QR_LOAI[x.loai] + (cv ? ' · ' + (nguoiCuaKhoan(cv) || cv.ten) : '') + (x.ghiChu ? ' · ' + x.ghiChu : ''), tien: fmt(Math.round(x.tien)), dich: { loai: 'qr', id: x.id } });
   });
   var thuTu = { khan: 0, sap: 1, de: 2 };
@@ -151,9 +152,11 @@ function cbCapNhatNut(){
   var nut = document.getElementById('btnChuong'); if (nut) nut.setAttribute('aria-label', n > 0 ? 'Thông báo: ' + n + ' chưa xem' : 'Thông báo');
 }
 function cbDongHtml(it, i){
-  return '<div class="cb-r' + (it.daXem ? ' xem' : '') + ' ' + it.muc + (it.dich && it.dich.loai === 'qr' ? ' qr' : '') + '"><button type="button" class="cb-main" data-act="cbDen" data-i="' + i + '">'
+  // màu thẻ theo chiều tiền: k-thu (xanh nhạt) / k-chi (đỏ nhạt) / k-tb (vàng nhạt, thông báo không có chiều tiền); số tiền có dấu +/−
+  var k = it.chieu === 'thu' || it.chieu === 'chi' ? it.chieu : 'tb';
+  return '<div class="cb-r' + (it.daXem ? ' xem' : '') + ' ' + it.muc + ' k-' + k + (it.dich && it.dich.loai === 'qr' ? ' qr' : '') + '"><button type="button" class="cb-main" data-act="cbDen" data-i="' + i + '">'
     + '<span class="cb-cham" aria-hidden="true"></span><span class="cb-b"><b>' + esc(it.tieu) + '</b><small>' + esc(it.phu) + '</small></span>'
-    + (it.tien ? '<span class="cb-t">' + esc(it.tien) + '</span>' : '') + '</button>'
+    + (it.tien ? '<span class="cb-t' + (k !== 'tb' ? ' ' + k : '') + '">' + (k === 'thu' ? '+' : (k === 'chi' ? '−' : '')) + esc(it.tien) + '</span>' : '') + '</button>'
     + (it.coXong ? '<button type="button" class="btn secondary sm" data-act="cbXong" data-i="' + i + '">Hoàn thành</button>' : '')
     + (it.dich && it.dich.loai === 'qr' ? '<button type="button" class="btn secondary sm" data-act="cbBoQr" data-i="' + i + '">Bỏ</button>' : '') + '</div>';
 }
