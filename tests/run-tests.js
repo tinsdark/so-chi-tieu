@@ -5615,6 +5615,18 @@ test('form Chuyển ví ở Sổ tay điền sẵn ví nhận và số cần chu
   ok(/id="vi_tu">[\s\S]*value="w2" selected/.test(h), 'ví đi là ví khác (Tiền mặt)');
   ctx.state.viChuyenGoiY = null; ctx.state.viFormOpen = false; setToday('2026-10-01');
 });
+test('thẻ Chuyển ví: mặc định chỉ hiện dòng TỔNG tháng, bấm mới bung lịch sử; không lặp nút Chuyển ví', function(){
+  pwData(function(d){ d.chuyenVi.push({ id: 'ct2', ngay: '2026-10-03', tuVi: 'w1', denVi: 'w2', soTien: 300000, ghiChu: 'Rút' }); });
+  ctx.state.viDsMo = false;
+  var h = ctx.viSoDuCardHtml('2026-10');
+  ok(h.indexOf('data-act="viDsMo" aria-expanded="false"') > 0 && h.indexOf('2 lần') > 0 && /1\.800\.000/.test(h), 'dòng tổng: 2 lần · 1.800.000');
+  ok(h.indexOf('vi-ct') < 0 && h.indexOf('viChuyenXoa') < 0, 'chưa bấm: không có chi tiết');
+  ok(h.indexOf('data-act="viChuyenMo"') < 0, 'không lặp nút Chuyển ví (đã có ở dải Số dư theo ví)');
+  ctx.state.viDsMo = true; h = ctx.viSoDuCardHtml('2026-10');
+  ok(h.indexOf('aria-expanded="true"') > 0 && (h.match(/data-act="viChuyenXoa"/g) || []).length === 2, 'bấm rồi: 2 dòng chi tiết, có nút xóa');
+  eq(ctx.viSoDuCardHtml('2026-11'), '', 'tháng không có lần chuyển: không có thẻ');
+  ctx.state.viDsMo = false; setToday('2026-10-01');
+});
 test('locTongKet: cộng đúng các DÒNG khớp từ khóa / danh mục (không phải cả ngày), so với tháng trước', function(){
   var j = {}, it = function(id, kind, cat, v, ghi){ return { iid: id, kind: kind, catId: cat, soTien: v, ghiChu: ghi, walletId: 'w_chinh' }; };
   j['2026-10-02'] = { thu: {}, chi: { an: 60000 }, ghiChu: '', refs: [], items: [it('a', 'chi', 'an', 60000, 'Coffee')] };
