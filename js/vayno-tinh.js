@@ -449,10 +449,15 @@ function phaiThuTaiNgay(loan, d, thuHoi){
 function noGocTaiNgay(loan, d){
   if (!loan.ngayVay || loan.ngayVay > d) return 0;
   if (loan.tatToan && loan.tatToan.ngay && loan.tatToan.ngay <= d) return 0;
-  var sch = tinhLichTraNo(loan), tra = 0;
+  var sch = tinhLichTraNo(loan), tra = 0, dong = {};
+  // kỳ đã ĐÓNG (tới ngày d) là xong kỳ: trừ ĐỦ gốc của kỳ theo lịch, như gocConLai. Trả thiếu / thừa so với lịch
+  // (ngân hàng làm tròn khác app...) là chênh lệch ghi riêng (tongLechTraNo), không để lại gốc dư mãi không về 0.
+  (loan.traNo || []).forEach(function(r){ if (r.dongKy && r.ngay && r.ngay <= d) dong[num(r.ky)] = 1; });
+  Object.keys(dong).forEach(function(ky){ if (sch[ky]) tra += num(sch[ky].goc); });
+  // kỳ chưa đóng (đang trả dở): trừ gốc theo tỉ lệ tiền đã trả
   (loan.traNo || []).forEach(function(r){
     var k = sch[num(r.ky)];
-    if (!k || !r.ngay || r.ngay > d || !(num(k.tongTra) > 0)) return;
+    if (dong[num(r.ky)] || !k || !r.ngay || r.ngay > d || !(num(k.tongTra) > 0)) return;
     tra += num(r.soTien) * num(k.goc) / num(k.tongTra);
   });
   return Math.max(0, num(loan.soTienGoc) - tra);
