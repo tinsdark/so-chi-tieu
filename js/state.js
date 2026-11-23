@@ -714,7 +714,9 @@ function normalizeData(d){
     if (c.daThu == null) c.daThu = 0;
     // các lần xóa nợ một phần (xem tongDaBo ở vayno-tinh.js): bỏ mục hỏng (số âm / không phải số) để không làm lệch còn phải thu
     c.daBo = Array.isArray(c.daBo) ? c.daBo.filter(function(x){ return x && num(x.soTien) > 0; }) : [];
-    if (c.tatToan) c.trangThai = 'da_thu_du';
+    // trạng thái luôn SUY RA từ số liệu (choVayCapNhatTrangThai): trạng thái lưu từ bản cũ / lần nhập / đồng bộ có thể lệch
+    // (vd 'da_thu_du' mà còn phải thu > 0) làm Vay - Nợ và dự báo Dòng tiền ra hai con số cho vay chờ thu khác nhau
+    choVayCapNhatTrangThai(c);
   });
   // ví / nguồn tiền: dữ liệu cũ chỉ có 1 số dư đầu kỳ -> thành 1 ví mang đúng số đó (tổng không đổi)
   if (!Array.isArray(d.wallets) || !d.wallets.length){
