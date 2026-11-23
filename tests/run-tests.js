@@ -430,6 +430,20 @@ test('cho vay: trạng thái lưu lệch số liệu thì lúc tải được t�
   eq(cv[1].trangThai, 'da_thu_du', 'thu đủ rồi mà lưu dang_cho: cũng sửa lại');
   eq(ctx.taiSanRongDuKien(ctx.monthKey(ctx.todayStr()), 0).phaiThu, 50392, 'dự báo tính đúng phần còn phải thu');
 });
+test('vay: kỳ ĐÃ ĐÓNG mà trả thiếu so với lịch vẫn trừ đủ gốc kỳ (không để gốc dư mãi trong tài sản ròng dự kiến)', function(){
+  setToday('2026-11-01');
+  var d = baseData();
+  d.vayNo.vayNoPhaiTra = [{ id:'v1', ten:'Vay A', loaiVay:'ngan_hang', hinhThuc:'khong_lai', soTienGoc:12000000, soThangVay:4,
+    ngayVay:'2026-09-20', ngayTraHangThang:28, walletId:'', trangThai:'dang_vay',
+    traNo:[{ rid:'a', ky:0, ngay:'2026-10-28', soTien:2900000, dongKy:true }, { rid:'b', ky:1, ngay:'2026-10-30', soTien:1000000, dongKy:false }] }];
+  loadData(d);
+  var l = ctx.state.data.vayNo.vayNoPhaiTra[0];
+  eq(Math.round(ctx.noGocTaiNgay(l, '2026-10-29')), 9000000, 'kỳ 1 đóng thiếu 100k: gốc vẫn giảm đủ 3tr (trước đây còn 9,1tr)');
+  eq(Math.round(ctx.noGocTaiNgay(l, '2026-10-31')), 8000000, 'kỳ đang trả dở: trừ theo số đã trả');
+  eq(Math.round(ctx.noGocTaiNgay(l, '2026-10-27')), 12000000, 'trước ngày đóng kỳ: chưa trừ');
+  eq(Math.round(ctx.taiSanRongDuKien('2027-06', 0).no), 0, 'trả hết lịch: nợ gốc dự kiến về 0');
+  setToday('2026-10-01');
+});
 
 /* ==================================================================== */
 group('3. Migration dữ liệu cũ daTraGoc -> traNo[]');
