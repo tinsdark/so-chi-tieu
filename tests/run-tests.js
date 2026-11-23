@@ -420,6 +420,16 @@ test('cho vay: dữ liệu cũ không có daBo vẫn chạy như cũ (normalizeD
   eq(ctx.conLaiPhaiThu(c), 750000, 'công thức cũ không đổi');
   eq(ctx.phaiThuTaiNgay(c, '2026-12-10', {}), 1000000, 'tài sản ròng cũ không đổi (daThu lấy từ journal)');
 });
+test('cho vay: trạng thái lưu lệch số liệu thì lúc tải được tính lại (Vay - Nợ và dự báo Dòng tiền ra cùng một số chờ thu)', function(){
+  var d = baseData();
+  d.vayNo.choVay = [{ id:'cv1', ten:'Ăn trưa (A Hà)', soTien:133333, daThu:82941, trangThai:'da_thu_du', ngayChoVay:'2026-10-01' },
+                    { id:'cv2', ten:'Bạn B', soTien:200000, daThu:200000, trangThai:'dang_cho', ngayChoVay:'2026-10-01' }];
+  loadData(d);
+  var cv = ctx.state.data.vayNo.choVay;
+  eq(cv[0].trangThai, 'dang_cho', 'còn phải thu 50.392 nên KHÔNG phải đã thu đủ');
+  eq(cv[1].trangThai, 'da_thu_du', 'thu đủ rồi mà lưu dang_cho: cũng sửa lại');
+  eq(ctx.taiSanRongDuKien(ctx.monthKey(ctx.todayStr()), 0).phaiThu, 50392, 'dự báo tính đúng phần còn phải thu');
+});
 
 /* ==================================================================== */
 group('3. Migration dữ liệu cũ daTraGoc -> traNo[]');
