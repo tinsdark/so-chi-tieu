@@ -146,6 +146,9 @@ function chiaFormBody(){
     + vnF('Ngày', '<input type="date" id="vn_chia_ngay" value="'+todayStr()+'">')
     + vnF('Phần của mình ghi vào', '<select id="vn_chia_cat">' + cats.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id === 'an' ? ' selected' : '')+'>'+esc(c.ten)+'</option>'; }).join('') + '</select>')
     + '</div>'
+    + vnF('Nhãn <span class="mp-hint">(tùy chọn)</span>', '<input type="text" id="vn_chia_nhan" list="vn_chia_nhan_goiy" autocomplete="off" placeholder="VD: Công tác Hà Giang">'
+        + '<datalist id="vn_chia_nhan_goiy">' + nhanThongKe().slice(0, 30).map(function(r){ return '<option value="'+esc(r.ten)+'">'; }).join('') + '</datalist>',
+        '', 'Gắn vào phần của mình ở Sổ tay để cộng vào tổng của nhãn. Phần của người khác là tiền cho vay, không tính vào nhãn.')
     + vnViSelect('vn_chia_wallet', 'Ví đã trả', null)
     + vnF('Chia với ai', '<textarea id="vn_chia_ds" rows="4" placeholder="Minh&#10;Lan 150k&#10;Hùng"></textarea>', '',
         'Mỗi dòng một người. Ghi thêm số tiền nếu người đó không chia đều (Lan 150k). Người không ghi số chia đều phần còn lại cùng bạn.')
@@ -220,6 +223,7 @@ function chiaGhi(o){
     var tenMinh = o.ten + ' (phần mình)';
     var it = entryAddItem(o.ngay, 'chi', o.cat, o.minh, tenMinh, o.walletId);
     if (it){
+      itemDatNhan(it, o.nhan || []);
       var gc = tenMinh + ' ' + fmt(Math.round(o.minh)), e = state.data.journal[o.ngay];
       e.ghiChu = e.ghiChu ? e.ghiChu + '; ' + gc : gc;
       it.gc = gc; ket.iid = it.iid; ket.note = gc;
@@ -404,7 +408,7 @@ function handleNguoiAction(act, el){
     var viAmChia = viCanhBaoAm(viChia, -tongChia);          // cả hóa đơn ra khỏi ví (phần của mình + các khoản cho vay)
     if (viAmChia) cbChia.unshift(viAmChia);
     if (chayNeuDongY(cbChia, act, el, handleNguoiAction)) return true;
-    var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: viChia, minh: kq.minh, phan: kq.phan });
+    var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: viChia, minh: kq.minh, phan: kq.phan, nhan: nhanParse(g('vn_chia_nhan')) });
     scheduleSave(); chiaVeLai();
     toast('Đã chia "' + ten + '": phần mình ' + fmt(kq.minh) + ', ' + kq.phan.length + ' khoản cho vay.', { giay: 7, hoanTac: function(){
       chiaHoanTac(ket); scheduleSave(); chiaVeLai(); toast('Đã hoàn tác chia hóa đơn.');

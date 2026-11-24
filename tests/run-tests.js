@@ -6467,6 +6467,16 @@ test('Chia hóa đơn: form ở Công cụ; khoản sinh ra tách khỏi thẻ C
   ok(ctx.chiaPageHtml().indexOf('id="vn_chia_tong"') > 0 && ctx.chiaPageHtml().indexOf('data-act="vnChiaLuu"') > 0, 'trang có sẵn form');
   ctx.state.chiaMo = null; ctx.state.vnXongCV = false;
 });
+test('Chia hóa đơn: nhãn gắn vào phần của mình ở Sổ tay (khoản cho vay không có nhãn)', function(){
+  loadData(baseData());
+  ok(ctx.chiaPageHtml().indexOf('id="vn_chia_nhan"') > 0, 'form có ô Nhãn');
+  ctx.chiaGhi({ ten: 'Ăn tối', ngay: '2026-10-12', cat: 'an', walletId: '', minh: 100000, phan: [{ ten: 'A Hà', tien: 100000 }], nhan: ['Công tác Hà Giang'] });
+  var it = ctx.entryItems(ctx.state.data.journal['2026-10-12']).filter(function(x){ return x.catId === 'an'; })[0];
+  eq(ctx.itemNhan(it).join(','), 'Công tác Hà Giang', 'phần mình có nhãn');
+  var tk = ctx.nhanThongKe()[0]; eq(tk.ten, 'Công tác Hà Giang'); eq(tk.chi, 100000, 'tổng nhãn = phần của mình');
+  ctx.chiaGhi({ ten: 'Cà phê', ngay: '2026-10-13', cat: 'an', walletId: '', minh: 30000, phan: [{ ten: 'A Hà', tien: 30000 }] });
+  eq(ctx.itemNhan(ctx.entryItems(ctx.state.data.journal['2026-10-13'])[0]).length, 0, 'không nhập nhãn: không có nhãn');
+});
 test('Định kỳ "Ghi vào Sổ tay": vượt lời hứa thì hỏi; không vi phạm thì ghi thẳng', function(){
   dataCanhBao(function(d){ d.dinhKy = [{ id: 'dk1', ten: 'Ăn trưa', kind: 'chi', catId: 'an', soTien: 40000, ngay: 12, bat: true, bo: [] }, { id: 'dk2', ten: 'Xăng', kind: 'chi', catId: 'xang', soTien: 40000, ngay: 12, bat: true, bo: [] }]; });
   xacNhanGia(); hoi.n = 0; hoi.traLoi = false;
