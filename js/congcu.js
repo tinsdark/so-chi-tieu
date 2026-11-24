@@ -207,6 +207,7 @@ function mmCardHtml(){
 }
 /* ---- màn tổng hợp: mỗi công cụ / sổ một ô có dòng trạng thái, bấm vào mở trang riêng ---- */
 var CC_TRANG = [
+  { key: 'chiahd', nhom: 'Tiện ích', ten: 'Chia hóa đơn', icon: 'user', tomTat: function(){ return chiaTomTat(); }, trang: function(){ return chiaPageHtml(); } },
   { key: 'muonmua', nhom: 'Quyết định', ten: 'Muốn mua', icon: 'cart', tomTat: function(){ return mmTomTat(); }, trang: function(){ return mmCardHtml(); } },
   { key: 'giocong', nhom: 'Quyết định', ten: 'Giờ công', icon: 'clock', tomTat: function(){ return gcTomTat(); }, trang: function(){ return gcCardHtml(); } },
   { key: 'loihua', nhom: 'Quyết định', ten: 'Lời hứa', icon: 'flag', tomTat: function(){ return lhTomTat(); }, trang: function(){ return lhCardHtml(); } },
@@ -216,9 +217,10 @@ var CC_TRANG = [
 ];
 function ccHubHtml(){
   var h = '<div class="dm-page">', nhom = '';
-  var hien = htHien('congcu');                         // thứ tự + bật tắt theo Cài đặt → Hiển thị (ht.js); nhóm Quyết định luôn đứng trước nhóm Sổ
+  var hien = htHien('congcu');                         // thứ tự + bật tắt theo Cài đặt → Hiển thị (ht.js); nhóm luôn theo thứ tự Tiện ích, Quyết định, Sổ
+  var thuTuNhom = { 'Tiện ích': 0, 'Quyết định': 1, 'Sổ': 2 };
   var ds = CC_TRANG.filter(function(t){ return hien.indexOf(t.key) >= 0; }).sort(function(a, b){
-    return (a.nhom === b.nhom ? 0 : (a.nhom === 'Quyết định' ? -1 : 1)) || (hien.indexOf(a.key) - hien.indexOf(b.key));
+    return (thuTuNhom[a.nhom] - thuTuNhom[b.nhom]) || (hien.indexOf(a.key) - hien.indexOf(b.key));
   });
   if (!ds.length) return h + '<div class="empty">Đã ẩn hết công cụ. Bật lại ở Cài đặt → Hiển thị.</div></div>';
   ds.forEach(function(t){

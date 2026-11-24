@@ -6244,16 +6244,16 @@ test('ht: ẩn / hiện, thứ tự, đặt lại; chỉ đổi cách vẽ; id l
   eq(ctx.htDoiViTri('baocao', 'nhan', 1), false, 'nhan là thẻ đổi được cuối cùng (bieudo cố định)');
   ctx.htDatAn('baocao', 'taisan', true); eq(ctx.htHien('baocao').join(','), 'tongket,hanmuc,muctieu,dautu,diemnhan,ngaytudo,tet,nhan,bieudo', 'htHien bỏ thẻ ẩn, giữ thứ tự');
   ctx.htDatLai(); eq(ctx.htThuTu('baocao').join(','), 'tongket,hanmuc,taisan,muctieu,dautu,diemnhan,ngaytudo,tet,nhan,bieudo'); eq(ctx.htAn('baocao', 'taisan'), false);
-  luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 6);
+  luuTru['sct_hien_thi_v1'] = '{không phải json'; eq(ctx.htAn('baocao', 'tongket'), false, 'JSON hỏng: dùng mặc định'); eq(ctx.htThuTu('congcu').length, 7);
   luuTru['sct_hien_thi_v1'] = JSON.stringify({ thuTu: { baocao: ['nhan', 'cu-khong-con', 'hanmuc'] } });
   eq(ctx.htThuTu('baocao').join(','), 'nhan,hanmuc,tongket,taisan,muctieu,dautu,diemnhan,ngaytudo,tet,bieudo', 'id đã bỏ bị loại, thẻ mới rơi vào cuối phần còn lại, bieudo giữ vị trí gốc');
   htSach();
 });
 test('ht: Công cụ chỉ đổi vị trí trong CÙNG nhóm (Quyết định / Sổ)', function(){
   htSach();
-  eq(ctx.htDoiViTri('congcu', 'giocong', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,sommung,dodac,dautu');
+  eq(ctx.htDoiViTri('congcu', 'giocong', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,sommung,dodac,dautu,chiahd');
   eq(ctx.htDoiViTri('congcu', 'loihua', 1), false, 'loihua là cuối nhóm Quyết định: không nhảy sang nhóm Sổ');
-  eq(ctx.htDoiViTri('congcu', 'dodac', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,dodac,sommung,dautu');
+  eq(ctx.htDoiViTri('congcu', 'dodac', -1), true); eq(ctx.htThuTu('congcu').join(','), 'giocong,muonmua,loihua,dodac,sommung,dautu,chiahd');
   htSach();
 });
 test('Báo cáo / Sổ tay / hub Công cụ vẽ theo tuỳ chọn: ẩn thẻ thì không vẽ, đổi thứ tự thì đổi vị trí, số liệu không đổi', function(){
@@ -6272,7 +6272,7 @@ test('Báo cáo / Sổ tay / hub Công cụ vẽ theo tuỳ chọn: ẩn thẻ t
   var hub0 = ctx.ccHubHtml(); ok(hub0.indexOf('<b>Giờ công</b>') > 0);
   ctx.htDatAn('congcu', 'giocong', true); ok(ctx.ccHubHtml().indexOf('<b>Giờ công</b>') < 0 && ctx.ccHubHtml().indexOf('<b>Lời hứa</b>') > 0, 'ẩn một ô');
   ctx.htDatAn('congcu', 'giocong', false); ctx.htDoiViTri('congcu', 'loihua', -1); var hub2 = ctx.ccHubHtml(); ok(hub2.indexOf('<b>Lời hứa</b>') < hub2.indexOf('<b>Giờ công</b>'), 'Lời hứa lên trước Giờ công');
-  ['muonmua', 'giocong', 'loihua', 'sommung', 'dodac', 'dautu'].forEach(function(id){ ctx.htDatAn('congcu', id, true); }); ok(ctx.ccHubHtml().indexOf('Đã ẩn hết công cụ') > 0, 'ẩn hết thì báo cách bật lại');
+  ['muonmua', 'giocong', 'loihua', 'sommung', 'dodac', 'dautu', 'chiahd'].forEach(function(id){ ctx.htDatAn('congcu', id, true); }); ok(ctx.ccHubHtml().indexOf('Đã ẩn hết công cụ') > 0, 'ẩn hết thì báo cách bật lại');
   htSach(); setToday('2026-10-01');
 });
 test('Cài đặt: 5 phần bằng thanh chọn (không phải danh sách bấm); mỗi phần chỉ chứa đúng thẻ của nó; bảng sửa nhảy đúng phần', function(){
@@ -6443,6 +6443,29 @@ test('Chia hóa đơn: phần của mình vượt lời hứa HOẶC cả hóa �
   voiDom(fm2, null, function(){ ctx.handleNguoiAction('vnChiaLuu', {}); });
   eq(hoi.n, 1, 'tổng hóa đơn 900.000 mà ví chỉ còn 150.000 (600.000 − 450.000 đã chi): ví sắp âm'); ok(hoi.noiDung.indexOf('sẽ âm') > 0, hoi.noiDung);
   setToday('2026-10-01');
+});
+test('Chia hóa đơn: form ở Công cụ; khoản sinh ra tách khỏi thẻ Cho vay, gom theo người ở Vay - Nợ, bấm mới sổ danh sách', function(){
+  var d = baseData();
+  d.vayNo.choVay = [
+    { id:'cv1', ten:'Bạn B', soTien:1000000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-01' },
+    { id:'ch1', ten:'Ăn lẩu (A Hà)', nguoi:'A Hà', chiaHd:'Ăn lẩu', soTien:150000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05' },
+    { id:'ch2', ten:'Ăn trưa (A Hà)', nguoi:'A Hà', chiaHd:'Ăn trưa', soTien:50000, daThu:50000, trangThai:'da_thu_du', ngayChoVay:'2026-10-06' },
+    { id:'ch3', ten:'Ăn lẩu (A Dũng)', nguoi:'a dũng', chiaHd:'Ăn lẩu', soTien:150000, daThu:0, trangThai:'dang_cho', ngayChoVay:'2026-10-05' }
+  ];
+  loadData(d); ctx.state.vnXongCV = true; ctx.state.chiaMo = null;
+  var cv = ctx.vnChoVayHtml();
+  ok(cv.indexOf('id="vn-cv-cv1"') > 0 && cv.indexOf('vn-cv-ch') < 0, 'thẻ Cho vay chỉ còn khoản cho vay riêng');
+  ok(cv.indexOf('vnChiaMo') < 0, 'không còn nút chia ở thẻ Cho vay');
+  var h = ctx.chiaCardHtml();
+  ok(h.indexOf('<b>A Hà</b><small>2 hóa đơn · 1 chưa trả</small>') > 0 && h.indexOf('<b>A Dũng</b>') < 0 && h.indexOf('<b>a dũng</b>') > 0, 'gom theo người');
+  ok(h.indexOf('vn-cv-ch') < 0, 'chưa bấm: không sổ danh sách');
+  eq(ctx.chiaMoKhoan('ch2'), true, 'nhảy tới khoản chia: mở đúng người'); h = ctx.chiaCardHtml();
+  ok(h.indexOf('id="vn-cv-ch1"') > 0 && h.indexOf('id="vn-cv-ch2"') > h.indexOf('id="vn-cv-ch1"') && h.indexOf('vn-cv-ch3') < 0, 'bấm A Hà: sổ 2 khoản, đang chờ trước');
+  eq(ctx.chiaMoKhoan('cv1'), false, 'khoản thường: không đụng');
+  ctx.state.data.vayNo.choVay = [d.vayNo.choVay[0]]; eq(ctx.chiaCardHtml(), '', 'chưa chia hóa đơn nào: không có thẻ');
+  var hub = ctx.ccHubHtml(); ok(hub.indexOf('data-trang="chiahd"') > 0 && hub.indexOf('data-trang="chiahd"') < hub.indexOf('data-trang="muonmua"'), 'ô Chia hóa đơn ở Công cụ, nhóm Tiện ích đứng đầu');
+  ok(ctx.chiaPageHtml().indexOf('id="vn_chia_tong"') > 0 && ctx.chiaPageHtml().indexOf('data-act="vnChiaLuu"') > 0, 'trang có sẵn form');
+  ctx.state.chiaMo = null; ctx.state.vnXongCV = false;
 });
 test('Định kỳ "Ghi vào Sổ tay": vượt lời hứa thì hỏi; không vi phạm thì ghi thẳng', function(){
   dataCanhBao(function(d){ d.dinhKy = [{ id: 'dk1', ten: 'Ăn trưa', kind: 'chi', catId: 'an', soTien: 40000, ngay: 12, bat: true, bo: [] }, { id: 'dk2', ten: 'Xăng', kind: 'chi', catId: 'xang', soTien: 40000, ngay: 12, bat: true, bo: [] }]; });

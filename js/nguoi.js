@@ -10,6 +10,8 @@
    (2) Chia hóa đơn: MÌNH trả cả hóa đơn, mỗi người khác nợ phần của họ. Phần của mình ghi thành 1 khoản chi ở Sổ tay,
        mỗi người khác thành 1 khoản CHO VAY (cùng đường ghi "Cho vay" như thêm khoản cho vay tay: tiền ra khỏi ví ngay).
        Khoản người khác trả hộ mình (mình nợ họ) chưa có luồng này.
+       Form chia nằm ở tab CÔNG CỤ (trang 'chiahd', congcu.js). Các khoản cho vay sinh ra (loan.chiaHd) KHÔNG nằm trong thẻ Cho vay
+       mà gom ở thẻ riêng "Chia hóa đơn" của Vay - Nợ theo từng người: bấm vào người mới sổ ra danh sách khoản (state.chiaMo).
    Cần state.js, nhan.js, ui.js, vayno.js, sotay.js (qaCats) load trước.
    ==================================================================== */
 
@@ -136,9 +138,9 @@ function chiaTinh(tong, ds){
   var phan = ds.map(function(x){ return { ten: x.ten, tien: x.tien == null ? moiNguoi : x.tien }; });
   return { phan: phan, minh: con - moiNguoi * tu };
 }
-function chiaFormHtml(){
+function chiaFormBody(){
   var cats = qaCats('chi');
-  var h = vnF('Hóa đơn', '<input type="text" id="vn_chia_ten" placeholder="VD: Ăn lẩu">')
+  return vnF('Hóa đơn', '<input type="text" id="vn_chia_ten" placeholder="VD: Ăn lẩu">')
     + vnF('Tổng hóa đơn (mình đã trả)', '<input type="text" inputmode="numeric" autocomplete="off" class="money" id="vn_chia_tong" placeholder="0">')
     + '<div class="vn-2">'
     + vnF('Ngày', '<input type="date" id="vn_chia_ngay" value="'+todayStr()+'">')
@@ -148,8 +150,58 @@ function chiaFormHtml(){
     + vnF('Chia với ai', '<textarea id="vn_chia_ds" rows="4" placeholder="Minh&#10;Lan 150k&#10;Hùng"></textarea>', '',
         'Mỗi dòng một người. Ghi thêm số tiền nếu người đó không chia đều (Lan 150k). Người không ghi số chia đều phần còn lại cùng bạn.')
     + '<div class="vn-tom" id="vn_chia_tom">Nhập tổng và danh sách để xem cách chia.</div>';
-  return vnSheetKhung('Chia hóa đơn nhóm', h, 'Ghi và tạo khoản cho vay', 'vnChiaLuu', 'vnCancelForm');
 }
+// trang Chia hóa đơn ở tab Công cụ: form nằm thẳng trên trang, ghi xong vẽ lại = form trống để chia hóa đơn tiếp
+function chiaPageHtml(){
+  return '<div class="card dm-card cc-chia"><h3>Chia hóa đơn nhóm</h3>'
+    + '<div class="vn-sub" style="margin-bottom:10px">Mình trả cả hóa đơn: phần của mình ghi vào Sổ tay, mỗi người khác thành một khoản cho vay.</div>'
+    + chiaFormBody()
+    + '<div class="nh-btn" style="margin-top:12px"><button type="button" class="btn" data-act="vnChiaLuu">Ghi và tạo khoản cho vay</button>'
+    + '<button type="button" class="btn secondary" data-act="chiaXemVn">Xem các khoản đã chia</button></div></div>';
+}
+function chiaTomTat(){
+  var ds = chiaNhom().filter(function(r){ return r.con > 0.01; }), tong = 0;
+  ds.forEach(function(r){ tong += r.con; });
+  return ds.length ? { chu: ds.length + ' người còn nợ · ' + fmt(Math.round(tong)) } : { chu: 'Mình trả cả hóa đơn, mỗi người nợ phần của họ' };
+}
+
+/* ---- thẻ "Chia hóa đơn" ở Vay - Nợ: các khoản sinh từ chia hóa đơn, gom theo người ---- */
+function chiaKhoa(c){ return nhanKhoa(nguoiCuaKhoan(c)) || '_'; }
+// [{ khoa, ten, loans (đang chờ trước, mới trước), con (còn phải thu), soMo }], người còn nợ nhiều nhất trước
+function chiaNhom(){
+  var m = {};
+  (state.data.vayNo.choVay || []).forEach(function(c){
+    if (!c.chiaHd) return;
+    var k = chiaKhoa(c), r = m[k] || (m[k] = { khoa: k, ten: nguoiCuaKhoan(c) || 'Chưa rõ', loans: [], con: 0, soMo: 0 });
+    var cl = choVayDaXong(c) ? 0 : conLaiPhaiThu(c);
+    r.loans.push(c); r.con += cl; if (cl > 0.01) r.soMo++;
+  });
+  var ds = Object.keys(m).map(function(k){ return m[k]; });
+  ds.forEach(function(r){ r.loans.sort(function(a, b){ return (choVayDaXong(a) - choVayDaXong(b)) || ((b.ngayChoVay || '') < (a.ngayChoVay || '') ? -1 : ((b.ngayChoVay || '') > (a.ngayChoVay || '') ? 1 : 0)); }); });
+  return ds.sort(function(a, b){ return (b.con - a.con) || (a.ten < b.ten ? -1 : 1); });
+}
+// mở sẵn đúng người khi cần nhảy tới một khoản chia hóa đơn (tìm kiếm, Sổ nợ theo đối tượng); true nếu là khoản chia
+function chiaMoKhoan(id){
+  var c = (state.data.vayNo.choVay || []).filter(function(x){ return x.id === id; })[0];
+  if (!c || !c.chiaHd) return false;
+  state.chiaMo = chiaKhoa(c);
+  return true;
+}
+function chiaCardHtml(){
+  var ds = chiaNhom();
+  if (!ds.length) return '';
+  var h = '<div class="card vn-ng" id="cardChiaHd"><h3 class="vn-h3">Chia hóa đơn <button type="button" class="btn sm secondary" data-act="chiaDen">+ Chia hóa đơn</button></h3>';
+  ds.forEach(function(r){
+    var mo = state.chiaMo === r.khoa;
+    h += '<div class="vn-ng-i'+(mo ? ' mo' : '')+'"><div class="vn-ng-r" role="button" tabindex="0" aria-expanded="'+mo+'" data-act="chiaMo" data-k="'+esc(r.khoa)+'">'
+      + '<span class="vn-ng-t"><b>'+esc(r.ten)+'</b><small>'+r.loans.length+' hóa đơn'+(r.soMo && r.soMo < r.loans.length ? ' · '+r.soMo+' chưa trả' : '')+'</small></span>'
+      + '<span class="vn-ng-s"><small>'+(r.con > 0.01 ? 'Còn nợ mình' : 'Đã trả đủ')+'</small>'+(r.con > 0.01 ? '<b class="thu">'+fmt(Math.round(r.con))+'</b>' : '')+'</span></div>';
+    if (mo) h += '<div class="vn-ng-ct">' + r.loans.map(vnChoVayCardHtml).join('') + '</div>';
+    h += '</div>';
+  });
+  return h + '</div>';
+}
+function chiaVeLai(){ if (state.tab === 'congcu') renderCongCu(); else renderVayNo(); }
 function chiaDoc(){
   var g = function(id){ var e = document.getElementById(id); return e ? e.value : ''; };
   return chiaTinh(docSo(g('vn_chia_tong')), chiaParseDs(g('vn_chia_ds')));
@@ -329,8 +381,15 @@ function handleNguoiAction(act, el){
     });
     return true;
   }
-  if (act === 'vnChiaMo'){
-    state.vnFormKind = 'chia'; state.vnFormId = null; renderVayNo();
+  if (act === 'chiaMo'){
+    var kc = el.getAttribute('data-k');
+    state.chiaMo = state.chiaMo === kc ? null : kc; renderVayNo();
+    return true;
+  }
+  if (act === 'chiaDen'){ state.ccTrang = 'chiahd'; chuyenTab('congcu'); return true; }
+  if (act === 'chiaXemVn'){
+    chuyenTab('vayno');
+    setTimeout(function(){ var o = document.getElementById('cardChiaHd'); if (o && o.scrollIntoView) o.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
     return true;
   }
   if (act === 'vnChiaLuu'){
@@ -346,10 +405,9 @@ function handleNguoiAction(act, el){
     if (viAmChia) cbChia.unshift(viAmChia);
     if (chayNeuDongY(cbChia, act, el, handleNguoiAction)) return true;
     var ket = chiaGhi({ ten: ten, ngay: ngay, cat: cat, walletId: viChia, minh: kq.minh, phan: kq.phan });
-    state.vnFormKind = null; state.vnFormId = null;
-    scheduleSave(); renderVayNo();
+    scheduleSave(); chiaVeLai();
     toast('Đã chia "' + ten + '": phần mình ' + fmt(kq.minh) + ', ' + kq.phan.length + ' khoản cho vay.', { giay: 7, hoanTac: function(){
-      chiaHoanTac(ket); scheduleSave(); renderVayNo(); toast('Đã hoàn tác chia hóa đơn.');
+      chiaHoanTac(ket); scheduleSave(); chiaVeLai(); toast('Đã hoàn tác chia hóa đơn.');
     } });
     return true;
   }

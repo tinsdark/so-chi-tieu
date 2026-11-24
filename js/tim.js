@@ -220,7 +220,7 @@ function timDi(r){
   else if (r.loai === 'vay'){
     tab = 'vayno';
     if (r.sub === 'vn'){ var v = (state.data.vayNo.vayNoPhaiTra || []).filter(function(x){ return x.id === r.id; })[0]; if (v && !loanIsActive(v)) state.vnXong = true; dich = '#vn-vn-' + r.id; }
-    else { var c = (state.data.vayNo.choVay || []).filter(function(x){ return x.id === r.id; })[0]; if (c && (c.tatToan || conLaiPhaiThu(c) <= 0.5)) state.vnXongCV = true; dich = '#vn-cv-' + r.id; }
+    else { var c = (state.data.vayNo.choVay || []).filter(function(x){ return x.id === r.id; })[0]; if (!chiaMoKhoan(r.id) && c && (c.tatToan || conLaiPhaiThu(c) <= 0.5)) state.vnXongCV = true; dich = '#vn-cv-' + r.id; }
   }
   else if (r.loai === 'nhan'){ tab = 'baocao'; }
   else if (r.loai === 'mung'){ state.ccTrang = 'sommung'; state.sm.tim = q; tab = 'congcu'; dich = lh('smSua', r.id); }

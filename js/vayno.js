@@ -245,9 +245,8 @@ function vnChoVayCardHtml(c){
 }
 
 function vnChoVayHtml(){
-  var ds = state.data.vayNo.choVay;
+  var ds = state.data.vayNo.choVay.filter(function(c){ return !c.chiaHd; });   // khoản sinh từ chia hóa đơn nằm ở thẻ riêng (chiaCardHtml)
   var h = '<div class="card k-asset"><h3 class="vn-h3">Cho vay'+(ds.length ? ' <button class="btn sm" data-act="vnAddChoVay">+ Thêm khoản cho vay</button>' : '')+'</h3>';
-  h += '<div class="vn-chia"><button type="button" class="btn sm secondary" data-act="vnChiaMo">Chia hóa đơn nhóm</button><span class="vn-sub">Mình trả hộ cả nhóm → tạo khoản cho vay từng người</span></div>';
   var c0 = ds.filter(function(x){ return !choVayDaXong(x); })[0];
   h += ghiChuGon('Bấm "Tất toán" trên khoản để ghi số tiền thực thu (chọn ngày và ví): app tự ghi giao dịch thu vào Sổ tay. "Xóa nợ" chỉ dùng để bỏ phần không đòi được và không tạo giao dịch nào.'
     + (c0 ? gtViDu([{ ten: esc(c0.ten), ct: 'Còn phải thu = số cho vay − đã thu − đã xóa nợ.', pt: ptCong([c0.soTien, -num(c0.daThu), -tongDaBo(c0)], conLaiPhaiThu(c0)) }]) : ''), 'Ghi tiền thu về thế nào?');
@@ -358,7 +357,7 @@ function vnBangTheoDoiHtml(){
 function renderVayNo(){
   var root = document.getElementById('tabContent');
   var trai = vnTongQuanHtml() + sapDenHanHtml(7) + nguoiCardHtml() + vnVayHtml();
-  var phai = vnChoVayHtml() + vnBangTheoDoiHtml();
+  var phai = vnChoVayHtml() + chiaCardHtml() + vnBangTheoDoiHtml();
   root.innerHTML = '<div class="cot2"><div class="cot-trai">' + trai + '</div><div class="cot-phai">' + phai + '</div></div>';
   vnSheetVe();
 }
@@ -477,7 +476,7 @@ function vnSheetVe(){
   root.id = 'vnSheetRoot';
   root.className = 'qa-back moi';
   root.setAttribute('data-key', khoa);
-  root.innerHTML = state.vnFormKind === 'choVay' ? choVayFormHtml() : (state.vnFormKind === 'chia' ? chiaFormHtml() : vayNoFormHtml());
+  root.innerHTML = state.vnFormKind === 'choVay' ? choVayFormHtml() : vayNoFormHtml();
   document.body.appendChild(root);
   document.body.classList.add('qa-mo');
   vnKhopKhungNhin();
@@ -656,6 +655,7 @@ function handleVayNoAction(act, el){
   } else if (act === 'vnAddVayNo'){
     state.vnFormKind = 'vayNoPhaiTra'; state.vnFormId = null; renderVayNo();
   } else if (act === 'vnCuonTo'){
+    if (el.getAttribute('data-loai') === 'choVay' && chiaMoKhoan(el.getAttribute('data-id'))) renderVayNo();   // khoản chia hóa đơn: mở đúng người trước
     var dichVn = document.getElementById((el.getAttribute('data-loai') === 'choVay' ? 'vn-cv-' : 'vn-vn-') + el.getAttribute('data-id'));
     if (dichVn){
       if (dichVn.scrollIntoView) dichVn.scrollIntoView({ behavior:'smooth', block:'center' });
